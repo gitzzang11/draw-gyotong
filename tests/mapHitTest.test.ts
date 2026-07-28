@@ -39,6 +39,13 @@ describe("unified map hit testing", () => {
     expect(getTargetHitRadius("route", "touch")).toBeGreaterThan(getTargetHitRadius("route", "mouse"));
   });
 
+  it("keeps hit radii in screen pixels regardless of map zoom", () => {
+    const atOverviewZoom = getTargetHitRadius("station", "mouse");
+    const atBuildZoom = getTargetHitRadius("station", "mouse");
+    expect(atOverviewZoom).toBe(13);
+    expect(atBuildZoom).toBe(atOverviewZoom);
+  });
+
   it("filters candidates by workspace mode", () => {
     expect(resolveMapTarget([hit("train")], "mouse", 7, "planning").selected).toBeNull();
     expect(resolveMapTarget([hit("blueprint")], "mouse", 7, "planning").selected?.kind).toBe("blueprint");

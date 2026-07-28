@@ -27,6 +27,12 @@ import {
   type MapHitCandidate,
 } from "./mapHitTest.ts";
 import {
+  isValidConstructionStatusTransition,
+  normalizeTransferLinks,
+  synchronizeNetworkReferences,
+  validateNetworkIntegrity,
+} from "./storage/integrityCheck.ts";
+import {
   advanceStationDemand,
   allocateCatchmentDemand,
   calculateTransitCaptureRate,
@@ -41,6 +47,18 @@ import {
   type DemandZone,
   type StationDemandState,
 } from "./demandModel.ts";
+import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
+import { SaveRepository } from "./storage/saveRepository.ts";
+import { serializeFiniteState } from "./storage/serialization.ts";
+import {
+  CURRENT_SAVE_SCHEMA_VERSION,
+  ensureStableId,
+  stableEntityId,
+} from "./storage/migrations.ts";
+import { calculateServiceCapacity } from "./simulation/capacity.ts";
+import { mergeOdPassengerGroup } from "./simulation/passengerAssignment.ts";
+import { measureTask } from "./dev/performanceMonitor.ts";
+import { ListenerRegistry } from "./map/listenerRegistry.ts";
 
 // =============================================================================
 // 도메인 모델
@@ -658,7 +676,7 @@ const bridgeConstructionDays = 120;
 const tunnelConstructionDays = 240;
 const stationSnapPx = 24;
 const maxHistory = 20;
-const currentSaveSchemaVersion = 3;
+const currentSaveSchemaVersion = CURRENT_SAVE_SCHEMA_VERSION;
 const saveDatabaseVersion = 2;
 const trainCatalog: Record<TrainType, { label: string; capacityPerCar: number; pricePerCar: number; maintenancePerCar: number; speedKmh: number }> = {
   metro: { label: "도시철도", capacityPerCar: 160, pricePerCar: 28, maintenancePerCar: 2.2, speedKmh: 34 },
@@ -2290,10 +2308,11 @@ const mapSelectionPointers = new Set<number>();
 let mapSelectionGesture: MapSelectionGesture | null = null;
 
 const mapContainer = map.getContainer();
-mapContainer.addEventListener("pointerdown", onPointerDown, { passive: false });
-mapContainer.addEventListener("pointermove", onPointerMove, { passive: false });
-mapContainer.addEventListener("pointerup", onPointerUp, { passive: false });
-mapContainer.addEventListener("pointercancel", cancelActiveDrawing, { passive: false });
+const mapInputListeners = new ListenerRegistry();
+mapInputListeners.add("map:pointerdown", mapContainer, "pointerdown", onPointerDown, { passive: false });
+mapInputListeners.add("map:pointermove", mapContainer, "pointermove", onPointerMove, { passive: false });
+mapInputListeners.add("map:pointerup", mapContainer, "pointerup", onPointerUp, { passive: false });
+mapInputListeners.add("map:pointercancel", mapContainer, "pointercancel", cancelActiveDrawing, { passive: false });
 
 map.whenReady(() => {
   railLayer.addTo(map);
@@ -2320,7 +2339,7 @@ window.setTimeout(() => finishLoading(), 3500);
 map.on("zoomend moveend", (event) => {
   updateLod();
   const nextLod = getLodMode(map.getZoom());
-  if (event.type === "zoomend" && nextLod !== lastMapRenderLod) renderAll(selectedRouteId ?? undefined);
+  if (event.type === "zoomend" && nextLod !== lastMapRenderLod) requestUpdate("viewport", selectedRouteId ?? undefined);
   else if (event.type === "zoomend") {
     renderRoutes(selectedRouteId ?? undefined);
     renderStations();
@@ -4203,7 +4222,10 @@ function updateConstructionProjectsForDay() {
   let becameReady = 0;
   constructionProjects = constructionProjects.map((project) => {
     if (project.status === "operating" || project.status === "opening-ready" || project.status === "planned") return project;
-    let next = { ...project, status: project.status === "scheduled" ? ("building" as const) : project.status, elapsedDays: project.elapsedDays + 1 };
+    const nextStatus = project.status === "scheduled" && isValidConstructionStatusTransition(project.status, "building")
+      ? "building" as const
+      : project.status;
+    let next = { ...project, status: nextStatus, elapsedDays: project.elapsedDays + 1 };
     const appliedEvents = next.events.map((event) => {
       if (event.applied || event.triggerDay > analysisState.dayIndex) return event;
       if (event.kind === "delay") {
@@ -4220,9 +4242,13 @@ function updateConstructionProjectsForDay() {
     if (next.elapsedDays < next.durationDays + next.delayDays) return next;
     if (["route", "extension", "branch", "repair", "edit", "plan"].includes(next.kind)) {
       becameReady += 1;
-      return { ...next, status: "opening-ready", elapsedDays: next.durationDays + next.delayDays };
+      return isValidConstructionStatusTransition(next.status, "opening-ready")
+        ? { ...next, status: "opening-ready", elapsedDays: next.durationDays + next.delayDays }
+        : next;
     }
-    return { ...next, status: "operating", elapsedDays: next.durationDays + next.delayDays, openedAtDay: analysisState.dayIndex };
+    return isValidConstructionStatusTransition(next.status, "operating")
+      ? { ...next, status: "operating", elapsedDays: next.durationDays + next.delayDays, openedAtDay: analysisState.dayIndex }
+      : next;
   });
   if (becameReady > 0) showToast(`${becameReady}개 공사가 완료되었습니다. 개통 조건을 확인하세요.`);
   updateConstructionBadge();
@@ -4353,7 +4379,9 @@ function openConstructionProject(projectId: string) {
   }
   pushHistory();
   constructionProjects = constructionProjects.map((item) =>
-    item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex } : item,
+    item.id === projectId && isValidConstructionStatusTransition(item.status, "operating")
+      ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex }
+      : item,
   );
   redoStack = [];
   persistState();
@@ -6177,7 +6205,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
     construction: ["기존 노선 분기·연결 또는 시설 철거", "실제 노선을 선택해 공사 범위와 비용을 검토"],
   };
   setHint(hints[nextMode]);
-  renderAll(selectedRouteId ?? undefined);
+  requestUpdate("route-style", selectedRouteId ?? undefined);
   if (previousMode !== nextMode) showToast(`${modeName[nextMode]}로 전환했습니다.`);
 }
 
@@ -7059,36 +7087,63 @@ function isPlanFullyConverted(plan: ConstructionPlan) {
  * 상태를 변경한 호출자는 개별 화면을 빠뜨리지 않도록 가능하면 이 진입점을 사용한다.
  * selectedId가 있으면 다시 그린 뒤에도 해당 노선의 선택 강조를 유지한다.
  */
-function renderAll(selectedId?: string) {
+const updateScheduler = new DirtyUpdateScheduler();
+
+function requestUpdate(reason: UpdateReason, selectedId?: string) {
+  requestUpdates([reason], selectedId);
+}
+
+function requestUpdates(reasons: readonly UpdateReason[], selectedId?: string) {
+  for (const reason of reasons) updateScheduler.mark(reason);
+  flushUpdates(selectedId);
+}
+
+function flushUpdates(selectedId?: string) {
+  const domains = new Set<UpdateDomain>(updateScheduler.consume());
+  if (domains.size === 0) return;
   lastMapRenderLod = getLodMode(map.getZoom());
   if (selectedRouteId && !routes.some((route) => route.id === selectedRouteId)) selectedRouteId = null;
   if (selectedId && routes.some((route) => route.id === selectedId)) selectedRouteId = selectedId;
   document.body.classList.toggle("has-network", routes.length > 0);
   document.body.classList.toggle("has-route-selection", Boolean(selectedRouteId));
   document.body.dataset.activeTool = activeTool;
-  refreshTransferMetrics();
-  ensureDemandSimulation();
-  updateOperationRouteOptions();
-  renderRoutes(selectedRouteId ?? selectedId);
-  renderConstructionProjects();
-  renderPlans();
-  if (activeTool === "reconnect") renderRepairGuide();
-  if (activeTool === "edit") renderEditHandles();
-  else if (activeTool === "eraser") renderDeleteGuide();
-  else if (activeTool === "merge") renderMergeGuide();
-  else editGuideLayer.clearLayers();
-  renderDepots(selectedId);
-  renderStations(selectedId);
-  renderTrains();
-  updateHud(selectedRouteId ?? selectedId);
-  updateSelectedLinePanel();
-  updateOperationHud();
-  updateEconomyHud();
-  refreshOperationSuggestions();
-  updateAnalysisBadge();
-  updateConstructionBadge();
-  updateNewsBadge();
-  updateTutorialProgress();
+  if (domains.has("network")) refreshTransferMetrics();
+  if (domains.has("demand") || domains.has("congestion") || domains.has("finance")) {
+    measureTask("demand", ensureDemandSimulation);
+  }
+  if (domains.has("network") || domains.has("routes") || domains.has("capacity")) updateOperationRouteOptions();
+  if (domains.has("routes") || domains.has("map-entities")) {
+    measureTask("map-entities", () => renderRoutes(selectedRouteId ?? selectedId));
+  }
+  if (domains.has("map-entities")) {
+    renderConstructionProjects();
+    renderPlans();
+    if (activeTool === "reconnect") renderRepairGuide();
+    if (activeTool === "edit") renderEditHandles();
+    else if (activeTool === "eraser") renderDeleteGuide();
+    else if (activeTool === "merge") renderMergeGuide();
+    else editGuideLayer.clearLayers();
+    renderDepots(selectedId);
+    renderStations(selectedId);
+  }
+  if (domains.has("trains") || domains.has("map-entities")) measureTask("trains", renderTrains);
+  if (domains.has("hud")) {
+    measureTask("hud", () => updateHud(selectedRouteId ?? selectedId));
+    updateOperationHud();
+    updateEconomyHud();
+    updateAnalysisBadge();
+    updateConstructionBadge();
+    updateNewsBadge();
+    updateTutorialProgress();
+  }
+  if (domains.has("panels")) {
+    updateSelectedLinePanel();
+    refreshOperationSuggestions();
+  }
+}
+
+function renderAll(selectedId?: string) {
+  requestUpdate("full", selectedId);
 }
 
 async function initializeGameShell() {
@@ -7568,16 +7623,6 @@ function migrateSaveStateRecord(input: unknown): SaveState {
     })) : [],
     economy: { ...defaultEconomy, ...(source.economy ?? {}) },
   };
-}
-
-function ensureStableId(value: unknown, prefix: string, seed: string) {
-  return typeof value === "string" && value.trim() ? value : stableEntityId(prefix, seed);
-}
-
-function stableEntityId(prefix: string, seed: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < seed.length; index += 1) hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619);
-  return `${prefix}-${(hash >>> 0).toString(36)}`;
 }
 
 function migratePlansWithStableIds(sourcePlans: ConstructionPlan[], slotId: string): ConstructionPlan[] {
@@ -8293,17 +8338,20 @@ function calculateLegacyRouteOperation(routeId: string, fleetSource = trainFleet
   }
   const express = expressConfigs.find((config) => config.routeId === routeId && config.enabled);
   const stopCount = express ? Math.max(express.stopStationIds.length, 2) : routeStations.length;
-  const dwellMin = Math.max(1, stopCount * 0.45);
-  const roundTripMin = route ? Math.max(8, (route.lengthKm / averageSpeed) * 120 + dwellMin * 2) : 0;
   const servicePathCount = route ? Math.max(1, getTrainServicePaths(route).length) : 1;
   // 분기마다 모든 열차가 완전히 분리된다고 보던 기존 방식은 혼잡을 지나치게 키웠다.
   // 본선 공용 운행을 고려해 추가 분기 하나당 배차 손실을 55%만 반영한다.
-  const branchFrequencyPenalty = 1 + Math.max(0, servicePathCount - 1) * 0.55;
-  const headwayMin = sets > 0 ? Math.round(((roundTripMin / sets) * branchFrequencyPenalty) * 10) / 10 : 0;
   const averageTrainCapacity = sets > 0
     ? routeFleets.reduce((sum, fleet) => sum + getFleetTotalCapacity(fleet), 0) / sets
     : 0;
-  const hourlyCapacity = headwayMin > 0 ? Math.round((60 / headwayMin) * averageTrainCapacity) : 0;
+  const { headwayMin, hourlyCapacity } = calculateServiceCapacity({
+    trainSets: sets,
+    averageTrainCapacity,
+    routeLengthKm: route?.lengthKm ?? 0,
+    averageSpeedKph: averageSpeed,
+    stopCount,
+    servicePathCount,
+  });
   // 일 수요의 10.5%가 첨두 한 시간에 발생하고 그중 58%가 혼잡 방향에 몰린다고 본다.
   const hourlyDemand = dailyDemand * 0.105 * 0.58;
   const crowding = hourlyCapacity > 0 ? Math.round((hourlyDemand / hourlyCapacity) * 100) / 100 : 0;
@@ -9416,7 +9464,7 @@ function handleStationManagerClick(event: Event) {
   stations = stations.map((station) => memberIds.has(station.id) ? { ...station, name } : station);
   persistState();
   renderStationManager();
-  renderAll(selectedStationManagerId);
+  requestUpdate("station-label", selectedStationManagerId);
   showToast("역 이름을 저장했습니다.");
 }
 
@@ -10114,14 +10162,8 @@ function regeneratePassengerGroups() {
         0,
         Math.round(basePeople * getPassengerDemandEventMultiplier(origin, destination, journey.routeIds)),
       );
-      const id = `${origin.id}:${destination.id}`;
-      const existing = groupsByOd.get(id);
-      if (existing) {
-        existing.people += basePeople;
-        existing.activeDemand += activeDemand;
-      } else {
-        groupsByOd.set(id, {
-          id,
+      mergeOdPassengerGroup(groupsByOd, {
+          id: `${origin.id}:${destination.id}`,
           originStationId: origin.id,
           destinationStationId: destination.id,
           people: basePeople,
@@ -10134,7 +10176,6 @@ function regeneratePassengerGroups() {
           activeDemand,
           journey,
         });
-      }
     }
   }
   passengerGroups = [...groupsByOd.values()];
@@ -10356,7 +10397,7 @@ function settleSimulationDay() {
     analysisState = { ...analysisState, lastNotifiedDay: analysisState.dayIndex };
     showToast(`운영 분석에 우선 확인 제안 ${criticalCount}건이 있습니다.`);
   }
-  persistState();
+  persistState(true);
   renderAll(selectedOperationRouteId);
 }
 
@@ -10844,7 +10885,7 @@ function setTool(tool: ToolMode) {
     deleteAnchor = null;
     mergeFirstEndpoint = null;
     updateLod();
-    renderAll(selectedRouteId ?? undefined);
+    requestUpdate("route-style", selectedRouteId ?? undefined);
     return;
   }
   map.dragging.disable();
@@ -10914,7 +10955,7 @@ function selectRoute(routeId: string | null, shouldRender = true) {
     deleteAnchor = null;
     plannedDeleteAnchor = null;
   mergeFirstEndpoint = null;
-  if (shouldRender) renderAll(selectedRouteId ?? undefined);
+  if (shouldRender) requestUpdate("route-style", selectedRouteId ?? undefined);
 }
 
 function findRoutesAtPoint(point: L.Point, thresholdPx: number) {
@@ -11013,7 +11054,7 @@ function renderLeftRouteWindow() {
     item.querySelector(".route-item-manage-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
       selectedRouteId = route.id;
-      renderAll(selectedRouteId);
+      requestUpdate("route-style", selectedRouteId);
       renderLeftRouteWindow();
       openLineManager();
       showToast(`${route.name} 노선 관리 패널을 열었습니다.`);
@@ -11021,7 +11062,7 @@ function renderLeftRouteWindow() {
 
     item.addEventListener("click", () => {
       selectedRouteId = route.id;
-      renderAll(selectedRouteId);
+      requestUpdate("route-style", selectedRouteId);
       renderLeftRouteWindow();
       openLineManager();
       playFeedback("select");
@@ -11294,7 +11335,7 @@ function renderTrainManager() {
         redoStack = [];
         persistState();
         renderTrainManager();
-        renderAll(route.id);
+        requestUpdate("fleet-service", route.id);
         showToast(`${route.name} 열차 1편성을 구입·추가 배치했습니다.`);
       }
     });
@@ -11314,7 +11355,7 @@ function renderTrainManager() {
         redoStack = [];
         persistState();
         renderTrainManager();
-        renderAll(route.id);
+        requestUpdate("fleet-service", route.id);
         showToast(`${route.name} 열차 편성을 감축했습니다.`);
       }
     });
@@ -11353,7 +11394,7 @@ function renderTrainManager() {
     redoStack = [];
     persistState();
     renderTrainManager();
-    renderAll(route.id);
+    requestUpdate("fleet-service", route.id);
     playFeedback("confirm");
     showToast(`${route.name}에 신규 ${cars}량 ${spec.label} 1편성을 도입했습니다.`);
   });
@@ -11363,6 +11404,17 @@ function saveLineManager() {
   const route = routes.find((item) => item.id === selectedRouteId);
   if (!route) return;
   const nextName = lineNameInput?.value.trim() || route.name;
+  const nextColor = lineColorInput?.value || route.color;
+  const nextFare = Number.isNaN(parseInt(lineFareInput?.value || "", 10))
+    ? economy.fare
+    : clampInteger(parseInt(lineFareInput?.value || "", 10), 900, 4200);
+  const serviceChanged =
+    route.visibility !== (lineVisibilitySelect?.value === "planning" ? "planning" : "public") ||
+    route.localServiceEnabled !== (localServiceToggle?.checked ?? true) ||
+    route.expressServiceEnabled !== (expressServiceToggle?.checked ?? false) ||
+    route.operationPaused !== (operationPausedToggle?.checked ?? false);
+  const styleChanged = route.name !== nextName || route.color !== nextColor;
+  const fareChanged = economy.fare !== nextFare;
   pushHistory();
   const fareVal = parseInt(lineFareInput?.value || "", 10);
   if (!isNaN(fareVal)) {
@@ -11373,7 +11425,7 @@ function saveLineManager() {
       ? {
           ...item,
           name: nextName,
-          color: lineColorInput?.value || item.color,
+          color: nextColor,
           visibility: lineVisibilitySelect?.value === "planning" ? "planning" : "public",
           localServiceEnabled: localServiceToggle?.checked ?? true,
           expressServiceEnabled: expressServiceToggle?.checked ?? false,
@@ -11394,7 +11446,10 @@ function saveLineManager() {
   redoStack = [];
   persistState();
   closeLineManager();
-  renderAll(route.id);
+  requestUpdates([
+    serviceChanged ? "network-structure" : styleChanged ? "route-style" : "fleet-service",
+    ...(fareChanged && !serviceChanged ? ["fare" as const] : []),
+  ], route.id);
   showToast(`${nextName} 설정을 저장했습니다`);
   playFeedback("confirm");
 }
@@ -12342,12 +12397,9 @@ function depotTouchesRoute(depot: Depot, route: RouteLine) {
 }
 
 function cleanupTransferData() {
-  const stationIds = new Set(stations.map((station) => station.id));
-  transfers = transfers
-    .map((transfer) => ({ ...transfer, stationIds: Array.from(new Set(transfer.stationIds.filter((id) => stationIds.has(id)))) }))
-    .filter((transfer) => transfer.stationIds.length >= 2);
-  const transferIds = new Set(transfers.map((transfer) => transfer.id));
-  stations = stations.map((station) => (station.transferGroupId && !transferIds.has(station.transferGroupId) ? { ...station, transferGroupId: undefined } : station));
+  const normalized = normalizeTransferLinks(stations, transfers);
+  stations = normalized.stations;
+  transfers = normalized.transfers;
 }
 
 /**
@@ -12355,9 +12407,24 @@ function cleanupTransferData() {
  * 편집 후 존재하지 않는 ID가 저장 데이터에 남는 것을 막는 참조 무결성 정리 단계다.
  */
 function synchronizeGraphReferences() {
-  const routeIds = new Set(routes.map((route) => route.id));
-  stations = stations.map((station) => {
-    const connectedRouteIds = station.connectedRouteIds.filter((id) => routeIds.has(id));
+  const synchronized = synchronizeNetworkReferences({
+    routeIds: routes.map((route) => route.id),
+    stations,
+    transfers,
+    depots,
+    fleets: trainFleets,
+    expressConfigs,
+    passengerGroups,
+    projects: constructionProjects,
+  });
+  transfers = synchronized.transfers;
+  depots = synchronized.depots;
+  trainFleets = synchronized.fleets;
+  expressConfigs = synchronized.expressConfigs;
+  passengerGroups = synchronized.passengerGroups;
+  constructionProjects = synchronized.projects;
+  stations = synchronized.stations.map((station) => {
+    const connectedRouteIds = station.connectedRouteIds;
     const point = L.latLng(station.position[0], station.position[1]);
     return {
       ...station,
@@ -12365,9 +12432,30 @@ function synchronizeGraphReferences() {
       routeNodeIds: connectedRouteIds.map((routeId) => findNearestGraphNodeId(routes.find((route) => route.id === routeId), point)).filter((id): id is string => Boolean(id)),
     };
   });
-  depots = depots.map((depot) => ({ ...depot, connectedRouteIds: depot.connectedRouteIds.filter((id) => routeIds.has(id)) }));
-  trainFleets = trainFleets.filter((fleet) => routeIds.has(fleet.routeId));
-  expressConfigs = expressConfigs.filter((config) => routeIds.has(config.routeId));
+  reportIntegrityIssues();
+}
+
+function reportIntegrityIssues() {
+  const issues = validateNetworkIntegrity({
+    routeIds: routes.map((route) => route.id),
+    stations,
+    transfers,
+    depots,
+    fleets: trainFleets,
+    expressConfigs,
+    passengerGroups,
+    projects: constructionProjects,
+    blueprintIds: plans.flatMap((plan) => [
+      plan.id,
+      ...plan.routes.flatMap((route) => [route.id, ...route.segments.map((segment) => segment.id)]),
+      ...plan.stations.map((station) => station.id),
+      ...plan.depots.map((depot) => depot.id),
+    ]),
+    numericState: { economy, stationDemandStates, analysisState, statisticsState },
+  });
+  if (issues.length > 0 && import.meta.env.DEV) {
+    console.warn(`[integrity] ${issues.length} recoverable issue(s) detected`, issues);
+  }
 }
 
 function mergeDuplicateStations(source: Station[]) {
@@ -13076,13 +13164,23 @@ function applyState(state: SaveState) {
   passengerGroups = state.passengerGroups ?? [];
   loans = state.loans ?? [];
   economy = { ...defaultEconomy, ...(state.economy ?? {}) };
+  synchronizeGraphReferences();
   if (!state.statisticsState && economy.demand > 0) statisticsState = { ...statisticsState, totalPassengers: economy.demand };
 }
 
-function persistState() {
+const localSaveRepository = new SaveRepository({
+  capture: () => measureTask("save-serialization", cloneState),
+  write: (state) => {
+    localStorage.setItem("draw-gyotong-state", serializeFiniteState(state));
+    localStorage.setItem("draw-gyotong-routes", serializeFiniteState(state.routes));
+  },
+  delayMs: 240,
+});
+
+function persistState(immediate = false) {
   synchronizeGraphReferences();
-  localStorage.setItem("draw-gyotong-state", JSON.stringify({ schemaVersion: currentSaveSchemaVersion, meta: currentMeta, routes, stations, transfers, depots, plans, diagramState, analysisState, statisticsState, constructionProjects, newsEvents, trainFleets, expressConfigs, passengerGroups, loans, economy, demandZones, stationDemandStates }));
-  localStorage.setItem("draw-gyotong-routes", JSON.stringify(routes));
+  if (immediate) void localSaveRepository.flush();
+  else localSaveRepository.request();
 }
 
 /**
@@ -13115,6 +13213,7 @@ function loadSavedState() {
       passengerGroups = Array.isArray(parsed.passengerGroups) ? parsed.passengerGroups : [];
       loans = Array.isArray(parsed.loans) ? parsed.loans : [];
       economy = { ...defaultEconomy, ...(parsed.economy ?? {}) };
+      synchronizeGraphReferences();
       if (!parsed.statisticsState && economy.demand > 0) statisticsState = { ...statisticsState, totalPassengers: economy.demand };
       return;
     }

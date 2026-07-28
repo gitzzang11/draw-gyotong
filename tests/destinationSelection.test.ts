@@ -16,6 +16,7 @@ describe("passenger destination selection", () => {
     const second = selectPassengerDestinations(stations[10], stations, { seed: "fixed", maxDestinations: 8, distanceKm });
     expect(second).toEqual(first);
     expect(first.every((choice) => choice.destinationId !== "s10")).toBe(true);
+    expect(new Set(first.map((choice) => choice.destinationId)).size).toBe(first.length);
   });
 
   it("produces near, middle and far trips without concentrating on only the farthest stations", () => {

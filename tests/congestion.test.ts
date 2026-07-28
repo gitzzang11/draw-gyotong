@@ -83,4 +83,15 @@ describe("path based congestion", () => {
     expect(summary.peakCrowding).toBe(Math.max(...base.map((segment) => segment.crowding)));
     expect(summary.busiestSegment?.direction).toBe("a>b");
   });
+
+  it("reports no capacity for a traversed service that is not operating", () => {
+    const segments = calculateSegmentCongestion(
+      [{ activeDemand: 800, journey: journey(["a", "b"]) }],
+      [],
+      "08",
+      0.1,
+    );
+    expect(segments[0]).toMatchObject({ hourlyCapacity: 0, passengerDemand: 80 });
+    expect(segments[0].crowding).toBe(Number.POSITIVE_INFINITY);
+  });
 });

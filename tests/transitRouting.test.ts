@@ -63,6 +63,23 @@ describe("graph routing", () => {
     expect(router.findJourney("c", "a")?.stationIds).toEqual(["c", "a"]);
   });
 
+  it("uses a reachable branch service instead of treating the main line as a dead end", () => {
+    const stations: RoutingStation[] = [
+      { id: "a", position: [37.5, 126.9], routeIds: ["main"] },
+      { id: "junction", position: [37.5, 126.92], routeIds: ["main", "branch"] },
+      { id: "b", position: [37.5, 126.94], routeIds: ["branch"] },
+    ];
+    const router = new TransitRouter({
+      stations,
+      transfers: [],
+      services: [
+        { id: "main:local", routeId: "main", kind: "local", paths: [{ id: "main", coordinates: [stations[0].position, stations[1].position] }], stopStationIds: ["a", "junction"], speedKph: 35, headwayMin: 4, crowding: 0.6 },
+        { id: "branch:local", routeId: "branch", kind: "local", paths: [{ id: "branch", coordinates: [stations[1].position, stations[2].position] }], stopStationIds: ["junction", "b"], speedKph: 35, headwayMin: 4, crowding: 0.6 },
+      ],
+    });
+    expect(router.findJourney("a", "b")?.routeIds).toEqual(["main", "branch"]);
+  });
+
   it("returns no path for unavailable destinations, closed boarding stations and construction paths", () => {
     const network = chainNetwork(1);
     expect(new TransitRouter(network).findJourney("p0", "missing")).toBeNull();
