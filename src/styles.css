@@ -1211,6 +1211,30 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   box-shadow: 0 0 16px var(--c-primary-glow);
 }
 
+#analysisButton {
+  position: relative;
+}
+
+#analysisBadge {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--c-danger);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
+}
+
+#analysisBadge[hidden] {
+  display: none;
+}
+
 /* ----------------------------------------------------
    7. SUB CARDS & POPOVERS
 ---------------------------------------------------- */
