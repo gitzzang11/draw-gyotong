@@ -1271,44 +1271,44 @@ app.innerHTML = `
     <section id="analysisScreen" class="analysis-screen" hidden aria-label="운영 분석 보고서">
       <header class="analysis-header">
         <div class="analysis-heading">
-          <span>OPERATIONS INTELLIGENCE</span>
-          <div><h2>운영 분석 보고서</h2><strong id="analysisUpdatedAt">게임 0일차</strong></div>
-          <p>현재 운영 데이터에 근거한 추정 제안입니다. 실행 전 비용과 효과를 직접 확인할 수 있습니다.</p>
+          <span><i aria-hidden="true"></i> OPERATIONS INTELLIGENCE</span>
+          <div><h2>운영 분석 센터</h2><strong id="analysisUpdatedAt">게임 0일차</strong></div>
+          <p>수요·혼잡·수익·시설 용량을 종합해 지금 확인할 운영 과제를 정리합니다.</p>
         </div>
         <div class="analysis-header-actions">
-          <button id="refreshAnalysisButton" type="button">다시 분석</button>
+          <button id="refreshAnalysisButton" type="button"><span aria-hidden="true">↻</span> 데이터 새로고침</button>
           <button id="closeAnalysisButton" class="analysis-close" type="button" aria-label="운영 분석 닫기">×</button>
         </div>
       </header>
       <div class="analysis-body">
         <aside class="analysis-summary">
           <div class="analysis-score-card">
-            <span>NETWORK HEALTH</span>
-            <strong id="analysisHealthScore">100</strong>
+            <div class="analysis-score-title"><span>NETWORK HEALTH</span><small>종합 운영 건전성</small></div>
+            <div class="analysis-score-ring"><strong id="analysisHealthScore">100</strong><small>/ 100</small></div>
             <em id="analysisHealthLabel">안정적</em>
           </div>
           <div class="analysis-summary-grid">
-            <div><span>긴급</span><strong id="analysisCriticalCount">0</strong></div>
-            <div><span>주의</span><strong id="analysisWarningCount">0</strong></div>
-            <div><span>참고</span><strong id="analysisInfoCount">0</strong></div>
+            <div class="critical"><i aria-hidden="true">!</i><span>긴급</span><strong id="analysisCriticalCount">0</strong></div>
+            <div class="warning"><i aria-hidden="true">△</i><span>주의</span><strong id="analysisWarningCount">0</strong></div>
+            <div class="info"><i aria-hidden="true">i</i><span>참고</span><strong id="analysisInfoCount">0</strong></div>
           </div>
-          <label class="analysis-filter"><span>표시 항목</span><select id="analysisFilter">
+          <label class="analysis-filter"><span>보고서 필터</span><select id="analysisFilter">
             <option value="active">현재 제안</option>
             <option value="later">나중에 보기</option>
             <option value="all">전체</option>
           </select></label>
-          <div class="analysis-principle"><strong>결정은 플레이어가 합니다</strong><span>이 보고서는 자동으로 자금을 사용하거나 노선을 변경하지 않습니다.</span></div>
+          <div class="analysis-principle"><i aria-hidden="true">◇</i><div><strong>분석은 조언만 제공합니다</strong><span>자금 사용과 노선 변경은 플레이어가 실행할 때만 반영됩니다.</span></div></div>
         </aside>
         <div class="analysis-report">
           <section class="analysis-section urgent">
-            <div class="analysis-section-title"><div><span>PRIORITY ACTIONS</span><h3>우선 확인</h3></div><strong id="analysisUrgentLabel"></strong></div>
+            <div class="analysis-section-title"><div><span>PRIORITY ACTIONS</span><h3><i aria-hidden="true">!</i> 우선 대응</h3></div><strong id="analysisUrgentLabel"></strong></div>
             <div id="analysisUrgentList" class="analysis-list"></div>
           </section>
           <section class="analysis-section">
-            <div class="analysis-section-title"><div><span>DAILY OPERATIONS REPORT</span><h3>정기 운영 보고서</h3></div><strong>긴급하지 않은 제안을 묶어 표시합니다</strong></div>
+            <div class="analysis-section-title"><div><span>DAILY OPERATIONS REPORT</span><h3><i aria-hidden="true">≡</i> 운영 제안</h3></div><strong>운영 지표를 기준으로 자동 정렬</strong></div>
             <div id="analysisReportList" class="analysis-list"></div>
           </section>
-          <div id="analysisEmptyState" class="analysis-empty" hidden><strong>현재 제안이 없습니다</strong><span>운영 지표가 기준 범위 안에 있습니다. 운행을 계속하면 변화 추세를 분석합니다.</span></div>
+          <div id="analysisEmptyState" class="analysis-empty" hidden><i aria-hidden="true">✓</i><strong>현재 운영 상태가 안정적입니다</strong><span>새로운 추세가 발견되면 이곳에 운영 제안을 표시합니다.</span></div>
         </div>
       </div>
     </section>
@@ -3826,7 +3826,20 @@ function selectTransferStation(point: L.Point) {
   const endpoint: ManualTransferEndpoint | null =
     plannedDistance < actualDistance && planned ? { kind: "planned", id: planned.id } : actual ? { kind: "actual", id: actual.id } : planned ? { kind: "planned", id: planned.id } : null;
   if (!endpoint) {
-    setText(facilityReadout, planningMode ? "기존역 또는 계획역을 선택하세요" : "환승할 기존역을 선택하세요");
+    setText(facilityReadout, planningMode ? "기존역 또는 계획역을 선택하세요" : "해제할 환승역을 선택하세요");
+    return;
+  }
+  if (!planningMode) {
+    if (endpoint.kind === "actual" && actual?.transferGroupId) {
+      removeTransferGroup(actual.transferGroupId, actual.id);
+    } else {
+      selectedManualTransferEndpoints = [];
+      selectedTransferStationIds = [];
+      selectedPlannedStationIds = [];
+      setText(facilityReadout, "일반역입니다 · 해제할 기존 환승역을 선택하세요");
+      showToast("공사 모드에서는 기존 환승 연결 해제만 지원합니다.");
+      renderAll(actual?.id);
+    }
     return;
   }
   selectedManualTransferEndpoints = [...selectedManualTransferEndpoints.filter((item) => item.kind !== endpoint.kind || item.id !== endpoint.id), endpoint].slice(-2);
@@ -3873,6 +3886,40 @@ function selectTransferStation(point: L.Point) {
   renderAll(actualStationIds[0]);
 }
 
+function removeTransferGroup(transferGroupId: string, focusedStationId?: string) {
+  const transfer = transfers.find((item) => item.id === transferGroupId);
+  if (!transfer) {
+    cleanupTransferData();
+    renderAll(focusedStationId);
+    return;
+  }
+
+  const memberNames = transfer.stationIds
+    .map((stationId) => stations.find((station) => station.id === stationId)?.name)
+    .filter(Boolean);
+  pushHistory();
+  transfers = transfers.filter((item) => item.id !== transferGroupId);
+  stations = stations.map((station) =>
+    station.transferGroupId === transferGroupId ? { ...station, transferGroupId: undefined } : station,
+  );
+  const diagramNodeId = `transfer:${transferGroupId}`;
+  diagramState = {
+    ...diagramState,
+    autoPositions: Object.fromEntries(Object.entries(diagramState.autoPositions).filter(([id]) => id !== diagramNodeId)),
+    manualPositions: Object.fromEntries(Object.entries(diagramState.manualPositions).filter(([id]) => id !== diagramNodeId)),
+    networkSignature: "",
+  };
+  selectedManualTransferEndpoints = [];
+  selectedTransferStationIds = [];
+  selectedPlannedStationIds = [];
+  redoStack = [];
+  persistState();
+  renderAll(focusedStationId);
+  setText(facilityReadout, "환승 해제 완료 · 각 노선의 역을 개별 일반역으로 전환했습니다");
+  showToast(`${memberNames.join(" · ") || "환승역"} 환승을 해제하고 ${transfer.stationIds.length}개 일반역으로 분리했습니다.`);
+  playFeedback("confirm");
+}
+
 function createTransferGroup(stationIds: string[], automatic: boolean) {
   const uniqueStationIds = Array.from(new Set(stationIds));
   if (uniqueStationIds.length < 2) return;
@@ -3880,13 +3927,33 @@ function createTransferGroup(stationIds: string[], automatic: boolean) {
   if (duplicate) return;
 
   const selectedStations = uniqueStationIds.map((id) => stations.find((station) => station.id === id)).filter(Boolean) as Station[];
-  const distanceM = calculateTransferDistance(selectedStations);
-  const congestion = Math.min(2.4, selectedStations.reduce((sum, station) => sum + station.demand, 0) / 22000);
-  const transferTimeMin = Math.round((distanceM / 75 + 2 + congestion * 1.4) * 10) / 10;
-  const resistance = Math.round((distanceM * 0.04 + transferTimeMin * 12 + congestion * 28) * 10) / 10;
+  const { distanceM, congestion, transferTimeMin, resistance } = calculateTransferMetrics(selectedStations);
   const groupId = createId("transfer");
   transfers = [...transfers, { id: groupId, stationIds: uniqueStationIds, distanceM, transferTimeMin, congestion, resistance, automatic }];
   stations = stations.map((station) => (uniqueStationIds.includes(station.id) ? { ...station, transferGroupId: groupId } : station));
+}
+
+function calculateTransferMetrics(selectedStations: Station[]) {
+  const distanceM = calculateTransferDistance(selectedStations);
+  const congestion = Math.min(2.4, selectedStations.reduce((sum, station) => sum + station.demand, 0) / 22000);
+  const effectiveDistanceM = Math.max(0, distanceM - 10);
+  const congestionExposure = Math.min(1, effectiveDistanceM / 140);
+  const walkTimeMin = effectiveDistanceM / 80;
+  const congestionDelayMin = congestion * 1.1 * congestionExposure;
+  const transferTimeMin = Math.round((0.15 + walkTimeMin + congestionDelayMin) * 10) / 10;
+  const resistance = Math.round(
+    (effectiveDistanceM * 0.025 + transferTimeMin * 8 + congestion * 12 * congestionExposure) * 10,
+  ) / 10;
+  return { distanceM, congestion, transferTimeMin, resistance };
+}
+
+function refreshTransferMetrics() {
+  transfers = transfers.map((transfer) => {
+    const transferStations = transfer.stationIds
+      .map((id) => stations.find((station) => station.id === id))
+      .filter(Boolean) as Station[];
+    return transferStations.length >= 2 ? { ...transfer, ...calculateTransferMetrics(transferStations) } : transfer;
+  });
 }
 
 type DiagramNodeInternal = {
@@ -4962,6 +5029,9 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   });
   planningModeButton?.classList.toggle("active", shouldPlan);
   planningModeButton?.setAttribute("aria-pressed", String(shouldPlan));
+  const transferToolLabel = transferTool?.querySelector("span");
+  if (transferToolLabel) transferToolLabel.textContent = nextMode === "construction" ? "환승 해제" : "환승";
+  transferTool?.setAttribute("aria-label", nextMode === "construction" ? "기존 환승역 해제" : "환승 연결");
   for (const button of [extendTool, editTool, eraserTool, reconnectTool, branchTool, mergeTool]) {
     if (button) button.disabled = false;
   }
@@ -4975,7 +5045,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   const hints: Record<WorkspaceMode, string[]> = {
     management: ["지도를 이동하거나 시설을 선택", "운영·노선 정보를 확인"],
     planning: ["건설 전 설계안을 자유롭게 편집", "설계안은 비용이 차감되지 않음"],
-    construction: ["철거 도구로 노선과 역의 범위를 선택", "확정 전까지 지도는 바뀌지 않음"],
+    construction: ["기존 환승역 해제 또는 시설 철거", "환승 해제 후 각 역은 개별 일반역으로 전환"],
   };
   setHint(hints[nextMode]);
   renderAll(selectedRouteId ?? undefined);
@@ -5708,6 +5778,7 @@ function renderAll(selectedId?: string) {
   document.body.classList.toggle("has-network", routes.length > 0);
   document.body.classList.toggle("has-route-selection", Boolean(selectedRouteId));
   document.body.dataset.activeTool = activeTool;
+  refreshTransferMetrics();
   regeneratePassengerGroups();
   updateOperationRouteOptions();
   renderRoutes(selectedRouteId ?? selectedId);
@@ -7251,6 +7322,10 @@ function renderAnalysisScreen() {
   const warning = active.filter((suggestion) => suggestion.severity === "warning").length;
   const info = active.filter((suggestion) => suggestion.severity === "info").length;
   const health = Math.max(0, 100 - critical * 18 - warning * 8 - info * 2);
+  if (analysisScreen) {
+    analysisScreen.style.setProperty("--analysis-health", String(health));
+    analysisScreen.dataset.health = health >= 86 ? "stable" : health >= 65 ? "warning" : "critical";
+  }
   setText(analysisUpdatedAt, `게임 ${analysisState.dayIndex}일차 · ${analysisState.demandHistory.length}일 추세`);
   setText(analysisHealthScore, String(health));
   setText(analysisHealthLabel, health >= 86 ? "안정적" : health >= 65 ? "점검 필요" : "집중 개선");
@@ -7269,6 +7344,7 @@ function renderAnalysisScreen() {
 
 function renderSuggestionCard(suggestion: OperationSuggestion) {
   const severityLabel = suggestion.severity === "critical" ? "긴급" : suggestion.severity === "warning" ? "주의" : "참고";
+  const severityIcon = suggestion.severity === "critical" ? "!" : suggestion.severity === "warning" ? "△" : "i";
   const statusLabel =
     suggestion.status === "later"
       ? `${Math.max(0, (suggestion.remindAtDay ?? analysisState.dayIndex) - analysisState.dayIndex)}일 후 다시 표시`
@@ -7276,8 +7352,8 @@ function renderSuggestionCard(suggestion: OperationSuggestion) {
         ? "숨김됨"
         : "현재 제안";
   return `<article class="analysis-card severity-${suggestion.severity} status-${suggestion.status}" data-suggestion-id="${escapeHtml(suggestion.id)}">
-    <header><div><span class="analysis-severity">${severityLabel}</span><span class="analysis-target">${escapeHtml(suggestion.targetLabel)}</span></div><em>${statusLabel}</em></header>
-    <h4>${escapeHtml(suggestion.title)}</h4>
+    <header><div><span class="analysis-severity"><i aria-hidden="true">${severityIcon}</i>${severityLabel}</span><span class="analysis-target">${escapeHtml(suggestion.targetLabel)}</span></div><em>${statusLabel}</em></header>
+    <div class="analysis-card-title"><h4>${escapeHtml(suggestion.title)}</h4><span aria-hidden="true">→</span></div>
     <dl>
       <div><dt>원인</dt><dd>${escapeHtml(suggestion.cause)}</dd></div>
       <div><dt>추천 행동</dt><dd>${escapeHtml(suggestion.recommendation)}</dd></div>
@@ -8641,7 +8717,7 @@ function setTool(tool: ToolMode) {
   const allowedTools: Record<WorkspaceMode, ToolMode[]> = {
     management: ["pan"],
     planning: ["pan", "route", "extend", "station", "transfer", "depot", "eraser", "branch", "merge"],
-    construction: ["pan", "eraser"],
+    construction: ["pan", "transfer", "eraser"],
   };
   if (!allowedTools[workspaceMode].includes(tool)) {
     const targetMode = ["route", "extend", "station", "transfer", "depot", "branch", "merge"].includes(tool)
@@ -8718,7 +8794,9 @@ function setTool(tool: ToolMode) {
     branch: planningMode ? ["계획 분기", ["계획 노선 위에서 시작", "새 점선 분기를 그린 뒤 계획에 저장"]] : ["분기 건설", ["기존 노선 위에서 시작", "완공 후 균등 배차"]],
     merge: planningMode ? ["계획 노선 연결", ["첫 계획 노선 끝점 선택", "다른 계획 노선 끝점 선택", "자금 차감 없이 하나의 설계안으로 정리"]] : ["노선 연결", ["첫 노선 끝점 선택", "다른 노선 끝점 선택", "거리와 비용을 확인한 뒤 확정"]],
     station: ["역 배치", ["완성 노선 위 터치", "가까운 노선 자동 연결"]],
-    transfer: ["수동 환승", ["첫 번째 기존역 또는 계획역 선택", "두 번째 역 선택", "자동 환승 없음"]],
+    transfer: planningMode
+      ? ["수동 환승 계획", ["첫 번째 기존역 또는 계획역 선택", "두 번째 역 선택", "계획에 환승 연결 저장"]]
+      : ["환승 해제", ["해제할 기존 환승역을 선택", "그룹의 모든 역이 개별 일반역으로 전환", "실행 취소로 복원 가능"]],
     depot: ["차량기지", ["노선과 겹치거나 30m 안", "밝게 표시된 노선에 닿게 그리기"]],
     expressStop: ["급행 정차역", ["정차역 터치 토글", "급행 운영비 추가"]],
   };
