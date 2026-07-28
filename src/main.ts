@@ -1,6 +1,46 @@
 import L, { type Coords, type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
+import { selectPassengerDestinations } from "./destinationSelection.ts";
+import {
+  buildNetworkSignature,
+  TransitRouter,
+  type RoutingNetwork,
+  type TransitJourney,
+  type TransitServiceKind,
+} from "./transitRouting.ts";
+import {
+  type RouteCongestionSummary,
+  type SegmentCongestion,
+  type ServiceCapacity,
+} from "./congestion.ts";
+import {
+  calculateOperatingForecast,
+  calculatePassengerSatisfaction,
+  type OperatingForecast,
+} from "./operatingForecast.ts";
+import {
+  distanceToSegment,
+  getTargetHitRadius,
+  pointInPolygon as hitPointInPolygon,
+  resolveMapTarget,
+  type MapHitCandidate,
+} from "./mapHitTest.ts";
+import {
+  advanceStationDemand,
+  allocateCatchmentDemand,
+  calculateTransitCaptureRate,
+  createLegacyDemandZones,
+  createRegionalDemandGrid,
+  createStationDemandState,
+  getDestinationPeriodMultiplier,
+  getDemandPeriod,
+  previewStationDemand,
+  type DemandAttractiveness,
+  type DemandEvent,
+  type DemandZone,
+  type StationDemandState,
+} from "./demandModel.ts";
 
 // =============================================================================
 // 도메인 모델
@@ -103,6 +143,10 @@ type Station = {
   name: string;
   position: [number, number];
   demand: number;
+  /** Legacy compatibility mirror. Canonical values live in stationDemandStates. */
+  potentialDemand?: number;
+  realizedDemand?: number;
+  transitCaptureRate?: number;
   connectedRouteIds: string[];
   routeNodeIds?: string[];
   transferGroupId?: string;
@@ -374,6 +418,7 @@ type PassengerGroup = {
   crowding: number;
   satisfaction: number;
   activeDemand: number;
+  journey?: TransitJourney;
 };
 
 type Loan = {
@@ -406,6 +451,9 @@ type DailyStatisticsRecord = {
   transitShare: number;
   assets: number;
   liabilities: number;
+  crowding?: number;
+  waitMin?: number;
+  captureRate?: number;
 };
 
 type StatisticsState = {
@@ -542,6 +590,8 @@ type SaveState = {
   passengerGroups?: PassengerGroup[];
   loans?: Loan[];
   economy?: EconomyState;
+  demandZones?: DemandZone[];
+  stationDemandStates?: StationDemandState[];
 };
 
 type SaveSlotSummary = {
@@ -608,7 +658,7 @@ const bridgeConstructionDays = 120;
 const tunnelConstructionDays = 240;
 const stationSnapPx = 24;
 const maxHistory = 20;
-const currentSaveSchemaVersion = 2;
+const currentSaveSchemaVersion = 3;
 const saveDatabaseVersion = 2;
 const trainCatalog: Record<TrainType, { label: string; capacityPerCar: number; pricePerCar: number; maintenancePerCar: number; speedKmh: number }> = {
   metro: { label: "도시철도", capacityPerCar: 160, pricePerCar: 28, maintenancePerCar: 2.2, speedKmh: 34 },
@@ -842,7 +892,7 @@ const newsEventCatalog: Record<
   recession: { tone: "change", title: "지역 경기 둔화", summary: "통행 수요가 줄지만 합리적인 운임으로 이용을 유도할 수 있습니다.", demandMultiplier: 0.92, operatingCostMultiplier: 1.04, duration: [7, 12], action: "review-fare", actionLabel: "운임 전략 검토" },
 };
 
-const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; demandMultiplier: number; constructionMultiplier: number; mountainMultiplier: number; riverMultiplier: number; growthMultiplier: number; description: string }> = {
+const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; demandMultiplier: number; constructionMultiplier: number; mountainMultiplier: number; riverMultiplier: number; description: string }> = {
   seoul: {
     name: "서울",
     center: [37.5665, 126.978],
@@ -850,7 +900,6 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
     constructionMultiplier: 1,
     mountainMultiplier: 1,
     riverMultiplier: 1.35,
-    growthMultiplier: 1,
     description: "높은 수요, 강 많음",
   },
   busan: {
@@ -860,7 +909,6 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
     constructionMultiplier: 1.25,
     mountainMultiplier: 1.55,
     riverMultiplier: 0.9,
-    growthMultiplier: 0.95,
     description: "산 많음, 건설 비용 증가",
   },
   daejeon: {
@@ -870,8 +918,7 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
     constructionMultiplier: 0.95,
     mountainMultiplier: 0.9,
     riverMultiplier: 0.85,
-    growthMultiplier: 1.04,
-    description: "안정적인 성장",
+    description: "균형적인 지역 수요",
   },
   gwangju: {
     name: "광주",
@@ -880,8 +927,7 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
     constructionMultiplier: 0.9,
     mountainMultiplier: 0.95,
     riverMultiplier: 0.85,
-    growthMultiplier: 1.12,
-    description: "성장형 도시",
+    description: "분산된 지역 수요",
   },
 };
 
@@ -1257,6 +1303,7 @@ app.innerHTML = `
             <strong id="financeDemandReadout" class="finance-val">0 명</strong>
           </div>
         </div>
+        <div id="financeForecastContent"></div>
 
         <div class="finance-section">
           <h3>대출 및 금융 관리</h3>
@@ -1780,11 +1827,13 @@ const landuseLayer = L.geoJSON(undefined, {
 
 const facilityInteractionPane = map.createPane("facilityInteractionPane");
 facilityInteractionPane.style.zIndex = "690";
+facilityInteractionPane.style.pointerEvents = "none";
 const trainInteractionPane = map.createPane("trainInteractionPane");
 trainInteractionPane.style.zIndex = "790";
 trainInteractionPane.style.pointerEvents = "none";
 const stationInteractionPane = map.createPane("stationInteractionPane");
 stationInteractionPane.style.zIndex = "780";
+stationInteractionPane.style.pointerEvents = "none";
 
 const routeLayer = L.layerGroup().addTo(map);
 const constructionLayer = L.layerGroup().addTo(map);
@@ -1847,6 +1896,7 @@ const financeCashReadout = byId("financeCashReadout");
 const financeDailyNetReadout = byId("financeDailyNetReadout");
 const financeLoanReadout = byId("financeLoanReadout");
 const financeDemandReadout = byId("financeDemandReadout");
+const financeForecastContent = byId("financeForecastContent");
 const dialogFareInput = document.querySelector<HTMLInputElement>("#dialogFareInput");
 const dialogAutoFareButton = document.querySelector<HTMLButtonElement>("#dialogAutoFareButton");
 const dialogLoanButton = document.querySelector<HTMLButtonElement>("#dialogLoanButton");
@@ -2133,6 +2183,15 @@ let newsEvents: NewsEvent[] = [];
 let trainFleets: TrainFleet[] = [];
 let expressConfigs: ExpressConfig[] = [];
 let passengerGroups: PassengerGroup[] = [];
+let segmentCongestion: SegmentCongestion[] = [];
+let routeCongestionSummaries: RouteCongestionSummary[] = [];
+let transitRouter: TransitRouter | null = null;
+let transitRouterSignature = "";
+let demandZones: DemandZone[] = [];
+let stationDemandStates: StationDemandState[] = [];
+let demandStructureSignature = "";
+let demandServiceSignature = "";
+let demandContextSignature = "";
 let loans: Loan[] = [];
 let economy: EconomyState = { ...defaultEconomy };
 let currentMeta: GameMeta = createDefaultMeta();
@@ -2204,6 +2263,31 @@ let loadingComplete = false;
 let retryAction: (() => void) | null = null;
 let tileErrorReported = false;
 const trainMarkers = new Map<string, L.Marker>();
+type TrainHitTarget = {
+  key: string;
+  routeId: string;
+  fleetId: string;
+  setNumber: number;
+  label: string;
+  position: [number, number];
+};
+type MapSelectionData =
+  | { kind: "train"; target: TrainHitTarget }
+  | { kind: "station"; stationId: string }
+  | { kind: "depot"; depotId: string }
+  | { kind: "route"; routeId: string }
+  | { kind: "construction"; projectId: string }
+  | { kind: "blueprint"; planId: string; assetId: string; assetKind: "route" | "station" | "depot" };
+type MapSelectionGesture = {
+  pointerId: number;
+  pointerType: string;
+  start: L.Point;
+  moved: boolean;
+  cancelled: boolean;
+};
+const trainHitTargets = new Map<string, TrainHitTarget>();
+const mapSelectionPointers = new Set<number>();
+let mapSelectionGesture: MapSelectionGesture | null = null;
 
 const mapContainer = map.getContainer();
 mapContainer.addEventListener("pointerdown", onPointerDown, { passive: false });
@@ -2661,12 +2745,176 @@ function combinePlanningContinuation(points: LatLng[]) {
   return continuation.atStart ? [...addition.reverse(), ...continuation.basePoints] : [...continuation.basePoints, ...addition];
 }
 
+function nearestScreenPathDistance(point: L.Point, coordinates: Array<[number, number]>) {
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const start = map.latLngToContainerPoint(L.latLng(...coordinates[index - 1]));
+    const end = map.latLngToContainerPoint(L.latLng(...coordinates[index]));
+    best = Math.min(best, distanceToSegment(point, start, end));
+  }
+  return best;
+}
+
+function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCandidate[] {
+  const touch = pointerType === "touch";
+  const candidates: MapHitCandidate[] = [];
+  if (workspaceMode === "management" && map.getZoom() >= 14) {
+    for (const target of trainHitTargets.values()) {
+      const targetPoint = map.latLngToContainerPoint(L.latLng(...target.position));
+      const dx = Math.abs(point.x - targetPoint.x);
+      const dy = Math.abs(point.y - targetPoint.y);
+      const halfWidth = getTargetHitRadius("train", pointerType);
+      const halfHeight = touch ? 16 : 10;
+      candidates.push({
+        id: target.key,
+        kind: "train",
+        label: target.label,
+        distancePx: Math.hypot(dx, dy),
+        hit: dx <= halfWidth && dy <= halfHeight,
+        data: { kind: "train", target } satisfies MapSelectionData,
+      });
+    }
+  }
+  if (map.getZoom() >= 13) {
+    const stationRadius = getTargetHitRadius("station", pointerType);
+    for (const station of stations) {
+      const distancePx = point.distanceTo(map.latLngToContainerPoint(L.latLng(...station.position)));
+      candidates.push({
+        id: station.id,
+        kind: "station",
+        label: station.name,
+        distancePx,
+        hit: distancePx <= stationRadius,
+        data: { kind: "station", stationId: station.id } satisfies MapSelectionData,
+      });
+    }
+    for (const transfer of transfers) {
+      const transferStations = transfer.stationIds.map((id) => stations.find((station) => station.id === id)).filter(Boolean) as Station[];
+      if (transferStations.length < 2) continue;
+      const centre = L.latLng(
+        transferStations.reduce((sum, station) => sum + station.position[0], 0) / transferStations.length,
+        transferStations.reduce((sum, station) => sum + station.position[1], 0) / transferStations.length,
+      );
+      const distancePx = point.distanceTo(map.latLngToContainerPoint(centre));
+      candidates.push({
+        id: transfer.id,
+        kind: "transfer",
+        label: transferStations.map((station) => station.name).join(" / "),
+        distancePx,
+        hit: distancePx <= getTargetHitRadius("transfer", pointerType),
+        data: { kind: "station", stationId: transferStations[0].id } satisfies MapSelectionData,
+      });
+    }
+  }
+  for (const depot of depots) {
+    const polygon = depot.polygon.map((coordinate) => map.latLngToContainerPoint(L.latLng(...coordinate)));
+    const inside = hitPointInPolygon(point, polygon);
+    candidates.push({
+      id: depot.id,
+      kind: "depot",
+      label: depot.name,
+      distancePx: inside ? 0 : Number.POSITIVE_INFINITY,
+      hit: inside,
+      data: { kind: "depot", depotId: depot.id } satisfies MapSelectionData,
+    });
+  }
+  if (workspaceMode === "construction") {
+    for (const project of constructionProjects.filter((item) => item.status !== "operating" && item.coordinates.length >= 2)) {
+      const distancePx = nearestScreenPathDistance(point, project.coordinates);
+      candidates.push({
+        id: project.id,
+        kind: "construction",
+        label: project.name,
+        distancePx,
+        hit: distancePx <= getTargetHitRadius("construction", pointerType),
+        data: { kind: "construction", projectId: project.id } satisfies MapSelectionData,
+      });
+    }
+  }
+  if (workspaceMode === "planning" || planningMode) {
+    for (const plan of plans.filter((item) => item.cityId === currentMeta.cityId)) {
+      for (const route of plan.routes) {
+        const distancePx = nearestScreenPathDistance(point, route.coordinates);
+        candidates.push({
+          id: route.id,
+          kind: "blueprint",
+          label: route.name,
+          distancePx,
+          hit: distancePx <= getTargetHitRadius("blueprint", pointerType),
+          data: { kind: "blueprint", planId: plan.id, assetId: route.id, assetKind: "route" } satisfies MapSelectionData,
+        });
+      }
+    }
+  }
+  const routeRadius = getTargetHitRadius("route", pointerType);
+  for (const route of routes) {
+    const distancePx = Math.min(...getRoutePaths(route).map((path) =>
+      nearestScreenPathDistance(point, path.map((latLng) => [latLng.lat, latLng.lng] as [number, number]))
+    ));
+    candidates.push({
+      id: route.id,
+      kind: "route",
+      label: route.name,
+      distancePx,
+      hit: distancePx <= routeRadius,
+      data: { kind: "route", routeId: route.id } satisfies MapSelectionData,
+    });
+  }
+  return candidates;
+}
+
+function activateMapSelection(data: MapSelectionData) {
+  if (data.kind === "train") {
+    selectRoute(data.target.routeId);
+    openTrainManagerForFleet(data.target.fleetId, data.target.setNumber);
+  } else if (data.kind === "station") {
+    openStationManager(data.stationId);
+  } else if (data.kind === "depot") {
+    selectedDepotId = data.depotId;
+    openDepotManager(data.depotId);
+  } else if (data.kind === "route") {
+    selectRoute(data.routeId);
+    openLineManager();
+  } else if (data.kind === "construction") {
+    openConstructionManager();
+  } else {
+    activePlanId = data.planId;
+    openPlanningDialog();
+  }
+}
+
+function openMapTargetChoice(candidates: Array<MapHitCandidate & { score: number }>) {
+  if (!routeChoiceDialog || !routeChoiceList) return;
+  routeChoiceList.innerHTML = candidates.map((candidate, index) =>
+    `<button type="button" data-map-target-index="${index}"><span><strong>${escapeHtml(candidate.label)}</strong><small>${candidate.kind}</small></span></button>`
+  ).join("");
+  routeChoiceList.querySelectorAll<HTMLButtonElement>("[data-map-target-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const candidate = candidates[Number(button.dataset.mapTargetIndex)];
+      if (candidate?.data) activateMapSelection(candidate.data as MapSelectionData);
+      closeRouteChoice();
+    });
+  });
+  routeChoiceDialog.hidden = false;
+}
+
+function handleUnifiedMapSelection(point: L.Point, pointerType: string) {
+  const result = resolveMapTarget(collectMapHitCandidates(point, pointerType), pointerType, 7, workspaceMode);
+  if (!result.selected) {
+    selectRoute(null);
+    return;
+  }
+  if (result.alternatives.length > 0) {
+    openMapTargetChoice([result.selected, ...result.alternatives]);
+    return;
+  }
+  if (result.selected.data) activateMapSelection(result.selected.data as MapSelectionData);
+}
+
 function onPointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   const pointerTarget = event.target as HTMLElement;
-  if (pointerTarget.closest(".planned-facility-click-target")) return;
-  if (activeTool === "pan" && pointerTarget.closest(".station-map-marker, .station-click-target, .depot-map-shape, .depot-click-target")) return;
-  if (pointerTarget.closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .train-icon, .construction-preview-panel, .dialog-backdrop")) return;
+  if (pointerTarget.closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .construction-preview-panel, .dialog-backdrop")) return;
   if (demolitionReview) return;
   if (event.pointerType === "touch" && activePointerId !== null && event.pointerId !== activePointerId) {
     cancelActiveDrawing();
@@ -2674,29 +2922,20 @@ function onPointerDown(event: PointerEvent) {
     return;
   }
   const point = containerPointFromEvent(event);
+  if (activeTool === "pan") {
+    mapSelectionPointers.add(event.pointerId);
+    if (mapSelectionPointers.size > 1 && mapSelectionGesture) mapSelectionGesture.cancelled = true;
+    if (!mapSelectionGesture) {
+      mapSelectionGesture = { pointerId: event.pointerId, pointerType: event.pointerType, start: point, moved: false, cancelled: false };
+    }
+    return;
+  }
   const planningContinuation = findPlanningRouteContinuation(point);
   if (constructionDraft && activePointerId === null && !planningContinuation) {
     map.dragging.enable();
     return;
   }
 
-  if (activeTool === "pan") {
-    const station = findNearestStationAtPoint(point, 40);
-    if (station) {
-      openStationManager(station.id);
-      return;
-    }
-    const hits = findRoutesAtPoint(point, 26);
-    if (hits.length === 0) {
-      selectRoute(null);
-    } else if (hits.length === 1) {
-      selectRoute(hits[0].id);
-      openLineManager();
-    } else {
-      openRouteChoice(hits);
-    }
-    return;
-  }
   if (activePointerId === null) map.dragging.disable();
   if (activeTool === "edit") {
     event.preventDefault();
@@ -2855,6 +3094,11 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onPointerMove(event: PointerEvent) {
+  if (activeTool === "pan" && mapSelectionGesture?.pointerId === event.pointerId) {
+    const threshold = event.pointerType === "touch" ? 12 : 5;
+    if (containerPointFromEvent(event).distanceTo(mapSelectionGesture.start) > threshold) mapSelectionGesture.moved = true;
+    return;
+  }
   if (event.pointerId !== activePointerId) return;
   event.preventDefault();
   const point = containerPointFromEvent(event);
@@ -2893,6 +3137,17 @@ function onPointerMove(event: PointerEvent) {
 }
 
 function onPointerUp(event: PointerEvent) {
+  if (activeTool === "pan") {
+    mapSelectionPointers.delete(event.pointerId);
+    const gesture = mapSelectionGesture;
+    if (gesture?.pointerId === event.pointerId) {
+      mapSelectionGesture = null;
+      if (!gesture.moved && !gesture.cancelled && mapSelectionPointers.size === 0) {
+        handleUnifiedMapSelection(containerPointFromEvent(event), gesture.pointerType);
+      }
+    }
+    return;
+  }
   if (event.pointerId !== activePointerId) return;
   event.preventDefault();
   if (activeTool === "edit" && activeHandleMove) {
@@ -6271,9 +6526,9 @@ function renderPlans() {
         fillColor: "#56636b",
         fillOpacity: canDelete ? 0.82 : 0.65,
         dashArray: "3 2",
-        interactive: canDelete,
+        interactive: false,
         bubblingMouseEvents: false,
-        className: canDelete ? "planned-facility-click-target" : "",
+        className: "",
       }).addTo(planLayer);
       if (canDelete) {
         marker.bindTooltip(`${station.name} · 클릭하여 계획에서 삭제`, { direction: "top", offset: [0, -10] });
@@ -6292,9 +6547,9 @@ function renderPlans() {
         weight: canDelete ? 3 : 2,
         opacity: canDelete ? 0.92 : 0.7,
         dashArray: "7 7",
-        interactive: canDelete,
+        interactive: false,
         bubblingMouseEvents: false,
-        className: canDelete ? "planned-facility-click-target" : "",
+        className: "",
       }).addTo(planLayer);
       if (canDelete) {
         polygon.bindTooltip(`${depot.name} · 클릭하여 계획에서 삭제`, { direction: "center" });
@@ -6812,7 +7067,7 @@ function renderAll(selectedId?: string) {
   document.body.classList.toggle("has-route-selection", Boolean(selectedRouteId));
   document.body.dataset.activeTool = activeTool;
   refreshTransferMetrics();
-  regeneratePassengerGroups();
+  ensureDemandSimulation();
   updateOperationRouteOptions();
   renderRoutes(selectedRouteId ?? selectedId);
   renderConstructionProjects();
@@ -7046,6 +7301,11 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
 function resetWorld() {
   routes = [];
   stations = [];
+  demandZones = [];
+  stationDemandStates = [];
+  demandStructureSignature = "";
+  demandServiceSignature = "";
+  demandContextSignature = "";
   transfers = [];
   depots = [];
   plans = [];
@@ -7194,9 +7454,70 @@ function migrateSaveStateRecord(input: unknown): SaveState {
   const migratedStations = (Array.isArray(source.stations) ? source.stations : []).map((station, index) => ({
     ...station,
     id: ensureStableId(station?.id, "station", `${slotId}:${index}:${station?.position?.join(",")}`),
+    demand: Number.isFinite(station?.demand) ? Math.max(0, Math.round(station!.demand)) : 0,
     connectedRouteIds: station?.connectedRouteIds ?? [],
     routeNodeIds: station?.routeNodeIds ?? [],
   })) as Station[];
+  const savedDemandZones = Array.isArray(source.demandZones) ? source.demandZones : [];
+  const migratedDemandZones = savedDemandZones.length > 0
+    ? savedDemandZones
+    : createLegacyDemandZones(
+      migratedStations.map((station) => ({
+        id: station.id,
+        position: station.position,
+        operational: true,
+        legacyDemand: station.realizedDemand ?? station.demand,
+      })),
+    );
+  const demandDay = normalizeAnalysisState(source.analysisState).dayIndex;
+  const demandAllocation = allocateCatchmentDemand(
+    migratedDemandZones,
+    migratedStations.map((station) => ({
+      id: station.id,
+      position: station.position,
+      operational: true,
+      legacyDemand: station.realizedDemand ?? station.demand,
+    })),
+    demandDay,
+    "daytime",
+  );
+  const sourceDemandStates = new Map(
+    (Array.isArray(source.stationDemandStates) ? source.stationDemandStates : [])
+      .filter((state) => state && typeof state.stationId === "string")
+      .map((state) => [state.stationId, state]),
+  );
+  const migratedDemandStates = migratedStations.map((station) => {
+    const existing = sourceDemandStates.get(station.id);
+    const created = createStationDemandState(
+      {
+        id: station.id,
+        position: station.position,
+        operational: true,
+        legacyDemand: station.realizedDemand ?? station.demand,
+      },
+      demandAllocation,
+      demandDay,
+    );
+    if (!existing) return created;
+    const potentialDemand = Math.max(0, Math.round(demandAllocation.stationPotential.get(station.id) ?? created.potentialDemand));
+    const realizedDemand = Math.min(
+      potentialDemand,
+      Number.isFinite(existing.realizedDemand) ? Math.max(0, Math.round(existing.realizedDemand)) : created.realizedDemand,
+    );
+    return {
+      ...created,
+      ...existing,
+      potentialDemand,
+      realizedDemand,
+      previousRealizedDemand: Number.isFinite(existing.previousRealizedDemand)
+        ? Math.min(potentialDemand, Math.max(0, Math.round(existing.previousRealizedDemand)))
+        : realizedDemand,
+      transitCaptureRate: potentialDemand > 0 ? realizedDemand / potentialDemand : 0,
+      targetCaptureRate: Math.min(1, Math.max(0, Number.isFinite(existing.targetCaptureRate) ? existing.targetCaptureRate : created.targetCaptureRate)),
+      catchmentWeight: demandAllocation.stationCatchmentWeight.get(station.id) ?? created.catchmentWeight,
+      areaProfile: demandAllocation.stationAreaProfile.get(station.id) ?? created.areaProfile,
+    };
+  });
   const migratedDepots = (Array.isArray(source.depots) ? source.depots : []).map((depot, index) => ({
     ...depot,
     id: ensureStableId(depot?.id, "depot", `${slotId}:${index}`),
@@ -7207,6 +7528,8 @@ function migrateSaveStateRecord(input: unknown): SaveState {
     meta,
     routes: migratedRoutes,
     stations: migratedStations,
+    demandZones: migratedDemandZones,
+    stationDemandStates: migratedDemandStates,
     transfers: (Array.isArray(source.transfers) ? source.transfers : []).map((transfer, index) => ({
       ...transfer,
       id: ensureStableId(transfer?.id, "transfer", `${slotId}:${index}`),
@@ -7609,6 +7932,8 @@ function renderStations(selectedId?: string) {
       pane: "stationInteractionPane",
     }).addTo(stationLayer);
 
+    // Selection is handled by the map-wide screen-space hit tester.
+    continue;
     if (activeTool !== "pan") continue;
 
     const clickTarget = L.marker(position, {
@@ -7686,6 +8011,8 @@ function renderDepots(selectedId?: string) {
         pane: "facilityInteractionPane",
       },
     ).addTo(depotLayer);
+    // The visible polygon is intentionally non-interactive; unified hit testing uses its true outline.
+    continue;
     polygon.on("click", () => {
       selectedDepotId = depot.id;
       openDepotManager(depot.id);
@@ -7716,6 +8043,7 @@ function renderTrains() {
   if (map.getZoom() < 14) {
     trainLayer.clearLayers();
     trainMarkers.clear();
+    trainHitTargets.clear();
     return;
   }
   if (performance.now() < trainInteractionLockedUntil) return;
@@ -7745,14 +8073,22 @@ function renderTrains() {
       const progress = (progressBase + index / displaySets) % 1;
       const routePoints = routePaths[index % routePaths.length];
       const position = interpolateAlongRoute(routePoints, progress <= 0.5 ? progress * 2 : (1 - progress) * 2);
+      trainHitTargets.set(key, {
+        key,
+        routeId: route.id,
+        fleetId: displayedTrain.fleet.id,
+        setNumber: displayedTrain.setNumber,
+        label: `${route.name} ${displayedTrain.setNumber}편성`,
+        position: [position.lat, position.lng],
+      });
       const existing = trainMarkers.get(key);
       if (existing) {
         existing.setLatLng(position);
         existing.setZIndexOffset(1200);
         const element = existing.getElement();
         if (element) {
-          element.style.pointerEvents = "auto";
-          element.classList.add("leaflet-interactive");
+          element.style.pointerEvents = "none";
+          element.classList.remove("leaflet-interactive");
         }
         continue;
       }
@@ -7763,7 +8099,7 @@ function renderTrains() {
           iconSize: [40, 40],
           iconAnchor: [20, 20],
         }),
-        interactive: true,
+        interactive: false,
         bubblingMouseEvents: false,
         keyboard: true,
         alt: `${route.name} ${displayedTrain.setNumber}편성 열차`,
@@ -7772,31 +8108,16 @@ function renderTrains() {
         zIndexOffset: 1200,
         riseOnHover: true,
       }).addTo(trainLayer);
-      let lastOpenedAt = 0;
-      const openDisplayedTrain = () => {
-        const now = performance.now();
-        if (now - lastOpenedAt < 350) return;
-        lastOpenedAt = now;
-        trainInteractionLockedUntil = now + 700;
-        selectRoute(route.id);
-        openTrainManagerForFleet(displayedTrain.fleet.id, displayedTrain.setNumber);
-      };
       const markerElement = marker.getElement();
-      if (markerElement) {
-        markerElement.style.pointerEvents = "auto";
-        markerElement.addEventListener("pointerdown", (event) => {
-          event.stopPropagation();
-          openDisplayedTrain();
-        });
-      }
-      marker.on("click", openDisplayedTrain);
+      if (markerElement) markerElement.style.pointerEvents = "none";
       trainMarkers.set(key, marker);
     }
   }
   for (const [key, marker] of trainMarkers) {
-    if (visibleKeys.has(key)) continue;
-    trainLayer.removeLayer(marker);
-    trainMarkers.delete(key);
+      if (visibleKeys.has(key)) continue;
+      trainLayer.removeLayer(marker);
+      trainMarkers.delete(key);
+      trainHitTargets.delete(key);
   }
 }
 
@@ -7955,10 +8276,10 @@ function toggleExpressStopAt(point: L.Point) {
  * 배정 차량, 역별 수요, 급행 설정으로부터 한 노선의 배차·혼잡·비용을 계산한다.
  * 반환값은 표시용 캐시가 아니라 현재 상태에서 언제든 다시 만들 수 있는 파생 데이터다.
  */
-function calculateRouteOperation(routeId: string): RouteOperation {
+function calculateLegacyRouteOperation(routeId: string, fleetSource = trainFleets): RouteOperation {
   const route = routes.find((item) => item.id === routeId);
   const routeStations = stations.filter((station) => station.connectedRouteIds.includes(routeId));
-  const routeFleets = trainFleets.filter((fleet) => fleet.routeId === routeId);
+  const routeFleets = fleetSource.filter((fleet) => fleet.routeId === routeId);
   const sets = routeFleets.reduce((sum, fleet) => sum + fleet.sets, 0);
   const averageSpeed = routeFleets.length > 0 ? weightedAverageSpeed(routeFleets) : 32;
   const dailyDemand = routeStations.reduce((sum, station) => sum + station.demand, 0);
@@ -7966,7 +8287,7 @@ function calculateRouteOperation(routeId: string): RouteOperation {
     const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
     return { routeId, headwayMin: 0, crowding: 0, waitMin: 0, dailyDemand: 0, hourlyCapacity: 0, operatingCost: fleetMaintenance };
   }
-  if (route && (hasRouteGaps(route) || route.operationPaused || route.visibility === "planning" || route.localServiceEnabled === false)) {
+  if (route && (hasRouteGaps(route) || route.operationPaused || route.visibility === "planning" || (route.localServiceEnabled === false && !route.expressServiceEnabled))) {
     const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
     return { routeId, headwayMin: 0, crowding: 2.4, waitMin: 30, dailyDemand, hourlyCapacity: 0, operatingCost: fleetMaintenance };
   }
@@ -7990,6 +8311,55 @@ function calculateRouteOperation(routeId: string): RouteOperation {
   const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
   const operatingCost = fleetMaintenance + (express ? express.extraOperatingCost : 0);
   return { routeId, headwayMin, crowding, waitMin, dailyDemand, hourlyCapacity, operatingCost };
+}
+
+function getRoutingServiceCapacities(routeId?: string, fleetSource = trainFleets): ServiceCapacity[] {
+  const targetRoutes = routeId ? routes.filter((route) => route.id === routeId) : routes;
+  return targetRoutes.flatMap((route) => {
+    const operation = calculateLegacyRouteOperation(route.id, fleetSource);
+    if (!isRouteOperational(route.id) || route.operationPaused || route.visibility === "planning" || operation.hourlyCapacity <= 0) return [];
+    const express = expressConfigs.find((config) => config.routeId === route.id && config.enabled);
+    const expressEnabled = Boolean(
+      route.expressServiceEnabled !== false &&
+      express &&
+      express.stopStationIds.filter((id) => isStationOperational(id)).length >= 2
+    );
+    const localEnabled = route.localServiceEnabled !== false;
+    const expressShare = expressEnabled && localEnabled ? 0.3 : expressEnabled ? 1 : 0;
+    const localShare = localEnabled ? 1 - expressShare : 0;
+    const capacities: ServiceCapacity[] = [];
+    if (localShare > 0) capacities.push({
+      serviceId: `${route.id}:local`,
+      routeId: route.id,
+      serviceKind: "local",
+      hourlyCapacity: Math.round(operation.hourlyCapacity * localShare),
+      headwayMin: operation.headwayMin / Math.max(0.1, localShare),
+    });
+    if (expressShare > 0) capacities.push({
+      serviceId: `${route.id}:express`,
+      routeId: route.id,
+      serviceKind: "express",
+      hourlyCapacity: Math.round(operation.hourlyCapacity * expressShare),
+      headwayMin: operation.headwayMin / Math.max(0.1, expressShare),
+    });
+    return capacities;
+  });
+}
+
+function calculateRouteOperation(routeId: string): RouteOperation {
+  const base = calculateLegacyRouteOperation(routeId);
+  const route = routes.find((item) => item.id === routeId);
+  if (!route || !isRouteOperational(routeId)) return { ...base, dailyDemand: 0, crowding: 0 };
+  const dailyDemand = passengerGroups
+    .filter((group) => group.journey?.routeIds.includes(routeId) ?? group.routeIds.includes(routeId))
+    .reduce((sum, group) => sum + group.activeDemand, 0);
+  const summary = routeCongestionSummaries.find((item) => item.routeId === routeId);
+  const hourlyCapacity = getRoutingServiceCapacities(routeId).reduce((sum, capacity) => sum + capacity.hourlyCapacity, 0);
+  const crowding = summary?.representativeCrowding ?? 0;
+  const waitMin = base.headwayMin > 0
+    ? Math.round((base.headwayMin / 2) * Math.max(1, crowding * 0.75) * 10) / 10
+    : 0;
+  return { ...base, dailyDemand, hourlyCapacity, crowding, waitMin };
 }
 
 function normalizeAnalysisState(state?: OperationAnalysisState): OperationAnalysisState {
@@ -8626,7 +8996,10 @@ function updateNewsEventsForDay() {
 }
 
 function createNewsEvent(day: number): NewsEvent {
-  const opportunityKinds: NewsEventKind[] = ["festival", "concert", "sports", "tourism", "new-town", "university", "commercial-growth"];
+  // City development is not generated from railway performance. Legacy
+  // new-town/commercial events still load safely, but new automatic events are
+  // limited to temporary trip-generating occasions.
+  const opportunityKinds: NewsEventKind[] = ["festival", "concert", "sports", "tourism", "university"];
   const changeKinds: NewsEventKind[] = ["heavy-rain", "heavy-snow", "roadworks", "demand-decline", "operating-cost", "construction-delay", "recession"];
   const seed = hashNewsSeed(day, `${currentMeta.slotId}:${currentMeta.cityId}:${newsEvents.length}`);
   const pool = seed % 100 < 62 ? opportunityKinds : changeKinds;
@@ -8683,17 +9056,6 @@ function attachConstructionDelayFromNews(event: NewsEvent) {
 
 function getActiveNewsEvents() {
   return newsEvents.filter(isNewsEventActive);
-}
-
-function getPassengerNewsMultiplier(origin: Station, destination: Station, routeIds: string[]) {
-  return getActiveNewsEvents().reduce((multiplier, event) => {
-    const applies =
-      event.relatedStationIds.length === 0 ||
-      event.relatedStationIds.includes(origin.id) ||
-      event.relatedStationIds.includes(destination.id) ||
-      event.relatedRouteIds.some((routeId) => routeIds.includes(routeId));
-    return applies ? multiplier * event.demandMultiplier : multiplier;
-  }, 1);
 }
 
 function getNewsOperatingCostMultiplier() {
@@ -8858,13 +9220,14 @@ function calculateNetworkFinancials() {
   const recent = statisticsState.dailyRecords.slice(-30);
   const monthlyRevenue = recent.length > 0 ? recent.reduce((sum, item) => sum + item.revenue, 0) : dailyRevenue * 30;
   const monthlyExpenses = recent.length > 0 ? recent.reduce((sum, item) => sum + item.expenses, 0) : dailyExpenses * 30;
-  const totalStationDemand = stations.reduce((sum, station) => sum + station.demand, 0);
-  const transitShare = totalStationDemand > 0 ? clampNumber(economy.demand / totalStationDemand, 0, 0.98) : 0;
+  const totalPotentialDemand = stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0);
+  const transitShare = totalPotentialDemand > 0 ? clampNumber(economy.demand / totalPotentialDemand, 0, 0.98) : 0;
   return { assets, liabilities, dailyRevenue, dailyExpenses, monthlyRevenue, monthlyExpenses, transitShare, loanPayment };
 }
 
 function calculateRouteStatistics(route: RouteLine) {
   const operation = calculateRouteOperation(route.id);
+  const congestionSegments = segmentCongestion.filter((segment) => segment.routeId === route.id);
   const groups = passengerGroups.filter((group) => group.routeIds.includes(route.id));
   const passengers = Math.round(groups.reduce((sum, group) => sum + group.activeDemand / Math.max(1, group.routeIds.length), 0));
   const totalPassengers = passengerGroups.reduce((sum, group) => sum + group.activeDemand, 0);
@@ -8890,6 +9253,7 @@ function calculateRouteStatistics(route: RouteLine) {
   return {
     route,
     operation,
+    congestionSegments,
     passengers,
     fareRevenue,
     maintenance,
@@ -8904,19 +9268,34 @@ function calculateRouteStatistics(route: RouteLine) {
 }
 
 function calculateStationStatistics(station: Station) {
+  const demandState = stationDemandStates.find((state) => state.stationId === station.id);
   const relatedGroups = passengerGroups.filter((group) => group.originStationId === station.id || group.destinationStationId === station.id);
   const boardings = relatedGroups.reduce((sum, group) => sum + group.activeDemand, 0);
   const transferPassengers = relatedGroups.filter((group) => group.routeIds.length > 1).reduce((sum, group) => sum + group.activeDemand, 0);
   const operations = station.connectedRouteIds.map((routeId) => calculateRouteOperation(routeId));
   const crowding = operations.length > 0 ? operations.reduce((sum, operation) => sum + operation.crowding, 0) / operations.length : 0;
   const waitMin = operations.length > 0 ? operations.reduce((sum, operation) => sum + (operation.waitMin || 0), 0) / operations.length : 0;
-  const potentialDemand = Math.max(station.demand, estimateStationDemand(L.latLng(station.position[0], station.position[1]), station.connectedRouteIds.length));
-  const oldSnapshot = [...analysisState.demandHistory].reverse().find((snapshot) => snapshot.day <= analysisState.dayIndex - 7);
-  const oldDemand = oldSnapshot?.stationDemand[station.id] ?? station.demand;
-  const growth = oldDemand > 0 ? station.demand / oldDemand - 1 : 0;
+  const potentialDemand = demandState?.potentialDemand ?? station.potentialDemand ?? station.demand;
+  const realizedDemand = demandState?.realizedDemand ?? station.realizedDemand ?? station.demand;
+  const previousDemand = demandState?.previousRealizedDemand ?? realizedDemand;
+  const growth = previousDemand > 0 ? realizedDemand / previousDemand - 1 : 0;
   const profileWeights = [0.025, 0.018, 0.015, 0.014, 0.018, 0.035, 0.07, 0.115, 0.095, 0.055, 0.04, 0.038, 0.042, 0.04, 0.043, 0.052, 0.075, 0.105, 0.075, 0.045, 0.032, 0.025, 0.018, 0.013];
   const hourly = profileWeights.map((weight, hour) => ({ hour, passengers: Math.round(boardings * weight) }));
-  return { station, boardings, transferPassengers, crowding, waitMin, potentialDemand, growth, hourly };
+  return {
+    station,
+    boardings,
+    transferPassengers,
+    crowding,
+    waitMin,
+    potentialDemand,
+    realizedDemand,
+    captureRate: demandState?.transitCaptureRate ?? (potentialDemand > 0 ? realizedDemand / potentialDemand : 0),
+    growth,
+    trend: demandState?.trend ?? "stable",
+    positiveReasons: demandState?.positiveReasons ?? [],
+    negativeReasons: demandState?.negativeReasons ?? [],
+    hourly,
+  };
 }
 
 function openStationManager(stationId: string) {
@@ -8952,13 +9331,21 @@ function renderStationManager() {
     crowding: memberStatistics.reduce((sum, item) => sum + item.crowding, 0) / members.length,
     waitMin: memberStatistics.reduce((sum, item) => sum + item.waitMin, 0) / members.length,
     growth: memberStatistics.reduce((sum, item) => sum + item.growth, 0) / members.length,
+    potentialDemand: memberStatistics.reduce((sum, item) => sum + item.potentialDemand, 0),
+    realizedDemand: memberStatistics.reduce((sum, item) => sum + item.realizedDemand, 0),
   };
   const transfer = transfers.find((item) => item.id === station.transferGroupId);
   const routeIds = Array.from(new Set(members.flatMap((item) => item.connectedRouteIds)));
   const routesForStation = routeIds.map((id) => routes.find((route) => route.id === id)).filter(Boolean) as RouteLine[];
   const operational = members.every((item) => isStationOperational(item.id));
   const stationName = Array.from(new Set(members.map((item) => item.name))).join(" · ");
-  const combinedDemand = members.reduce((sum, item) => sum + item.demand, 0);
+  const combinedDemand = statistics.realizedDemand;
+  const captureRate = statistics.potentialDemand > 0 ? combinedDemand / statistics.potentialDemand : 0;
+  const reasonEntries = [
+    ...memberStatistics.flatMap((item) => item.positiveReasons.map((reason) => ({ reason, positive: true }))),
+    ...memberStatistics.flatMap((item) => item.negativeReasons.map((reason) => ({ reason, positive: false }))),
+  ].filter((entry, index, source) => source.findIndex((candidate) => candidate.reason === entry.reason) === index).slice(0, 3);
+  const trend = statistics.growth > 0.003 ? "상승" : statistics.growth < -0.003 ? "하락" : "유지";
   const growth = statistics.growth >= 0.03 ? `+${Math.round(statistics.growth * 100)}%` : `${Math.round(statistics.growth * 100)}%`;
   setText(stationManagerTitle, stationName);
   stationManagerContent.innerHTML = `
@@ -8969,11 +9356,18 @@ function renderStationManager() {
     </section>
     <section class="station-manager-metrics" aria-label="승객 통계">
       <div><span>일일 승하차</span><strong>${statistics.boardings.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>기본 수요</span><strong>${combinedDemand.toLocaleString("ko-KR")}명</strong></div>
+      <div><span>지역 잠재 수요</span><strong>${statistics.potentialDemand.toLocaleString("ko-KR")}명</strong></div>
+      <div><span>실제 일간 이용객</span><strong>${combinedDemand.toLocaleString("ko-KR")}명</strong></div>
+      <div><span>철도 이용 전환율</span><strong>${Math.round(captureRate * 100)}%</strong></div>
       <div><span>환승 승객</span><strong>${statistics.transferPassengers.toLocaleString("ko-KR")}명</strong></div>
       <div><span>혼잡도</span><strong>${statistics.crowding > 0 ? `${Math.round(statistics.crowding * 100)}%` : "-"}</strong></div>
       <div><span>평균 대기</span><strong>${statistics.waitMin > 0 ? `${statistics.waitMin.toFixed(1)}분` : "-"}</strong></div>
-      <div><span>수요 변화</span><strong class="${statistics.growth < 0 ? "down" : "up"}">${growth}</strong></div>
+      <div><span>전일 대비</span><strong class="${statistics.growth < 0 ? "down" : "up"}">${growth}</strong></div>
+      <div><span>현재 추세</span><strong class="${statistics.growth < 0 ? "down" : "up"}">${trend}</strong></div>
+    </section>
+    <section class="station-manager-section">
+      <div class="station-manager-section-heading"><span>수요 변화 주요 원인</span></div>
+      <div class="connected-route-chips">${reasonEntries.length > 0 ? reasonEntries.map((entry) => `<span>${entry.positive ? "＋" : "－"} ${escapeHtml(entry.reason)}</span>`).join("") : "<em>서비스 조건이 안정적입니다.</em>"}</div>
     </section>
     <section class="station-manager-section">
       <div class="station-manager-section-heading"><span>연결 노선</span><strong>${routesForStation.length}개</strong></div>
@@ -9229,7 +9623,7 @@ function renderStationStatistics() {
   const ranked = [...stations].map(calculateStationStatistics).sort((a, b) => b.boardings - a.boardings);
   const selected = ranked.find((item) => item.station.id === selectedStatisticsStationId)!;
   const maxHourly = Math.max(1, ...selected.hourly.map((item) => item.passengers));
-  const growthLabel = selected.growth >= 0.12 ? "빠른 성장" : selected.growth >= 0.03 ? "성장" : selected.growth <= -0.05 ? "감소" : "안정";
+  const trendLabel = selected.trend === "rising" ? "상승" : selected.trend === "falling" ? "하락" : "유지";
   return `<div class="statistics-split">
     <aside class="statistics-entity-list">
       ${ranked.map((item) => `<button type="button" data-stat-station="${item.station.id}" class="${item.station.id === selected.station.id ? "active" : ""}">
@@ -9242,10 +9636,13 @@ function renderStationStatistics() {
         ${renderMetricCard("승하차 인원", `${selected.boardings.toLocaleString("ko-KR")}명`, null)}
         ${renderMetricCard("환승 인원", `${selected.transferPassengers.toLocaleString("ko-KR")}명`, null)}
         ${renderMetricCard("혼잡도", `${Math.round(selected.crowding * 100)}%`, null)}
-        ${renderMetricCard("주변 잠재 수요", `${selected.potentialDemand.toLocaleString("ko-KR")}명`, null, true)}
+        ${renderMetricCard("지역 잠재 수요", `${selected.potentialDemand.toLocaleString("ko-KR")}명`, null, true)}
+        ${renderMetricCard("실제 일간 이용객", `${selected.realizedDemand.toLocaleString("ko-KR")}명`, null)}
+        ${renderMetricCard("철도 이용 전환율", `${Math.round(selected.captureRate * 100)}%`, null)}
         ${renderMetricCard("연결 노선", `${selected.station.connectedRouteIds.length}개`, null)}
         ${renderMetricCard("평균 대기", selected.waitMin > 0 ? `${selected.waitMin.toFixed(1)}분` : "-", null)}
-        ${renderMetricCard("역세권 성장", growthLabel, selected.growth * 100)}
+        ${renderMetricCard("전일 대비", `${selected.growth >= 0 ? "+" : ""}${(selected.growth * 100).toFixed(1)}%`, selected.growth * 100)}
+        ${renderMetricCard("현재 추세", trendLabel, selected.growth * 100)}
       </div>
       <section class="hourly-chart"><div class="statistics-section-heading"><div><span>HOURLY USE</span><h3>시간대별 이용량</h3></div><em>현재 일 수요 기반 추정</em></div>
         <div>${selected.hourly.map((item) => `<i style="height:${Math.max(3, (item.passengers / maxHourly) * 100)}%" title="${item.hour}시 ${item.passengers.toLocaleString("ko-KR")}명"><span>${item.hour % 3 === 0 ? item.hour : ""}</span></i>`).join("")}</div>
@@ -9276,21 +9673,23 @@ function renderCityStatistics() {
     region.current += station.demand;
     region.previous += oldSnapshot?.stationDemand[station.id] ?? station.demand;
   }
-  const growth = oldSnapshot && oldSnapshot.totalDemand > 0 ? economy.demand / oldSnapshot.totalDemand - 1 : (city.growthMultiplier - 1) * 0.1;
+  const networkPotential = stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0);
+  const networkRealized = stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0);
+  const captureRate = networkPotential > 0 ? networkRealized / networkPotential : 0;
   const congested = stations
     .map(calculateStationStatistics)
     .filter((item) => item.crowding >= 0.9)
     .sort((a, b) => b.crowding - a.crowding)
     .slice(0, 4);
-  const development = plans.flatMap((plan) => plan.stations.filter((station) => !station.completed).map((station) => ({ ...station, planName: plan.name }))).slice(0, 4);
+  const plannedCoverage = plans.flatMap((plan) => plan.stations.filter((station) => !station.completed).map((station) => ({ ...station, planName: plan.name }))).slice(0, 4);
   const unlocked = currentMeta.unlockedCityIds.length;
   return `<div class="statistics-page">
     <section class="city-stat-hero">
-      <div><span>${escapeHtml(city.name)} 전체 수요</span><strong>${stations.reduce((sum, station) => sum + station.demand, 0).toLocaleString("ko-KR")}</strong><em>역 주변 잠재 수요 합계</em></div>
+      <div><span>${escapeHtml(city.name)} 실제 철도 이용객</span><strong>${networkRealized.toLocaleString("ko-KR")}</strong><em>고정 지역 잠재 수요 ${networkPotential.toLocaleString("ko-KR")}명</em></div>
       <div class="statistics-metric-grid compact">
         ${renderMetricCard("대중교통 이용률", `${Math.round(finances.transitShare * 100)}%`, null)}
         ${renderMetricCard("시민 만족도", `${economy.satisfaction}점`, null)}
-        ${renderMetricCard("도시 성장률", `${growth >= 0 ? "+" : ""}${(growth * 100).toFixed(1)}%`, growth * 100, true)}
+        ${renderMetricCard("철도 이용 전환율", `${Math.round(captureRate * 100)}%`, null, true)}
         ${renderMetricCard("해금 진행도", `${unlocked}/${Object.keys(cityConfigs).length}`, null)}
       </div>
     </section>
@@ -9304,8 +9703,8 @@ function renderCityStatistics() {
       <section><div class="statistics-section-heading"><div><span>CONGESTION</span><h3>혼잡 지역</h3></div></div>
         <div class="statistics-ranked-list">${congested.length > 0 ? congested.map((item) => `<button type="button" data-focus-station="${item.station.id}"><strong>${escapeHtml(item.station.name)}</strong><span>혼잡 ${Math.round(item.crowding * 100)}%</span></button>`).join("") : `<p>현재 뚜렷한 혼잡 지역이 없습니다.</p>`}</div>
       </section>
-      <section><div class="statistics-section-heading"><div><span>DEVELOPMENT</span><h3>개발 예정 지역</h3></div></div>
-        <div class="statistics-ranked-list">${development.length > 0 ? development.map((item) => `<button type="button" data-open-plan="${item.planName}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.planName)} · 수요 ${item.expectedDemand.toLocaleString("ko-KR")}</span></button>`).join("") : `<p>현재 계획된 개발 지역이 없습니다.</p>`}</div>
+      <section><div class="statistics-section-heading"><div><span>PLANNED COVERAGE</span><h3>계획 노선 서비스 후보</h3></div></div>
+        <div class="statistics-ranked-list">${plannedCoverage.length > 0 ? plannedCoverage.map((item) => `<button type="button" data-open-plan="${item.planName}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.planName)} · 예상 이용 수요 ${item.expectedDemand.toLocaleString("ko-KR")}</span></button>`).join("") : `<p>현재 계획된 서비스 후보가 없습니다.</p>`}</div>
       </section>
     </div>
   </div>`;
@@ -9440,96 +9839,455 @@ function updateOperationHud() {
  * 역 수요를 출발-도착 승객 그룹으로 재구성한다.
  * 개별 승객을 시뮬레이션하지 않고 집단 단위로 계산해 노선 탐색 비용을 제한한다.
  */
-function regeneratePassengerGroups() {
-  if (stations.length < 2) {
-    passengerGroups = [];
-    economy = { ...economy, demand: 0 };
-    return;
-  }
-  const groups: PassengerGroup[] = [];
-  const rankedStations = stations.filter((station) => isStationOperational(station.id)).sort((a, b) => b.demand - a.demand).slice(0, 18);
-  for (const origin of rankedStations) {
-    const candidates = rankedStations
-      .filter((station) => station.id !== origin.id)
-      .map((destination) => ({
-        destination,
-        distance: map.distance(L.latLng(origin.position[0], origin.position[1]), L.latLng(destination.position[0], destination.position[1])),
-      }))
-      .sort((a, b) => b.distance - a.distance)
-      .slice(0, 3);
-    for (const candidate of candidates) {
-      const routeIds = findRoutePath(origin, candidate.destination);
-      if (routeIds.length === 0) continue;
-      const distanceKm = Math.round((candidate.distance / 1000) * 10) / 10;
-      const operationMix = mixOperation(routeIds);
-      const transferResistance = calculateGroupTransferResistance(origin, candidate.destination, routeIds);
-      const basePeople = Math.round(Math.min(origin.demand, candidate.destination.demand) * 0.18);
-      const satisfaction = calculateGroupSatisfaction(operationMix.waitMin, operationMix.crowding, transferResistance, economy.fare);
-      const eventMultiplier = getPassengerNewsMultiplier(origin, candidate.destination, routeIds);
-      const activeDemand = Math.round(basePeople * (0.45 + satisfaction / 140) * eventMultiplier);
-      groups.push({
-        id: `${origin.id}:${candidate.destination.id}`,
-        originStationId: origin.id,
-        destinationStationId: candidate.destination.id,
-        people: basePeople,
-        routeIds,
-        distanceKm,
-        transferResistance,
-        waitMin: operationMix.waitMin,
-        crowding: operationMix.crowding,
-        satisfaction,
-        activeDemand,
+function buildPassengerRoutingNetwork(): RoutingNetwork {
+  const operationalStations = stations.filter((station) => isStationOperational(station.id));
+  const capacities = getRoutingServiceCapacities();
+  const capacityByService = new Map(capacities.map((capacity) => [capacity.serviceId, capacity]));
+  const services = routes.flatMap((route) => {
+    if (!isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning") return [];
+    const baseOperation = calculateLegacyRouteOperation(route.id);
+    const routeFleets = trainFleets.filter((fleet) => fleet.routeId === route.id);
+    const speedKph = routeFleets.length > 0 ? weightedAverageSpeed(routeFleets) : 32;
+    const routeStationIds = operationalStations.filter((station) => station.connectedRouteIds.includes(route.id)).map((station) => station.id);
+    const paths = getRoutePaths(route).map((path, index) => ({
+      id: `${route.id}:path:${index}`,
+      coordinates: path.map((point) => [point.lat, point.lng] as [number, number]),
+    }));
+    const result: RoutingNetwork["services"] = [];
+    for (const kind of ["local", "express"] as TransitServiceKind[]) {
+      const serviceId = `${route.id}:${kind}`;
+      const capacity = capacityByService.get(serviceId);
+      if (!capacity || capacity.hourlyCapacity <= 0) continue;
+      const express = expressConfigs.find((config) => config.routeId === route.id && config.enabled);
+      const stopStationIds = kind === "express"
+        ? (express?.stopStationIds ?? []).filter((id) => routeStationIds.includes(id))
+        : routeStationIds;
+      if (stopStationIds.length < 2) continue;
+      const capacityShare = capacity.hourlyCapacity / Math.max(1, baseOperation.hourlyCapacity);
+      result.push({
+        id: serviceId,
+        routeId: route.id,
+        kind,
+        paths,
+        stopStationIds,
+        speedKph: kind === "express" ? speedKph * 1.28 : speedKph,
+        headwayMin: baseOperation.headwayMin > 0 ? baseOperation.headwayMin / Math.max(0.1, capacityShare) : 30,
+        crowding: routeCongestionSummaries.find((summary) => summary.routeId === route.id)?.representativeCrowding ?? 0,
       });
     }
-  }
-  passengerGroups = groups;
-  const demand = groups.reduce((sum, group) => sum + group.activeDemand, 0);
-  const satisfaction = groups.length > 0 ? Math.round(groups.reduce((sum, group) => sum + group.satisfaction, 0) / groups.length) : 75;
-  economy = { ...economy, demand, satisfaction };
-}
-
-function findRoutePath(origin: Station, destination: Station) {
-  const direct = origin.connectedRouteIds.find((routeId) => isRouteOperational(routeId) && destination.connectedRouteIds.includes(routeId));
-  if (direct) return [direct];
-  for (const originRoute of origin.connectedRouteIds.filter(isRouteOperational)) {
-    for (const destinationRoute of destination.connectedRouteIds.filter(isRouteOperational)) {
-      const hasTransfer = transfers.some((transfer) => {
-        const transferStations = transfer.stationIds.map((id) => stations.find((station) => station.id === id)).filter(Boolean) as Station[];
-        const hasOriginRoute = transferStations.some((station) => station.connectedRouteIds.includes(originRoute));
-        const hasDestinationRoute = transferStations.some((station) => station.connectedRouteIds.includes(destinationRoute));
-        return hasOriginRoute && hasDestinationRoute;
-      });
-      if (hasTransfer) return [originRoute, destinationRoute];
-    }
-  }
-  return [];
-}
-
-function mixOperation(routeIds: string[]) {
-  const operations = routeIds.map((routeId) => calculateRouteOperation(routeId));
-  if (operations.length === 0) return { waitMin: 18, crowding: 1.8 };
+    return result;
+  });
   return {
-    waitMin: operations.reduce((sum, operation) => sum + (operation.waitMin || 18), 0),
-    crowding: operations.reduce((sum, operation) => sum + operation.crowding, 0) / operations.length,
+    stations: operationalStations.map((station) => ({
+      id: station.id,
+      position: station.position,
+      routeIds: station.connectedRouteIds,
+    })),
+    services,
+    transfers: transfers
+      .map((transfer) => ({
+        id: transfer.id,
+        stationIds: transfer.stationIds.filter((id) => operationalStations.some((station) => station.id === id)),
+        walkMin: transfer.transferTimeMin,
+        resistance: transfer.resistance,
+      }))
+      .filter((transfer) => transfer.stationIds.length >= 2),
   };
 }
 
-function calculateGroupTransferResistance(origin: Station, destination: Station, routeIds: string[]) {
-  if (routeIds.length <= 1) return 0;
-  const relevant = transfers.filter((transfer) => {
-    const transferStations = transfer.stationIds.map((id) => stations.find((station) => station.id === id)).filter(Boolean) as Station[];
-    return routeIds.every((routeId) => transferStations.some((station) => station.connectedRouteIds.includes(routeId)));
-  });
-  if (relevant.length > 0) return Math.min(...relevant.map((transfer) => transfer.resistance));
-  const originPoint = L.latLng(origin.position[0], origin.position[1]);
-  const destinationPoint = L.latLng(destination.position[0], destination.position[1]);
-  return Math.round(Math.min(160, map.distance(originPoint, destinationPoint) * 0.018));
+function getPassengerRouter() {
+  const network = buildPassengerRoutingNetwork();
+  const signature = buildNetworkSignature(network);
+  if (!transitRouter || signature !== transitRouterSignature) {
+    transitRouter = new TransitRouter(network);
+    transitRouterSignature = signature;
+  } else {
+    transitRouter.updateOperatingState(network.services);
+  }
+  return transitRouter;
 }
 
-function calculateGroupSatisfaction(waitMin: number, crowding: number, transferResistance: number, fare: number) {
-  const farePenalty = Math.max(0, (fare - 1450) / 55);
-  const score = 100 - waitMin * 1.8 - Math.max(0, crowding - 0.75) * 34 - transferResistance * 0.24 - farePenalty;
-  return Math.max(5, Math.min(100, Math.round(score)));
+function getDemandStationInputs() {
+  return stations.map((station) => ({
+    id: station.id,
+    position: station.position,
+    operational: isStationOperational(station.id),
+    legacyDemand: station.realizedDemand ?? station.demand,
+  }));
+}
+
+function getDemandEvents(): DemandEvent[] {
+  return newsEvents
+    .filter((event) => event.demandMultiplier !== 1)
+    .map((event) => {
+      const periods =
+        event.kind === "concert" || event.kind === "sports" || event.kind === "festival"
+          ? ["evening-peak" as const]
+          : event.kind === "university"
+            ? ["morning-peak" as const, "daytime" as const]
+            : event.kind === "tourism" || event.kind === "commercial-growth" || event.kind === "new-town"
+              ? ["daytime" as const, "evening-peak" as const]
+              : undefined;
+      return {
+        id: event.id,
+        kind: "temporary" as const,
+        position: event.position,
+        radiusM: 1_600,
+        periods,
+        multiplier: event.demandMultiplier,
+        startsOnDay: event.startedDay,
+        endsOnDay: event.startedDay + event.durationDays - 1,
+      };
+    });
+}
+
+function getPassengerDemandEventMultiplier(origin: Station, destination: Station, routeIds: string[]) {
+  const period = getDemandPeriod(simMinutes);
+  const demandEventsById = new Map(getDemandEvents().map((event) => [event.id, event]));
+  return getActiveNewsEvents().reduce((multiplier, event) => {
+    const demandEvent = demandEventsById.get(event.id);
+    if (demandEvent?.periods && !demandEvent.periods.includes(period)) return multiplier;
+    const applies =
+      event.relatedStationIds.length === 0 ||
+      event.relatedStationIds.includes(origin.id) ||
+      event.relatedStationIds.includes(destination.id) ||
+      event.relatedRouteIds.some((routeId) => routeIds.includes(routeId));
+    return applies ? multiplier * event.demandMultiplier : multiplier;
+  }, 1);
+}
+
+function synchronizeStationDemandMirrors() {
+  const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
+  stations = stations.map((station) => {
+    const state = stateByStation.get(station.id);
+    if (!state) return station;
+    return {
+      ...station,
+      demand: state.realizedDemand,
+      potentialDemand: state.potentialDemand,
+      realizedDemand: state.realizedDemand,
+      transitCaptureRate: state.transitCaptureRate,
+    };
+  });
+}
+
+function refreshDemandCatchments() {
+  const inputs = getDemandStationInputs();
+  if (demandZones.length === 0) {
+    demandZones = createRegionalDemandGrid(
+      cityConfigs[currentMeta.cityId].center as [number, number],
+      currentMeta.cityId,
+      cityConfigs[currentMeta.cityId].demandMultiplier,
+    );
+  } else if (!demandZones.some((zone) => zone.id.startsWith(`demand-zone:${currentMeta.cityId}:`))) {
+    // Legacy saves retain their inferred regional zones. Adjacent new stations
+    // compete for these zones instead of creating another copy of demand.
+    demandZones = createLegacyDemandZones(inputs, demandZones);
+  }
+  const allocation = allocateCatchmentDemand(
+    demandZones,
+    inputs,
+    analysisState.dayIndex,
+    getDemandPeriod(simMinutes),
+  );
+  const existingByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
+  stationDemandStates = inputs.map((input) => {
+    const existing = existingByStation.get(input.id);
+    if (!existing) {
+      const initial = createStationDemandState(
+        { ...input, legacyDemand: Math.round((allocation.stationPotential.get(input.id) ?? 0) * 0.18) },
+        allocation,
+        analysisState.dayIndex,
+      );
+      return initial;
+    }
+    const potentialDemand = Math.max(0, Math.round(allocation.stationPotential.get(input.id) ?? 0));
+    const realizedDemand = Math.min(potentialDemand, Math.max(0, existing.realizedDemand));
+    return {
+      ...existing,
+      potentialDemand,
+      realizedDemand,
+      previousRealizedDemand: Math.min(potentialDemand, Math.max(0, existing.previousRealizedDemand)),
+      transitCaptureRate: potentialDemand > 0 ? realizedDemand / potentialDemand : 0,
+      catchmentWeight: allocation.stationCatchmentWeight.get(input.id) ?? 0,
+      areaProfile: allocation.stationAreaProfile.get(input.id) ?? existing.areaProfile,
+    };
+  });
+  synchronizeStationDemandMirrors();
+}
+
+function buildDemandStructureFingerprint() {
+  return JSON.stringify({
+    stations: stations.map((station) => [
+      station.id,
+      station.position,
+      station.connectedRouteIds,
+      isStationOperational(station.id),
+    ]),
+    routes: routes.map((route) => [
+      route.id,
+      route.coordinates,
+      route.disabledSegments,
+      route.operationPaused,
+      route.visibility,
+      route.localServiceEnabled,
+      route.expressServiceEnabled,
+    ]),
+    transfers: transfers.map((transfer) => [transfer.id, transfer.stationIds, transfer.resistance]),
+    expressPaths: expressConfigs.map((config) => [config.routeId, config.enabled, config.stopStationIds]),
+  });
+}
+
+function buildDemandServiceFingerprint() {
+  return JSON.stringify({
+    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.sets, fleet.cars, fleet.trainType]),
+    fare: economy.fare,
+    events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
+    period: getDemandPeriod(simMinutes),
+  });
+}
+
+function ensureDemandSimulation() {
+  const structure = buildDemandStructureFingerprint();
+  const service = buildDemandServiceFingerprint();
+  const context = JSON.stringify({
+    day: analysisState.dayIndex,
+    period: getDemandPeriod(simMinutes),
+    events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
+  });
+  const structureChanged = structure !== demandStructureSignature;
+  const serviceChanged = service !== demandServiceSignature;
+  const contextChanged = context !== demandContextSignature;
+  if (!structureChanged && !serviceChanged && !contextChanged) return;
+  if (structureChanged || contextChanged || stationDemandStates.length !== stations.length) refreshDemandCatchments();
+  regeneratePassengerGroups();
+  demandStructureSignature = structure;
+  demandServiceSignature = service;
+  demandContextSignature = context;
+}
+
+function regeneratePassengerGroups() {
+  const operationalStations = stations.filter((station) => isStationOperational(station.id));
+  if (operationalStations.length < 2) {
+    passengerGroups = [];
+    segmentCongestion = [];
+    routeCongestionSummaries = [];
+    economy = { ...economy, demand: 0 };
+    return;
+  }
+  const router = getPassengerRouter();
+  const hour = Math.floor(simMinutes / 60) % 24;
+  const period = getDemandPeriod(simMinutes);
+  const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
+  const origins = [...operationalStations].sort((a, b) => b.demand - a.demand);
+  const destinationStations = operationalStations.map((station) => ({
+    id: station.id,
+    demand: stateByStation.get(station.id)?.potentialDemand ?? station.demand,
+    position: station.position,
+    accessibility: 0.72 + Math.min(1.4, station.connectedRouteIds.filter(isRouteOperational).length * 0.28),
+    areaFactor: getDestinationPeriodMultiplier(stateByStation.get(station.id)?.areaProfile ?? "mixed", period),
+  }));
+  const stationById = new Map(operationalStations.map((station) => [station.id, station]));
+  const groupsByOd = new Map<string, PassengerGroup>();
+  for (const origin of origins) {
+    const originDestination = destinationStations.find((station) => station.id === origin.id)!;
+    const choices = selectPassengerDestinations(originDestination, destinationStations, {
+      seed: `${currentMeta.slotId}:${analysisState.dayIndex}:${hour}`,
+      maxDestinations: operationalStations.length > 150 ? 6 : 8,
+      distanceKm: (from, to) => map.distance(L.latLng(...from.position), L.latLng(...to.position)) / 1000,
+    });
+    for (const choice of choices) {
+      const destination = stationById.get(choice.destinationId);
+      if (!destination) continue;
+      const journey = router.findJourney(origin.id, destination.id);
+      if (!journey) continue;
+      const transferResistance = journey.transferStationIds.reduce((sum, stationId) => {
+        const transfer = transfers.find((item) => item.stationIds.includes(stationId));
+        return sum + (transfer?.resistance ?? 8);
+      }, 0);
+      const operationCrowding = journey.legs.length > 0
+        ? journey.legs.reduce((sum, leg) => sum + (routeCongestionSummaries.find((item) => item.routeId === leg.routeId)?.representativeCrowding ?? 0), 0) / journey.legs.length
+        : 0;
+      const basePeople = Math.max(1, Math.round((stateByStation.get(origin.id)?.realizedDemand ?? origin.demand) * choice.share));
+      const satisfaction = calculatePassengerSatisfaction(journey.waitTimeMin, operationCrowding, transferResistance, economy.fare);
+      const activeDemand = Math.max(
+        0,
+        Math.round(basePeople * getPassengerDemandEventMultiplier(origin, destination, journey.routeIds)),
+      );
+      const id = `${origin.id}:${destination.id}`;
+      const existing = groupsByOd.get(id);
+      if (existing) {
+        existing.people += basePeople;
+        existing.activeDemand += activeDemand;
+      } else {
+        groupsByOd.set(id, {
+          id,
+          originStationId: origin.id,
+          destinationStationId: destination.id,
+          people: basePeople,
+          routeIds: journey.routeIds,
+          distanceKm: Math.round(choice.distanceKm * 10) / 10,
+          transferResistance,
+          waitMin: journey.waitTimeMin,
+          crowding: operationCrowding,
+          satisfaction,
+          activeDemand,
+          journey,
+        });
+      }
+    }
+  }
+  passengerGroups = [...groupsByOd.values()];
+  const forecast = calculateCurrentOperatingForecast();
+  segmentCongestion = forecast.segmentCongestion;
+  routeCongestionSummaries = forecast.routeSummaries;
+  passengerGroups = passengerGroups.map((group, index) => ({
+    ...group,
+    crowding: forecast.groupMetrics[index]?.crowding ?? group.crowding,
+    waitMin: forecast.groupMetrics[index]?.waitMin ?? group.waitMin,
+    satisfaction: forecast.groupMetrics[index]?.satisfaction ?? group.satisfaction,
+  }));
+  economy = { ...economy, demand: forecast.demand, satisfaction: forecast.satisfaction };
+}
+
+function calculateCurrentOperatingForecast(
+  fleetSource = trainFleets,
+  fare = economy.fare,
+): OperatingForecast {
+  return calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
+}
+
+function calculateOperatingForecastForGroups(
+  groups: PassengerGroup[],
+  fleetSource = trainFleets,
+  fare = economy.fare,
+): OperatingForecast {
+  const hour = Math.floor(simMinutes / 60) % 24;
+  const hourlyDemandShare = hour >= 7 && hour <= 9 ? 0.105 : hour >= 17 && hour <= 19 ? 0.095 : 0.045;
+  const loanInterest = loans.reduce((sum, loan) => sum + loan.balance * (loan.interestRate / 365), 0);
+  const loanPayment = loans.reduce((sum, loan) => sum + loan.monthlyPayment / 30, 0);
+  return calculateOperatingForecast({
+    groups,
+    capacities: getRoutingServiceCapacities(undefined, fleetSource),
+    fare,
+    maintenance: calculateDailyMaintenance(fleetSource),
+    loanInterest,
+    loanPayment,
+    timeBand: `${String(hour).padStart(2, "0")}:00`,
+    hourlyDemandShare,
+    fallbackSatisfaction: economy.satisfaction,
+  });
+}
+
+function calculateStationServiceDemand(
+  station: Station,
+  fare = economy.fare,
+  groupsSource = passengerGroups,
+  fleetSource = trainFleets,
+): { captureRate: number; attractiveness: DemandAttractiveness } {
+  const originGroups = groupsSource.filter((group) => group.originStationId === station.id && group.journey);
+  const totalWeight = originGroups.reduce((sum, group) => sum + Math.max(1, group.activeDemand), 0);
+  const weighted = (select: (group: PassengerGroup) => number, fallback: number) =>
+    totalWeight > 0
+      ? originGroups.reduce((sum, group) => sum + select(group) * Math.max(1, group.activeDemand), 0) / totalWeight
+      : fallback;
+  const routeOperations = station.connectedRouteIds.map((routeId) => calculateLegacyRouteOperation(routeId, fleetSource));
+  const serviceAvailable =
+    isStationOperational(station.id) &&
+    routeOperations.some((operation) => operation.hourlyCapacity > 0 && isRouteOperational(operation.routeId));
+  const operationalShare = station.connectedRouteIds.length > 0
+    ? station.connectedRouteIds.filter(isRouteOperational).length / station.connectedRouteIds.length
+    : 0;
+  const expressUsed = originGroups.some((group) => group.journey?.legs.some((leg) => leg.serviceKind === "express"));
+  return calculateTransitCaptureRate({
+    hasAccessibleStation: isStationOperational(station.id),
+    reachableDestinationShare: originGroups.length > 0 ? Math.min(1, 0.62 + originGroups.length * 0.045) : 0,
+    averageWaitMin: weighted((group) => group.waitMin, serviceAvailable ? 12 : 30),
+    averageTravelTimeMin: weighted((group) => group.journey?.totalTimeMin ?? 90, 90),
+    averageTransfers: weighted((group) => group.journey?.transferCount ?? 3, 3),
+    transferResistance: weighted((group) => group.transferResistance, 80),
+    crowding: weighted((group) => group.crowding, serviceAvailable ? 1.2 : 2.4),
+    fare,
+    reliability: serviceAvailable ? Math.min(1, operationalShare * 0.9 + 0.1) : 0,
+    satisfaction: weighted((group) => group.satisfaction, serviceAvailable ? economy.satisfaction : 10),
+    expressTimeSaving: expressUsed ? 0.12 : 0,
+    serviceAvailable,
+  });
+}
+
+type DemandResponsiveForecast = OperatingForecast & {
+  captureRate: number;
+};
+
+function calculateDemandResponsiveForecast(
+  fleetSource = trainFleets,
+  fare = economy.fare,
+): DemandResponsiveForecast {
+  const capacityForecast = calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
+  const measuredGroups = passengerGroups.map((group, index) => ({
+    ...group,
+    crowding: capacityForecast.groupMetrics[index]?.crowding ?? group.crowding,
+    waitMin: capacityForecast.groupMetrics[index]?.waitMin ?? group.waitMin,
+    satisfaction: capacityForecast.groupMetrics[index]?.satisfaction ?? group.satisfaction,
+  }));
+  const projectedByStation = new Map<string, StationDemandState>();
+  for (const station of stations) {
+    const state = stationDemandStates.find((candidate) => candidate.stationId === station.id);
+    if (!state) continue;
+    const service = calculateStationServiceDemand(station, fare, measuredGroups, fleetSource);
+    projectedByStation.set(station.id, previewStationDemand(state, service.captureRate));
+  }
+  const projectedGroups = passengerGroups.map((group) => {
+    const current = stationDemandStates.find((state) => state.stationId === group.originStationId);
+    const projected = projectedByStation.get(group.originStationId);
+    const ratio = current && projected && current.realizedDemand > 0
+      ? projected.realizedDemand / current.realizedDemand
+      : 1;
+    return { ...group, activeDemand: Math.max(0, Math.round(group.activeDemand * ratio)) };
+  });
+  const forecast = calculateOperatingForecastForGroups(projectedGroups, fleetSource, fare);
+  const totalPotential = [...projectedByStation.values()].reduce((sum, state) => sum + state.potentialDemand, 0);
+  const totalRealized = [...projectedByStation.values()].reduce((sum, state) => sum + state.realizedDemand, 0);
+  return {
+    ...forecast,
+    captureRate: totalPotential > 0 ? totalRealized / totalPotential : 0,
+  };
+}
+
+function advanceDemandForGameDay(gameDay: number, fare = economy.fare) {
+  refreshDemandCatchments();
+  const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
+  stationDemandStates = stations.map((station) => {
+    const existing = stateByStation.get(station.id);
+    if (!existing) {
+      const allocation = allocateCatchmentDemand(
+        demandZones,
+        getDemandStationInputs(),
+        analysisState.dayIndex,
+        getDemandPeriod(simMinutes),
+      );
+      return createStationDemandState(
+        {
+          id: station.id,
+          position: station.position,
+          operational: isStationOperational(station.id),
+          legacyDemand: 0,
+        },
+        allocation,
+        analysisState.dayIndex,
+        0,
+      );
+    }
+    const result = calculateStationServiceDemand(station, fare);
+    return advanceStationDemand(
+      existing,
+      existing.potentialDemand,
+      result.captureRate,
+      gameDay,
+      result.attractiveness,
+    );
+  });
+  synchronizeStationDemandMirrors();
 }
 
 /**
@@ -9538,10 +10296,13 @@ function calculateGroupSatisfaction(waitMin: number, crowding: number, transferR
  * 섞이지 않도록 한다.
  */
 function settleSimulationDay() {
-  regeneratePassengerGroups();
+  ensureDemandSimulation();
   if (economy.autoFare) economy.fare = calculateAutoFare();
-  const calculatedFareRevenue = Math.round((economy.demand * economy.fare) / 100000000);
-  const fareRevenue = economy.demand > 0 ? Math.max(1, calculatedFareRevenue) : 0;
+  regeneratePassengerGroups();
+  advanceDemandForGameDay(analysisState.dayIndex + 1, economy.fare);
+  regeneratePassengerGroups();
+  const settlement = calculateCurrentOperatingForecast(trainFleets, economy.fare);
+  const fareRevenue = settlement.revenue;
   const maintenance = calculateDailyMaintenance();
   const loanInterest = loans.reduce((sum, loan) => sum + loan.balance * (loan.interestRate / 365), 0);
   const loanPayment = loans.reduce((sum, loan) => sum + loan.monthlyPayment / 30, 0);
@@ -9550,8 +10311,9 @@ function settleSimulationDay() {
     ...economy,
     revenue: fareRevenue,
     maintenance,
+    satisfaction: settlement.satisfaction,
     loanBalance: Math.round(loans.reduce((sum, loan) => sum + loan.balance, 0)),
-    cash: currentMeta.mode === "sandbox" ? 999999999 : Math.round(economy.cash + fareRevenue - maintenance - loanInterest - loanPayment),
+    cash: currentMeta.mode === "sandbox" ? 999999999 : Math.round(economy.cash + settlement.netProfit),
   };
   loans = loans
     .map((loan) => {
@@ -9560,7 +10322,6 @@ function settleSimulationDay() {
       return { ...loan, balance: Math.max(0, Math.round(loan.balance - principalPaid)) };
     })
     .filter((loan) => loan.balance > 0);
-  applyCityGrowth();
   updateCareerProgress();
   analysisState = { ...analysisState, dayIndex: analysisState.dayIndex + 1, lastFingerprint: "" };
   updateNewsEventsForDay();
@@ -9571,12 +10332,18 @@ function settleSimulationDay() {
   const dailyRecord: DailyStatisticsRecord = {
     day: analysisState.dayIndex,
     revenue: fareRevenue,
-    expenses: Math.round(maintenance + loanInterest + loanPayment),
+    expenses: settlement.expenses,
     passengers: economy.demand,
     satisfaction: economy.satisfaction,
     transitShare: finances.transitShare,
     assets: finances.assets,
     liabilities: finances.liabilities,
+    crowding: settlement.crowding,
+    waitMin: settlement.waitMin,
+    captureRate: stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0) > 0
+      ? stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0) /
+        stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0)
+      : 0,
   };
   statisticsState = {
     ...statisticsState,
@@ -9611,21 +10378,8 @@ function updateCareerProgress() {
   currentMeta = { ...currentMeta, unlockedCityIds: Array.from(unlocked), bankrupt };
 }
 
-function applyCityGrowth() {
-  const cityGrowth = cityConfigs[currentMeta.cityId].growthMultiplier;
-  if (economy.satisfaction < 58 || stations.length === 0) {
-    stations = stations.map((station) => ({ ...station, demand: Math.max(800, Math.round(station.demand * 0.985)) }));
-    return;
-  }
-  stations = stations.map((station) => {
-    const operation = mixOperation(station.connectedRouteIds);
-    const growth = operation.waitMin <= 8 && operation.crowding <= 1.15 ? 1 + 0.018 * cityGrowth : 1 + 0.006 * cityGrowth;
-    return { ...station, demand: Math.min(85000, Math.round(station.demand * growth)) };
-  });
-}
-
-function calculateDailyMaintenance() {
-  const fleetMaintenance = trainFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
+function calculateDailyMaintenance(fleetSource = trainFleets) {
+  const fleetMaintenance = fleetSource.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
   const depotMaintenance = depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0);
   const expressCost = expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0);
   return Math.round((fleetMaintenance + depotMaintenance + expressCost) * getNewsOperatingCostMultiplier());
@@ -9735,6 +10489,9 @@ function openFinanceDialog() {
   if (!financeDialog) return;
   financeDialog.hidden = false;
   updateEconomyHud();
+  if (financeForecastContent) {
+    financeForecastContent.innerHTML = renderOperatingForecastComparison(calculateDemandResponsiveForecast());
+  }
   playFeedback("select");
 }
 
@@ -10130,6 +10887,8 @@ function setTool(tool: ToolMode) {
 }
 
 function cancelActiveDrawing() {
+  mapSelectionPointers.clear();
+  mapSelectionGesture = null;
   activePointerId = null;
   activeExtension = null;
   activeRepair = null;
@@ -10194,6 +10953,8 @@ function openRouteChoice(hitRoutes: RouteLine[]) {
   });
   routeChoiceDialog.hidden = false;
 }
+
+void openRouteChoice;
 
 function openLeftRouteWindow() {
   if (!leftRouteWindow) return;
@@ -10343,6 +11104,67 @@ function closeTrainManagerModal() {
   if (trainManagerDialog) trainManagerDialog.hidden = true;
 }
 
+type OperatingComparisonMetric = "demand" | "captureRate" | "crowding" | "waitMin" | "satisfaction" | "revenue" | "netProfit";
+
+function operatingMetricText(metric: OperatingComparisonMetric, value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) return "-";
+  if (metric === "demand") return `${Math.round(value).toLocaleString("ko-KR")}명`;
+  if (metric === "captureRate") return `${Math.round(value * 100)}%`;
+  if (metric === "crowding") return `${Math.round(value * 100)}%`;
+  if (metric === "waitMin") return `${value.toFixed(1)}분`;
+  if (metric === "satisfaction") return `${Math.round(value)}점`;
+  if (metric === "revenue") return formatCost(value);
+  return formatSignedCost(value);
+}
+
+function renderOperatingForecastComparison(forecast: DemandResponsiveForecast) {
+  const confirmed = statisticsState.dailyRecords.at(-1);
+  const confirmedValues = {
+    demand: confirmed?.passengers,
+    captureRate: confirmed?.captureRate,
+    crowding: confirmed?.crowding,
+    waitMin: confirmed?.waitMin,
+    satisfaction: confirmed?.satisfaction,
+    revenue: confirmed?.revenue,
+    netProfit: confirmed ? confirmed.revenue - confirmed.expenses : undefined,
+  };
+  const forecastValues = {
+    demand: forecast.demand,
+    captureRate: forecast.captureRate,
+    crowding: forecast.crowding,
+    waitMin: forecast.waitMin,
+    satisfaction: forecast.satisfaction,
+    revenue: forecast.revenue,
+    netProfit: forecast.netProfit,
+  };
+  const labels: Record<OperatingComparisonMetric, string> = {
+    demand: "실제 이용객",
+    captureRate: "철도 이용 전환율",
+    crowding: "혼잡도",
+    waitMin: "대기시간",
+    satisfaction: "만족도",
+    revenue: "운임 수익",
+    netProfit: "순이익",
+  };
+  return `<section class="operating-forecast-card" aria-label="운영 설정 예상 효과">
+    <header><div><span>OPERATING FORECAST</span><strong>운영 설정 예상 효과</strong></div><small>경로는 유지하고 수송력만 재계산</small></header>
+    <div class="operating-forecast-head"><span>지표</span><span>전일 확정</span><span>현재 예상</span></div>
+    ${(Object.keys(labels) as Array<keyof typeof labels>).map((metric) => `
+      <div class="operating-forecast-row">
+        <span>${labels[metric]}</span>
+        <strong>${operatingMetricText(metric, confirmedValues[metric])}</strong>
+        <strong data-operating-forecast="${metric}">${operatingMetricText(metric, forecastValues[metric])}</strong>
+      </div>`).join("")}
+  </section>`;
+}
+
+function updateOperatingForecastComparison(forecast: DemandResponsiveForecast) {
+  for (const metric of ["demand", "captureRate", "crowding", "waitMin", "satisfaction", "revenue", "netProfit"] as const) {
+    const element = trainManagerContent?.querySelector<HTMLElement>(`[data-operating-forecast="${metric}"]`);
+    setText(element ?? null, operatingMetricText(metric, forecast[metric]));
+  }
+}
+
 function renderTrainManager() {
   if (!trainManagerContent) return;
   const route = routes.find((item) => item.id === selectedRouteId) || routes[0];
@@ -10358,6 +11180,7 @@ function renderTrainManager() {
     .reduce((sum, depot) => sum + depot.capacity, 0);
   const operation = calculateRouteOperation(route.id);
   const selectedFleet = routeFleets.find((fleet) => fleet.id === selectedTrainFleetId);
+  const operatingForecast = calculateDemandResponsiveForecast();
   const selectedTrainSummary = selectedFleet
     ? `<div class="selected-train-summary" style="--selected-train-color:${escapeHtml(route.color)}">
         <span>선택한 열차</span>
@@ -10375,6 +11198,7 @@ function renderTrainManager() {
       <div class="depot-capacity-chip">기지 수용력: ${totalSets} / ${connectedDepotCapacity}</div>
     </div>
 
+    ${renderOperatingForecastComparison(operatingForecast)}
     <div class="train-fleet-list">
       ${
         routeFleets.length === 0
@@ -10426,6 +11250,27 @@ function renderTrainManager() {
       </button>
     </div>
   `;
+
+  const previewProposedFleet = () => {
+    const trainTypeSelect = byId("modalTrainTypeSelect") as HTMLSelectElement | null;
+    const carCountSelect = byId("modalCarCountSelect") as HTMLSelectElement | null;
+    const trainType = (trainTypeSelect?.value as TrainType) || "metro";
+    const cars = Number(carCountSelect?.value ?? 6);
+    const spec = trainCatalog[trainType];
+    const previewFleet: TrainFleet = {
+      id: "forecast-preview",
+      routeId: route.id,
+      trainType,
+      cars,
+      sets: 1,
+      capacity: spec.capacityPerCar * cars,
+      purchaseCost: spec.pricePerCar * cars,
+      maintenanceCost: spec.maintenancePerCar * cars,
+    };
+    updateOperatingForecastComparison(calculateDemandResponsiveForecast([...trainFleets, previewFleet]));
+  };
+  byId("modalTrainTypeSelect")?.addEventListener("change", previewProposedFleet);
+  byId("modalCarCountSelect")?.addEventListener("change", previewProposedFleet);
 
   trainManagerContent.querySelectorAll<HTMLButtonElement>(".fleet-qty-btn.increase").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -12205,7 +13050,7 @@ function redo() {
 }
 
 function cloneState(): SaveState {
-  return JSON.parse(JSON.stringify({ schemaVersion: currentSaveSchemaVersion, meta: currentMeta, routes, stations, transfers, depots, plans, diagramState, analysisState, statisticsState, constructionProjects, newsEvents, trainFleets, expressConfigs, passengerGroups, loans, economy })) as SaveState;
+  return JSON.parse(JSON.stringify({ schemaVersion: currentSaveSchemaVersion, meta: currentMeta, routes, stations, transfers, depots, plans, diagramState, analysisState, statisticsState, constructionProjects, newsEvents, trainFleets, expressConfigs, passengerGroups, loans, economy, demandZones, stationDemandStates })) as SaveState;
 }
 
 function applyState(state: SaveState) {
@@ -12213,6 +13058,11 @@ function applyState(state: SaveState) {
   currentMeta = { ...createDefaultMeta(), ...(state.meta ?? currentMeta) };
   routes = (state.routes ?? []).map((route) => rebuildRouteGraph(route));
   stations = state.stations;
+  demandZones = state.demandZones ?? [];
+  stationDemandStates = state.stationDemandStates ?? [];
+  demandStructureSignature = "";
+  demandServiceSignature = "";
+  demandContextSignature = "";
   transfers = state.transfers;
   depots = state.depots;
   plans = normalizePlans(state.plans ?? []);
@@ -12231,7 +13081,7 @@ function applyState(state: SaveState) {
 
 function persistState() {
   synchronizeGraphReferences();
-  localStorage.setItem("draw-gyotong-state", JSON.stringify({ schemaVersion: currentSaveSchemaVersion, meta: currentMeta, routes, stations, transfers, depots, plans, diagramState, analysisState, statisticsState, constructionProjects, newsEvents, trainFleets, expressConfigs, passengerGroups, loans, economy }));
+  localStorage.setItem("draw-gyotong-state", JSON.stringify({ schemaVersion: currentSaveSchemaVersion, meta: currentMeta, routes, stations, transfers, depots, plans, diagramState, analysisState, statisticsState, constructionProjects, newsEvents, trainFleets, expressConfigs, passengerGroups, loans, economy, demandZones, stationDemandStates }));
   localStorage.setItem("draw-gyotong-routes", JSON.stringify(routes));
 }
 
@@ -12247,6 +13097,11 @@ function loadSavedState() {
       currentMeta = { ...createDefaultMeta(), ...(parsed.meta ?? {}) };
       routes = Array.isArray(parsed.routes) ? parsed.routes.map((route) => rebuildRouteGraph(route)) : [];
       stations = Array.isArray(parsed.stations) ? parsed.stations : [];
+      demandZones = Array.isArray(parsed.demandZones) ? parsed.demandZones : [];
+      stationDemandStates = Array.isArray(parsed.stationDemandStates) ? parsed.stationDemandStates : [];
+      demandStructureSignature = "";
+      demandServiceSignature = "";
+      demandContextSignature = "";
       transfers = Array.isArray(parsed.transfers) ? parsed.transfers : [];
       depots = Array.isArray(parsed.depots) ? parsed.depots : [];
       plans = normalizePlans(Array.isArray(parsed.plans) ? parsed.plans : []);
@@ -12268,6 +13123,11 @@ function loadSavedState() {
   } catch {
     routes = [];
     stations = [];
+    demandZones = [];
+    stationDemandStates = [];
+    demandStructureSignature = "";
+    demandServiceSignature = "";
+    demandContextSignature = "";
     transfers = [];
     depots = [];
     plans = [];
