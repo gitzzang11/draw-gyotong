@@ -519,6 +519,7 @@ type GameSettings = {
   performanceMode: "balanced" | "battery";
   reducedMotion: boolean;
   sandboxConstructionTime: boolean;
+  autoStationNaming: boolean;
   autoSaveEnabled: boolean;
   autoSaveIntervalSeconds: 30 | 60 | 180 | 300;
 };
@@ -566,7 +567,11 @@ type Obstacle = {
 };
 
 type OverpassElement = {
+  id?: number;
+  lat?: number;
+  lon?: number;
   tags?: Record<string, string>;
+  center?: { lat: number; lon: number };
   geometry?: Array<{ lat: number; lon: number }>;
   members?: Array<{ role: string; geometry?: Array<{ lat: number; lon: number }> }>;
 };
@@ -749,6 +754,19 @@ type ConstructionDraft = {
   analysis: ConstructionAnalysis;
 };
 
+type DemolitionReview = {
+  planning: boolean;
+  routeCount: number;
+  segmentCount: number;
+  stationCount: number;
+  depotCount: number;
+  lengthKm: number;
+  refund: number;
+  description: string;
+  confirmLabel: string;
+  confirm: () => void;
+};
+
 type RouteRepair = {
   routeId: string;
   gapIndex: number;
@@ -761,6 +779,7 @@ const defaultSettings: GameSettings = {
   performanceMode: "balanced",
   reducedMotion: false,
   sandboxConstructionTime: false,
+  autoStationNaming: true,
   autoSaveEnabled: true,
   autoSaveIntervalSeconds: 30,
 };
@@ -864,6 +883,62 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
     growthMultiplier: 1.12,
     description: "성장형 도시",
   },
+};
+
+type StationNamePlace = { name: string; position: [number, number] };
+const stationNamePlaces: Record<CityId, StationNamePlace[]> = {
+  seoul: [
+    { name: "시청", position: [37.5663, 126.9779] },
+    { name: "광화문", position: [37.5716, 126.9769] },
+    { name: "종로", position: [37.5704, 126.9922] },
+    { name: "동대문", position: [37.5714, 127.0097] },
+    { name: "왕십리", position: [37.5615, 127.0377] },
+    { name: "성수", position: [37.5446, 127.0559] },
+    { name: "잠실", position: [37.5133, 127.1002] },
+    { name: "강남", position: [37.4979, 127.0276] },
+    { name: "용산", position: [37.5299, 126.9648] },
+    { name: "여의도", position: [37.5217, 126.9243] },
+    { name: "노량진", position: [37.5141, 126.9425] },
+    { name: "홍대입구", position: [37.5572, 126.9254] },
+    { name: "신촌", position: [37.5552, 126.9369] },
+    { name: "마곡", position: [37.5602, 126.8255] },
+    { name: "구로", position: [37.5032, 126.8820] },
+    { name: "수유", position: [37.6381, 127.0257] },
+  ],
+  busan: [
+    { name: "부산", position: [35.1151, 129.0414] },
+    { name: "남포", position: [35.0978, 129.0348] },
+    { name: "서면", position: [35.1578, 129.0590] },
+    { name: "연산", position: [35.1861, 129.0815] },
+    { name: "동래", position: [35.2056, 129.0785] },
+    { name: "사상", position: [35.1624, 128.9846] },
+    { name: "하단", position: [35.1062, 128.9667] },
+    { name: "광안", position: [35.1579, 129.1131] },
+    { name: "센텀시티", position: [35.1690, 129.1302] },
+    { name: "해운대", position: [35.1632, 129.1588] },
+  ],
+  daejeon: [
+    { name: "대전", position: [36.3323, 127.4342] },
+    { name: "중앙로", position: [36.3287, 127.4255] },
+    { name: "서대전", position: [36.3226, 127.4032] },
+    { name: "둔산", position: [36.3518, 127.3787] },
+    { name: "정부청사", position: [36.3580, 127.3818] },
+    { name: "유성온천", position: [36.3537, 127.3413] },
+    { name: "노은", position: [36.3741, 127.3178] },
+    { name: "도안", position: [36.3217, 127.3427] },
+    { name: "관저", position: [36.2982, 127.3372] },
+  ],
+  gwangju: [
+    { name: "광주송정", position: [35.1378, 126.7915] },
+    { name: "상무", position: [35.1466, 126.8486] },
+    { name: "김대중컨벤션센터", position: [35.1432, 126.8415] },
+    { name: "양동시장", position: [35.1542, 126.9014] },
+    { name: "금남로", position: [35.1531, 126.9147] },
+    { name: "문화전당", position: [35.1466, 126.9199] },
+    { name: "조선대", position: [35.1443, 126.9300] },
+    { name: "수완", position: [35.1903, 126.8245] },
+    { name: "첨단", position: [35.2190, 126.8420] },
+  ],
 };
 
 const difficultyConfigs: Record<Difficulty, { label: string; startCash: number; costMultiplier: number; demandMultiplier: number; bankruptcyLimit: number; loanInterestMultiplier: number }> = {
@@ -978,10 +1053,10 @@ app.innerHTML = `
           <strong id="dailyNetReadout" class="net-readout negative">-4,500 억</strong>
         </div>
 
-        <div class="status-pill satisfaction-pill" title="시민 승객 만족도">
+        <button id="satisfactionPill" class="status-pill satisfaction-pill" type="button" title="승객 만족도 상세 보기" aria-label="승객 만족도 상세 보기">
           <span id="satisfactionIcon" class="pill-icon satisfaction-icon">😊</span>
           <strong id="satisfactionReadout">94 - 매우좋음</strong>
-        </div>
+        </button>
 
         <div class="status-pill history-pill" aria-label="작업 이력">
           <button id="undoButton" class="history-action icon-only" type="button" aria-label="실행 취소" title="실행 취소"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg></button>
@@ -1063,7 +1138,7 @@ app.innerHTML = `
     <section id="modifyToolsCard" class="hud modify-tools-card" hidden aria-label="수정 도구">
       <div class="modify-tools-card-heading"><span>MODIFY TOOLS</span><strong>수정 도구</strong></div>
       <div class="modify-tools-grid">
-        <button id="eraserTool" class="primary-tool compact danger-tool" type="button" aria-pressed="false" aria-label="노선과 역 철거"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l10-10 7 7-7 7"/><path d="M6.5 12.5l5 5"/></svg><span>철거</span></button>
+        <button id="eraserTool" class="primary-tool compact danger-tool" type="button" aria-pressed="false" aria-label="시설 범위 철거"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l10-10 7 7-7 7"/><path d="M6.5 12.5l5 5"/></svg><span>철거</span></button>
         <button id="extendTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연장"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/><path d="M14 8l4 4-4 4"/></svg><span>연장</span></button>
         <button id="branchTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="분기 추가"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 12h4c4 0 4-7 6-7"/><path d="M11 12c4 0 4 7 6 7"/></svg><span>분기</span></button>
         <button id="mergeTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연결"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 5c5 0 5 7 10 7"/><path d="M7 19c5 0 5-7 10-7"/></svg><span>연결</span></button>
@@ -1074,9 +1149,16 @@ app.innerHTML = `
 
     <section id="routeSettingsCard" class="hud route-settings-card" hidden aria-label="노선 설정">
       <div class="route-settings-card-heading"><span>ROUTE SETTINGS</span><strong>노선 설정</strong></div>
-      <label><span>이름</span><input id="draftRouteNameInput" type="text" maxlength="32" placeholder="자동 이름" autocomplete="off" /></label>
-      <label class="route-settings-color-field"><span>색상</span><input id="draftRouteColorInput" type="color" value="#3277ff" aria-label="노선 색상" /></label>
-      <button id="saveRouteSettingsButton" class="ops-button primary action-button action-button--setting" type="button"><span class="button-icon" aria-hidden="true">✓</span><span>설정 적용</span></button>
+      <div id="routeSettingsTarget" class="route-settings-target" hidden>
+        <span id="routeSettingsTargetKicker">수정 대상</span>
+        <div><i id="routeSettingsTargetSwatch" aria-hidden="true"></i><strong id="routeSettingsTargetName">노선을 선택하세요</strong></div>
+        <small id="routeSettingsTargetMeta">지도에서 대상 노선을 선택하면 여기에 표시됩니다.</small>
+      </div>
+      <div id="routeSettingsEditFields" class="route-settings-edit-fields">
+        <label><span>이름</span><input id="draftRouteNameInput" type="text" maxlength="32" placeholder="자동 이름" autocomplete="off" /></label>
+        <label class="route-settings-color-field"><span>색상</span><input id="draftRouteColorInput" type="color" value="#3277ff" aria-label="노선 색상" /></label>
+        <button id="saveRouteSettingsButton" class="ops-button primary action-button action-button--setting" type="button"><span class="button-icon" aria-hidden="true">✓</span><span>설정 적용</span></button>
+      </div>
     </section>
 
 
@@ -1140,6 +1222,7 @@ app.innerHTML = `
         <label class="setting-row"><span><strong>성능</strong><small>열차 표시와 지도 자원 사용량</small></span><select id="performanceSelect"><option value="balanced">균형</option><option value="battery">절전</option></select></label>
         <label class="setting-row"><span><strong>모션 감소</strong><small>화면 전환과 애니메이션 축소</small></span><input id="reducedMotionToggle" type="checkbox" /></label>
         <label class="setting-row"><span><strong>샌드박스 공사 기간</strong><small>샌드박스에서도 공사와 개통 절차 사용</small></span><input id="sandboxConstructionTimeToggle" type="checkbox" /></label>
+        <label class="setting-row"><span><strong>역 이름 자동 생성</strong><small>새 역에 주변 지역·기존 역·랜드마크 이름 적용</small></span><input id="autoStationNamingToggle" type="checkbox" checked /></label>
         <label class="setting-row"><span><strong>자동 저장</strong><small>현재 슬롯을 설정한 주기로 저장</small></span><input id="autoSaveToggle" type="checkbox" checked /></label>
         <label class="setting-row"><span><strong>자동 저장 주기</strong><small>자동 저장이 켜졌을 때 적용</small></span><select id="autoSaveIntervalSelect"><option value="30">30초</option><option value="60">1분</option><option value="180">3분</option><option value="300">5분</option></select></label>
         <div class="settings-footer"><span id="cacheReadout">지도 캐시 확인 중</span><button id="clearCacheButton" class="ops-button" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span>캐시 정리</span></button></div>
@@ -1194,27 +1277,41 @@ app.innerHTML = `
       </section>
     </div>
 
+    <div id="satisfactionDialog" class="dialog-backdrop satisfaction-backdrop" hidden>
+      <section class="satisfaction-dialog" role="dialog" aria-modal="true" aria-labelledby="satisfactionDialogTitle">
+        <header class="satisfaction-dialog-header">
+          <div>
+            <span>PASSENGER EXPERIENCE</span>
+            <h2 id="satisfactionDialogTitle">승객 만족도 리포트</h2>
+            <p>실제 이동 그룹의 대기·혼잡·환승·요금 체감을 종합한 현재 평가입니다.</p>
+          </div>
+          <button id="closeSatisfactionButton" class="dialog-close" type="button" aria-label="승객 만족도 리포트 닫기">×</button>
+        </header>
+        <div id="satisfactionDialogContent" class="satisfaction-dialog-content"></div>
+      </section>
+    </div>
+
     <div id="errorBanner" class="error-banner" hidden role="alert"><span id="errorMessage">일시적인 오류가 발생했습니다.</span><button id="errorRetryButton" type="button">재시도</button><button id="errorDismissButton" type="button" aria-label="닫기">×</button></div>
     <div id="toast" class="toast" hidden role="status"></div>
 
     <section id="constructionPreviewPanel" class="construction-preview-panel" hidden aria-live="polite">
       <header>
-        <div><span>CONSTRUCTION REVIEW</span><strong id="constructionPreviewTitle">건설 미리보기</strong></div>
+        <div><span id="constructionPreviewKicker">CONSTRUCTION REVIEW</span><strong id="constructionPreviewTitle">건설 미리보기</strong><small id="constructionPreviewSubtitle">범위와 비용을 확인한 뒤 확정하세요.</small></div>
         <button id="toggleConstructionPreviewButton" type="button" aria-expanded="true" aria-label="비용 정보 접기">⌃</button>
       </header>
       <div id="constructionPreviewDetails" class="construction-preview-details">
         <div class="construction-summary">
-          <div><span>예상 총비용</span><strong id="previewTotalCost">0억</strong></div>
-          <div><span>건설 후 잔액</span><strong id="previewBalance">0억</strong></div>
-          <div><span>예상 공기</span><strong id="previewDuration">0일</strong></div>
+          <div><span id="previewTotalCostLabel">예상 총비용</span><strong id="previewTotalCost">0억</strong></div>
+          <div><span id="previewBalanceLabel">건설 후 잔액</span><strong id="previewBalance">0억</strong></div>
+          <div><span id="previewDurationLabel">예상 공기</span><strong id="previewDuration">0일</strong></div>
         </div>
         <dl class="construction-breakdown">
-          <div><dt>총 길이</dt><dd id="previewLength">0m</dd></div>
-          <div><dt>기본 건설비</dt><dd id="previewBaseCost">0억</dd></div>
-          <div><dt>산악 구간</dt><dd id="previewMountain">없음</dd></div>
-          <div><dt>강 통과</dt><dd id="previewRiverCount">없음</dd></div>
-          <div><dt>역 연결/설치</dt><dd id="previewStationCount">0개</dd></div>
-          <div><dt>차량기지 연결</dt><dd id="previewDepotConnection">미연결</dd></div>
+          <div><dt id="previewLengthLabel">총 길이</dt><dd id="previewLength">0m</dd></div>
+          <div><dt id="previewBaseCostLabel">기본 건설비</dt><dd id="previewBaseCost">0억</dd></div>
+          <div><dt id="previewMountainLabel">산악 구간</dt><dd id="previewMountain">없음</dd></div>
+          <div><dt id="previewRiverCountLabel">강 통과</dt><dd id="previewRiverCount">없음</dd></div>
+          <div><dt id="previewStationCountLabel">역 연결/설치</dt><dd id="previewStationCount">0개</dd></div>
+          <div><dt id="previewDepotConnectionLabel">차량기지 연결</dt><dd id="previewDepotConnection">미연결</dd></div>
         </dl>
         <div id="riverChoiceList" class="river-choice-list" hidden></div>
         <div id="constructionWarnings" class="construction-warnings"></div>
@@ -1433,13 +1530,28 @@ app.innerHTML = `
 
     <div id="planConversionDialog" class="dialog-backdrop" hidden>
       <section class="plan-conversion-dialog" role="dialog" aria-modal="true" aria-labelledby="planConversionTitle">
-        <div class="dialog-heading">
-          <div><span>BUILD FROM PLAN</span><h2 id="planConversionTitle">실제 건설 전환</h2></div>
+        <div class="dialog-heading plan-conversion-heading">
+          <div class="plan-conversion-heading-icon" aria-hidden="true">▣</div>
+          <div><span>BUILD FROM PLAN</span><h2 id="planConversionTitle">실제 건설 전환</h2><p id="planConversionPlanName">현재 기획안</p></div>
           <button id="closePlanConversionButton" class="dialog-close" type="button" aria-label="실제 건설 전환 닫기">×</button>
         </div>
-        <p class="conversion-help">건설할 노선 구간과 시설을 선택하세요. 선택하지 않은 항목은 계획에 그대로 남습니다.</p>
-        <div id="planConversionItems" class="plan-conversion-items"></div>
-        <div id="planConversionSummary" class="plan-conversion-summary"></div>
+        <div class="plan-conversion-intro">
+          <div><strong>기획안을 실제 공사로 전환합니다</strong><span>선택하지 않은 항목은 기획안에 남아 나중에 이어서 건설할 수 있습니다.</span></div>
+          <div class="plan-conversion-balance"><span>현재 자금</span><strong id="planConversionCurrentCash">0억</strong></div>
+        </div>
+        <div class="plan-conversion-layout">
+          <section class="plan-conversion-selection">
+            <div class="plan-conversion-toolbar">
+              <div><span>BUILD SCOPE</span><strong>건설 범위 선택</strong></div>
+              <div>
+                <button id="selectAllPlanConversionButton" type="button">전체 선택</button>
+                <button id="clearPlanConversionButton" type="button">선택 해제</button>
+              </div>
+            </div>
+            <div id="planConversionItems" class="plan-conversion-items"></div>
+          </section>
+          <aside id="planConversionSummary" class="plan-conversion-summary"></aside>
+        </div>
         <div class="conversion-actions">
           <button id="fundPlanWithLoanButton" type="button" hidden>대출 30,000억 받기</button>
           <button id="cancelPlanConversionButton" type="button">취소</button>
@@ -1545,9 +1657,9 @@ app.innerHTML = `
       <section class="merge-dialog" role="dialog" aria-modal="true" aria-labelledby="mergeTitle">
         <div class="dialog-heading"><div><span>CONNECT LINES</span><h2 id="mergeTitle">노선 연결</h2></div><button id="closeMergeButton" class="dialog-close" type="button" aria-label="닫기">×</button></div>
         <p id="mergeDescription"></p>
-        <label class="manager-field"><span>병합 노선 이름</span><select id="mergeNameSelect"></select></label>
-        <label class="manager-field"><span>병합 노선 색상</span><select id="mergeColorSelect"></select></label>
-        <div class="dialog-actions"><button id="confirmMergeButton" type="button">병합 확정</button><button id="cancelMergeButton" type="button">취소</button></div>
+        <label class="manager-field"><span>연결 후 노선 이름</span><select id="mergeNameSelect"></select></label>
+        <label class="manager-field"><span>연결 후 노선 색상</span><select id="mergeColorSelect"></select></label>
+        <div class="dialog-actions"><button id="confirmMergeButton" type="button">연결 공사 확정</button><button id="cancelMergeButton" type="button">취소</button></div>
       </section>
     </div>
 
@@ -1668,6 +1780,11 @@ const landuseLayer = L.geoJSON(undefined, {
 
 const facilityInteractionPane = map.createPane("facilityInteractionPane");
 facilityInteractionPane.style.zIndex = "690";
+const trainInteractionPane = map.createPane("trainInteractionPane");
+trainInteractionPane.style.zIndex = "790";
+trainInteractionPane.style.pointerEvents = "none";
+const stationInteractionPane = map.createPane("stationInteractionPane");
+stationInteractionPane.style.zIndex = "780";
 
 const routeLayer = L.layerGroup().addTo(map);
 const constructionLayer = L.layerGroup().addTo(map);
@@ -1718,6 +1835,10 @@ const waitReadout = byId("waitReadout");
 const cashReadout = byId("cashReadout");
 const satisfactionReadout = byId("satisfactionReadout");
 const satisfactionIcon = byId("satisfactionIcon");
+const satisfactionPill = document.querySelector<HTMLButtonElement>("#satisfactionPill");
+const satisfactionDialog = byId("satisfactionDialog");
+const closeSatisfactionButton = byId("closeSatisfactionButton");
+const satisfactionDialogContent = byId("satisfactionDialogContent");
 const demandReadout = byId("demandReadout");
 const cashPill = document.querySelector<HTMLElement>(".cash-pill");
 const financeDialog = byId("financeDialog");
@@ -1780,6 +1901,7 @@ const hapticsToggle = document.querySelector<HTMLInputElement>("#hapticsToggle")
 const performanceSelect = document.querySelector<HTMLSelectElement>("#performanceSelect");
 const reducedMotionToggle = document.querySelector<HTMLInputElement>("#reducedMotionToggle");
 const sandboxConstructionTimeToggle = document.querySelector<HTMLInputElement>("#sandboxConstructionTimeToggle");
+const autoStationNamingToggle = document.querySelector<HTMLInputElement>("#autoStationNamingToggle");
 const autoSaveToggle = document.querySelector<HTMLInputElement>("#autoSaveToggle");
 const autoSaveIntervalSelect = document.querySelector<HTMLSelectElement>("#autoSaveIntervalSelect");
 const clearCacheButton = document.querySelector<HTMLButtonElement>("#clearCacheButton");
@@ -1790,6 +1912,12 @@ const errorRetryButton = document.querySelector<HTMLButtonElement>("#errorRetryB
 const errorDismissButton = document.querySelector<HTMLButtonElement>("#errorDismissButton");
 const toast = byId("toast");
 const routeSettingsCard = byId("routeSettingsCard");
+const routeSettingsTarget = byId("routeSettingsTarget");
+const routeSettingsTargetKicker = byId("routeSettingsTargetKicker");
+const routeSettingsTargetSwatch = byId("routeSettingsTargetSwatch");
+const routeSettingsTargetName = byId("routeSettingsTargetName");
+const routeSettingsTargetMeta = byId("routeSettingsTargetMeta");
+const routeSettingsEditFields = byId("routeSettingsEditFields");
 const draftRouteNameInput = document.querySelector<HTMLInputElement>("#draftRouteNameInput");
 const draftRouteColorInput = document.querySelector<HTMLInputElement>("#draftRouteColorInput");
 const saveRouteSettingsButton = document.querySelector<HTMLButtonElement>("#saveRouteSettingsButton");
@@ -1838,16 +1966,27 @@ const undoButton = document.querySelector<HTMLButtonElement>("#undoButton");
 const redoButton = document.querySelector<HTMLButtonElement>("#redoButton");
 const constructionPreviewPanel = byId("constructionPreviewPanel");
 const constructionPreviewTitle = byId("constructionPreviewTitle");
+const constructionPreviewKicker = byId("constructionPreviewKicker");
+const constructionPreviewSubtitle = byId("constructionPreviewSubtitle");
 const toggleConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#toggleConstructionPreviewButton");
 const constructionPreviewDetails = byId("constructionPreviewDetails");
+const previewTotalCostLabel = byId("previewTotalCostLabel");
+const previewBalanceLabel = byId("previewBalanceLabel");
+const previewDurationLabel = byId("previewDurationLabel");
 const previewTotalCost = byId("previewTotalCost");
 const previewBalance = byId("previewBalance");
 const previewDuration = byId("previewDuration");
+const previewLengthLabel = byId("previewLengthLabel");
 const previewLength = byId("previewLength");
+const previewBaseCostLabel = byId("previewBaseCostLabel");
 const previewBaseCost = byId("previewBaseCost");
+const previewMountainLabel = byId("previewMountainLabel");
 const previewMountain = byId("previewMountain");
+const previewRiverCountLabel = byId("previewRiverCountLabel");
 const previewRiverCount = byId("previewRiverCount");
+const previewStationCountLabel = byId("previewStationCountLabel");
 const previewStationCount = byId("previewStationCount");
+const previewDepotConnectionLabel = byId("previewDepotConnectionLabel");
 const previewDepotConnection = byId("previewDepotConnection");
 const riverChoiceList = byId("riverChoiceList");
 const constructionWarnings = byId("constructionWarnings");
@@ -1936,6 +2075,10 @@ const closePlanConversionButton = document.querySelector<HTMLButtonElement>("#cl
 const cancelPlanConversionButton = document.querySelector<HTMLButtonElement>("#cancelPlanConversionButton");
 const planConversionItems = byId("planConversionItems");
 const planConversionSummary = byId("planConversionSummary");
+const planConversionPlanName = byId("planConversionPlanName");
+const planConversionCurrentCash = byId("planConversionCurrentCash");
+const selectAllPlanConversionButton = document.querySelector<HTMLButtonElement>("#selectAllPlanConversionButton");
+const clearPlanConversionButton = document.querySelector<HTMLButtonElement>("#clearPlanConversionButton");
 const fundPlanWithLoanButton = document.querySelector<HTMLButtonElement>("#fundPlanWithLoanButton");
 const confirmPlanConversionButton = document.querySelector<HTMLButtonElement>("#confirmPlanConversionButton");
 const layerButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".layer-toggle"));
@@ -2033,6 +2176,7 @@ let selectedManualTransferEndpoints: ManualTransferEndpoint[] = [];
 let diagramDrag: { stationId: string; pointerId: number } | null = null;
 let pendingDecision: (() => void) | null = null;
 let constructionDraft: ConstructionDraft | null = null;
+let demolitionReview: DemolitionReview | null = null;
 let constructionPreviewCollapsed = false;
 let knownObstacles: Obstacle[] = [];
 let selectedTransferStationIds: string[] = [];
@@ -2053,6 +2197,7 @@ let settings: GameSettings = loadSettings();
 let audioContext: AudioContext | null = null;
 let toastTimer = 0;
 let lastTrainRender = 0;
+let trainInteractionLockedUntil = 0;
 let lastHudClockUpdate = 0;
 let lastMapRenderLod: LodMode = getLodMode(map.getZoom());
 let loadingComplete = false;
@@ -2189,13 +2334,15 @@ planConversionDialog?.addEventListener("click", (event) => {
   if (event.target === planConversionDialog) closePlanConversionDialog();
 });
 planConversionItems?.addEventListener("change", handlePlanConversionSelectionChange);
+selectAllPlanConversionButton?.addEventListener("click", () => setAllPlanConversionSelection(true));
+clearPlanConversionButton?.addEventListener("click", () => setAllPlanConversionSelection(false));
 fundPlanWithLoanButton?.addEventListener("click", fundPlanWithLoan);
 confirmPlanConversionButton?.addEventListener("click", confirmPlanConversion);
 undoButton?.addEventListener("click", undo);
 redoButton?.addEventListener("click", redo);
 toggleConstructionPreviewButton?.addEventListener("click", toggleConstructionPreview);
-cancelConstructionButton?.addEventListener("click", cancelConstructionDraft);
-confirmConstructionButton?.addEventListener("click", confirmConstructionDraft);
+cancelConstructionButton?.addEventListener("click", cancelActiveReview);
+confirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
 manageLineButton?.addEventListener("click", openLineManager);
 selectedLineColor?.addEventListener("click", openLineManager);
 lineAutoFareButton?.addEventListener("click", () => {
@@ -2250,6 +2397,11 @@ cashPill?.addEventListener("click", openFinanceDialog);
 closeFinanceButton?.addEventListener("click", closeFinanceDialog);
 financeDialog?.addEventListener("click", (event) => {
   if (event.target === financeDialog) closeFinanceDialog();
+});
+satisfactionPill?.addEventListener("click", openSatisfactionDialog);
+closeSatisfactionButton?.addEventListener("click", closeSatisfactionDialog);
+satisfactionDialog?.addEventListener("click", (event) => {
+  if (event.target === satisfactionDialog) closeSatisfactionDialog();
 });
 dialogLoanButton?.addEventListener("click", () => {
   takeLoan();
@@ -2418,6 +2570,9 @@ reducedMotionToggle?.addEventListener("change", () => updateSettings({ reducedMo
 sandboxConstructionTimeToggle?.addEventListener("change", () =>
   updateSettings({ sandboxConstructionTime: Boolean(sandboxConstructionTimeToggle.checked) }),
 );
+autoStationNamingToggle?.addEventListener("change", () =>
+  updateSettings({ autoStationNaming: Boolean(autoStationNamingToggle.checked) }),
+);
 autoSaveToggle?.addEventListener("change", () => updateSettings({ autoSaveEnabled: Boolean(autoSaveToggle.checked) }));
 autoSaveIntervalSelect?.addEventListener("change", () => {
   const value = Number(autoSaveIntervalSelect.value);
@@ -2509,8 +2664,10 @@ function combinePlanningContinuation(points: LatLng[]) {
 function onPointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   const pointerTarget = event.target as HTMLElement;
+  if (pointerTarget.closest(".planned-facility-click-target")) return;
   if (activeTool === "pan" && pointerTarget.closest(".station-map-marker, .station-click-target, .depot-map-shape, .depot-click-target")) return;
   if (pointerTarget.closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .train-icon, .construction-preview-panel, .dialog-backdrop")) return;
+  if (demolitionReview) return;
   if (event.pointerType === "touch" && activePointerId !== null && event.pointerId !== activePointerId) {
     cancelActiveDrawing();
     setText(facilityReadout, "확대/축소 후 다시 그리세요");
@@ -2524,6 +2681,11 @@ function onPointerDown(event: PointerEvent) {
   }
 
   if (activeTool === "pan") {
+    const station = findNearestStationAtPoint(point, 40);
+    if (station) {
+      openStationManager(station.id);
+      return;
+    }
     const hits = findRoutesAtPoint(point, 26);
     if (hits.length === 0) {
       selectRoute(null);
@@ -2596,6 +2758,12 @@ function onPointerDown(event: PointerEvent) {
   activePlanningContinuation = planningContinuation;
   if (planningContinuation && !hasDraftRouteSettings) selectedColor = planningContinuation.color;
   replacingPlannedRouteId = planningContinuation?.plannedRouteId ?? null;
+  if (planningContinuation) {
+    const targetRoute = planningContinuation.plannedRouteId
+      ? getActivePlan(false)?.routes.find((route) => route.id === planningContinuation.plannedRouteId)
+      : routes.find((route) => route.id === planningContinuation.actualRouteId);
+    if (targetRoute) showRouteSettingsTarget(targetRoute, planningContinuation.plannedRouteId ? "planned" : "actual");
+  }
 
   event.preventDefault();
   if (activeTool === "extend") {
@@ -2612,6 +2780,8 @@ function onPointerDown(event: PointerEvent) {
     }
     activeExtension = extension;
     selectRoute(extension.routeId, false);
+    const targetRoute = routes.find((route) => route.id === extension.routeId);
+    if (targetRoute) showRouteSettingsTarget(targetRoute, "actual");
     }
   }
   if (activeTool === "branch") {
@@ -2623,6 +2793,7 @@ function onPointerDown(event: PointerEvent) {
       }
       activePlanningBranch = { routeId: snap.route.id, junction: map.latLngToContainerPoint(snap.latLng), junctionLatLng: snap.latLng, color: snap.route.color };
       selectedColor = snap.route.color;
+      showRouteSettingsTarget(snap.route, "planned");
     } else {
     const snap = findNearestRoutePoint(point, selectedRouteId ?? undefined);
     if (!snap || snap.distancePx > 34) {
@@ -2630,6 +2801,7 @@ function onPointerDown(event: PointerEvent) {
       return;
     }
     selectRoute(snap.route.id, false);
+    showRouteSettingsTarget(snap.route, "actual");
     activeBranch = {
       routeId: snap.route.id,
       junction: map.latLngToContainerPoint(snap.latLng),
@@ -2774,51 +2946,346 @@ function beginEraserStroke(event: PointerEvent, point: L.Point) {
     lineCap: "round",
     interactive: false,
   }).addTo(previewLayer);
-  setText(facilityReadout, planningMode ? "지울 계획 노선 구간을 따라 드래그하세요" : "철거할 실제 노선 구간을 따라 드래그하세요");
+  setText(facilityReadout, planningMode ? "지울 계획 시설을 가로질러 드래그하세요" : "철거할 건설 시설을 가로질러 드래그하세요");
 }
 
 function finishEraserStroke(points: L.Point[]) {
-  if (!planningMode) {
-    finishConstructionEraserStroke(points);
+  if (points.length < 2) {
+    if (points[0]) selectDeletePoint(points[0]);
     return;
   }
-  const plan = getActivePlan(false);
-  if (!plan || points.length < 2) {
-    setText(facilityReadout, "지울 구간을 따라 조금 더 길게 드래그하세요");
-    return;
-  }
-  const start = findNearestPlannedRoutePoint(points[0], plan);
-  const end = findNearestPlannedRoutePoint(points[points.length - 1], plan);
-  const hitRadius = eraserRadiusPx + 12;
-  if (!start || !end || start.distancePx > hitRadius || end.distancePx > hitRadius) {
-    setText(facilityReadout, "지우개를 계획 노선 위에서 시작하고 끝내세요");
-    return;
-  }
-  if (start.route.id !== end.route.id) {
-    setText(facilityReadout, "한 번에 같은 계획 노선의 구간만 지울 수 있습니다");
-    return;
-  }
-  openPlannedRouteEraseRange(plan, start.route, start.coordinateIndex, end.coordinateIndex);
+  if (planningMode) requestPlannedAssetsErase(points);
+  else requestBuiltAssetsErase(points);
 }
 
-function finishConstructionEraserStroke(points: L.Point[]) {
-  if (points.length < 2) {
-    setText(facilityReadout, "지울 노선 구간을 따라 조금 더 길게 드래그하세요");
+function strokeTouchesSegment(stroke: L.Point[], start: L.Point, end: L.Point, radiusPx: number) {
+  if (stroke.length === 1) return pointLineDistance(stroke[0], start, end) <= radiusPx;
+  for (let index = 1; index < stroke.length; index += 1) {
+    const brushStart = stroke[index - 1];
+    const brushEnd = stroke[index];
+    if (segmentsIntersect(brushStart, brushEnd, start, end)) return true;
+    if (
+      pointLineDistance(start, brushStart, brushEnd) <= radiusPx ||
+      pointLineDistance(end, brushStart, brushEnd) <= radiusPx ||
+      pointLineDistance(brushStart, start, end) <= radiusPx ||
+      pointLineDistance(brushEnd, start, end) <= radiusPx
+    ) return true;
+  }
+  return false;
+}
+
+function strokeTouchesPoint(stroke: L.Point[], point: L.Point, radiusPx: number) {
+  if (stroke.some((item) => item.distanceTo(point) <= radiusPx)) return true;
+  for (let index = 1; index < stroke.length; index += 1) {
+    if (pointLineDistance(point, stroke[index - 1], stroke[index]) <= radiusPx) return true;
+  }
+  return false;
+}
+
+function strokeTouchesPolygon(stroke: L.Point[], polygon: L.Point[], radiusPx: number) {
+  if (polygon.length < 3) return false;
+  if (stroke.some((point) => pointInPolygon(point, polygon))) return true;
+  for (let index = 0; index < polygon.length; index += 1) {
+    const start = polygon[index];
+    const end = polygon[(index + 1) % polygon.length];
+    if (strokeTouchesSegment(stroke, start, end, radiusPx)) return true;
+  }
+  return false;
+}
+
+function findHitCoordinateSegments(coordinates: Array<[number, number]>, stroke: L.Point[], radiusPx: number) {
+  const hits = new Set<number>();
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const start = map.latLngToContainerPoint(L.latLng(...coordinates[index - 1]));
+    const end = map.latLngToContainerPoint(L.latLng(...coordinates[index]));
+    if (strokeTouchesSegment(stroke, start, end, radiusPx)) hits.add(index - 1);
+  }
+  return hits;
+}
+
+function groupKeptSegmentIndices(segmentCount: number, removed: Set<number>) {
+  const groups: number[][] = [];
+  let current: number[] = [];
+  for (let index = 0; index < segmentCount; index += 1) {
+    if (removed.has(index)) {
+      if (current.length > 0) groups.push(current);
+      current = [];
+    } else {
+      current.push(index);
+    }
+  }
+  if (current.length > 0) groups.push(current);
+  return groups;
+}
+
+function getPlannedEraseSelection(plan: ConstructionPlan, stroke: L.Point[]) {
+  const radius = eraserRadiusPx + 8;
+  const routeHits = new Map<string, Set<number>>();
+  for (const route of plan.routes) {
+    const rawHits = findHitCoordinateSegments(route.coordinates, stroke, radius);
+    const removableHits = new Set(Array.from(rawHits).filter((index) => {
+      const segment = route.segments[index];
+      return segment && !route.completedSegmentIds.includes(segment.id);
+    }));
+    if (removableHits.size > 0) routeHits.set(route.id, removableHits);
+  }
+  const stationIds = new Set(
+    plan.stations
+      .filter((station) => !station.completed && strokeTouchesPoint(stroke, map.latLngToContainerPoint(L.latLng(...station.position)), radius + 4))
+      .map((station) => station.id),
+  );
+  const depotIds = new Set(
+    plan.depots
+      .filter((depot) => !depot.completed && strokeTouchesPolygon(stroke, depot.polygon.map((point) => map.latLngToContainerPoint(L.latLng(...point))), radius))
+      .map((depot) => depot.id),
+  );
+  return { routeHits, stationIds, depotIds };
+}
+
+function requestPlannedAssetsErase(points: L.Point[]) {
+  const plan = getActivePlan(false);
+  if (!plan) {
+    setText(facilityReadout, "삭제할 기획안이 없습니다");
     return;
   }
-  const hitRadius = eraserRadiusPx + 12;
-  const start = findNearestRouteCoordinate(points[0], undefined, hitRadius);
-  const end = findNearestRouteCoordinate(points[points.length - 1], undefined, hitRadius);
-  if (!start || !end) {
-    setText(facilityReadout, "지우개를 실제 노선 위에서 시작하고 끝내세요");
+  const selection = getPlannedEraseSelection(plan, points);
+  const segmentCount = Array.from(selection.routeHits.values()).reduce((sum, hits) => sum + hits.size, 0);
+  if (segmentCount + selection.stationIds.size + selection.depotIds.size === 0) {
+    setText(facilityReadout, "드래그 범위에 삭제할 계획 시설이 없습니다");
     return;
   }
-  if (start.route.id !== end.route.id) {
-    setText(facilityReadout, "한 번에 같은 노선의 구간만 철거할 수 있습니다");
+  const lengthKm = Array.from(selection.routeHits).reduce((sum, [routeId, hits]) => {
+    const route = plan.routes.find((item) => item.id === routeId);
+    if (!route) return sum;
+    return sum + Array.from(hits).reduce((routeSum, index) => routeSum + (route.segments[index]?.lengthKm ?? 0), 0);
+  }, 0);
+  openDemolitionReview({
+    planning: true,
+    routeCount: selection.routeHits.size,
+    segmentCount,
+    stationCount: selection.stationIds.size,
+    depotCount: selection.depotIds.size,
+    lengthKm,
+    refund: 0,
+    description: "드래그 범위의 계획 시설만 삭제합니다. 이미 건설된 계획 항목은 그대로 유지됩니다.",
+    confirmLabel: "계획 삭제 확정",
+    confirm: () => erasePlannedAssets(plan.id, selection),
+  });
+}
+
+function erasePlannedAssets(
+  planId: string,
+  selection: { routeHits: Map<string, Set<number>>; stationIds: Set<string>; depotIds: Set<string> },
+) {
+  const plan = plans.find((item) => item.id === planId);
+  if (!plan) return;
+  pushHistory();
+  const replacements = new Map<string, PlannedRoute[]>();
+  const nextRoutes = plan.routes.flatMap((route) => {
+    const hits = selection.routeHits.get(route.id);
+    if (!hits?.size) return [route];
+    const sections = groupKeptSegmentIndices(route.segments.length, hits).map((group, groupIndex) => {
+      const first = group[0];
+      const last = group[group.length - 1];
+      const segments = route.segments.slice(first, last + 1);
+      const coordinates = segments.flatMap((segment, index) => index === 0 ? segment.coordinates : segment.coordinates.slice(1));
+      return createPlannedRouteSection(
+        route,
+        groupIndex === 0 ? route.id : createId("planned-route"),
+        groupIndex === 0 ? route.name : `${route.name} 분리 ${groupIndex + 1}`,
+        coordinates,
+        segments,
+      );
+    });
+    replacements.set(route.id, sections);
+    return sections;
+  });
+  const nextStations = plan.stations
+    .filter((station) => !selection.stationIds.has(station.id))
+    .map((station) => {
+      let plannedRouteIds = [...station.plannedRouteIds];
+      for (const [oldRouteId, sections] of replacements) {
+        if (!plannedRouteIds.includes(oldRouteId)) continue;
+        plannedRouteIds = plannedRouteIds.filter((id) => id !== oldRouteId);
+        const nearSections = sections
+          .map((section) => ({ id: section.id, distance: distanceToCoordinatesMeters(L.latLng(...station.position), section.coordinates) }))
+          .filter((item) => item.distance <= 75)
+          .sort((a, b) => a.distance - b.distance);
+        if (nearSections[0]) plannedRouteIds.push(nearSections[0].id);
+      }
+      return { ...station, plannedRouteIds: Array.from(new Set(plannedRouteIds)) };
+    })
+    .filter((station) => station.completed || station.plannedRouteIds.length > 0 || station.actualRouteIds.length > 0);
+  const remainingStationIds = new Set(nextStations.map((station) => station.id));
+  const nextDepots = plan.depots
+    .filter((depot) => !selection.depotIds.has(depot.id))
+    .map((depot) => {
+      let routeIds = [...depot.connectedPlannedRouteIds];
+      for (const [oldRouteId, sections] of replacements) {
+        if (!routeIds.includes(oldRouteId)) continue;
+        routeIds = routeIds.filter((id) => id !== oldRouteId);
+        const polygon = depot.polygon.map(([lat, lng]) => L.latLng(lat, lng));
+        routeIds.push(...sections.filter((section) => section.coordinates.some(([lat, lng]) => polygon.some((point) => map.distance(point, L.latLng(lat, lng)) <= 45))).map((section) => section.id));
+      }
+      return { ...depot, connectedPlannedRouteIds: Array.from(new Set(routeIds)) };
+    });
+  updatePlan(planId, (item) => ({
+    ...item,
+    routes: nextRoutes,
+    stations: nextStations,
+    depots: nextDepots,
+    transfers: item.transfers.filter((transfer) => {
+      const plannedCount = transfer.stationIds.filter((id) => remainingStationIds.has(id)).length;
+      return transfer.completed || plannedCount + (transfer.actualStationIds?.length ?? 0) >= 2;
+    }),
+  }));
+  selectedPlannedStationIds = selectedPlannedStationIds.filter((id) => remainingStationIds.has(id));
+  redoStack = [];
+  persistState();
+  renderPlanningDialog();
+  renderAll();
+  showToast("드래그 범위의 계획 시설을 삭제했습니다.");
+  playFeedback("confirm");
+}
+
+function getBuiltEraseSelection(stroke: L.Point[]) {
+  const radius = eraserRadiusPx + 8;
+  const routeHits = new Map<string, Set<number>>();
+  for (const route of routes) {
+    const hits = findHitCoordinateSegments(route.coordinates, stroke, radius);
+    if (hits.size > 0) routeHits.set(route.id, hits);
+  }
+  const stationIds = new Set(
+    stations
+      .filter((station) => strokeTouchesPoint(stroke, map.latLngToContainerPoint(L.latLng(...station.position)), radius + 4))
+      .flatMap((station) => getStationManagerMembers(station).map((member) => member.id)),
+  );
+  const depotIds = new Set(
+    depots
+      .filter((depot) => strokeTouchesPolygon(stroke, depot.polygon.map((point) => map.latLngToContainerPoint(L.latLng(...point))), radius))
+      .map((depot) => depot.id),
+  );
+  return { routeHits, stationIds, depotIds };
+}
+
+function requestBuiltAssetsErase(points: L.Point[]) {
+  const selection = getBuiltEraseSelection(points);
+  const segmentCount = Array.from(selection.routeHits.values()).reduce((sum, hits) => sum + hits.size, 0);
+  if (segmentCount + selection.stationIds.size + selection.depotIds.size === 0) {
+    setText(facilityReadout, "드래그 범위에 철거할 건설 시설이 없습니다");
     return;
   }
-  deleteAnchor = { routeId: start.route.id, coordinateIndex: start.coordinateIndex, point: start.point };
-  selectDeletePoint(end.point);
+  const lengthKm = Array.from(selection.routeHits).reduce((sum, [routeId, hits]) => {
+    const route = routes.find((item) => item.id === routeId);
+    if (!route) return sum;
+    return sum + Array.from(hits).reduce((routeSum, index) => {
+      const pair = route.coordinates.slice(index, index + 2).map(([lat, lng]) => L.latLng(lat, lng));
+      return routeSum + calculateLengthKmPrecise(pair);
+    }, 0);
+  }, 0);
+  openDemolitionReview({
+    planning: false,
+    routeCount: selection.routeHits.size,
+    segmentCount,
+    stationCount: selection.stationIds.size,
+    depotCount: selection.depotIds.size,
+    lengthKm,
+    refund: Math.round(lengthKm * baseCostPerKm * 0.35),
+    description: "드래그 범위의 실제 건설 시설을 철거합니다. 환승역은 관리상 하나의 역으로 함께 처리됩니다.",
+    confirmLabel: "철거 확정",
+    confirm: () => demolishBuiltAssets(selection),
+  });
+}
+
+function demolishBuiltAssets(selection: { routeHits: Map<string, Set<number>>; stationIds: Set<string>; depotIds: Set<string> }) {
+  pushHistory();
+  const oldRoutes = new Map(routes.map((route) => [route.id, route]));
+  const replacements = new Map<string, RouteLine[]>();
+  let removedLength = 0;
+  routes = routes.flatMap((route) => {
+    const hits = selection.routeHits.get(route.id);
+    if (!hits?.size) return [route];
+    removedLength += Array.from(hits).reduce((sum, index) => {
+      const coordinates = route.coordinates.slice(index, index + 2).map(([lat, lng]) => L.latLng(lat, lng));
+      return sum + calculateLengthKmPrecise(coordinates);
+    }, 0);
+    const groups = groupKeptSegmentIndices(route.coordinates.length - 1, hits);
+    const sections = groups.map((group, groupIndex) => {
+      const coordinates = route.coordinates.slice(group[0], group[group.length - 1] + 2);
+      const lengthKm = Math.round(calculateLengthKmPrecise(coordinates.map(([lat, lng]) => L.latLng(lat, lng))) * 10) / 10;
+      return rebuildRouteGraph({
+        ...route,
+        id: groupIndex === 0 ? route.id : createId("route"),
+        name: groupIndex === 0 ? route.name : `${route.name} 분리 ${groupIndex + 1}`,
+        coordinates,
+        lengthKm,
+        constructionCost: Math.round(route.constructionCost * (lengthKm / Math.max(route.lengthKm, 0.1))),
+        disabledSegments: [],
+        branches: [],
+      });
+    });
+    replacements.set(route.id, sections);
+    return sections;
+  });
+  stations = stations
+    .filter((station) => !selection.stationIds.has(station.id))
+    .map((station) => {
+      let connectedRouteIds = [...station.connectedRouteIds];
+      for (const [oldRouteId, sections] of replacements) {
+        if (!connectedRouteIds.includes(oldRouteId)) continue;
+        connectedRouteIds = connectedRouteIds.filter((id) => id !== oldRouteId);
+        const nearSections = sections
+          .map((section) => ({ id: section.id, distance: distanceToCoordinatesMeters(L.latLng(...station.position), section.coordinates) }))
+          .filter((item) => item.distance <= 75)
+          .sort((a, b) => a.distance - b.distance);
+        if (nearSections[0]) connectedRouteIds.push(nearSections[0].id);
+      }
+      return { ...station, connectedRouteIds: Array.from(new Set(connectedRouteIds)) };
+    })
+    .filter((station) => station.connectedRouteIds.length > 0);
+  const stationIds = new Set(stations.map((station) => station.id));
+  depots = depots
+    .filter((depot) => !selection.depotIds.has(depot.id))
+    .map((depot) => {
+      let routeIds = [...depot.connectedRouteIds];
+      for (const [oldRouteId, sections] of replacements) {
+        if (!routeIds.includes(oldRouteId)) continue;
+        routeIds = routeIds.filter((id) => id !== oldRouteId);
+        routeIds.push(...sections.filter((section) => depotTouchesRoute(depot, section)).map((section) => section.id));
+      }
+      return { ...depot, connectedRouteIds: Array.from(new Set(routeIds)) };
+    });
+  const depotIds = new Set(depots.map((depot) => depot.id));
+  trainFleets = trainFleets.flatMap((fleet) => {
+    const sections = replacements.get(fleet.routeId);
+    if (!sections) return [fleet];
+    return sections[0] ? [{ ...fleet, routeId: sections[0].id }] : [];
+  });
+  expressConfigs = expressConfigs.flatMap((config) => {
+    const sections = replacements.get(config.routeId);
+    if (!sections) return [{ ...config, stopStationIds: config.stopStationIds.filter((id) => stationIds.has(id)) }];
+    return sections[0] ? [{ ...config, routeId: sections[0].id, stopStationIds: config.stopStationIds.filter((id) => stations.find((station) => station.id === id)?.connectedRouteIds.includes(sections[0].id)) }] : [];
+  });
+  constructionProjects = constructionProjects
+    .map((project) => ({
+      ...project,
+      routeIds: project.routeIds.flatMap((id) => replacements.has(id) ? replacements.get(id)!.map((route) => route.id) : oldRoutes.has(id) ? [id] : []),
+      stationIds: project.stationIds.filter((id) => stationIds.has(id)),
+      depotIds: project.depotIds.filter((id) => depotIds.has(id)),
+    }))
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
+  cleanupTransferData();
+  synchronizeGraphReferences();
+  const refund = Math.round(removedLength * baseCostPerKm * 0.35);
+  economy = { ...economy, cash: economy.cash + refund, constructionSpent: Math.max(0, economy.constructionSpent - refund) };
+  if (selectedStationManagerId && !stationIds.has(selectedStationManagerId)) closeStationManager();
+  if (selectedDepotManagerId && !depotIds.has(selectedDepotManagerId)) closeDepotManager();
+  if (selectedRouteId && !routes.some((route) => route.id === selectedRouteId)) selectedRouteId = routes[0]?.id ?? null;
+  redoStack = [];
+  persistState();
+  renderAll(selectedRouteId ?? undefined);
+  showToast(`범위 안의 건설 시설을 철거했습니다${refund > 0 ? ` · ${formatCost(refund)} 환급` : ""}.`);
+  playFeedback("confirm");
 }
 
 function findNearestStationAtPoint(point: L.Point, thresholdPx: number) {
@@ -2830,12 +3297,19 @@ function findNearestStationAtPoint(point: L.Point, thresholdPx: number) {
 
 function requestStationDemolition(station: Station) {
   const connectedRoutes = station.connectedRouteIds.map((id) => routes.find((route) => route.id === id)?.name).filter(Boolean);
-  openDecisionDialog(
-    `“${station.name}” 역을 철거할까요?`,
-    `${connectedRoutes.length > 0 ? `${connectedRoutes.join(", ")} 운행과 환승 연결에서 이 역이 제거됩니다.` : "이 역의 환승 연결도 함께 정리됩니다."}`,
-    "역 철거",
-    () => demolishStations([station.id]),
-  );
+  const memberIds = getStationManagerMembers(station).map((member) => member.id);
+  openDemolitionReview({
+    planning: false,
+    routeCount: connectedRoutes.length,
+    segmentCount: 0,
+    stationCount: memberIds.length,
+    depotCount: 0,
+    lengthKm: 0,
+    refund: 0,
+    description: connectedRoutes.length > 0 ? `${connectedRoutes.join(", ")} 운행과 환승 연결에서 이 역을 제거합니다.` : "이 역의 환승 연결을 함께 정리합니다.",
+    confirmLabel: memberIds.length > 1 ? "환승역 철거 확정" : "역 철거 확정",
+    confirm: () => demolishStations(memberIds),
+  });
 }
 
 function demolishStations(stationIds: string[]) {
@@ -2986,7 +3460,7 @@ function updateLiveConstructionDraft(points: L.Point[]) {
   if (activeTool === "route") stageRouteDraft("route", combinePlanningContinuation(latLngs), {});
   if (activeTool === "extend")
     stageRouteDraft(
-      planningMode ? "route" : "extension",
+      "extension",
       planningMode ? combinePlanningContinuation(latLngs) : latLngs,
       planningMode && activePlanningContinuation?.actualRouteId
         ? { plannedExtension: { routeId: activePlanningContinuation.actualRouteId, atStart: activePlanningContinuation.atStart } }
@@ -3053,17 +3527,31 @@ function renderConstructionPanel() {
   document.body.classList.add("construction-reviewing");
   const analysis = constructionDraft.analysis;
   constructionPreviewPanel.hidden = false;
-  const titles: Record<ConstructionDraftKind, string> = {
-    route: "새 노선 검토",
-    extension: "노선 연장 검토",
-    branch: "분기 건설 검토",
-    repair: "단절 구간 복구 검토",
-    edit: "경로 수정 검토",
-    depot: "차량기지 건설 검토",
+  const reviewCopy: Record<ConstructionDraftKind, { title: string; planningDescription: string; constructionDescription: string }> = {
+    route: { title: "노선 건설 검토", planningDescription: "새 노선 설계를 현재 기획안에 추가합니다.", constructionDescription: "새 노선의 비용과 공사 조건을 확인하세요." },
+    extension: { title: "연장 검토", planningDescription: "선택한 노선의 연장 설계를 기획안에 추가합니다.", constructionDescription: "선택한 노선의 실제 연장 공사를 검토합니다." },
+    branch: { title: "분기 검토", planningDescription: "새 분기 설계를 현재 기획안에 추가합니다.", constructionDescription: "새 분기의 연결과 공사 조건을 확인하세요." },
+    repair: { title: "복구 검토", planningDescription: "단절 구간 복구 설계를 기획안에 반영합니다.", constructionDescription: "단절된 구간을 실제로 복구합니다." },
+    edit: { title: "노선 수정 검토", planningDescription: "변경한 선형을 현재 기획안에 반영합니다.", constructionDescription: "경로 수정에 따른 비용과 영향을 확인하세요." },
+    depot: { title: "차량기지 검토", planningDescription: "차량기지 부지와 연결 계획을 기획안에 추가합니다.", constructionDescription: "차량기지의 부지·연결·공사비를 확인하세요." },
   };
-  setText(constructionPreviewTitle, planningMode ? `계획 · ${titles[constructionDraft.kind]}` : titles[constructionDraft.kind]);
+  const copy = reviewCopy[constructionDraft.kind];
+  constructionPreviewPanel.dataset.reviewMode = planningMode ? "planning" : "construction";
+  constructionPreviewPanel.dataset.reviewTool = constructionDraft.kind;
+  setText(constructionPreviewKicker, planningMode ? "PLANNING REVIEW" : "CONSTRUCTION REVIEW");
+  setText(constructionPreviewSubtitle, planningMode ? `${copy.planningDescription} 자금은 아직 차감되지 않습니다.` : copy.constructionDescription);
+  setText(previewTotalCostLabel, planningMode ? "계획 예상비" : "예상 총비용");
+  setText(previewBalanceLabel, planningMode ? "현재 단계" : "건설 후 잔액");
+  setText(previewDurationLabel, planningMode ? "예상 공기" : "예상 공기");
+  setText(previewLengthLabel, "총 길이");
+  setText(previewBaseCostLabel, "기본 건설비");
+  setText(previewMountainLabel, "산악 구간");
+  setText(previewRiverCountLabel, "강 통과");
+  setText(previewStationCountLabel, "역 연결/설치");
+  setText(previewDepotConnectionLabel, "차량기지 연결");
+  setText(constructionPreviewTitle, copy.title);
   setText(previewTotalCost, analysis.totalCost < 0 ? `${formatCost(Math.abs(analysis.totalCost))} 환급` : formatCost(analysis.totalCost));
-  setText(previewBalance, formatSignedCost(analysis.balanceAfter));
+  setText(previewBalance, planningMode ? "기획안 저장" : formatSignedCost(analysis.balanceAfter));
   setText(previewDuration, formatConstructionDuration(analysis.durationDays));
   setText(previewLength, analysis.lengthKm < 1 ? `${Math.round(analysis.lengthKm * 1000)}m` : `${analysis.lengthKm.toFixed(2)}km`);
   setText(previewBaseCost, analysis.baseCost < 0 ? `${formatCost(Math.abs(analysis.baseCost))} 환급` : formatCost(analysis.baseCost));
@@ -3089,7 +3577,7 @@ function renderConstructionPanel() {
   const blocked = activePointerId !== null || analysis.warnings.some((warning) => warning.severity === "error");
   if (confirmConstructionButton) {
     confirmConstructionButton.disabled = blocked;
-    confirmConstructionButton.textContent = planningMode ? "계획에 추가" : "건설 확정";
+    confirmConstructionButton.textContent = planningMode ? "기획안에 추가" : constructionDraft.kind === "edit" ? "수정 확정" : constructionDraft.kind === "repair" ? "복구 확정" : "건설 확정";
   }
 }
 
@@ -3131,6 +3619,80 @@ function chooseRiverCrossingMode(crossingId: string, mode: ConstructionMode) {
   }
   renderConstructionDraft();
   playFeedback("select");
+}
+
+function openDemolitionReview(review: DemolitionReview) {
+  if (!constructionPreviewPanel) return;
+  if (constructionDraft) cancelConstructionDraft();
+  demolitionReview = review;
+  document.body.classList.add("construction-reviewing");
+  constructionPreviewCollapsed = false;
+  constructionPreviewPanel.hidden = false;
+  constructionPreviewPanel.dataset.reviewMode = review.planning ? "planning" : "construction";
+  constructionPreviewPanel.dataset.reviewTool = "eraser";
+  if (constructionPreviewDetails) constructionPreviewDetails.hidden = false;
+  toggleConstructionPreviewButton?.setAttribute("aria-expanded", "true");
+  toggleConstructionPreviewButton?.setAttribute("aria-label", "철거 정보 접기");
+  if (toggleConstructionPreviewButton) toggleConstructionPreviewButton.textContent = "⌃";
+  setText(constructionPreviewKicker, review.planning ? "PLANNING DEMOLITION" : "CONSTRUCTION DEMOLITION");
+  setText(constructionPreviewTitle, "철거 검토");
+  setText(constructionPreviewSubtitle, review.description);
+  setText(previewTotalCostLabel, review.planning ? "계획 비용" : "예상 환급");
+  setText(previewBalanceLabel, "처리 대상");
+  setText(previewDurationLabel, "처리 시점");
+  setText(previewTotalCost, review.planning ? "차감 없음" : review.refund > 0 ? formatCost(review.refund) : "환급 없음");
+  setText(previewBalance, `${review.routeCount + review.stationCount + review.depotCount}개 시설`);
+  setText(previewDuration, "확정 즉시");
+  setText(previewLengthLabel, "삭제 노선 길이");
+  setText(previewBaseCostLabel, "대상 노선");
+  setText(previewMountainLabel, "대상 구간");
+  setText(previewRiverCountLabel, "대상 역");
+  setText(previewStationCountLabel, "대상 차량기지");
+  setText(previewDepotConnectionLabel, "보호 항목");
+  setText(previewLength, review.lengthKm < 1 ? `${Math.round(review.lengthKm * 1000)}m` : `${review.lengthKm.toFixed(2)}km`);
+  setText(previewBaseCost, `${review.routeCount}개`);
+  setText(previewMountain, `${review.segmentCount}구간`);
+  setText(previewRiverCount, `${review.stationCount}개`);
+  setText(previewStationCount, `${review.depotCount}개`);
+  setText(previewDepotConnection, review.planning ? "건설 완료 시설" : "범위 밖 시설");
+  if (riverChoiceList) {
+    riverChoiceList.hidden = true;
+    riverChoiceList.innerHTML = "";
+  }
+  if (constructionWarnings) {
+    constructionWarnings.innerHTML = `<div class="warning"><strong>삭제 주의</strong><span>${escapeHtml(review.description)}</span></div>`;
+  }
+  if (confirmConstructionButton) {
+    confirmConstructionButton.disabled = false;
+    confirmConstructionButton.textContent = review.confirmLabel;
+  }
+}
+
+function cancelDemolitionReview() {
+  demolitionReview = null;
+  document.body.classList.remove("construction-reviewing");
+  if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
+  setText(facilityReadout, "철거 검토를 취소했습니다");
+}
+
+function cancelActiveReview() {
+  if (demolitionReview) {
+    cancelDemolitionReview();
+    return;
+  }
+  cancelConstructionDraft();
+}
+
+async function confirmActiveReview() {
+  if (demolitionReview) {
+    const confirm = demolitionReview.confirm;
+    demolitionReview = null;
+    document.body.classList.remove("construction-reviewing");
+    if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
+    confirm();
+    return;
+  }
+  await confirmConstructionDraft();
 }
 
 function cancelConstructionDraft() {
@@ -3782,6 +4344,135 @@ function createSegmentFromImpact(
   };
 }
 
+const stationNameLookupCache = new Map<string, Promise<string | null>>();
+
+function createAutomaticStationName(position: LatLng, fallbackName: string, excludingId?: string) {
+  if (!settings.autoStationNaming) return fallbackName;
+  const nearest = stationNamePlaces[currentMeta.cityId]
+    .map((place) => ({ ...place, distance: map.distance(position, L.latLng(place.position[0], place.position[1])) }))
+    .sort((a, b) => a.distance - b.distance)[0];
+  return makeUniqueStationName(nearest?.name ?? cityConfigs[currentMeta.cityId].name, position, excludingId);
+}
+
+function makeUniqueStationName(baseName: string, position: LatLng, excludingId?: string) {
+  const normalized = normalizeAutomaticStationName(baseName);
+  const namedStations = [
+    ...stations.map((station) => ({ id: station.id, name: station.name, position: station.position })),
+    ...plans.flatMap((plan) => plan.stations.map((station) => ({ id: station.id, name: station.name, position: station.position }))),
+  ].filter((station) => station.id !== excludingId && station.name === normalized);
+  if (namedStations.length === 0) return normalized;
+  const sameArea = namedStations.some(
+    (station) => map.distance(position, L.latLng(station.position[0], station.position[1])) <= 650,
+  );
+  if (sameArea) return normalized;
+  return `${normalized} ${namedStations.length + 1}`;
+}
+
+function normalizeAutomaticStationName(value: string) {
+  const cleaned = value
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/(도시철도|지하철|전철)\s*/g, "")
+    .replace(/(행정복지센터|주민센터)$/g, "")
+    .replace(/역$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || "새 역";
+}
+
+async function findNearbyOsmStationName(position: [number, number]) {
+  const cacheKey = `${currentMeta.cityId}:${position[0].toFixed(3)}:${position[1].toFixed(3)}`;
+  const cached = stationNameLookupCache.get(cacheKey);
+  if (cached) return cached;
+  const lookup = (async () => {
+    const [lat, lng] = position;
+    const query = `[out:json][timeout:8];(
+      nwr(around:1000,${lat},${lng})["name"]["railway"~"station|halt"];
+      nwr(around:850,${lat},${lng})["name"]["place"~"suburb|quarter|neighbourhood|village"];
+      nwr(around:600,${lat},${lng})["name"]["amenity"~"university|hospital|townhall|marketplace"];
+      nwr(around:600,${lat},${lng})["name"]["tourism"];
+      nwr(around:450,${lat},${lng})["name"]["leisure"="park"];
+      nwr(around:300,${lat},${lng})["name"]["highway"];
+    );out center tags 48;`;
+    try {
+      const data = await fetchOverpass(query, new AbortController().signal);
+      const origin = L.latLng(lat, lng);
+      const candidates = ((data?.elements ?? []) as OverpassElement[])
+        .map((element) => {
+          const name = element.tags?.["name:ko"] ?? element.tags?.name;
+          const point =
+            element.center ??
+            (typeof element.lat === "number" && typeof element.lon === "number"
+              ? { lat: element.lat, lon: element.lon }
+              : element.geometry?.[0]);
+          if (!name || !point) return null;
+          const distance = map.distance(origin, L.latLng(point.lat, point.lon));
+          const isRailwayStation = /^(station|halt)$/.test(element.tags?.railway ?? "");
+          const categoryBias = element.tags?.place
+            ? -80
+            : element.tags?.amenity
+              ? 35
+              : element.tags?.leisure === "park"
+                ? 55
+                : element.tags?.highway
+                  ? 90
+                  : element.tags?.tourism
+                    ? 110
+                    : isRailwayStation
+                      ? 160
+                      : 180;
+          return {
+            name,
+            distance,
+            priority: isRailwayStation && distance <= 100 ? 0 : 1,
+            score: distance + categoryBias,
+          };
+        })
+        .filter((candidate): candidate is { name: string; distance: number; priority: number; score: number } => Boolean(candidate))
+        .sort((a, b) => a.priority - b.priority || a.score - b.score);
+      return candidates[0]?.name ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  stationNameLookupCache.set(cacheKey, lookup);
+  return lookup;
+}
+
+async function refineAutomaticStationName(
+  target: { kind: "actual"; id: string; initialName: string } | { kind: "planned"; id: string; planId: string; initialName: string },
+) {
+  if (!settings.autoStationNaming) return;
+  const current =
+    target.kind === "actual"
+      ? stations.find((station) => station.id === target.id)
+      : plans.find((plan) => plan.id === target.planId)?.stations.find((station) => station.id === target.id);
+  if (!current || current.name !== target.initialName) return;
+  const nearbyName = await findNearbyOsmStationName(current.position);
+  if (!nearbyName || !settings.autoStationNaming) return;
+  const latest =
+    target.kind === "actual"
+      ? stations.find((station) => station.id === target.id)
+      : plans.find((plan) => plan.id === target.planId)?.stations.find((station) => station.id === target.id);
+  if (!latest || latest.name !== target.initialName) return;
+  const nextName = makeUniqueStationName(
+    nearbyName,
+    L.latLng(latest.position[0], latest.position[1]),
+    target.id,
+  );
+  if (nextName === latest.name) return;
+  if (target.kind === "actual") {
+    stations = stations.map((station) => station.id === target.id ? { ...station, name: nextName } : station);
+  } else {
+    updatePlan(target.planId, (plan) => ({
+      ...plan,
+      stations: plan.stations.map((station) => station.id === target.id ? { ...station, name: nextName } : station),
+    }));
+  }
+  persistState();
+  renderAll(target.kind === "actual" ? target.id : undefined);
+  setText(facilityReadout, `${nextName} · 주변 지역명 자동 적용`);
+}
+
 function createStationAt(point: L.Point) {
   if (planningMode) {
     createPlannedStationAt(point);
@@ -3796,9 +4487,11 @@ function createStationAt(point: L.Point) {
 
   pushHistory();
   const nearRoutes = findRoutesNearLatLng(snap.latLng, 55);
+  const stationId = createId("station");
+  const stationName = createAutomaticStationName(snap.latLng, `Station ${stations.length + 1}`, stationId);
   const station: Station = {
-    id: createId("station"),
-    name: `Station ${stations.length + 1}`,
+    id: stationId,
+    name: stationName,
     position: [roundCoord(snap.latLng.lat), roundCoord(snap.latLng.lng)],
     demand: estimateStationDemand(snap.latLng, nearRoutes.length),
     connectedRouteIds: nearRoutes.length > 0 ? nearRoutes : [snap.route.id],
@@ -3815,6 +4508,10 @@ function createStationAt(point: L.Point) {
   redoStack = [];
   persistState();
   renderAll(station.id);
+  if (settings.autoStationNaming) {
+    setText(facilityReadout, `${station.name} · 주변 지역명으로 자동 지정`);
+    void refineAutomaticStationName({ kind: "actual", id: station.id, initialName: station.name });
+  }
 }
 
 function selectTransferStation(point: L.Point) {
@@ -3832,6 +4529,8 @@ function selectTransferStation(point: L.Point) {
   if (!planningMode) {
     if (endpoint.kind === "actual" && actual?.transferGroupId) {
       removeTransferGroup(actual.transferGroupId, actual.id);
+    } else if (endpoint.kind === "actual" && actual && actual.connectedRouteIds.length > 1) {
+      removeStandaloneMultiRouteStation(actual);
     } else {
       selectedManualTransferEndpoints = [];
       selectedTransferStationIds = [];
@@ -3889,24 +4588,54 @@ function selectTransferStation(point: L.Point) {
 function removeTransferGroup(transferGroupId: string, focusedStationId?: string) {
   const transfer = transfers.find((item) => item.id === transferGroupId);
   if (!transfer) {
+    const staleMemberIds = new Set(
+      stations.filter((station) => station.transferGroupId === transferGroupId).map((station) => station.id),
+    );
+    if (staleMemberIds.size > 0) {
+      pushHistory();
+      separateTransferStations(staleMemberIds);
+      diagramState = {
+        ...diagramState,
+        autoPositions: Object.fromEntries(
+          Object.entries(diagramState.autoPositions).filter(([id]) => id !== `transfer:${transferGroupId}`),
+        ),
+        manualPositions: Object.fromEntries(
+          Object.entries(diagramState.manualPositions).filter(([id]) => id !== `transfer:${transferGroupId}`),
+        ),
+        networkSignature: "",
+      };
+      redoStack = [];
+    }
     cleanupTransferData();
+    persistState();
     renderAll(focusedStationId);
+    if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
+    setText(facilityReadout, "남아 있던 환승 정보를 정리하고 각 노선의 일반역으로 분리했습니다");
+    showToast("손상된 환승 연결을 복구하고 일반역으로 분리했습니다.");
+    playFeedback("confirm");
     return;
   }
 
-  const memberNames = transfer.stationIds
-    .map((stationId) => stations.find((station) => station.id === stationId)?.name)
-    .filter(Boolean);
+  const memberIds = new Set([
+    ...transfer.stationIds,
+    ...stations.filter((station) => station.transferGroupId === transferGroupId).map((station) => station.id),
+  ]);
+  const members = stations.filter((station) => memberIds.has(station.id));
+  const memberNames = members.map((station) => station.name);
   pushHistory();
-  transfers = transfers.filter((item) => item.id !== transferGroupId);
-  stations = stations.map((station) =>
-    station.transferGroupId === transferGroupId ? { ...station, transferGroupId: undefined } : station,
+  const removedTransferIds = new Set(
+    transfers
+      .filter((item) => item.id === transferGroupId || item.stationIds.some((stationId) => memberIds.has(stationId)))
+      .map((item) => item.id),
   );
-  const diagramNodeId = `transfer:${transferGroupId}`;
+  transfers = transfers.filter((item) => !removedTransferIds.has(item.id));
+  separateTransferStations(memberIds);
+  cleanupTransferData();
+  const removedDiagramNodeIds = new Set(Array.from(removedTransferIds, (id) => `transfer:${id}`));
   diagramState = {
     ...diagramState,
-    autoPositions: Object.fromEntries(Object.entries(diagramState.autoPositions).filter(([id]) => id !== diagramNodeId)),
-    manualPositions: Object.fromEntries(Object.entries(diagramState.manualPositions).filter(([id]) => id !== diagramNodeId)),
+    autoPositions: Object.fromEntries(Object.entries(diagramState.autoPositions).filter(([id]) => !removedDiagramNodeIds.has(id))),
+    manualPositions: Object.fromEntries(Object.entries(diagramState.manualPositions).filter(([id]) => !removedDiagramNodeIds.has(id))),
     networkSignature: "",
   };
   selectedManualTransferEndpoints = [];
@@ -3915,9 +4644,137 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
   redoStack = [];
   persistState();
   renderAll(focusedStationId);
+  if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
   setText(facilityReadout, "환승 해제 완료 · 각 노선의 역을 개별 일반역으로 전환했습니다");
-  showToast(`${memberNames.join(" · ") || "환승역"} 환승을 해제하고 ${transfer.stationIds.length}개 일반역으로 분리했습니다.`);
+  showToast(`${memberNames.join(" · ") || "환승역"} 환승을 해제하고 각 노선의 일반역으로 분리했습니다.`);
   playFeedback("confirm");
+}
+
+function removeStandaloneMultiRouteStation(station: Station) {
+  pushHistory();
+  separateTransferStations(new Set([station.id]));
+  diagramState = { ...diagramState, networkSignature: "" };
+  selectedManualTransferEndpoints = [];
+  selectedTransferStationIds = [];
+  selectedPlannedStationIds = [];
+  redoStack = [];
+  persistState();
+  renderAll(station.id);
+  if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
+  setText(facilityReadout, "잔존 환승역을 각 노선의 개별 일반역으로 분리했습니다");
+  showToast(`${station.name}역의 남아 있던 환승 취급을 해제했습니다.`);
+  playFeedback("confirm");
+}
+
+function separateTransferStations(memberIds: Set<string>) {
+  const members = stations.filter((station) => memberIds.has(station.id));
+  if (members.length === 0) return;
+
+  const routeIds = Array.from(new Set(members.flatMap((station) => station.connectedRouteIds)))
+    .filter((routeId) => routes.some((route) => route.id === routeId));
+  const assignedRoutes = new Map<string, string[]>();
+  const unusedRouteIds = new Set(routeIds);
+  const stationCandidates = members
+    .map((station) => ({
+      station,
+      candidates: station.connectedRouteIds
+        .filter((routeId) => unusedRouteIds.has(routeId))
+        .map((routeId) => ({
+          routeId,
+          distance: distanceToCoordinatesMeters(
+            L.latLng(station.position[0], station.position[1]),
+            routes.find((route) => route.id === routeId)?.coordinates ?? [],
+          ),
+        }))
+        .sort((a, b) => a.distance - b.distance),
+    }))
+    .sort((a, b) => a.candidates.length - b.candidates.length);
+
+  for (const { station, candidates } of stationCandidates) {
+    const routeId = candidates.find((candidate) => unusedRouteIds.has(candidate.routeId))?.routeId;
+    if (!routeId) continue;
+    assignedRoutes.set(station.id, [routeId]);
+    unusedRouteIds.delete(routeId);
+  }
+  for (const routeId of unusedRouteIds) {
+    const closest = members
+      .filter((station) => station.connectedRouteIds.includes(routeId))
+      .map((station) => ({
+        station,
+        distance: distanceToCoordinatesMeters(
+          L.latLng(station.position[0], station.position[1]),
+          routes.find((route) => route.id === routeId)?.coordinates ?? [],
+        ),
+      }))
+      .sort((a, b) => a.distance - b.distance)[0]?.station;
+    if (closest) assignedRoutes.set(closest.id, [...(assignedRoutes.get(closest.id) ?? []), routeId]);
+  }
+
+  const splitIds = new Map<string, Array<{ id: string; routeId: string }>>();
+  const separatedStations: Station[] = [];
+  for (const station of stations) {
+    if (!memberIds.has(station.id)) {
+      separatedStations.push(station);
+      continue;
+    }
+    const stationRouteIds = assignedRoutes.get(station.id) ?? station.connectedRouteIds.slice(0, 1);
+    const count = Math.max(1, stationRouteIds.length);
+    const demandParts = stationRouteIds.map((_, index) =>
+      Math.floor(station.demand / count) + (index < station.demand % count ? 1 : 0),
+    );
+    const replacements = stationRouteIds.map((routeId, index) => {
+      const id = index === 0 ? station.id : createId("station");
+      const position = count > 1 ? offsetSeparatedStationPosition(station.position, index, count) : station.position;
+      const route = routes.find((item) => item.id === routeId);
+      const separated: Station = {
+        ...station,
+        id,
+        position,
+        demand: demandParts[index],
+        connectedRouteIds: [routeId],
+        routeNodeIds: route ? [findNearestGraphNodeId(route, L.latLng(position[0], position[1]))].filter((nodeId): nodeId is string => Boolean(nodeId)) : [],
+        transferGroupId: undefined,
+      };
+      separatedStations.push(separated);
+      return { id, routeId };
+    });
+    splitIds.set(station.id, replacements);
+  }
+  stations = separatedStations;
+
+  expressConfigs = expressConfigs.map((config) => {
+    const nextStopIds = config.stopStationIds.flatMap((stationId) => {
+      const replacements = splitIds.get(stationId);
+      if (!replacements) return [stationId];
+      return replacements.filter((item) => item.routeId === config.routeId).map((item) => item.id);
+    });
+    return { ...config, stopStationIds: Array.from(new Set(nextStopIds)) };
+  });
+  analysisState = {
+    ...analysisState,
+    demandHistory: analysisState.demandHistory.map((snapshot) => {
+      const stationDemand = { ...snapshot.stationDemand };
+      for (const [sourceId, replacements] of splitIds) {
+        const sourceDemand = stationDemand[sourceId];
+        if (sourceDemand === undefined || replacements.length <= 1) continue;
+        delete stationDemand[sourceId];
+        replacements.forEach((replacement, index) => {
+          stationDemand[replacement.id] =
+            Math.floor(sourceDemand / replacements.length) + (index < sourceDemand % replacements.length ? 1 : 0);
+        });
+      }
+      return { ...snapshot, stationDemand };
+    }),
+  };
+}
+
+function offsetSeparatedStationPosition(position: [number, number], index: number, count: number): [number, number] {
+  const angle = (Math.PI * 2 * index) / count;
+  const distanceM = 10;
+  const latitudeOffset = (Math.sin(angle) * distanceM) / 111_320;
+  const longitudeScale = Math.max(0.2, Math.cos((position[0] * Math.PI) / 180));
+  const longitudeOffset = (Math.cos(angle) * distanceM) / (111_320 * longitudeScale);
+  return [roundCoord(position[0] + latitudeOffset), roundCoord(position[1] + longitudeOffset)];
 }
 
 function createTransferGroup(stationIds: string[], automatic: boolean) {
@@ -4915,6 +5772,7 @@ function estimatePlannedTransferEffect(points: LatLng[]) {
 
 async function confirmPlanningDraft(draft: ConstructionDraft) {
   const before = cloneState();
+  const continuingTool = activeTool;
   try {
     const plan = getActivePlan(true);
     if (!plan) throw new Error("Active plan missing");
@@ -4998,7 +5856,8 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
     if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
     previewLayer.clearLayers();
     renderAll();
-    showToast("자금 차감 없이 계획에 저장했습니다.");
+    resumePlanningTool(continuingTool);
+    showToast("계획에 저장했습니다. 같은 도구로 계속 작업할 수 있습니다.");
     playFeedback("confirm");
   } catch (error) {
     applyState(before);
@@ -5007,14 +5866,28 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
     if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
     previewLayer.clearLayers();
     renderAll();
+    resumePlanningTool(continuingTool);
     showError("계획 저장 중 문제가 발생해 변경을 되돌렸습니다.");
     console.error(error);
   }
 }
 
+function resumePlanningTool(tool: ToolMode) {
+  if (workspaceMode !== "planning" || tool === "pan") return;
+  activeExtension = null;
+  activePlanningContinuation = null;
+  activePlanningBranch = null;
+  activeBranch = null;
+  replacingPlannedRouteId = null;
+  rawDrawPoints = [];
+  previewLayer.clearLayers();
+  setTool(tool);
+}
+
 function setWorkspaceMode(nextMode: WorkspaceMode) {
   const previousMode = workspaceMode;
   if (constructionDraft) cancelConstructionDraft();
+  if (demolitionReview) cancelDemolitionReview();
   workspaceMode = nextMode;
   const shouldPlan = nextMode === "planning";
   planningMode = shouldPlan;
@@ -5032,6 +5905,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   const transferToolLabel = transferTool?.querySelector("span");
   if (transferToolLabel) transferToolLabel.textContent = nextMode === "construction" ? "환승 해제" : "환승";
   transferTool?.setAttribute("aria-label", nextMode === "construction" ? "기존 환승역 해제" : "환승 연결");
+  eraserTool?.setAttribute("aria-label", shouldPlan ? "계획 시설 범위 삭제" : "건설 시설 범위 철거");
   for (const button of [extendTool, editTool, eraserTool, reconnectTool, branchTool, mergeTool]) {
     if (button) button.disabled = false;
   }
@@ -5045,7 +5919,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   const hints: Record<WorkspaceMode, string[]> = {
     management: ["지도를 이동하거나 시설을 선택", "운영·노선 정보를 확인"],
     planning: ["건설 전 설계안을 자유롭게 편집", "설계안은 비용이 차감되지 않음"],
-    construction: ["기존 환승역 해제 또는 시설 철거", "환승 해제 후 각 역은 개별 일반역으로 전환"],
+    construction: ["기존 노선 분기·연결 또는 시설 철거", "실제 노선을 선택해 공사 범위와 비용을 검토"],
   };
   setHint(hints[nextMode]);
   renderAll(selectedRouteId ?? undefined);
@@ -5338,9 +6212,11 @@ function createPlannedStationAt(point: L.Point) {
     return;
   }
   pushHistory();
+  const stationId = createId("planned-station");
+  const stationName = createAutomaticStationName(best.latLng, `계획 역 ${plan.stations.length + 1}`, stationId);
   const station: PlannedStation = {
-    id: createId("planned-station"),
-    name: `계획 역 ${plan.stations.length + 1}`,
+    id: stationId,
+    name: stationName,
     position: [roundCoord(best.latLng.lat), roundCoord(best.latLng.lng)],
     plannedRouteIds: best.plannedRouteIds,
     actualRouteIds: best.actualRouteIds,
@@ -5351,7 +6227,10 @@ function createPlannedStationAt(point: L.Point) {
   redoStack = [];
   persistState();
   renderAll();
-  showToast("예정 역을 계획에 추가했습니다.");
+  showToast(settings.autoStationNaming ? `${station.name} 예정 역을 계획에 추가했습니다.` : "예정 역을 계획에 추가했습니다.");
+  if (settings.autoStationNaming) {
+    void refineAutomaticStationName({ kind: "planned", id: station.id, planId: plan.id, initialName: station.name });
+  }
 }
 
 function renderPlans() {
@@ -5384,10 +6263,46 @@ function renderPlans() {
     }
     for (const station of plan.stations.filter((item) => !item.completed)) {
       const selected = selectedPlannedStationIds.includes(station.id);
-      L.circleMarker(L.latLng(...station.position), { radius: selected ? 8 : 6, color: "#d9e1e5", weight: 2, fillColor: "#56636b", fillOpacity: 0.65, dashArray: "3 2", interactive: false }).addTo(planLayer);
+      const canDelete = planningMode && activeTool === "eraser";
+      const marker = L.circleMarker(L.latLng(...station.position), {
+        radius: canDelete ? 12 : selected ? 8 : 6,
+        color: canDelete ? "#ff8b8b" : "#d9e1e5",
+        weight: canDelete ? 3 : 2,
+        fillColor: "#56636b",
+        fillOpacity: canDelete ? 0.82 : 0.65,
+        dashArray: "3 2",
+        interactive: canDelete,
+        bubblingMouseEvents: false,
+        className: canDelete ? "planned-facility-click-target" : "",
+      }).addTo(planLayer);
+      if (canDelete) {
+        marker.bindTooltip(`${station.name} · 클릭하여 계획에서 삭제`, { direction: "top", offset: [0, -10] });
+        marker.on("click", (event) => {
+          L.DomEvent.stopPropagation(event);
+          requestPlannedStationDeletion(plan.id, station.id);
+        });
+      }
     }
     for (const depot of plan.depots.filter((item) => !item.completed)) {
-      L.polygon(depot.polygon.map(([lat, lng]) => L.latLng(lat, lng)), { color: "#aeb9bf", fillColor: "#77848b", fillOpacity: 0.12, weight: 2, opacity: 0.7, dashArray: "7 7", interactive: false }).addTo(planLayer);
+      const canDelete = planningMode && activeTool === "eraser";
+      const polygon = L.polygon(depot.polygon.map(([lat, lng]) => L.latLng(lat, lng)), {
+        color: canDelete ? "#ff8b8b" : "#aeb9bf",
+        fillColor: canDelete ? "#ff5d5d" : "#77848b",
+        fillOpacity: canDelete ? 0.22 : 0.12,
+        weight: canDelete ? 3 : 2,
+        opacity: canDelete ? 0.92 : 0.7,
+        dashArray: "7 7",
+        interactive: canDelete,
+        bubblingMouseEvents: false,
+        className: canDelete ? "planned-facility-click-target" : "",
+      }).addTo(planLayer);
+      if (canDelete) {
+        polygon.bindTooltip(`${depot.name} · 클릭하여 계획에서 삭제`, { direction: "center" });
+        polygon.on("click", (event) => {
+          L.DomEvent.stopPropagation(event);
+          requestPlannedDepotDeletion(plan.id, depot.id);
+        });
+      }
     }
   }
   if (planningMode && activeTool === "extend") {
@@ -5396,6 +6311,63 @@ function renderPlans() {
       renderExtensionEndpointHandle(L.latLng(...route.coordinates[route.coordinates.length - 1]), route.color);
     }
   }
+}
+
+function requestPlannedStationDeletion(planId: string, stationId: string) {
+  const plan = plans.find((item) => item.id === planId);
+  const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
+  if (!plan || !station) return;
+  openDemolitionReview({
+    planning: true,
+    routeCount: station.plannedRouteIds.length,
+    segmentCount: 0,
+    stationCount: 1,
+    depotCount: 0,
+    lengthKm: 0,
+    refund: 0,
+    description: `“${station.name}” 예정 역과 연결된 계획 환승을 정리합니다. 이미 건설된 역에는 영향을 주지 않습니다.`,
+    confirmLabel: "예정 역 삭제",
+    confirm: () => deletePlannedFacility(plan.id, "station", station.id),
+  });
+}
+
+function requestPlannedDepotDeletion(planId: string, depotId: string) {
+  const plan = plans.find((item) => item.id === planId);
+  const depot = plan?.depots.find((item) => item.id === depotId && !item.completed);
+  if (!plan || !depot) return;
+  openDemolitionReview({
+    planning: true,
+    routeCount: depot.connectedPlannedRouteIds.length,
+    segmentCount: 0,
+    stationCount: 0,
+    depotCount: 1,
+    lengthKm: 0,
+    refund: 0,
+    description: `“${depot.name}” 차량기지 계획만 삭제하며 연결된 노선 계획은 유지합니다.`,
+    confirmLabel: "예정 기지 삭제",
+    confirm: () => deletePlannedFacility(plan.id, "depot", depot.id),
+  });
+}
+
+function deletePlannedFacility(planId: string, kind: "station" | "depot", assetId: string) {
+  const plan = plans.find((item) => item.id === planId);
+  if (!plan) return;
+  pushHistory();
+  updatePlan(planId, (item) => ({
+    ...item,
+    stations: kind === "station" ? item.stations.filter((station) => station.id !== assetId || station.completed) : item.stations,
+    depots: kind === "depot" ? item.depots.filter((depot) => depot.id !== assetId || depot.completed) : item.depots,
+    transfers: kind === "station"
+      ? item.transfers.filter((transfer) => transfer.completed || !transfer.stationIds.includes(assetId))
+      : item.transfers,
+  }));
+  selectedPlannedStationIds = selectedPlannedStationIds.filter((id) => id !== assetId);
+  redoStack = [];
+  persistState();
+  renderPlanningDialog();
+  renderAll();
+  showToast(kind === "station" ? "예정 역을 계획에서 삭제했습니다." : "예정 차량기지를 계획에서 삭제했습니다.");
+  playFeedback("confirm");
 }
 
 function renderExtensionEndpointHandle(point: LatLng, color: string) {
@@ -5441,26 +6413,45 @@ function findPlannedRoutesNearPolygon(polygon: LatLng[], maxDistanceM: number) {
 function openPlanConversionDialog() {
   const plan = getActivePlan(false);
   if (!plan || !planConversionDialog || !planConversionItems) return;
-  const items: string[] = [];
+  const routeItems: string[] = [];
+  const facilityItems: string[] = [];
   for (const route of plan.routes) {
     const remainingSegments = route.segments.filter((segment) => !route.completedSegmentIds.includes(segment.id));
     if (remainingSegments.length === 0) continue;
     const routeLength = remainingSegments.reduce((sum, segment) => sum + segment.lengthKm, 0);
     const routeCost = remainingSegments.reduce((sum, segment) => sum + segment.constructionCost, 0);
-    items.push(`<section class="plan-conversion-route" data-route-id="${route.id}"><label class="plan-conversion-route-toggle"><input type="checkbox" checked data-route-toggle="${route.id}" /><span><strong>${escapeHtml(route.name)}</strong><small>${remainingSegments.length}개 구간 · ${routeLength.toFixed(2)}km · ${formatCost(routeCost)}</small></span></label><details><summary>구간 직접 선택</summary><div class="plan-conversion-segments">`);
+    routeItems.push(`
+      <section class="plan-conversion-route" data-route-id="${route.id}" style="--conversion-route-color:${escapeHtml(route.color)}">
+        <label class="plan-conversion-route-toggle">
+          <input type="checkbox" checked data-route-toggle="${route.id}" />
+          <i aria-hidden="true"></i>
+          <span><strong>${escapeHtml(route.name)}</strong><small>${remainingSegments.length}개 구간 · ${routeLength.toFixed(2)}km</small></span>
+          <em>${formatCost(routeCost)}</em>
+        </label>
+        <details>
+          <summary><span>구간별 선택</span><small>필요한 구간만 건설</small></summary>
+          <div class="plan-conversion-segments">`);
     route.segments.forEach((segment, index) => {
       if (route.completedSegmentIds.includes(segment.id)) return;
-      items.push(`<label><input type="checkbox" checked data-convert-kind="segment" data-route-id="${route.id}" data-asset-id="${segment.id}" /><span><strong>${escapeHtml(route.name)} · ${index + 1}구간</strong><small>${segment.lengthKm.toFixed(2)}km · ${formatCost(segment.constructionCost)}</small></span></label>`);
+      routeItems.push(`<label><input type="checkbox" checked data-convert-kind="segment" data-route-id="${route.id}" data-asset-id="${segment.id}" /><span><strong>${index + 1}구간</strong><small>${segment.lengthKm.toFixed(2)}km</small></span><em>${formatCost(segment.constructionCost)}</em></label>`);
     });
-    items.push(`</div></details></section>`);
+    routeItems.push(`</div></details></section>`);
   }
   for (const station of plan.stations.filter((item) => !item.completed))
-    items.push(`<label><input type="checkbox" checked data-convert-kind="station" data-asset-id="${station.id}" /><span><strong>${escapeHtml(station.name)}</strong><small>역 건설 · ${formatCost(180)}</small></span></label>`);
+    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="station" data-asset-id="${station.id}" /><i aria-hidden="true">●</i><span><strong>${escapeHtml(station.name)}</strong><small>역 건설 · 연결 노선 ${station.plannedRouteIds.length + station.actualRouteIds.length}개</small></span><em>${formatCost(180)}</em></label>`);
   for (const depot of plan.depots.filter((item) => !item.completed))
-    items.push(`<label><input type="checkbox" checked data-convert-kind="depot" data-asset-id="${depot.id}" /><span><strong>${escapeHtml(depot.name)}</strong><small>${depot.capacity}편성 · ${formatCost(depot.expectedCost)}</small></span></label>`);
+    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="depot" data-asset-id="${depot.id}" /><i aria-hidden="true">▥</i><span><strong>${escapeHtml(depot.name)}</strong><small>차량기지 · ${depot.capacity}편성 수용</small></span><em>${formatCost(depot.expectedCost)}</em></label>`);
   for (const transfer of plan.transfers.filter((item) => !item.completed))
-    items.push(`<label><input type="checkbox" checked data-convert-kind="transfer" data-asset-id="${transfer.id}" /><span><strong>환승 연결</strong><small>예상 효과 +${transfer.expectedEffect} · ${formatCost(40)}</small></span></label>`);
-  planConversionItems.innerHTML = items.join("") || `<div class="planning-empty">건설할 미완료 항목이 없습니다.</div>`;
+    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="transfer" data-asset-id="${transfer.id}" /><i aria-hidden="true">⇄</i><span><strong>환승 연결</strong><small>예상 환승 효과 +${transfer.expectedEffect}</small></span><em>${formatCost(40)}</em></label>`);
+  const sections = [
+    routeItems.length > 0 ? `<section class="plan-conversion-group"><header><span>01</span><div><strong>노선과 구간</strong><small>전체 노선 또는 세부 구간을 선택합니다.</small></div></header>${routeItems.join("")}</section>` : "",
+    facilityItems.length > 0 ? `<section class="plan-conversion-group"><header><span>02</span><div><strong>역·차량기지·환승</strong><small>선택한 노선 구간과 연결되는 시설만 건설할 수 있습니다.</small></div></header><div class="plan-conversion-facilities">${facilityItems.join("")}</div></section>` : "",
+  ].filter(Boolean);
+  planConversionItems.innerHTML = sections.join("") || `<div class="planning-empty">건설할 미완료 항목이 없습니다.</div>`;
+  setText(planConversionPlanName, `${plan.name} · 남은 계획비 ${formatCost(plan.remainingCost)}`);
+  setText(planConversionCurrentCash, formatCost(economy.cash));
+  if (selectAllPlanConversionButton) selectAllPlanConversionButton.disabled = sections.length === 0;
+  if (clearPlanConversionButton) clearPlanConversionButton.disabled = sections.length === 0;
   planConversionDialog.hidden = false;
   renderPlanConversionSummary();
 }
@@ -5480,6 +6471,16 @@ function handlePlanConversionSelectionChange(event: Event) {
     }
   }
   renderPlanConversionSummary();
+}
+
+function setAllPlanConversionSelection(checked: boolean) {
+  const inputs = Array.from(planConversionItems?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? []);
+  inputs.forEach((input) => {
+    input.checked = checked;
+    input.indeterminate = false;
+  });
+  renderPlanConversionSummary();
+  playFeedback("select");
 }
 
 function closePlanConversionDialog() {
@@ -5508,6 +6509,12 @@ function renderPlanConversionSummary() {
   const plan = getActivePlan(false);
   if (!plan || !planConversionSummary) return;
   const selection = getPlanConversionSelection();
+  const availableCount = planConversionItems?.querySelectorAll<HTMLInputElement>("input[data-convert-kind]").length ?? 0;
+  const segmentCount = selection.filter((item) => item.kind === "segment").length;
+  const stationCount = selection.filter((item) => item.kind === "station").length;
+  const depotCount = selection.filter((item) => item.kind === "depot").length;
+  const transferCount = selection.filter((item) => item.kind === "transfer").length;
+  const routeCount = new Set(selection.filter((item) => item.kind === "segment").map((item) => item.routeId)).size;
   const cost = calculatePlanConversionCost(plan, selection);
   const shortfall = Math.max(0, cost - economy.cash);
   const invalidFacilities = selection.filter((entry) => {
@@ -5539,12 +6546,38 @@ function renderPlanConversionSummary() {
         state.cost + segment.constructionCost <= economy.cash ? { count: state.count + 1, cost: state.cost + segment.constructionCost } : state,
       { count: 0, cost: 0 },
     );
+  const state = selection.length === 0 ? "empty" : invalidFacilities > 0 ? "invalid" : currentMeta.mode === "career" && shortfall > 0 ? "shortfall" : "ready";
+  planConversionSummary.dataset.state = state;
+  const statusCopy =
+    state === "empty"
+      ? { kicker: "선택 필요", title: "건설 항목을 선택하세요", message: "왼쪽 목록에서 실제 공사로 전환할 항목을 선택하세요." }
+      : state === "invalid"
+        ? { kicker: "연결 확인", title: `${invalidFacilities}개 시설을 건설할 수 없음`, message: "해당 시설과 연결되는 노선 구간을 함께 선택하세요." }
+        : state === "shortfall"
+          ? { kicker: "자금 부족", title: `${formatCost(shortfall)} 부족`, message: `현재 자금으로 저비용 구간 기준 최대 ${affordableSegments.count}개 구간을 건설할 수 있습니다.` }
+          : { kicker: "건설 가능", title: "선택 범위를 전환할 수 있습니다", message: "확정하면 선택 항목이 실제 건설 프로젝트로 등록됩니다." };
   planConversionSummary.innerHTML = `
-    <div><span>선택 비용</span><strong>${formatCost(cost)}</strong></div>
-    <div><span>건설 후 잔액</span><strong class="${shortfall > 0 ? "negative" : ""}">${formatSignedCost(economy.cash - cost)}</strong></div>
-    ${invalidFacilities > 0 ? `<p>${invalidFacilities}개 시설이 선택한 건설 구간 또는 기존 노선과 연결되지 않습니다. 연결 구간을 함께 선택하세요.</p>` : shortfall > 0 ? `<p>자금이 ${formatCost(shortfall)} 부족합니다. 현재 자금으로 저비용 구간 기준 최대 ${affordableSegments.count}개 구간을 건설할 수 있습니다.</p>` : `<p>선택 항목을 한 번의 작업으로 건설할 수 있습니다.</p>`}`;
+    <header class="conversion-summary-status"><span>${statusCopy.kicker}</span><strong>${statusCopy.title}</strong><p>${statusCopy.message}</p></header>
+    <div class="conversion-summary-cost">
+      <span>선택 공사비</span>
+      <strong>${formatCost(cost)}</strong>
+      <small>건설 후 ${formatSignedCost(economy.cash - cost)}</small>
+    </div>
+    <div class="conversion-summary-progress">
+      <div><span>선택 항목</span><strong>${selection.length}<small> / ${availableCount}</small></strong></div>
+      <progress max="${Math.max(1, availableCount)}" value="${selection.length}"></progress>
+    </div>
+    <dl class="conversion-summary-breakdown">
+      <div><dt>대상 노선</dt><dd>${routeCount}개</dd></div>
+      <div><dt>노선 구간</dt><dd>${segmentCount}개</dd></div>
+      <div><dt>역</dt><dd>${stationCount}개</dd></div>
+      <div><dt>차량기지</dt><dd>${depotCount}개</dd></div>
+      <div><dt>환승 연결</dt><dd>${transferCount}개</dd></div>
+    </dl>`;
   if (confirmPlanConversionButton)
     confirmPlanConversionButton.disabled = selection.length === 0 || invalidFacilities > 0 || (currentMeta.mode === "career" && shortfall > 0);
+  const confirmLabel = confirmPlanConversionButton?.querySelector("span:last-child");
+  if (confirmLabel) confirmLabel.textContent = selection.length > 0 ? `${selection.length}개 항목 건설 전환` : "건설 항목 선택 필요";
   if (fundPlanWithLoanButton) fundPlanWithLoanButton.hidden = currentMeta.mode !== "career" || shortfall <= 0;
 }
 
@@ -6564,7 +7597,7 @@ function renderStations(selectedId?: string) {
     const isTransferStation = Boolean(station.transferGroupId) || station.connectedRouteIds.length > 1;
     const routeColor = routes.find((route) => route.id === station.connectedRouteIds[0])?.color ?? "#ffffff";
     const color = isTransferStation ? "#ffffff" : isExpressStop ? "#ff5d5d" : routeColor;
-    L.circleMarker(position, {
+    const visualMarker = L.circleMarker(position, {
       radius: isExpressStop ? 8 : isSelected ? 8 : 6,
       color: "#111111",
       weight: isSelected ? 3.5 : 2.5,
@@ -6573,26 +7606,64 @@ function renderStations(selectedId?: string) {
       dashArray: isStationOperational(station.id) ? undefined : "3 4",
       interactive: false,
       className: "station-map-marker",
-      pane: "facilityInteractionPane",
+      pane: "stationInteractionPane",
     }).addTo(stationLayer);
+
+    if (activeTool !== "pan") continue;
 
     const clickTarget = L.marker(position, {
       icon: L.divIcon({
         className: "station-click-target",
         html: "<span aria-hidden=\"true\"></span>",
-        iconSize: [48, 48],
-        iconAnchor: [24, 24],
+        iconSize: [64, 64],
+        iconAnchor: [32, 32],
       }),
       interactive: true,
       bubblingMouseEvents: false,
-      keyboard: false,
-      zIndexOffset: 1000,
+      keyboard: true,
+      alt: `${station.name} 역`,
+      title: `${station.name} 역 관리`,
+      zIndexOffset: 2000,
       riseOnHover: true,
-      pane: "facilityInteractionPane",
+      pane: "stationInteractionPane",
     }).addTo(stationLayer);
-    clickTarget.on("click", () => {
-      if (activeTool === "pan") openStationManager(station.id);
+
+    let lastOpenedAt = 0;
+    const openStation = () => {
+      if (activeTool !== "pan") return;
+      const now = performance.now();
+      if (now - lastOpenedAt < 450) return;
+      lastOpenedAt = now;
+      openStationManager(station.id);
+    };
+    const targetElement = clickTarget.getElement();
+    const visualElement = visualMarker.getElement();
+    const setHovered = (active: boolean) => {
+      targetElement?.classList.toggle("is-hovered", active);
+      visualElement?.classList.toggle("is-hovered", active);
+    };
+    const setPressed = (active: boolean) => {
+      targetElement?.classList.toggle("is-pressed", active);
+      visualElement?.classList.toggle("is-pressed", active);
+    };
+    targetElement?.addEventListener("pointerenter", () => setHovered(true));
+    targetElement?.addEventListener("pointerleave", () => {
+      setHovered(false);
+      setPressed(false);
     });
+    targetElement?.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setHovered(true);
+      setPressed(true);
+      openStation();
+    });
+    targetElement?.addEventListener("pointerup", () => setPressed(false));
+    targetElement?.addEventListener("pointercancel", () => {
+      setHovered(false);
+      setPressed(false);
+    });
+    clickTarget.on("click", openStation);
   }
 }
 
@@ -6647,6 +7718,7 @@ function renderTrains() {
     trainMarkers.clear();
     return;
   }
+  if (performance.now() < trainInteractionLockedUntil) return;
 
   const visibleKeys = new Set<string>();
   const maxVisiblePerRoute = settings.performanceMode === "battery" ? 8 : 18;
@@ -6668,7 +7740,7 @@ function renderTrains() {
     for (let index = 0; index < displaySets; index += 1) {
       const displayedTrain = displayedFleetSets[index];
       if (!displayedTrain) continue;
-      const key = `${route.id}:${index}`;
+      const key = `${route.id}:${displayedTrain.fleet.id}:${displayedTrain.setNumber}`;
       visibleKeys.add(key);
       const progress = (progressBase + index / displaySets) % 1;
       const routePoints = routePaths[index % routePaths.length];
@@ -6676,7 +7748,7 @@ function renderTrains() {
       const existing = trainMarkers.get(key);
       if (existing) {
         existing.setLatLng(position);
-        existing.setZIndexOffset(900);
+        existing.setZIndexOffset(1200);
         const element = existing.getElement();
         if (element) {
           element.style.pointerEvents = "auto";
@@ -6688,19 +7760,36 @@ function renderTrains() {
         icon: L.divIcon({
           className: "train-icon",
           html: `<span class="train-body" style="--train-color:${escapeHtml(route.color)}"><i></i><i></i></span>`,
-          iconSize: [24, 30],
-          iconAnchor: [12, 15],
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
         }),
         interactive: true,
         bubblingMouseEvents: false,
-        keyboard: false,
-        zIndexOffset: 900,
+        keyboard: true,
+        alt: `${route.name} ${displayedTrain.setNumber}편성 열차`,
+        title: `${route.name} · ${displayedTrain.fleet.cars}량 ${displayedTrain.setNumber}편성`,
+        pane: "trainInteractionPane",
+        zIndexOffset: 1200,
         riseOnHover: true,
       }).addTo(trainLayer);
-      marker.on("click", () => {
+      let lastOpenedAt = 0;
+      const openDisplayedTrain = () => {
+        const now = performance.now();
+        if (now - lastOpenedAt < 350) return;
+        lastOpenedAt = now;
+        trainInteractionLockedUntil = now + 700;
         selectRoute(route.id);
         openTrainManagerForFleet(displayedTrain.fleet.id, displayedTrain.setNumber);
-      });
+      };
+      const markerElement = marker.getElement();
+      if (markerElement) {
+        markerElement.style.pointerEvents = "auto";
+        markerElement.addEventListener("pointerdown", (event) => {
+          event.stopPropagation();
+          openDisplayedTrain();
+        });
+      }
+      marker.on("click", openDisplayedTrain);
       trainMarkers.set(key, marker);
     }
   }
@@ -6727,6 +7816,30 @@ function getTrainServicePaths(route: RouteLine) {
     paths.push([...prefix, junctionLatLng, ...branchPoints.slice(1)]);
   }
   return paths.filter((path) => path.length > 1);
+}
+
+function getFleetCapacityPerSet(fleet: TrainFleet) {
+  return trainCatalog[fleet.trainType].capacityPerCar * fleet.cars;
+}
+
+function getFleetTotalCapacity(fleet: TrainFleet) {
+  return getFleetCapacityPerSet(fleet) * fleet.sets;
+}
+
+function getFleetMaintenanceCost(fleet: TrainFleet) {
+  return Math.round(trainCatalog[fleet.trainType].maintenancePerCar * fleet.cars * fleet.sets);
+}
+
+function updateFleetSetCount(fleet: TrainFleet, sets: number): TrainFleet {
+  const normalizedSets = Math.max(0, Math.round(sets));
+  const spec = trainCatalog[fleet.trainType];
+  return {
+    ...fleet,
+    sets: normalizedSets,
+    capacity: spec.capacityPerCar * fleet.cars * normalizedSets,
+    purchaseCost: spec.pricePerCar * fleet.cars * normalizedSets,
+    maintenanceCost: spec.maintenancePerCar * fleet.cars * normalizedSets,
+  };
 }
 
 function buyTrainsForSelectedRoute() {
@@ -6850,25 +7963,31 @@ function calculateRouteOperation(routeId: string): RouteOperation {
   const averageSpeed = routeFleets.length > 0 ? weightedAverageSpeed(routeFleets) : 32;
   const dailyDemand = routeStations.reduce((sum, station) => sum + station.demand, 0);
   if (route && !isRouteOperational(route.id)) {
-    const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + fleet.maintenanceCost, 0);
+    const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
     return { routeId, headwayMin: 0, crowding: 0, waitMin: 0, dailyDemand: 0, hourlyCapacity: 0, operatingCost: fleetMaintenance };
   }
   if (route && (hasRouteGaps(route) || route.operationPaused || route.visibility === "planning" || route.localServiceEnabled === false)) {
-    const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + fleet.maintenanceCost, 0);
+    const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
     return { routeId, headwayMin: 0, crowding: 2.4, waitMin: 30, dailyDemand, hourlyCapacity: 0, operatingCost: fleetMaintenance };
   }
   const express = expressConfigs.find((config) => config.routeId === routeId && config.enabled);
   const stopCount = express ? Math.max(express.stopStationIds.length, 2) : routeStations.length;
   const dwellMin = Math.max(1, stopCount * 0.45);
   const roundTripMin = route ? Math.max(8, (route.lengthKm / averageSpeed) * 120 + dwellMin * 2) : 0;
-  const branchDivisor = route ? Math.max(1, getTrainServicePaths(route).length) : 1;
-  const headwayMin = sets > 0 ? Math.round(((roundTripMin / sets) * branchDivisor) * 10) / 10 : 0;
-  const averageTrainCapacity = sets > 0 ? routeFleets.reduce((sum, fleet) => sum + fleet.capacity, 0) / sets : 0;
+  const servicePathCount = route ? Math.max(1, getTrainServicePaths(route).length) : 1;
+  // 분기마다 모든 열차가 완전히 분리된다고 보던 기존 방식은 혼잡을 지나치게 키웠다.
+  // 본선 공용 운행을 고려해 추가 분기 하나당 배차 손실을 55%만 반영한다.
+  const branchFrequencyPenalty = 1 + Math.max(0, servicePathCount - 1) * 0.55;
+  const headwayMin = sets > 0 ? Math.round(((roundTripMin / sets) * branchFrequencyPenalty) * 10) / 10 : 0;
+  const averageTrainCapacity = sets > 0
+    ? routeFleets.reduce((sum, fleet) => sum + getFleetTotalCapacity(fleet), 0) / sets
+    : 0;
   const hourlyCapacity = headwayMin > 0 ? Math.round((60 / headwayMin) * averageTrainCapacity) : 0;
-  const hourlyDemand = dailyDemand / 18;
+  // 일 수요의 10.5%가 첨두 한 시간에 발생하고 그중 58%가 혼잡 방향에 몰린다고 본다.
+  const hourlyDemand = dailyDemand * 0.105 * 0.58;
   const crowding = hourlyCapacity > 0 ? Math.round((hourlyDemand / hourlyCapacity) * 100) / 100 : 0;
   const waitMin = headwayMin > 0 ? Math.round((headwayMin / 2) * Math.max(1, crowding * 0.75) * 10) / 10 : 0;
-  const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + fleet.maintenanceCost, 0);
+  const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
   const operatingCost = fleetMaintenance + (express ? express.extraOperatingCost : 0);
   return { routeId, headwayMin, crowding, waitMin, dailyDemand, hourlyCapacity, operatingCost };
 }
@@ -7863,19 +8982,42 @@ function renderStationManager() {
     <section class="station-manager-section station-manager-transfer">
       <div class="station-manager-section-heading"><span>환승 정보</span><strong>${transfer ? "환승역" : "일반역"}</strong></div>
       <p>${transfer ? `환승 거리 ${Math.round(transfer.distanceM)}m · 예상 환승 ${transfer.transferTimeMin.toFixed(1)}분 · 혼잡 저항 ${transfer.resistance}` : "현재 연결된 환승 시설이 없습니다."}</p>
+    </section>
+    <section class="manager-danger-zone">
+      <div><strong>${transfer ? "환승역 전체 철거" : "역 철거"}</strong><span>${transfer ? `${members.length}개 노선 역을 하나의 환승역으로 함께 철거합니다.` : "이 역과 관련된 운행·환승 참조를 정리합니다."}</span></div>
+      <button type="button" data-station-manager-action="delete">${transfer ? "환승역 철거" : "역 철거"}</button>
     </section>`;
 }
 
 function handleStationManagerClick(event: Event) {
-  const target = event.target as HTMLElement;
-  if (target.dataset.stationManagerAction !== "save-name" || !selectedStationManagerId) return;
+  const target = (event.target as HTMLElement).closest<HTMLElement>("[data-station-manager-action]");
+  const action = target?.dataset.stationManagerAction;
+  if (!action || !selectedStationManagerId) return;
+  const selectedStation = stations.find((station) => station.id === selectedStationManagerId);
+  if (!selectedStation) return;
+  if (action === "delete") {
+    const members = getStationManagerMembers(selectedStation);
+    const routeNames = Array.from(new Set(members.flatMap((station) => station.connectedRouteIds)))
+      .map((id) => routes.find((route) => route.id === id)?.name)
+      .filter(Boolean);
+    openDecisionDialog(
+      `“${selectedStation.name}” ${members.length > 1 ? "환승역" : "역"}을 철거할까요?`,
+      `${members.length > 1 ? `관리상 하나로 묶인 역 ${members.length}개를 함께 철거합니다.` : "역을 철거하고 관련 참조를 정리합니다."}${routeNames.length > 0 ? ` 영향 노선: ${routeNames.join(", ")}.` : ""}`,
+      members.length > 1 ? "환승역 철거" : "역 철거",
+      () => {
+        closeStationManager();
+        demolishStations(members.map((station) => station.id));
+      },
+    );
+    return;
+  }
+  if (action !== "save-name") return;
   const input = document.querySelector<HTMLInputElement>("#stationManagerName");
   const name = input?.value.trim();
   if (!name) {
     showToast("역 이름을 입력해 주세요.");
     return;
   }
-  const selectedStation = stations.find((station) => station.id === selectedStationManagerId);
   const memberIds = new Set(selectedStation ? getStationManagerMembers(selectedStation).map((station) => station.id) : []);
   stations = stations.map((station) => memberIds.has(station.id) ? { ...station, name } : station);
   persistState();
@@ -7924,15 +9066,49 @@ function renderDepotManager() {
       <div class="depot-manager-section-heading"><span>연결 노선</span><strong>${connectedRoutes.length}개</strong></div>
       <div class="connected-route-chips">${connectedRoutes.length > 0 ? connectedRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}">${escapeHtml(route.name)}</span>`).join("") : "<em>연결된 노선이 없습니다.</em>"}</div>
     </section>
-    <button class="depot-manager-expand" type="button" data-depot-manager-action="expand" ${operational ? "" : "disabled"}>차량기지 확장</button>`;
+    <div class="depot-manager-actions">
+      <button class="depot-manager-expand" type="button" data-depot-manager-action="expand" ${operational ? "" : "disabled"}>차량기지 확장</button>
+      <button class="manager-delete-button" type="button" data-depot-manager-action="delete">차량기지 철거</button>
+    </div>`;
 }
 
 function handleDepotManagerClick(event: Event) {
-  const target = event.target as HTMLElement;
-  if (target.dataset.depotManagerAction !== "expand" || !selectedDepotManagerId) return;
+  const target = (event.target as HTMLElement).closest<HTMLElement>("[data-depot-manager-action]");
+  const action = target?.dataset.depotManagerAction;
+  if (!action || !selectedDepotManagerId) return;
+  const depot = depots.find((item) => item.id === selectedDepotManagerId);
+  if (!depot) return;
+  if (action === "delete") {
+    openDecisionDialog(
+      `“${depot.name}” 차량기지를 철거할까요?`,
+      `${depot.connectedRouteIds.length > 0 ? `연결 노선 ${depot.connectedRouteIds.length}개의 차량기지 참조가 해제됩니다.` : "차량기지와 관련 공사 참조를 정리합니다."}`,
+      "차량기지 철거",
+      () => {
+        closeDepotManager();
+        demolishDepots([depot.id]);
+      },
+    );
+    return;
+  }
+  if (action !== "expand") return;
   expandDepot(selectedDepotManagerId);
   renderDepotManager();
   showToast("차량기지를 확장했습니다.");
+}
+
+function demolishDepots(depotIdsToRemove: string[]) {
+  const removedIds = new Set(depotIdsToRemove);
+  if (removedIds.size === 0) return;
+  pushHistory();
+  depots = depots.filter((depot) => !removedIds.has(depot.id));
+  constructionProjects = constructionProjects
+    .map((project) => ({ ...project, depotIds: project.depotIds.filter((id) => !removedIds.has(id)) }))
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
+  redoStack = [];
+  persistState();
+  renderAll(selectedRouteId ?? undefined);
+  showToast(`${removedIds.size}개 차량기지를 철거했습니다.`);
+  playFeedback("confirm");
 }
 
 function renderStatisticsScreen() {
@@ -8449,7 +9625,7 @@ function applyCityGrowth() {
 }
 
 function calculateDailyMaintenance() {
-  const fleetMaintenance = trainFleets.reduce((sum, fleet) => sum + fleet.maintenanceCost, 0);
+  const fleetMaintenance = trainFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
   const depotMaintenance = depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0);
   const expressCost = expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0);
   return Math.round((fleetMaintenance + depotMaintenance + expressCost) * getNewsOperatingCostMultiplier());
@@ -8566,6 +9742,138 @@ function closeFinanceDialog() {
   if (financeDialog) financeDialog.hidden = true;
 }
 
+function openSatisfactionDialog() {
+  if (!satisfactionDialog) return;
+  renderSatisfactionDialog();
+  satisfactionDialog.hidden = false;
+  playFeedback("select");
+}
+
+function closeSatisfactionDialog() {
+  if (satisfactionDialog) satisfactionDialog.hidden = true;
+}
+
+function renderSatisfactionDialog() {
+  if (!satisfactionDialogContent || !satisfactionDialog) return;
+  const score = economy.satisfaction;
+  const level = score >= 85 ? "excellent" : score >= 70 ? "stable" : score >= 50 ? "warning" : "critical";
+  const label = score >= 85 ? "매우 좋음" : score >= 70 ? "안정" : score >= 50 ? "개선 필요" : "불만 집중";
+  const groups = passengerGroups;
+  const average = (values: number[]) => values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  const averageWait = average(groups.map((group) => group.waitMin));
+  const averageCrowding = average(groups.map((group) => group.crowding));
+  const transferGroups = groups.filter((group) => group.routeIds.length > 1);
+  const averageTransferResistance = average(transferGroups.map((group) => group.transferResistance));
+  const waitPenalty = averageWait * 1.8;
+  const crowdingPenalty = Math.max(0, averageCrowding - 0.75) * 34;
+  const transferPenalty = averageTransferResistance * 0.24;
+  const farePenalty = Math.max(0, (economy.fare - 1450) / 55);
+  const factors = [
+    {
+      key: "wait",
+      icon: "◷",
+      title: "평균 대기",
+      value: groups.length > 0 ? `${averageWait.toFixed(1)}분` : "-",
+      note: averageWait <= 5 ? "원활" : averageWait <= 9 ? "보통" : "배차 개선 필요",
+      penalty: waitPenalty,
+    },
+    {
+      key: "crowding",
+      icon: "◉",
+      title: "차내 혼잡",
+      value: groups.length > 0 ? `${Math.round(averageCrowding * 100)}%` : "-",
+      note: averageCrowding <= 0.75 ? "쾌적" : averageCrowding <= 1 ? "혼잡 주의" : "과밀",
+      penalty: crowdingPenalty,
+    },
+    {
+      key: "transfer",
+      icon: "⇄",
+      title: "환승 부담",
+      value: transferGroups.length > 0 ? averageTransferResistance.toFixed(1) : "-",
+      note: transferGroups.length === 0 ? "환승 이동 없음" : averageTransferResistance <= 12 ? "낮음" : averageTransferResistance <= 30 ? "보통" : "개선 필요",
+      penalty: transferPenalty,
+    },
+    {
+      key: "fare",
+      icon: "₩",
+      title: "요금 체감",
+      value: `${economy.fare.toLocaleString("ko-KR")}원`,
+      note: farePenalty === 0 ? "기준 요금 이하" : farePenalty <= 8 ? "수용 가능" : "부담 증가",
+      penalty: farePenalty,
+    },
+  ];
+  const previousRecord = [...statisticsState.dailyRecords].reverse().find((record) => record.day < analysisState.dayIndex);
+  const change = previousRecord ? score - previousRecord.satisfaction : null;
+  const trendValues = statisticsState.dailyRecords
+    .slice(-6)
+    .map((record) => ({ day: record.day + 1, value: record.satisfaction }));
+  if (trendValues.at(-1)?.day !== analysisState.dayIndex + 1) trendValues.push({ day: analysisState.dayIndex + 1, value: score });
+  const worstGroups = [...groups].sort((a, b) => a.satisfaction - b.satisfaction || b.activeDemand - a.activeDemand).slice(0, 3);
+  const dominantFactor = [...factors].sort((a, b) => b.penalty - a.penalty)[0];
+  const recommendations: Array<{ icon: string; title: string; text: string }> = [];
+  if (groups.length === 0) {
+    recommendations.push({ icon: "＋", title: "운행 데이터가 필요합니다", text: "역과 운행 열차를 연결하면 승객 이동이 생성되고 만족도 원인을 분석할 수 있습니다." });
+  } else {
+    if (averageWait > 7) recommendations.push({ icon: "◷", title: "배차 간격 단축", text: "차량을 추가하거나 운행 중지 노선을 재개해 평균 대기시간을 줄여보세요." });
+    if (averageCrowding > 0.85) recommendations.push({ icon: "▦", title: "수송력 증대", text: "혼잡 노선의 편성 수 또는 차량 수를 늘리면 차내 혼잡을 빠르게 낮출 수 있습니다." });
+    if (averageTransferResistance > 20) recommendations.push({ icon: "⇄", title: "환승 동선 점검", text: "환승 거리가 긴 역을 재검토하면 환승 승객의 체감 부담이 줄어듭니다." });
+    if (farePenalty > 6) recommendations.push({ icon: "₩", title: "요금 부담 확인", text: "현재 요금이 만족도를 낮추고 있습니다. 수익과 승객 체감의 균형을 검토하세요." });
+    if (recommendations.length === 0) recommendations.push({ icon: "✓", title: "현재 서비스 유지", text: "뚜렷한 위험 요인이 없습니다. 승객 증가에 맞춰 혼잡과 대기 추세를 계속 확인하세요." });
+  }
+  satisfactionDialog.dataset.level = level;
+  satisfactionDialog.style.setProperty("--satisfaction-score", String(score));
+  satisfactionDialogContent.innerHTML = `
+    <section class="satisfaction-hero">
+      <div class="satisfaction-score-ring">
+        <div><strong>${score}</strong><span>/ 100</span></div>
+      </div>
+      <div class="satisfaction-hero-copy">
+        <span class="satisfaction-level">${label}</span>
+        <h3>${groups.length > 0 ? `${groups.length.toLocaleString("ko-KR")}개 이동 그룹의 현재 체감` : "운행 초기 기준 만족도"}</h3>
+        <p>${dominantFactor.penalty > 0.5 ? `현재 가장 큰 감점 요인은 ‘${dominantFactor.title}’입니다.` : "현재 뚜렷한 감점 요인 없이 안정적인 서비스입니다."}</p>
+      </div>
+      <div class="satisfaction-change ${change === null ? "neutral" : change >= 0 ? "positive" : "negative"}">
+        <span>직전 기록 대비</span>
+        <strong>${change === null ? "기록 대기" : `${change > 0 ? "+" : ""}${change}점`}</strong>
+      </div>
+    </section>
+    <section class="satisfaction-factor-section">
+      <div class="satisfaction-section-heading"><div><span>EXPERIENCE FACTORS</span><h3>만족도 구성 요인</h3></div><em>감점 영향이 클수록 막대가 길어집니다</em></div>
+      <div class="satisfaction-factor-grid">
+        ${factors.map((factor) => `
+          <article class="satisfaction-factor ${factor.key}">
+            <div><i aria-hidden="true">${factor.icon}</i><span>${factor.title}</span><strong>${factor.value}</strong></div>
+            <b><i style="width:${Math.min(100, Math.round((factor.penalty / 25) * 100))}%"></i></b>
+            <small>${factor.note}<em>${factor.penalty > 0 ? `-${factor.penalty.toFixed(1)}점 영향` : "감점 없음"}</em></small>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+    <div class="satisfaction-detail-grid">
+      <section class="satisfaction-trend-card">
+        <div class="satisfaction-section-heading"><div><span>RECENT TREND</span><h3>최근 만족도</h3></div></div>
+        <div class="satisfaction-trend ${trendValues.length < 2 ? "empty" : ""}">
+          ${trendValues.map((item) => `<div title="${item.day}일차 ${item.value}점"><i style="height:${Math.max(12, item.value)}%"></i><strong>${item.value}</strong><span>${item.day}일</span></div>`).join("") || "<p>하루가 지나면 변화 추세가 표시됩니다.</p>"}
+        </div>
+      </section>
+      <section class="satisfaction-journey-card">
+        <div class="satisfaction-section-heading"><div><span>LOW SCORE JOURNEYS</span><h3>개선 우선 이동</h3></div></div>
+        <div class="satisfaction-journey-list">
+          ${worstGroups.length > 0 ? worstGroups.map((group) => {
+            const origin = stations.find((station) => station.id === group.originStationId)?.name ?? "출발역";
+            const destination = stations.find((station) => station.id === group.destinationStationId)?.name ?? "도착역";
+            return `<article><div><strong>${escapeHtml(origin)} → ${escapeHtml(destination)}</strong><span>${group.routeIds.length > 1 ? `${group.routeIds.length - 1}회 환승 · ` : ""}${group.activeDemand.toLocaleString("ko-KR")}명</span></div><em>${group.satisfaction}점</em></article>`;
+          }).join("") : "<p>분석할 승객 이동이 아직 없습니다.</p>"}
+        </div>
+      </section>
+    </div>
+    <section class="satisfaction-recommendations">
+      <div class="satisfaction-section-heading"><div><span>NEXT ACTION</span><h3>추천 개선 방향</h3></div></div>
+      <div>${recommendations.slice(0, 3).map((item) => `<article><i aria-hidden="true">${item.icon}</i><div><strong>${item.title}</strong><span>${item.text}</span></div></article>`).join("")}</div>
+    </section>
+  `;
+}
+
 function updateEconomyHud() {
   if (fareInput && document.activeElement !== fareInput) fareInput.value = String(economy.fare);
   setText(cashReadout, formatSignedCost(economy.cash));
@@ -8598,6 +9906,7 @@ function updateEconomyHud() {
   setText(cityHudReadout, `${cityConfigs[currentMeta.cityId].name} 관제`);
   updateGameClockHud();
   updateAutoFareButton();
+  if (satisfactionDialog && !satisfactionDialog.hidden) renderSatisfactionDialog();
 }
 
 function updateGameClockHud() {
@@ -8717,7 +10026,7 @@ function setTool(tool: ToolMode) {
   const allowedTools: Record<WorkspaceMode, ToolMode[]> = {
     management: ["pan"],
     planning: ["pan", "route", "extend", "station", "transfer", "depot", "eraser", "branch", "merge"],
-    construction: ["pan", "transfer", "eraser"],
+    construction: ["pan", "transfer", "eraser", "branch", "merge"],
   };
   if (!allowedTools[workspaceMode].includes(tool)) {
     const targetMode = ["route", "extend", "station", "transfer", "depot", "branch", "merge"].includes(tool)
@@ -8733,6 +10042,7 @@ function setTool(tool: ToolMode) {
     return;
   }
   if (constructionDraft) cancelConstructionDraft();
+  if (demolitionReview) cancelDemolitionReview();
   activeTool = tool;
   document.body.dataset.activeTool = tool;
   const modifyToolActive = ["eraser", "extend", "branch", "merge"].includes(tool);
@@ -8784,20 +10094,20 @@ function setTool(tool: ToolMode) {
   map.doubleClickZoom.disable();
   const labels: Record<ToolMode, [string, string[]]> = {
     pan: ["지도 탐색", ["한 손가락 이동", "핀치 줌"]],
-    route: ["노선 건설", ["드래그로 노선", "역 도구로 역 추가"]],
-    extend: planningMode ? ["계획 노선 연장", ["계획 노선의 시작점 또는 끝점에서 시작", "드래그 후 기존 계획에 반영"]] : ["노선 연장", ["기존 노선의 끝점에서 시작", "끝점을 누른 뒤 드래그"]],
+    route: ["노선 건설", ["드래그로 노선", "확정 후 같은 도구로 계속 건설"]],
+    extend: planningMode ? ["계획 노선 연장", ["계획 노선의 시작점 또는 끝점에서 시작", "확정 후 다른 끝점에서 계속 연장"]] : ["노선 연장", ["기존 노선의 끝점에서 시작", "끝점을 누른 뒤 드래그"]],
     edit: ["경로 편집", ["노선 선택 후 핸들 드래그", "비용·환급 자동 계산"]],
     eraser: planningMode
-      ? ["계획 노선 지우개", ["지울 범위의 시작점과 끝점을 차례로 터치", "삭제 후 남은 구간은 별도 노선이 됩니다"]]
-      : ["구간 삭제", ["같은 노선에서 두 지점 선택", "분리 전 영향 확인"]],
+      ? ["계획 시설 지우개", ["지울 계획 시설을 가로질러 드래그", "확정 후 계속 다른 범위를 삭제"]]
+      : ["시설 철거", ["철거할 실제 시설을 가로질러 드래그", "범위와 영향을 검토 후 확정"]],
     reconnect: ["노선 수정", ["붉은 수정 지점에서 시작", "반대쪽 지점까지 드래그"]],
-    branch: planningMode ? ["계획 분기", ["계획 노선 위에서 시작", "새 점선 분기를 그린 뒤 계획에 저장"]] : ["분기 건설", ["기존 노선 위에서 시작", "완공 후 균등 배차"]],
+    branch: planningMode ? ["계획 분기", ["계획 노선 위에서 시작", "확정 후 계속 다른 분기 추가"]] : ["분기 건설", ["기존 노선 위에서 시작", "완공 후 균등 배차"]],
     merge: planningMode ? ["계획 노선 연결", ["첫 계획 노선 끝점 선택", "다른 계획 노선 끝점 선택", "자금 차감 없이 하나의 설계안으로 정리"]] : ["노선 연결", ["첫 노선 끝점 선택", "다른 노선 끝점 선택", "거리와 비용을 확인한 뒤 확정"]],
     station: ["역 배치", ["완성 노선 위 터치", "가까운 노선 자동 연결"]],
     transfer: planningMode
       ? ["수동 환승 계획", ["첫 번째 기존역 또는 계획역 선택", "두 번째 역 선택", "계획에 환승 연결 저장"]]
       : ["환승 해제", ["해제할 기존 환승역을 선택", "그룹의 모든 역이 개별 일반역으로 전환", "실행 취소로 복원 가능"]],
-    depot: ["차량기지", ["노선과 겹치거나 30m 안", "밝게 표시된 노선에 닿게 그리기"]],
+    depot: ["차량기지", ["노선과 겹치거나 30m 안", "확정 후 계속 다른 기지 계획 가능"]],
     expressStop: ["급행 정차역", ["정차역 터치 토글", "급행 운영비 추가"]],
   };
   setText(modeLabel, labels[tool][0]);
@@ -9122,11 +10432,25 @@ function renderTrainManager() {
       const fleetId = btn.dataset.fleetId;
       const fleet = trainFleets.find((f) => f.id === fleetId);
       if (fleet) {
-        fleet.sets += 1;
+        const currentRouteSets = trainFleets.filter((item) => item.routeId === route.id).reduce((sum, item) => sum + item.sets, 0);
+        if (currentRouteSets >= connectedDepotCapacity) {
+          showToast("차량기지 수용량이 부족합니다. 기지를 확장하거나 연결 상태를 확인하세요.");
+          return;
+        }
+        const spec = trainCatalog[fleet.trainType];
+        const purchaseCost = Math.round(spec.pricePerCar * fleet.cars);
+        if (currentMeta.mode === "career" && purchaseCost > economy.cash) {
+          showToast(`편성 구입 자금이 ${formatCost(purchaseCost - economy.cash)} 부족합니다.`);
+          return;
+        }
+        pushHistory();
+        trainFleets = trainFleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets + 1) : item);
+        economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
+        redoStack = [];
         persistState();
         renderTrainManager();
         renderAll(route.id);
-        showToast(`${route.name} 열차 1편성을 추가 배치했습니다.`);
+        showToast(`${route.name} 열차 1편성을 구입·추가 배치했습니다.`);
       }
     });
   });
@@ -9136,11 +10460,13 @@ function renderTrainManager() {
       const fleetId = btn.dataset.fleetId;
       const fleet = trainFleets.find((f) => f.id === fleetId);
       if (fleet) {
+        pushHistory();
         if (fleet.sets > 1) {
-          fleet.sets -= 1;
+          trainFleets = trainFleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets - 1) : item);
         } else {
           trainFleets = trainFleets.filter((f) => f.id !== fleetId);
         }
+        redoStack = [];
         persistState();
         renderTrainManager();
         renderAll(route.id);
@@ -9155,6 +10481,16 @@ function renderTrainManager() {
     const trainType = (trainTypeSelect?.value as TrainType) || "metro";
     const cars = Number(carCountSelect?.value ?? 6);
     const spec = trainCatalog[trainType];
+    const currentRouteSets = trainFleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+    if (currentRouteSets >= connectedDepotCapacity) {
+      showToast("차량기지 수용량이 부족합니다. 기지를 확장하거나 연결 상태를 확인하세요.");
+      return;
+    }
+    const purchaseCost = Math.round(spec.pricePerCar * cars);
+    if (currentMeta.mode === "career" && purchaseCost > economy.cash) {
+      showToast(`편성 구입 자금이 ${formatCost(purchaseCost - economy.cash)} 부족합니다.`);
+      return;
+    }
 
     pushHistory();
     trainFleets.push({
@@ -9164,11 +10500,12 @@ function renderTrainManager() {
       cars,
       sets: 1,
       capacity: spec.capacityPerCar * cars,
-      purchaseCost: Math.round(spec.pricePerCar * cars),
+      purchaseCost,
       maintenanceCost: Math.round(spec.maintenancePerCar * cars),
     });
 
-    economy = { ...economy, cash: economy.cash - Math.round(spec.pricePerCar * cars) };
+    economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
+    redoStack = [];
     persistState();
     renderTrainManager();
     renderAll(route.id);
@@ -9695,8 +11032,8 @@ function splitFleetBetweenRoutes(firstId: string, secondId: string) {
     if (fleet.routeId !== firstId || fleet.sets < 2) return [fleet];
     const secondSets = Math.floor(fleet.sets / 2);
     return [
-      { ...fleet, sets: fleet.sets - secondSets, capacity: Math.round(fleet.capacity * ((fleet.sets - secondSets) / fleet.sets)) },
-      { ...fleet, id: createId("fleet"), routeId: secondId, sets: secondSets, capacity: Math.round(fleet.capacity * (secondSets / fleet.sets)) },
+      updateFleetSetCount(fleet, fleet.sets - secondSets),
+      { ...updateFleetSetCount(fleet, secondSets), id: createId("fleet"), routeId: secondId },
     ];
   });
 }
@@ -9710,6 +11047,8 @@ function selectMergeEndpoint(point: L.Point) {
   if (!mergeFirstEndpoint) {
     selectRoute(endpoint.routeId, false);
     mergeFirstEndpoint = endpoint;
+    const firstRoute = routes.find((route) => route.id === endpoint.routeId);
+    if (firstRoute) showRouteSettingsTarget(firstRoute, "actual");
     renderMergeGuide();
     setText(facilityReadout, "연결할 다른 노선의 끝점을 선택하세요");
     return;
@@ -9718,11 +11057,15 @@ function selectMergeEndpoint(point: L.Point) {
     setText(facilityReadout, "서로 다른 노선을 선택하세요");
     return;
   }
-  const firstLatLng = map.containerPointToLatLng(mergeFirstEndpoint.endpoint);
+  const firstEndpoint = mergeFirstEndpoint;
+  const firstLatLng = map.containerPointToLatLng(firstEndpoint.endpoint);
   const secondLatLng = map.containerPointToLatLng(endpoint.endpoint);
+  const firstRoute = routes.find((route) => route.id === firstEndpoint.routeId);
+  const secondRoute = routes.find((route) => route.id === endpoint.routeId);
+  if (firstRoute && secondRoute) showRouteSettingsTarget(firstRoute, "actual", secondRoute);
   const bridgeLengthKm = calculateLengthKmPrecise(smoothCoordinateBridge([firstLatLng.lat, firstLatLng.lng], [secondLatLng.lat, secondLatLng.lng]).map(([lat, lng]) => L.latLng(lat, lng)));
   const bridgeCost = Math.round(bridgeLengthKm * baseCostPerKm * cityConfigs[currentMeta.cityId].constructionMultiplier * difficultyConfigs[currentMeta.difficulty].costMultiplier);
-  pendingMerge = { first: mergeFirstEndpoint, second: endpoint, bridgeLengthKm, bridgeCost };
+  pendingMerge = { first: firstEndpoint, second: endpoint, bridgeLengthKm, bridgeCost };
   mergeFirstEndpoint = null;
   openMergeDialog(pendingMerge);
 }
@@ -9737,6 +11080,8 @@ function selectPlannedMergeEndpoint(point: L.Point) {
   }
   if (!plannedMergeFirstEndpoint) {
     plannedMergeFirstEndpoint = endpoint;
+    const firstRoute = plan.routes.find((route) => route.id === endpoint.routeId);
+    if (firstRoute) showRouteSettingsTarget(firstRoute, "planned");
     renderMergeGuide();
     setText(facilityReadout, "연결할 다른 계획 노선의 끝점을 선택하세요");
     return;
@@ -9750,6 +11095,7 @@ function selectPlannedMergeEndpoint(point: L.Point) {
   if (!first || !second) return;
   const firstPoint = map.containerPointToLatLng(plannedMergeFirstEndpoint.endpoint);
   const secondPoint = map.containerPointToLatLng(endpoint.endpoint);
+  showRouteSettingsTarget(first, "planned", second);
   const bridgeLength = calculateLengthKmPrecise(smoothCoordinateBridge([firstPoint.lat, firstPoint.lng], [secondPoint.lat, secondPoint.lng]).map(([lat, lng]) => L.latLng(lat, lng)));
   const initial = plannedMergeFirstEndpoint;
   plannedMergeFirstEndpoint = null;
@@ -10875,7 +12221,7 @@ function applyState(state: SaveState) {
   statisticsState = normalizeStatisticsState(state.statisticsState);
   constructionProjects = normalizeConstructionProjects(state.constructionProjects);
   newsEvents = normalizeNewsEvents(state.newsEvents);
-  trainFleets = state.trainFleets ?? [];
+  trainFleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
   expressConfigs = state.expressConfigs ?? [];
   passengerGroups = state.passengerGroups ?? [];
   loans = state.loans ?? [];
@@ -10909,7 +12255,7 @@ function loadSavedState() {
       statisticsState = normalizeStatisticsState(parsed.statisticsState);
       constructionProjects = normalizeConstructionProjects(parsed.constructionProjects);
       newsEvents = normalizeNewsEvents(parsed.newsEvents);
-      trainFleets = Array.isArray(parsed.trainFleets) ? parsed.trainFleets : [];
+      trainFleets = Array.isArray(parsed.trainFleets) ? parsed.trainFleets.map((fleet: TrainFleet) => updateFleetSetCount(fleet, fleet.sets)) : [];
       expressConfigs = Array.isArray(parsed.expressConfigs) ? parsed.expressConfigs : [];
       passengerGroups = Array.isArray(parsed.passengerGroups) ? parsed.passengerGroups : [];
       loans = Array.isArray(parsed.loans) ? parsed.loans : [];
@@ -11396,6 +12742,7 @@ function applySettingsToUi() {
   if (performanceSelect) performanceSelect.value = settings.performanceMode;
   if (reducedMotionToggle) reducedMotionToggle.checked = settings.reducedMotion;
   if (sandboxConstructionTimeToggle) sandboxConstructionTimeToggle.checked = settings.sandboxConstructionTime;
+  if (autoStationNamingToggle) autoStationNamingToggle.checked = settings.autoStationNaming;
   if (autoSaveToggle) autoSaveToggle.checked = settings.autoSaveEnabled;
   if (autoSaveIntervalSelect) {
     autoSaveIntervalSelect.value = String(settings.autoSaveIntervalSeconds);
@@ -11416,12 +12763,49 @@ function closeSettings() {
 }
 
 function updateRouteSettingsCard(tool: ToolMode) {
-  const shouldShow = tool === "route" || tool === "extend" || tool === "branch";
+  const shouldShow = tool === "route" || tool === "extend" || tool === "branch" || tool === "merge";
   if (!routeSettingsCard) return;
   routeSettingsCard.hidden = !shouldShow;
   if (!shouldShow) return;
+  routeSettingsCard.dataset.context = tool;
+  const hasTargetContext = tool === "extend" || tool === "branch" || tool === "merge";
+  if (routeSettingsTarget) routeSettingsTarget.hidden = !hasTargetContext;
+  if (routeSettingsEditFields) routeSettingsEditFields.hidden = tool === "branch" || tool === "merge";
+  if (hasTargetContext) {
+    setText(routeSettingsTargetKicker, tool === "extend" ? "연장 대상" : tool === "branch" ? "분기 대상" : "연결 대상");
+    setText(routeSettingsTargetName, "노선을 선택하세요");
+    setText(routeSettingsTargetMeta, tool === "merge" ? "첫 번째 노선의 끝점을 선택하세요." : "지도에서 수정할 노선을 선택하세요.");
+    routeSettingsTarget?.style.setProperty("--target-route-color", "#64748b");
+    routeSettingsTargetSwatch?.style.setProperty("--target-route-color", "#64748b");
+  }
   if (draftRouteNameInput) draftRouteNameInput.value = draftRouteName;
   if (draftRouteColorInput) draftRouteColorInput.value = selectedColor;
+}
+
+function showRouteSettingsTarget(
+  route: Pick<RouteLine | PlannedRoute, "id" | "name" | "color">,
+  kind: "actual" | "planned",
+  secondary?: Pick<RouteLine | PlannedRoute, "name" | "color">,
+) {
+  if (!routeSettingsCard || !routeSettingsTarget || routeSettingsCard.hidden) return;
+  routeSettingsTarget.hidden = false;
+  const context = activeTool === "extend" ? "연장 대상" : activeTool === "branch" ? "분기 대상" : "연결 대상";
+  setText(routeSettingsTargetKicker, context);
+  setText(routeSettingsTargetName, secondary ? `${route.name} ↔ ${secondary.name}` : route.name);
+  setText(
+    routeSettingsTargetMeta,
+    secondary
+      ? `${kind === "planned" ? "계획 노선" : "운영 노선"} 두 개를 연결합니다.`
+      : `${kind === "planned" ? "계획 노선" : "운영 노선"} · ${activeTool === "merge" ? "다른 노선 끝점을 선택하세요." : "현재 수정 대상으로 선택됨"}`,
+  );
+  routeSettingsTarget.style.setProperty("--target-route-color", route.color);
+  routeSettingsTargetSwatch?.style.setProperty("--target-route-color", route.color);
+  if ((activeTool === "extend" || activeTool === "route") && !hasDraftRouteSettings) {
+    draftRouteName = route.name;
+    selectedColor = route.color;
+    if (draftRouteNameInput) draftRouteNameInput.value = route.name;
+    if (draftRouteColorInput) draftRouteColorInput.value = route.color;
+  }
 }
 
 function saveRouteSettings() {

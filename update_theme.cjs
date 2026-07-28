@@ -4,7 +4,10 @@ const path = require('path');
 const cssPath = path.join(__dirname, 'src', 'styles.css');
 let css = fs.readFileSync(cssPath, 'utf8');
 
-// Inject CSS variables into :root
+// 일회성 테마 마이그레이션 도구.
+// 실행하면 styles.css 자체를 수정하므로, 재실행 전 중복 변수/override 여부를 확인한다.
+
+// 새 팔레트를 CSS 변수로 주입해 이후 색상 변경 지점을 한곳으로 모은다.
 const rootVars = `
   --c-bg: #25171A;
   --c-panel: rgba(75, 36, 74, 0.6);
@@ -17,7 +20,7 @@ const rootVars = `
 
 css = css.replace(':root {', `:root {\n${rootVars}`);
 
-// Replace common dark grays/blues with new palette
+// 기존에 직접 적힌 어두운 회색/파란색을 의미 기반 테마 변수로 치환한다.
 const replacements = [
   // Backgrounds
   { regex: /#14161[aA]/g, replacement: 'var(--c-bg)' },
@@ -44,7 +47,7 @@ for (const { regex, replacement } of replacements) {
   css = css.replace(regex, replacement);
 }
 
-// Add global glassmorphism classes to the bottom
+// 기존 선택자의 우선순위를 유지하면서 공통 glassmorphism 표현을 마지막에 덮어쓴다.
 css += `
 /* UI/UX Unification: Glassmorphism Overrides */
 .start-panel, .dialog-content, .finance-card, .left-route-header, .top-actions-row, .layer-menu {
