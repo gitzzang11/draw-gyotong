@@ -6152,3 +6152,80 @@ font-size: 12px;
   .diagram-legend { gap: 9px; }
   .diagram-help { max-width: 70vw; }
 }
+
+/* ====================================================
+   ENHANCED LAYER PANEL HOVER & INTERACTION STYLES
+   ==================================================== */
+.layer-menu summary {
+  list-style: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: var(--c-text-muted, #a0aec0);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.layer-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.layer-menu summary:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: var(--c-primary, #00f2fe) !important;
+  border-color: rgba(0, 242, 254, 0.4) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 242, 254, 0.25);
+}
+
+.layer-menu summary:active {
+  transform: translateY(0) scale(0.96);
+  box-shadow: 0 2px 6px rgba(0, 242, 254, 0.15);
+}
+
+.layer-menu[open] summary {
+  background: rgba(0, 242, 254, 0.15) !important;
+  color: var(--c-primary, #00f2fe) !important;
+  border-color: var(--c-primary, #00f2fe) !important;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
+}
+
+.layer-toggle {
+  background: transparent;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: var(--c-text-muted);
+  font-size: 13px;
+  min-height: 44px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.layer-toggle:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--c-text-main, #ffffff) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  transform: translateX(2px);
+}
+
+.layer-toggle.active {
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--c-primary);
+  border-color: rgba(0, 242, 254, 0.25);
+}
+
+.layer-toggle.active:hover {
+  background: rgba(0, 242, 254, 0.22) !important;
+  color: #ffffff !important;
+  border-color: var(--c-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 242, 254, 0.2);
+  transform: translateX(2px);
+}

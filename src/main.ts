@@ -1014,9 +1014,8 @@ app.innerHTML = `
             </div>
           </details>
         </nav>
-        <button id="openDiagramButton" class="top-action-btn diagram-button" type="button" aria-label="노선도" title="자동 노선도">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/><line x1="12" y1="6" x2="18" y2="6"/><line x1="6" y1="12" x2="6" y2="18"/></svg>
-        </button>
+
+
         <button id="helpButton" class="top-action-btn help-button" type="button" aria-label="도움말" title="도움말">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
