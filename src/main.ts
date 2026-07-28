@@ -2092,7 +2092,12 @@ map.on("zoomend moveend", (event) => {
   updateLod();
   const nextLod = getLodMode(map.getZoom());
   if (event.type === "zoomend" && nextLod !== lastMapRenderLod) renderAll(selectedRouteId ?? undefined);
-  else if (event.type === "zoomend" && activeTool === "edit") renderEditHandles();
+  else if (event.type === "zoomend") {
+    renderRoutes(selectedRouteId ?? undefined);
+    renderStations();
+    renderTrains();
+    if (activeTool === "edit") renderEditHandles();
+  }
   window.clearTimeout(debounceTimer);
   debounceTimer = window.setTimeout(() => {
     updateDynamicLayers();
@@ -6345,14 +6350,20 @@ function getRoutePaths(route: RouteLine) {
 
 function renderRoutes(selectedId?: string) {
   routeLayer.clearLayers();
+  const zoom = map.getZoom();
+  const lowZoom = zoom < 13;
+  const middleZoom = zoom < 15;
   for (const route of routes) {
     const selected = route.id === selectedId;
     const underConstruction = !isRouteOperational(route.id);
+    const haloWeight = lowZoom ? 10 : middleZoom ? 13 : 18;
+    const outlineWeight = lowZoom ? (selected ? 7 : 6) : middleZoom ? (selected ? 10 : 9) : selected ? 14 : 13;
+    const routeWeight = lowZoom ? (selected ? 6 : 4) : middleZoom ? (selected ? 7 : 5) : selected ? 9 : 6;
     for (const latLngs of getRoutePaths(route)) {
-      if (selected) L.polyline(latLngs, routeStyle("rgba(255, 255, 255, 0.94)", 18, 0.95)).addTo(routeLayer);
-      L.polyline(latLngs, routeStyle("rgba(4, 10, 14, 0.82)", selected ? 14 : 13, 0.92)).addTo(routeLayer);
+      if (selected) L.polyline(latLngs, routeStyle("rgba(255, 255, 255, 0.94)", haloWeight, 0.95)).addTo(routeLayer);
+      L.polyline(latLngs, routeStyle("rgba(4, 10, 14, 0.82)", outlineWeight, 0.92)).addTo(routeLayer);
       const opacity = underConstruction ? 0.46 : route.visibility === "planning" ? 0.58 : route.operationPaused ? 0.68 : 0.98;
-      const polyline = L.polyline(latLngs, routeStyle(route.color, selected ? 9 : 6, opacity)).addTo(routeLayer);
+      const polyline = L.polyline(latLngs, routeStyle(route.color, routeWeight, opacity)).addTo(routeLayer);
       if (route.visibility === "planning" || underConstruction) polyline.setStyle({ dashArray: underConstruction ? "5 10" : "10 8" });
     }
   }
@@ -6456,7 +6467,7 @@ void createTransferEmblem;
 
 function renderStations(selectedId?: string) {
   stationLayer.clearLayers();
-  if (getLodMode(map.getZoom()) === "overview") return;
+  if (map.getZoom() < 13) return;
 
   for (const transfer of transfers) {
     const transferStations = transfer.stationIds.map((id) => stations.find((station) => station.id === id)).filter(Boolean) as Station[];
@@ -6560,7 +6571,7 @@ function renderDepots(selectedId?: string) {
 }
 
 function renderTrains() {
-  if (getLodMode(map.getZoom()) === "overview") {
+  if (map.getZoom() < 14) {
     trainLayer.clearLayers();
     trainMarkers.clear();
     return;
