@@ -2,6 +2,12 @@ import L, { type Coords, type GeoJSON, type LatLng, type LatLngExpression, type 
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
 
+// =============================================================================
+// 도메인 모델
+// 지도 위의 선·역·차량기지뿐 아니라 계획, 공사, 운행, 재정, 저장 데이터까지
+// 이 파일에서 공유하는 게임 상태의 형태를 한곳에 정의한다.
+// =============================================================================
+
 type OverlayKey = "administrative" | "landuse" | "rail";
 type LodMode = "overview" | "district" | "build";
 type WorkspaceMode = "management" | "planning" | "construction";
@@ -574,7 +580,14 @@ type GeoJsonFeature = {
   };
 };
 
+// =============================================================================
+// 게임 밸런스와 기본값
+// 거리 단위는 km, 금액은 게임 내부 화폐, 기간은 게임 일(day)을 사용한다.
+// 아래 값을 조정하면 건설비·공사 기간·스냅 감도 등 전반적인 난이도가 바뀐다.
+// =============================================================================
+
 const SEOUL: LatLngExpression = [37.5665, 126.978];
+// 한 서버가 응답하지 않을 때 다음 서버로 넘어가기 위한 Overpass API 후보 목록.
 const overpassEndpoints = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
@@ -610,6 +623,8 @@ const defaultEconomy: EconomyState = {
   demand: 0,
 };
 
+// 사용자가 지도에서 작업 중일 때만 존재하는 임시 상태들.
+// 확정 전 미리보기이므로 저장 데이터(SaveState)에는 직접 포함하지 않는다.
 type RouteExtension = {
   routeId: string;
   atStart: boolean;
@@ -762,7 +777,7 @@ const defaultDiagramState: MetroDiagramState = {
   showStationNames: true,
   showCompanyInfo: true,
   selectedRouteId: "all",
-  layoutVersion: 2,
+  layoutVersion: 3,
   networkSignature: "",
 };
 const defaultAnalysisState: OperationAnalysisState = {
@@ -862,6 +877,12 @@ const overlayState: Record<OverlayKey, boolean> = {
   landuse: false,
   rail: true,
 };
+
+// =============================================================================
+// 애플리케이션 화면 골격
+// 별도 UI 프레임워크 없이 정적 HTML을 한 번 주입하고, 아래에서 DOM 참조와
+// 이벤트를 연결한다. 실제 지도 객체는 이 마크업이 만들어진 뒤 초기화해야 한다.
+// =============================================================================
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App root not found");
@@ -1013,7 +1034,7 @@ app.innerHTML = `
     <section class="hud build-panel" aria-label="현재 모드 도구">
       <!-- Construction Tools Group -->
       <div class="tool-group construction-tools">
-        <button id="routeTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>노선</span></button>
+        <button id="routeTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>노선건설</span></button>
         <button id="stationTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>역</span></button>
         <button id="transferTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg><span>환승</span></button>
         <button id="depotTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg><span>기지</span></button>
@@ -1026,25 +1047,26 @@ app.innerHTML = `
 
       <!-- Management & Shortcuts Group -->
       <div class="tool-group management-tools">
-        <button id="selectTool" class="primary-tool workspace-management-tool" type="button" aria-pressed="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg><span>선택</span></button>
+        <button id="selectTool" class="primary-tool workspace-management-tool" type="button" aria-pressed="true" aria-label="지도 탐색"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg><span>탐색</span></button>
         <button id="manageLineTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>노선 목록</span></button>
         <button id="manageOperationsTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>운영 현황</span></button>
-        <button id="planOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="계획 목록 열기"><span>계획 목록</span></button>
-        <button id="constructionOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="공사 현황 열기"><span>공사 현황</span></button>
+        <button id="planOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="계획 목록 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>계획 목록</span></button>
+        <button id="constructionOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="공사 현황 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V9l6-4 6 4v12"/><path d="M9 21v-6h6v6"/></svg><span>공사 현황</span></button>
         <button id="manageMapTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg><span>노선도</span></button>
         <button id="diagramToolButton" class="primary-tool diagram-toolbar-button" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg><span>노선도</span></button>
       </div>
 
-      <label id="eraserSizeControl" class="eraser-size-control" hidden><span>지우개 크기</span><input id="eraserSizeRange" type="range" min="12" max="48" step="4" value="20" aria-label="지우개 크기" /><output id="eraserSizeValue">20</output></label>
     </section>
+
+    <label id="eraserSizeControl" class="hud eraser-size-control" hidden><span>지우개 크기</span><input id="eraserSizeRange" type="range" min="12" max="48" step="4" value="20" aria-label="지우개 크기" /><output id="eraserSizeValue">20</output></label>
 
     <section id="modifyToolsCard" class="hud modify-tools-card" hidden aria-label="수정 도구">
       <div class="modify-tools-card-heading"><span>MODIFY TOOLS</span><strong>수정 도구</strong></div>
       <div class="modify-tools-grid">
-        <button id="eraserTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선과 역 철거"><span class="tool-glyph erase-glyph" aria-hidden="true"></span><span>철거</span></button>
-        <button id="extendTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연장"><span class="tool-glyph route-glyph" aria-hidden="true"></span><span>연장</span></button>
-        <button id="branchTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="분기 추가"><span class="tool-glyph route-glyph" aria-hidden="true"></span><span>분기</span></button>
-        <button id="mergeTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연결"><span class="tool-glyph transfer-glyph" aria-hidden="true"></span><span>연결</span></button>
+        <button id="eraserTool" class="primary-tool compact danger-tool" type="button" aria-pressed="false" aria-label="노선과 역 철거"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l10-10 7 7-7 7"/><path d="M6.5 12.5l5 5"/></svg><span>철거</span></button>
+        <button id="extendTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연장"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/><path d="M14 8l4 4-4 4"/></svg><span>연장</span></button>
+        <button id="branchTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="분기 추가"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 12h4c4 0 4-7 6-7"/><path d="M11 12c4 0 4 7 6 7"/></svg><span>분기</span></button>
+        <button id="mergeTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연결"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 5c5 0 5 7 10 7"/><path d="M7 19c5 0 5-7 10-7"/></svg><span>연결</span></button>
       </div>
     </section>
 
@@ -1225,9 +1247,9 @@ app.innerHTML = `
       </header>
       <div class="diagram-workspace">
         <div class="diagram-help"><strong>자동 노선도</strong><span>역을 드래그해 위치를 조정할 수 있습니다. 조정값은 세이브에 저장됩니다.</span></div>
-        <svg id="metroDiagramSvg" viewBox="0 0 1600 900" role="img" aria-labelledby="diagramSvgTitle diagramSvgDescription">
+        <svg id="metroDiagramSvg" viewBox="0 0 1800 1000" role="img" aria-labelledby="diagramSvgTitle diagramSvgDescription">
           <title id="diagramSvgTitle">자동 생성 지하철 노선도</title>
-          <desc id="diagramSvgDescription">실제 노선의 연결 관계를 수평, 수직, 45도 선으로 단순화한 노선도</desc>
+          <desc id="diagramSvgDescription">실제 노선, 분기, 급행 정차역과 환승 그룹을 현재 운행 구조에 맞춰 단순화한 노선도</desc>
           <g id="diagramBackgroundLayer"></g>
           <g id="diagramRouteLayer"></g>
           <g id="diagramStationLayer"></g>
@@ -1241,6 +1263,7 @@ app.innerHTML = `
         <span><i class="legend-express"></i> 급행 정차역</span>
         <span><i class="legend-transfer"></i> 환승역</span>
         <span><i class="legend-terminal"></i> 노선 끝점</span>
+        <div id="diagramRouteLegend" class="diagram-route-legend" aria-label="노선 색상 범례"></div>
         <strong id="diagramStatus">자동 배치</strong>
       </footer>
     </section>
@@ -1298,6 +1321,16 @@ app.innerHTML = `
           <button id="closeStationManagerButton" class="dialog-close" type="button" aria-label="역 관리 닫기">×</button>
         </header>
         <div id="stationManagerContent" class="station-manager-content"></div>
+      </section>
+    </div>
+
+    <div id="depotManagerDialog" class="dialog-backdrop" hidden>
+      <section class="depot-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="depotManagerTitle">
+        <header class="depot-manager-header">
+          <div><span>DEPOT MANAGEMENT</span><h2 id="depotManagerTitle">차량기지 관리</h2></div>
+          <button id="closeDepotManagerButton" class="dialog-close" type="button" aria-label="차량기지 관리 닫기">×</button>
+        </header>
+        <div id="depotManagerContent" class="depot-manager-content"></div>
       </section>
     </div>
 
@@ -1564,6 +1597,11 @@ app.innerHTML = `
   </main>
 `;
 
+// =============================================================================
+// Leaflet 지도와 렌더링 레이어
+// 레이어를 목적별로 분리해 노선/공사/계획 등을 독립적으로 다시 그릴 수 있게 한다.
+// =============================================================================
+
 const map = L.map("map", {
   zoomControl: false,
   attributionControl: false,
@@ -1628,6 +1666,9 @@ const landuseLayer = L.geoJSON(undefined, {
   },
 });
 
+const facilityInteractionPane = map.createPane("facilityInteractionPane");
+facilityInteractionPane.style.zIndex = "690";
+
 const routeLayer = L.layerGroup().addTo(map);
 const constructionLayer = L.layerGroup().addTo(map);
 const planLayer = L.layerGroup().addTo(map);
@@ -1643,6 +1684,12 @@ const layers: Record<OverlayKey, TileLayer | GeoJSON> = {
   landuse: landuseLayer,
   rail: railLayer,
 };
+
+// =============================================================================
+// DOM 참조
+// 화면 요소는 시작할 때 한 번만 조회한다. 선택 요소는 실제 마크업 유무에 따라
+// null일 수 있으므로 이벤트 연결과 갱신 시 optional chaining을 사용한다.
+// =============================================================================
 
 const zoomReadout = byId("zoomReadout");
 const lodReadout = byId("lodReadout");
@@ -1826,6 +1873,7 @@ const diagramLabelLayer = document.querySelector<SVGGElement>("#diagramLabelLaye
 const diagramCompanyLayer = document.querySelector<SVGGElement>("#diagramCompanyLayer");
 const diagramEmptyState = byId("diagramEmptyState");
 const diagramStatus = byId("diagramStatus");
+const diagramRouteLegend = byId("diagramRouteLegend");
 const analysisScreen = byId("analysisScreen");
 const closeAnalysisButton = document.querySelector<HTMLButtonElement>("#closeAnalysisButton");
 const refreshAnalysisButton = document.querySelector<HTMLButtonElement>("#refreshAnalysisButton");
@@ -1845,6 +1893,10 @@ const stationManagerDialog = byId("stationManagerDialog");
 const closeStationManagerButton = document.querySelector<HTMLButtonElement>("#closeStationManagerButton");
 const stationManagerTitle = byId("stationManagerTitle");
 const stationManagerContent = byId("stationManagerContent");
+const depotManagerDialog = byId("depotManagerDialog");
+const closeDepotManagerButton = document.querySelector<HTMLButtonElement>("#closeDepotManagerButton");
+const depotManagerTitle = byId("depotManagerTitle");
+const depotManagerContent = byId("depotManagerContent");
 const statisticsScreen = byId("statisticsScreen");
 const closeStatisticsButton = document.querySelector<HTMLButtonElement>("#closeStatisticsButton");
 const statisticsNetworkTitle = byId("statisticsNetworkTitle");
@@ -1887,7 +1939,7 @@ const planConversionSummary = byId("planConversionSummary");
 const fundPlanWithLoanButton = document.querySelector<HTMLButtonElement>("#fundPlanWithLoanButton");
 const confirmPlanConversionButton = document.querySelector<HTMLButtonElement>("#confirmPlanConversionButton");
 const layerButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".layer-toggle"));
-const toolButtons = [routeTool, extendTool, editTool, eraserTool, reconnectTool, branchTool, mergeTool, stationTool, transferTool, depotTool].filter(Boolean) as HTMLButtonElement[];
+const toolButtons = [selectTool, routeTool, extendTool, editTool, eraserTool, reconnectTool, branchTool, mergeTool, stationTool, transferTool, depotTool].filter(Boolean) as HTMLButtonElement[];
 const selectedLineColor = document.querySelector<HTMLButtonElement>("#selectedLineColor");
 const selectedLineTitle = byId("selectedLineTitle");
 const selectedLineMeta = byId("selectedLineMeta");
@@ -1947,6 +1999,8 @@ let redoStack: SaveState[] = [];
 let overpassAbort: AbortController | null = null;
 let lastOverpassKey = "";
 let debounceTimer = 0;
+let selectedTrainFleetId: string | null = null;
+let selectedTrainSetNumber: number | null = null;
 let selectedColor = routeColors[0];
 let draftRouteName = "";
 let hasDraftRouteSettings = false;
@@ -1983,6 +2037,7 @@ let constructionPreviewCollapsed = false;
 let knownObstacles: Obstacle[] = [];
 let selectedTransferStationIds: string[] = [];
 let selectedDepotId: string | null = null;
+let selectedDepotManagerId: string | null = null;
 
 let selectedStationManagerId: string | null = null;
 let selectedOperationRouteId = "";
@@ -2035,11 +2090,11 @@ window.setTimeout(() => finishLoading(), 3500);
 
 map.on("zoomend moveend", (event) => {
   updateLod();
+  const nextLod = getLodMode(map.getZoom());
+  if (event.type === "zoomend" && nextLod !== lastMapRenderLod) renderAll(selectedRouteId ?? undefined);
+  else if (event.type === "zoomend" && activeTool === "edit") renderEditHandles();
   window.clearTimeout(debounceTimer);
   debounceTimer = window.setTimeout(() => {
-    const nextLod = getLodMode(map.getZoom());
-    if (event.type === "zoomend" && nextLod !== lastMapRenderLod) renderAll(selectedRouteId ?? undefined);
-    else if (event.type === "zoomend" && activeTool === "edit") renderEditHandles();
     updateDynamicLayers();
   }, 220);
 });
@@ -2050,7 +2105,25 @@ routeTool?.addEventListener("click", () => setTool(activeTool === "route" ? "pan
 modifyToolsButton?.addEventListener("click", () => {
   if (!modifyToolsCard) return;
   modifyToolsCard.hidden = !modifyToolsCard.hidden;
-  modifyToolsButton.setAttribute("aria-expanded", String(!modifyToolsCard.hidden));
+  const expanded = !modifyToolsCard.hidden;
+  modifyToolsButton.setAttribute("aria-expanded", String(expanded));
+  modifyToolsButton.setAttribute("aria-pressed", String(expanded));
+});
+document.addEventListener("pointerdown", (event) => {
+  if (!modifyToolsCard || modifyToolsCard.hidden) return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (modifyToolsCard.contains(target) || modifyToolsButton?.contains(target)) return;
+  modifyToolsCard.hidden = true;
+  modifyToolsButton?.setAttribute("aria-expanded", "false");
+  modifyToolsButton?.setAttribute("aria-pressed", "false");
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !modifyToolsCard || modifyToolsCard.hidden) return;
+  modifyToolsCard.hidden = true;
+  modifyToolsButton?.setAttribute("aria-expanded", "false");
+  modifyToolsButton?.setAttribute("aria-pressed", "false");
+  modifyToolsButton?.focus();
 });
 workspaceModeTabs.forEach((tab) => tab.addEventListener("click", () => setWorkspaceMode(tab.dataset.workspaceMode as WorkspaceMode)));
 selectTool?.addEventListener("click", () => setTool("pan"));
@@ -2248,6 +2321,11 @@ stationManagerDialog?.addEventListener("click", (event) => {
   if (event.target === stationManagerDialog) closeStationManager();
 });
 stationManagerContent?.addEventListener("click", handleStationManagerClick);
+closeDepotManagerButton?.addEventListener("click", closeDepotManager);
+depotManagerDialog?.addEventListener("click", (event) => {
+  if (event.target === depotManagerDialog) closeDepotManager();
+});
+depotManagerContent?.addEventListener("click", handleDepotManagerClick);
 newsButton?.addEventListener("click", openNewsScreen);
 closeNewsButton?.addEventListener("click", closeNewsScreen);
 newsFilter?.addEventListener("change", renderNewsFeed);
@@ -2425,7 +2503,9 @@ function combinePlanningContinuation(points: LatLng[]) {
 
 function onPointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
-  if ((event.target as HTMLElement).closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .construction-preview-panel, .dialog-backdrop")) return;
+  const pointerTarget = event.target as HTMLElement;
+  if (activeTool === "pan" && pointerTarget.closest(".station-map-marker, .station-click-target, .depot-map-shape, .depot-click-target")) return;
+  if (pointerTarget.closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .train-icon, .construction-preview-panel, .dialog-backdrop")) return;
   if (event.pointerType === "touch" && activePointerId !== null && event.pointerId !== activePointerId) {
     cancelActiveDrawing();
     setText(facilityReadout, "확대/축소 후 다시 그리세요");
@@ -3807,6 +3887,7 @@ function createTransferGroup(stationIds: string[], automatic: boolean) {
 type DiagramNodeInternal = {
   id: string;
   station?: Station;
+  sourceStationIds: string[];
   geo: LatLng;
   routeIds: string[];
   terminal: boolean;
@@ -3877,6 +3958,17 @@ function renderDiagramControls() {
   if (diagramLabelsToggle) diagramLabelsToggle.checked = diagramState.showStationNames;
   if (diagramCompanyToggle) diagramCompanyToggle.checked = diagramState.showCompanyInfo;
   setText(diagramCompanyName, getNetworkTitle());
+  renderDiagramRouteLegend();
+}
+
+function renderDiagramRouteLegend() {
+  if (!diagramRouteLegend) return;
+  const visibleRoutes = routes
+    .filter((route) => route.coordinates.length >= 2)
+    .filter((route) => diagramState.selectedRouteId === "all" || route.id === diagramState.selectedRouteId);
+  diagramRouteLegend.innerHTML = visibleRoutes
+    .map((route) => `<span><i style="--diagram-route-color:${escapeHtml(route.color)}"></i>${escapeHtml(route.name)}</span>`)
+    .join("");
 }
 
 function buildDiagramGraph(): DiagramGraphInternal {
@@ -3888,30 +3980,65 @@ function buildDiagramGraph(): DiagramGraphInternal {
   const nodes = new Map<string, DiagramNodeInternal>();
   const paths: DiagramPathInternal[] = [];
   const adjacency = new Map<string, Set<string>>();
+  const stationToDiagramNode = new Map<string, string>();
+  const logicalGroups = new Map<string, Station[]>();
+  const visibleStations = stations
+    .filter((station) => station.connectedRouteIds.some((routeId) => visibleRouteIds.has(routeId)))
+    .sort((a, b) => a.id.localeCompare(b.id));
 
-  for (const station of stations.filter((item) => item.connectedRouteIds.some((routeId) => visibleRouteIds.has(routeId))).sort((a, b) => a.id.localeCompare(b.id))) {
-    const routeIds = station.connectedRouteIds.filter((routeId) => visibleRouteIds.has(routeId)).sort();
-    const express = expressConfigs.some((config) => config.enabled && routeIds.includes(config.routeId) && config.stopStationIds.includes(station.id));
+  for (const station of visibleStations) {
+    const key = station.transferGroupId ? `transfer:${station.transferGroupId}` : station.id;
+    logicalGroups.set(key, [...(logicalGroups.get(key) ?? []), station]);
+    stationToDiagramNode.set(station.id, key);
+  }
+
+  for (const [logicalId, members] of logicalGroups) {
+    const routeIds = Array.from(new Set(members.flatMap((station) => station.connectedRouteIds)))
+      .filter((routeId) => visibleRouteIds.has(routeId))
+      .sort();
+    const latitude = members.reduce((sum, station) => sum + station.position[0], 0) / members.length;
+    const longitude = members.reduce((sum, station) => sum + station.position[1], 0) / members.length;
+    const names = Array.from(new Set(members.map((station) => station.name)));
+    const representative: Station = {
+      ...members[0],
+      id: logicalId,
+      name: names.join(" · "),
+      position: [latitude, longitude],
+      demand: members.reduce((sum, station) => sum + station.demand, 0),
+      connectedRouteIds: routeIds,
+      routeNodeIds: Array.from(new Set(members.flatMap((station) => station.routeNodeIds ?? []))),
+      transferGroupId: members.find((station) => station.transferGroupId)?.transferGroupId,
+    };
+    const express = expressConfigs.some(
+      (config) => config.enabled && routeIds.includes(config.routeId) && members.some((station) => config.stopStationIds.includes(station.id)),
+    );
     const branch = visibleRoutes.some((route) => {
       const junctions = new Set((route.branches ?? []).map((item) => item.junctionNodeId));
-      return station.connectedRouteIds.includes(route.id) && (station.routeNodeIds ?? []).some((nodeId) => junctions.has(nodeId));
+      return members.some(
+        (station) =>
+          station.connectedRouteIds.includes(route.id) &&
+          (station.routeNodeIds ?? []).some((nodeId) => junctions.has(nodeId)),
+      );
     });
-    nodes.set(station.id, {
-      id: station.id,
-      station,
-      geo: L.latLng(...station.position),
+    nodes.set(logicalId, {
+      id: logicalId,
+      station: representative,
+      sourceStationIds: members.map((station) => station.id),
+      geo: L.latLng(latitude, longitude),
       routeIds,
       terminal: false,
       branch,
       express,
     });
-    adjacency.set(station.id, new Set());
+    adjacency.set(logicalId, new Set());
   }
 
   for (const route of visibleRoutes) {
     const routePaths = getRoutePaths(route).filter((path) => path.length >= 2);
     const assignments = new Map<number, Array<{ stationId: string; progress: number }>>();
-    const routeStations = stations.filter((station) => station.connectedRouteIds.includes(route.id) && nodes.has(station.id));
+    const routeStations = stations.filter(
+      (station) => station.connectedRouteIds.includes(route.id) && stationToDiagramNode.has(station.id),
+    );
     for (const station of routeStations) {
       const stationPoint = L.latLng(...station.position);
       let best: { pathIndex: number; distance: number; progress: number } | null = null;
@@ -3922,19 +4049,25 @@ function buildDiagramGraph(): DiagramGraphInternal {
       }
       if (best && best.distance <= 650) {
         const list = assignments.get(best.pathIndex) ?? [];
-        list.push({ stationId: station.id, progress: best.progress });
+        list.push({ stationId: stationToDiagramNode.get(station.id)!, progress: best.progress });
         assignments.set(best.pathIndex, list);
       }
     }
 
     routePaths.forEach((path, pathIndex) => {
+      const seenStationIds = new Set<string>();
       const stationIds = (assignments.get(pathIndex) ?? [])
         .sort((a, b) => a.progress - b.progress || a.stationId.localeCompare(b.stationId))
+        .filter((item) => {
+          if (seenStationIds.has(item.stationId)) return false;
+          seenStationIds.add(item.stationId);
+          return true;
+        })
         .map((item) => item.stationId);
       const startId = `terminal:${route.id}:${pathIndex}:start`;
       const endId = `terminal:${route.id}:${pathIndex}:end`;
-      nodes.set(startId, { id: startId, geo: path[0], routeIds: [route.id], terminal: true, branch: pathIndex > 0, express: false });
-      nodes.set(endId, { id: endId, geo: path[path.length - 1], routeIds: [route.id], terminal: true, branch: pathIndex > 0, express: false });
+      nodes.set(startId, { id: startId, sourceStationIds: [], geo: path[0], routeIds: [route.id], terminal: true, branch: pathIndex > 0, express: false });
+      nodes.set(endId, { id: endId, sourceStationIds: [], geo: path[path.length - 1], routeIds: [route.id], terminal: true, branch: pathIndex > 0, express: false });
       adjacency.set(startId, new Set());
       adjacency.set(endId, new Set());
       const nodeIds = [startId, ...stationIds, endId];
@@ -4115,6 +4248,7 @@ function renderMetroDiagram() {
   if (diagramEmptyState) diagramEmptyState.hidden = hasRoutes;
   metroDiagramSvg.toggleAttribute("hidden", !hasRoutes);
   if (diagramScreen) diagramScreen.dataset.background = diagramState.background;
+  renderDiagramRouteLegend();
   renderDiagramBackground();
   if (!hasRoutes) {
     metroDiagramSvg.setAttribute("viewBox", `0 0 ${diagramWidth} ${diagramHeight}`);
@@ -4154,7 +4288,13 @@ function renderMetroDiagram() {
 
   diagramLabelLayer.innerHTML = diagramState.showStationNames ? renderDiagramLabels(visibleStationNodes, positions) : "";
   renderDiagramCompany();
-  setText(diagramStatus, `${graph.paths.length}개 경로 · ${visibleStationNodes.length}개 역 · ${Object.keys(diagramState.manualPositions).length}개 수동 조정`);
+  const transferCount = visibleStationNodes.filter(
+    (node) => node.sourceStationIds.length > 1 || node.routeIds.length > 1,
+  ).length;
+  setText(
+    diagramStatus,
+    `${graph.paths.length}개 경로 · ${visibleStationNodes.length}개 논리역 · 환승 ${transferCount}개 · 수동 조정 ${Object.keys(diagramState.manualPositions).length}개`,
+  );
 }
 
 function renderDiagramBackground() {
@@ -4367,6 +4507,7 @@ function saveDiagramSvg() {
 function buildMetroDiagramShareData(): MetroDiagramShareData {
   const graph = buildDiagramGraph();
   const positions = buildDiagramPositions(graph);
+  const logicalStationCount = Array.from(graph.nodes.values()).filter((node) => node.station).length;
   const routeMap = new Map<string, DiagramShareRoute>();
   for (const path of graph.paths) {
     const current = routeMap.get(path.route.id);
@@ -4386,7 +4527,7 @@ function buildMetroDiagramShareData(): MetroDiagramShareData {
       cityName: cityConfigs[currentMeta.cityId].name,
       generatedAt: Date.now(),
       routeCount: routes.length,
-      stationCount: stations.length,
+      stationCount: logicalStationCount,
     },
     routes: Array.from(routeMap.values()),
     stations: Array.from(graph.nodes.values())
@@ -4622,6 +4763,11 @@ function updatePlan(planId: string, updater: (plan: ConstructionPlan) => Constru
   plans = plans.map((plan) => (plan.id === planId ? recalculatePlan(updater(plan)) : plan));
 }
 
+/**
+ * 계획에 포함된 자산을 기준으로 비용·기간·수요·수익을 다시 집계한다.
+ * 계획 자산이 추가/삭제/완공될 때 파생 값을 직접 수정하지 말고 이 함수를 거쳐
+ * 요약 수치가 실제 목록과 어긋나지 않게 한다.
+ */
 function recalculatePlan(plan: ConstructionPlan): ConstructionPlan {
   const remainingRouteCost = plan.routes.reduce(
     (sum, route) => sum + route.segments.filter((segment) => !route.completedSegmentIds.includes(segment.id)).reduce((segmentSum, segment) => segmentSum + segment.constructionCost, 0),
@@ -4824,7 +4970,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   const hints: Record<WorkspaceMode, string[]> = {
     management: ["지도를 이동하거나 시설을 선택", "운영·노선 정보를 확인"],
     planning: ["건설 전 설계안을 자유롭게 편집", "설계안은 비용이 차감되지 않음"],
-    construction: ["기존 시설의 철거·개량을 계획", "확정 전까지 지도는 바뀌지 않음"],
+    construction: ["철거 도구로 노선과 역의 범위를 선택", "확정 전까지 지도는 바뀌지 않음"],
   };
   setHint(hints[nextMode]);
   renderAll(selectedRouteId ?? undefined);
@@ -5545,6 +5691,11 @@ function isPlanFullyConverted(plan: ConstructionPlan) {
   );
 }
 
+/**
+ * 현재 게임 상태를 지도와 HUD 전체에 반영하는 중앙 렌더 함수.
+ * 상태를 변경한 호출자는 개별 화면을 빠뜨리지 않도록 가능하면 이 진입점을 사용한다.
+ * selectedId가 있으면 다시 그린 뒤에도 해당 노선의 선택 강조를 유지한다.
+ */
 function renderAll(selectedId?: string) {
   lastMapRenderLod = getLodMode(map.getZoom());
   if (selectedRouteId && !routes.some((route) => route.id === selectedRouteId)) selectedRouteId = null;
@@ -5877,6 +6028,11 @@ function createDefaultMeta(): GameMeta {
   };
 }
 
+/**
+ * 과거 버전 또는 localStorage에서 읽은 값을 현재 SaveState 구조로 승격한다.
+ * 외부 입력을 그대로 신뢰하지 않고 누락 필드에 기본값을 채우므로, 저장 스키마를
+ * 변경할 때는 기존 세이브가 계속 열리도록 이 함수에도 변환 규칙을 추가해야 한다.
+ */
 function migrateSaveStateRecord(input: unknown): SaveState {
   const source = input && typeof input === "object" ? (input as Partial<SaveState>) : {};
   const defaultMeta = createDefaultMeta();
@@ -6158,6 +6314,10 @@ function hasRouteGaps(route: RouteLine) {
   return (route.disabledSegments?.length ?? 0) > 0;
 }
 
+/**
+ * 철거 등으로 비활성화된 구간을 경계로 노선을 연속된 운행 구간(run)들로 나눈다.
+ * 지도 렌더링과 열차 이동은 끊어진 선을 하나의 경로로 취급하면 안 되므로 이 결과를 쓴다.
+ */
 function getRouteRuns(route: RouteLine) {
   const points = route.coordinates.map(([lat, lng]) => L.latLng(lat, lng));
   const gaps = new Set(route.disabledSegments ?? []);
@@ -6296,12 +6456,21 @@ void createTransferEmblem;
 
 function renderStations(selectedId?: string) {
   stationLayer.clearLayers();
+  if (getLodMode(map.getZoom()) === "overview") return;
+
   for (const transfer of transfers) {
     const transferStations = transfer.stationIds.map((id) => stations.find((station) => station.id === id)).filter(Boolean) as Station[];
     if (transferStations.length < 2) continue;
     L.polyline(
       transferStations.map((station) => L.latLng(station.position[0], station.position[1])),
-      { color: "#ffffff", weight: 2, opacity: 0.7, dashArray: "3 6", interactive: false },
+      {
+        color: "#ffffff",
+        weight: 2,
+        opacity: 0.7,
+        dashArray: "3 6",
+        interactive: false,
+        pane: "facilityInteractionPane",
+      },
     ).addTo(stationLayer);
   }
 
@@ -6313,16 +6482,33 @@ function renderStations(selectedId?: string) {
     const isTransferStation = Boolean(station.transferGroupId) || station.connectedRouteIds.length > 1;
     const routeColor = routes.find((route) => route.id === station.connectedRouteIds[0])?.color ?? "#ffffff";
     const color = isTransferStation ? "#ffffff" : isExpressStop ? "#ff5d5d" : routeColor;
-    const marker = L.circleMarker(position, {
+    L.circleMarker(position, {
       radius: isExpressStop ? 8 : isSelected ? 8 : 6,
       color: "#111111",
       weight: isSelected ? 3.5 : 2.5,
       fillColor: color,
       fillOpacity: isStationOperational(station.id) ? 1 : 0.25,
       dashArray: isStationOperational(station.id) ? undefined : "3 4",
-      interactive: activeTool === "pan",
+      interactive: false,
+      className: "station-map-marker",
+      pane: "facilityInteractionPane",
     }).addTo(stationLayer);
-    marker.on("click", () => {
+
+    const clickTarget = L.marker(position, {
+      icon: L.divIcon({
+        className: "station-click-target",
+        html: "<span aria-hidden=\"true\"></span>",
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+      }),
+      interactive: true,
+      bubblingMouseEvents: false,
+      keyboard: false,
+      zIndexOffset: 1000,
+      riseOnHover: true,
+      pane: "facilityInteractionPane",
+    }).addTo(stationLayer);
+    clickTarget.on("click", () => {
       if (activeTool === "pan") openStationManager(station.id);
     });
   }
@@ -6342,20 +6528,44 @@ function renderDepots(selectedId?: string) {
         weight: isSelected ? 3 : 2,
         dashArray: operational ? undefined : "6 7",
         interactive: true,
+        bubblingMouseEvents: false,
+        className: "depot-map-shape",
+        pane: "facilityInteractionPane",
       },
     ).addTo(depotLayer);
     polygon.on("click", () => {
       selectedDepotId = depot.id;
-      if (!operational) {
-        openConstructionManager();
-        return;
-      }
-      expandDepot(depot.id);
+      openDepotManager(depot.id);
+    });
+
+    const clickTarget = L.marker(polygon.getBounds().getCenter(), {
+      icon: L.divIcon({
+        className: "depot-click-target",
+        html: "<span aria-hidden=\"true\"></span>",
+        iconSize: [52, 52],
+        iconAnchor: [26, 26],
+      }),
+      interactive: true,
+      bubblingMouseEvents: false,
+      keyboard: false,
+      zIndexOffset: 1000,
+      riseOnHover: true,
+      pane: "facilityInteractionPane",
+    }).addTo(depotLayer);
+    clickTarget.on("click", () => {
+      selectedDepotId = depot.id;
+      openDepotManager(depot.id);
     });
   }
 }
 
 function renderTrains() {
+  if (getLodMode(map.getZoom()) === "overview") {
+    trainLayer.clearLayers();
+    trainMarkers.clear();
+    return;
+  }
+
   const visibleKeys = new Set<string>();
   const maxVisiblePerRoute = settings.performanceMode === "battery" ? 8 : 18;
   for (const route of routes) {
@@ -6384,6 +6594,12 @@ function renderTrains() {
       const existing = trainMarkers.get(key);
       if (existing) {
         existing.setLatLng(position);
+        existing.setZIndexOffset(900);
+        const element = existing.getElement();
+        if (element) {
+          element.style.pointerEvents = "auto";
+          element.classList.add("leaflet-interactive");
+        }
         continue;
       }
       const marker = L.marker(position, {
@@ -6393,12 +6609,15 @@ function renderTrains() {
           iconSize: [24, 30],
           iconAnchor: [12, 15],
         }),
-        interactive: activeTool === "pan",
+        interactive: true,
+        bubblingMouseEvents: false,
         keyboard: false,
+        zIndexOffset: 900,
+        riseOnHover: true,
       }).addTo(trainLayer);
       marker.on("click", () => {
         selectRoute(route.id);
-        openLineManager();
+        openTrainManagerForFleet(displayedTrain.fleet.id, displayedTrain.setNumber);
       });
       trainMarkers.set(key, marker);
     }
@@ -6537,6 +6756,10 @@ function toggleExpressStopAt(point: L.Point) {
   renderAll(station.id);
 }
 
+/**
+ * 배정 차량, 역별 수요, 급행 설정으로부터 한 노선의 배차·혼잡·비용을 계산한다.
+ * 반환값은 표시용 캐시가 아니라 현재 상태에서 언제든 다시 만들 수 있는 파생 데이터다.
+ */
 function calculateRouteOperation(routeId: string): RouteOperation {
   const route = routes.find((item) => item.id === routeId);
   const routeStations = stations.filter((station) => station.connectedRouteIds.includes(routeId));
@@ -6593,6 +6816,10 @@ function buildAnalysisFingerprint() {
   });
 }
 
+/**
+ * 운영 지표를 점검해 수송력·재정·환승 관련 개선 제안을 갱신한다.
+ * fingerprint가 같으면 중복 계산/알림을 피하고, force일 때만 같은 상태도 재평가한다.
+ */
 function refreshOperationSuggestions(force = false) {
   const fingerprint = buildAnalysisFingerprint();
   if (!force && fingerprint === analysisState.lastFingerprint) return;
@@ -7498,27 +7725,45 @@ function closeStationManager() {
   if (stationManagerDialog) stationManagerDialog.hidden = true;
 }
 
+function getStationManagerMembers(station: Station) {
+  if (!station.transferGroupId) return [station];
+  const transfer = transfers.find((item) => item.id === station.transferGroupId);
+  const members = transfer?.stationIds.map((id) => stations.find((item) => item.id === id)).filter(Boolean) as Station[] | undefined;
+  return members && members.length > 0 ? members : [station];
+}
+
 function renderStationManager() {
   const station = stations.find((item) => item.id === selectedStationManagerId);
   if (!station || !stationManagerContent) {
     closeStationManager();
     return;
   }
-  const statistics = calculateStationStatistics(station);
+  const members = getStationManagerMembers(station);
+  const memberStatistics = members.map(calculateStationStatistics);
+  const statistics = {
+    boardings: memberStatistics.reduce((sum, item) => sum + item.boardings, 0),
+    transferPassengers: memberStatistics.reduce((sum, item) => sum + item.transferPassengers, 0),
+    crowding: memberStatistics.reduce((sum, item) => sum + item.crowding, 0) / members.length,
+    waitMin: memberStatistics.reduce((sum, item) => sum + item.waitMin, 0) / members.length,
+    growth: memberStatistics.reduce((sum, item) => sum + item.growth, 0) / members.length,
+  };
   const transfer = transfers.find((item) => item.id === station.transferGroupId);
-  const routesForStation = station.connectedRouteIds.map((id) => routes.find((route) => route.id === id)).filter(Boolean) as RouteLine[];
-  const operational = isStationOperational(station.id);
+  const routeIds = Array.from(new Set(members.flatMap((item) => item.connectedRouteIds)));
+  const routesForStation = routeIds.map((id) => routes.find((route) => route.id === id)).filter(Boolean) as RouteLine[];
+  const operational = members.every((item) => isStationOperational(item.id));
+  const stationName = Array.from(new Set(members.map((item) => item.name))).join(" · ");
+  const combinedDemand = members.reduce((sum, item) => sum + item.demand, 0);
   const growth = statistics.growth >= 0.03 ? `+${Math.round(statistics.growth * 100)}%` : `${Math.round(statistics.growth * 100)}%`;
-  setText(stationManagerTitle, station.name);
+  setText(stationManagerTitle, stationName);
   stationManagerContent.innerHTML = `
     <section class="station-manager-identity">
-      <label><span>역 이름</span><input id="stationManagerName" value="${escapeHtml(station.name)}" maxlength="32" /></label>
+      <label><span>역 이름</span><input id="stationManagerName" value="${escapeHtml(stationName)}" maxlength="32" /></label>
       <button type="button" data-station-manager-action="save-name">이름 저장</button>
       <span class="station-status ${operational ? "operational" : "building"}">${operational ? "운영 중" : "공사·설치 중"}</span>
     </section>
     <section class="station-manager-metrics" aria-label="승객 통계">
       <div><span>일일 승하차</span><strong>${statistics.boardings.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>기본 수요</span><strong>${station.demand.toLocaleString("ko-KR")}명</strong></div>
+      <div><span>기본 수요</span><strong>${combinedDemand.toLocaleString("ko-KR")}명</strong></div>
       <div><span>환승 승객</span><strong>${statistics.transferPassengers.toLocaleString("ko-KR")}명</strong></div>
       <div><span>혼잡도</span><strong>${statistics.crowding > 0 ? `${Math.round(statistics.crowding * 100)}%` : "-"}</strong></div>
       <div><span>평균 대기</span><strong>${statistics.waitMin > 0 ? `${statistics.waitMin.toFixed(1)}분` : "-"}</strong></div>
@@ -7543,11 +7788,64 @@ function handleStationManagerClick(event: Event) {
     showToast("역 이름을 입력해 주세요.");
     return;
   }
-  stations = stations.map((station) => station.id === selectedStationManagerId ? { ...station, name } : station);
+  const selectedStation = stations.find((station) => station.id === selectedStationManagerId);
+  const memberIds = new Set(selectedStation ? getStationManagerMembers(selectedStation).map((station) => station.id) : []);
+  stations = stations.map((station) => memberIds.has(station.id) ? { ...station, name } : station);
   persistState();
   renderStationManager();
   renderAll(selectedStationManagerId);
   showToast("역 이름을 저장했습니다.");
+}
+
+function openDepotManager(depotId: string) {
+  const depot = depots.find((item) => item.id === depotId);
+  if (!depot || !depotManagerDialog) return;
+  selectedDepotManagerId = depot.id;
+  renderDepotManager();
+  depotManagerDialog.hidden = false;
+}
+
+function closeDepotManager() {
+  if (depotManagerDialog) depotManagerDialog.hidden = true;
+}
+
+function renderDepotManager() {
+  const depot = depots.find((item) => item.id === selectedDepotManagerId);
+  if (!depot || !depotManagerContent) {
+    closeDepotManager();
+    return;
+  }
+  const connectedRoutes = depot.connectedRouteIds.map((id) => routes.find((route) => route.id === id)).filter(Boolean) as RouteLine[];
+  const assignedSets = trainFleets
+    .filter((fleet) => depot.connectedRouteIds.includes(fleet.routeId))
+    .reduce((sum, fleet) => sum + fleet.sets, 0);
+  const operational = isDepotOperational(depot.id);
+  const availableSets = Math.max(0, depot.capacity - assignedSets);
+  setText(depotManagerTitle, depot.name);
+  depotManagerContent.innerHTML = `
+    <section class="depot-manager-hero">
+      <span class="depot-manager-symbol" aria-hidden="true">▥</span>
+      <div><span>차량기지 상태</span><strong>${operational ? "운영 중" : "공사·설치 중"}</strong><em>레벨 ${depot.level} · ${depot.areaHa.toFixed(1)}ha</em></div>
+    </section>
+    <section class="depot-manager-metrics" aria-label="차량기지 운영 정보">
+      <div><span>수용 편성</span><strong>${depot.capacity}편성</strong></div>
+      <div><span>연결 노선 열차</span><strong>${assignedSets}편성</strong></div>
+      <div><span>추가 수용 가능</span><strong>${availableSets}편성</strong></div>
+      <div><span>월 유지비</span><strong>${formatCost(depot.maintenanceCost)}</strong></div>
+    </section>
+    <section class="depot-manager-section">
+      <div class="depot-manager-section-heading"><span>연결 노선</span><strong>${connectedRoutes.length}개</strong></div>
+      <div class="connected-route-chips">${connectedRoutes.length > 0 ? connectedRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}">${escapeHtml(route.name)}</span>`).join("") : "<em>연결된 노선이 없습니다.</em>"}</div>
+    </section>
+    <button class="depot-manager-expand" type="button" data-depot-manager-action="expand" ${operational ? "" : "disabled"}>차량기지 확장</button>`;
+}
+
+function handleDepotManagerClick(event: Event) {
+  const target = event.target as HTMLElement;
+  if (target.dataset.depotManagerAction !== "expand" || !selectedDepotManagerId) return;
+  expandDepot(selectedDepotManagerId);
+  renderDepotManager();
+  showToast("차량기지를 확장했습니다.");
 }
 
 function renderStatisticsScreen() {
@@ -7875,6 +8173,10 @@ function updateOperationHud() {
   setText(waitReadout, operation.waitMin > 0 ? `${operation.waitMin.toFixed(1)}분` : "-");
 }
 
+/**
+ * 역 수요를 출발-도착 승객 그룹으로 재구성한다.
+ * 개별 승객을 시뮬레이션하지 않고 집단 단위로 계산해 노선 탐색 비용을 제한한다.
+ */
 function regeneratePassengerGroups() {
   if (stations.length < 2) {
     passengerGroups = [];
@@ -7967,6 +8269,11 @@ function calculateGroupSatisfaction(waitMin: number, crowding: number, transferR
   return Math.max(5, Math.min(100, Math.round(score)));
 }
 
+/**
+ * 게임 날짜가 하루 넘어갈 때 실행하는 일일 결산.
+ * 승객/수익/유지비/대출/공사/통계를 같은 시점에 확정해 서로 다른 날짜의 값이
+ * 섞이지 않도록 한다.
+ */
 function settleSimulationDay() {
   regeneratePassengerGroups();
   if (economy.autoFare) economy.fare = calculateAutoFare();
@@ -8237,6 +8544,11 @@ function updateExpressButton() {
   expressButton.textContent = config?.unlocked ? (config.enabled ? "급행중" : "급행") : "급행 해금";
 }
 
+/**
+ * requestAnimationFrame에서 호출되는 게임 시계 루프.
+ * 실제 프레임 간격에 선택한 배속을 곱해 게임 시간을 진행하고, 날짜 경계를 넘으면
+ * settleSimulationDay에서 한 번만 결산한다.
+ */
 function tickSimulation(timestamp: number) {
   const realDeltaSeconds = Math.min(1, Math.max(0, (timestamp - lastFrameTime) / 1000));
   const deltaMinutes = (realDeltaSeconds / 60) * simSpeed * 60;
@@ -8321,7 +8633,11 @@ function setTool(tool: ToolMode) {
     construction: ["pan", "eraser"],
   };
   if (!allowedTools[workspaceMode].includes(tool)) {
-    const targetMode = tool === "route" || tool === "station" || tool === "transfer" || tool === "depot" ? "기획" : tool === "pan" ? "관리" : "공사";
+    const targetMode = ["route", "extend", "station", "transfer", "depot", "branch", "merge"].includes(tool)
+      ? "기획"
+      : tool === "pan"
+        ? "관리"
+        : "공사";
     showToast(`${targetMode} 모드에서 사용할 수 있는 도구입니다.`);
     return;
   }
@@ -8336,6 +8652,7 @@ function setTool(tool: ToolMode) {
   if (modifyToolsButton) modifyToolsButton.classList.toggle("active", modifyToolActive);
   if (modifyToolsCard) modifyToolsCard.hidden = true;
   modifyToolsButton?.setAttribute("aria-expanded", "false");
+  modifyToolsButton?.setAttribute("aria-pressed", String(modifyToolActive));
   updateRouteSettingsCard(tool);
   if (eraserSizeControl) eraserSizeControl.hidden = tool !== "eraser";
   cancelActiveDrawing();
@@ -8346,6 +8663,7 @@ function setTool(tool: ToolMode) {
   }
   toolButtons.forEach((button) => {
     const isActive =
+      (button === selectTool && tool === "pan") ||
       (button === routeTool && tool === "route") ||
       (button === extendTool && tool === "extend") ||
       (button === editTool && tool === "edit") ||
@@ -8604,6 +8922,18 @@ function closeLineManager() {
 }
 
 function openTrainManagerModal() {
+  selectedTrainFleetId = null;
+  selectedTrainSetNumber = null;
+  showTrainManagerModal();
+}
+
+function openTrainManagerForFleet(fleetId: string, setNumber: number) {
+  selectedTrainFleetId = fleetId;
+  selectedTrainSetNumber = setNumber;
+  showTrainManagerModal();
+}
+
+function showTrainManagerModal() {
   if (!trainManagerDialog) return;
   renderTrainManager();
   trainManagerDialog.hidden = false;
@@ -8628,8 +8958,16 @@ function renderTrainManager() {
     .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.includes(route.id))
     .reduce((sum, depot) => sum + depot.capacity, 0);
   const operation = calculateRouteOperation(route.id);
+  const selectedFleet = routeFleets.find((fleet) => fleet.id === selectedTrainFleetId);
+  const selectedTrainSummary = selectedFleet
+    ? `<div class="selected-train-summary" style="--selected-train-color:${escapeHtml(route.color)}">
+        <span>선택한 열차</span>
+        <strong>${escapeHtml(trainCatalog[selectedFleet.trainType].label)} · ${selectedFleet.cars}량 ${selectedTrainSetNumber ? `· ${selectedTrainSetNumber}편성` : ""}</strong>
+      </div>`
+    : "";
 
   trainManagerContent.innerHTML = `
+    ${selectedTrainSummary}
     <div class="train-modal-header-chip" style="border-left: 4px solid ${route.color}">
       <div>
         <strong style="color: ${route.color}">${escapeHtml(route.name)}</strong>
@@ -9555,6 +9893,11 @@ function findNearestRouteCoordinate(point: L.Point, preferredRouteId: string | u
   return findNearestRouteCoordinate(point, undefined, thresholdPx);
 }
 
+/**
+ * 좌표 기반 노선을 노드/세그먼트 그래프로 다시 정규화한다.
+ * 편집·분기·병합 후 생길 수 있는 중복 노드를 정리하고 기존 세그먼트의 공사 속성은
+ * 가능한 한 보존한다. 이후 역·분기·운행 패턴은 이 그래프 ID를 참조한다.
+ */
 function rebuildRouteGraph(route: RouteLine): RouteLine {
   if (route.coordinates.length < 2) return route;
   const branchSegmentIds = new Set((route.branches ?? []).flatMap((branch) => branch.segmentIds));
@@ -9727,6 +10070,10 @@ function cleanupTransferData() {
   stations = stations.map((station) => (station.transferGroupId && !transferIds.has(station.transferGroupId) ? { ...station, transferGroupId: undefined } : station));
 }
 
+/**
+ * 노선 그래프를 재생성한 뒤 역과 분기 등이 가리키는 node/segment ID를 동기화한다.
+ * 편집 후 존재하지 않는 ID가 저장 데이터에 남는 것을 막는 참조 무결성 정리 단계다.
+ */
 function synchronizeGraphReferences() {
   const routeIds = new Set(routes.map((route) => route.id));
   stations = stations.map((station) => {
@@ -9977,6 +10324,11 @@ function calculateTransferDistance(selectedStations: Station[]) {
   return Math.round(distance);
 }
 
+/**
+ * 사용자가 그린 공사안을 구간별로 분석해 비용·기간·지형 영향·경고를 만든다.
+ * 하천 교차는 사용자가 교량/터널을 선택해야 최종 비용이 정해지며, previousChoices로
+ * 다시 그리는 동안 이미 선택한 방식을 유지한다.
+ */
 function analyzeConstruction(
   kind: ConstructionDraftKind,
   points: LatLng[],
@@ -10394,6 +10746,7 @@ function closeLatLngRing(points: LatLng[]) {
   return [...points, first];
 }
 
+// 변경 직전의 전체 상태 스냅샷을 보관한다. 편집 작업은 mutate 전에 호출해야 한다.
 function pushHistory() {
   undoStack = [...undoStack, cloneState()].slice(-maxHistory);
 }
@@ -10447,6 +10800,10 @@ function persistState() {
   localStorage.setItem("draw-gyotong-routes", JSON.stringify(routes));
 }
 
+/**
+ * 빠른 복구용 localStorage 상태를 읽는다.
+ * 정식 슬롯 저장소는 IndexedDB지만, 읽기 실패나 이전 버전 호환을 위해 이 경로를 남긴다.
+ */
 function loadSavedState() {
   try {
     const savedState = localStorage.getItem("draw-gyotong-state");
@@ -10534,6 +10891,11 @@ function updateGeoLayer(layer: GeoJSON, visible: boolean) {
   }
 }
 
+/**
+ * 현재 화면 범위에 필요한 OSM 행정/토지이용 데이터만 Overpass에서 불러온다.
+ * 이전 요청은 취소하고 여러 endpoint를 순서대로 시도해 지도 이동이 잦거나
+ * 특정 서버가 불안정한 상황에서도 최신 viewport 결과만 적용한다.
+ */
 async function loadViewportOsmData(options: { admin: boolean; landuse: boolean }) {
   const bounds = map.getBounds().pad(0.18);
   renderFallbackOverlays(options);
