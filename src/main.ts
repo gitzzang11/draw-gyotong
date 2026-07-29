@@ -49,18 +49,21 @@ import {
 } from "./demandModel.ts";
 import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
 import { SaveRepository } from "./storage/saveRepository.ts";
-import { serializeFiniteState } from "./storage/serialization.ts";
+import { captureGameState } from "./storage/serialization.ts";
 import {
   CURRENT_SAVE_SCHEMA_VERSION,
-  ensureStableId,
+  migrateSaveStateRecord,
   stableEntityId,
 } from "./storage/migrations.ts";
 import { calculateServiceCapacity } from "./simulation/capacity.ts";
 import { mergeOdPassengerGroup } from "./simulation/passengerAssignment.ts";
 import { measureTask } from "./dev/performanceMonitor.ts";
 import { ListenerRegistry } from "./ui/listenerRegistry.ts";
-import { IndexedDbRepository } from "./storage/indexedDbRepository.ts";
-import { SaveSlotService } from "./storage/saveSlotService.ts";
+import {
+  createSaveSlotService,
+  LocalRecoveryStore,
+  type SaveSlotService,
+} from "./storage/saveSlotService.ts";
 import { calculateAtomicDailySettlement } from "./simulation/finance/dailySettlement.ts";
 
 let saveSlotServiceInstance: SaveSlotService<SaveState> | null = null;
@@ -858,6 +861,14 @@ const defaultSettings: GameSettings = {
   autoSaveIntervalSeconds: 30,
 };
 const fallbackSaveKey = "draw-gyotong-save-slots-v1";
+const localRecoveryStateKey = "draw-gyotong-state";
+const legacyRoutesKey = "draw-gyotong-routes";
+const localRecoveryStore = new LocalRecoveryStore<SaveState>(
+  localStorage,
+  localRecoveryStateKey,
+  legacyRoutesKey,
+  migrateGameSave,
+);
 const gameVersion = "0.4.0";
 const cityDataVersion = "korea-cities-1";
 const diagramWidth = 1800;
@@ -2462,7 +2473,7 @@ lineAutoFareButton?.addEventListener("click", () => {
     lineAutoFareButton.classList.toggle("active", economy.autoFare);
     lineAutoFareButton.textContent = economy.autoFare ? "자동 요금 적용 중" : "수동 요금";
   }
-  persistState();
+  requestStateSave();
   updateEconomyHud();
 });
 closeLineButton?.addEventListener("click", () => selectRoute(null));
@@ -2527,7 +2538,7 @@ openStatisticsFromFinanceButton?.addEventListener("click", () => {
 dialogAutoFareButton?.addEventListener("click", () => {
   economy = { ...economy, autoFare: !economy.autoFare };
   if (economy.autoFare) economy.fare = calculateAutoFare();
-  persistState();
+  requestStateSave();
   updateEconomyHud();
 });
 menuButton?.addEventListener("click", openInGameMenu);
@@ -2561,7 +2572,7 @@ dialogFareInput?.addEventListener("change", (e) => {
   const val = parseInt(target.value, 10);
   if (!isNaN(val)) {
     economy = { ...economy, fare: clampInteger(val, 900, 4200), autoFare: false };
-    persistState();
+    requestStateSave();
     updateEconomyHud();
   }
 });
@@ -2573,7 +2584,6 @@ closeAnalysisButton?.addEventListener("click", closeAnalysisScreen);
 refreshAnalysisButton?.addEventListener("click", () => {
   refreshOperationSuggestions(true);
   renderAnalysisScreen();
-  persistState();
 });
 analysisFilter?.addEventListener("change", renderAnalysisScreen);
 [analysisUrgentList, analysisReportList].forEach((list) => {
@@ -2607,14 +2617,14 @@ statisticsContent?.addEventListener("click", handleStatisticsClick);
 fareInput?.addEventListener("change", () => {
   economy = { ...economy, fare: clampInteger(Number(fareInput.value), 900, 4200), autoFare: false };
   updateAutoFareButton();
-  persistState();
+  requestStateSave();
   renderAll(selectedOperationRouteId);
 });
 autoFareButton?.addEventListener("click", () => {
   economy = { ...economy, autoFare: !economy.autoFare };
   if (economy.autoFare) economy.fare = calculateAutoFare();
   updateAutoFareButton();
-  persistState();
+  requestStateSave();
   renderAll(selectedOperationRouteId);
 });
 loanButton?.addEventListener("click", takeLoan);
@@ -2637,23 +2647,19 @@ diagramToolButton?.addEventListener("click", openDiagramScreen);
 closeDiagramButton?.addEventListener("click", closeDiagramScreen);
 diagramRouteFilter?.addEventListener("change", () => {
   diagramState = { ...diagramState, selectedRouteId: diagramRouteFilter.value || "all" };
-  persistState();
   renderMetroDiagram();
 });
 diagramBackgroundSelect?.addEventListener("change", () => {
   const background = ["light", "blueprint"].includes(diagramBackgroundSelect.value) ? (diagramBackgroundSelect.value as "light" | "blueprint") : "dark";
   diagramState = { ...diagramState, background };
-  persistState();
   renderMetroDiagram();
 });
 diagramLabelsToggle?.addEventListener("change", () => {
   diagramState = { ...diagramState, showStationNames: diagramLabelsToggle.checked };
-  persistState();
   renderMetroDiagram();
 });
 diagramCompanyToggle?.addEventListener("change", () => {
   diagramState = { ...diagramState, showCompanyInfo: diagramCompanyToggle.checked };
-  persistState();
   renderMetroDiagram();
 });
 resetDiagramLayoutButton?.addEventListener("click", resetDiagramLayout);
@@ -3421,7 +3427,7 @@ function erasePlannedAssets(
   }));
   selectedPlannedStationIds = selectedPlannedStationIds.filter((id) => remainingStationIds.has(id));
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   renderPlanningDialog();
   renderAll();
   showToast("드래그 범위의 계획 시설을 삭제했습니다.");
@@ -3562,7 +3568,7 @@ function demolishBuiltAssets(selection: { routeHits: Map<string, Set<number>>; s
   if (selectedDepotManagerId && !depotIds.has(selectedDepotManagerId)) closeDepotManager();
   if (selectedRouteId && !routes.some((route) => route.id === selectedRouteId)) selectedRouteId = routes[0]?.id ?? null;
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   renderAll(selectedRouteId ?? undefined);
   showToast(`범위 안의 건설 시설을 철거했습니다${refund > 0 ? ` · ${formatCost(refund)} 환급` : ""}.`);
   playFeedback("confirm");
@@ -3604,7 +3610,7 @@ function demolishStations(stationIds: string[]) {
     .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
   cleanupTransferData();
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   renderAll(selectedRouteId ?? undefined);
   showToast(`${removedIds.size}개 역을 철거했습니다.`);
   playFeedback("confirm");
@@ -4007,10 +4013,7 @@ async function confirmConstructionDraft() {
     };
     synchronizeGraphReferences();
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
-    persistState();
-    const saved = cloneState();
-    saved.meta = currentMeta;
-    await writeSaveSlot(saved);
+    await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     constructionDraft = null;
@@ -4031,8 +4034,7 @@ async function confirmConstructionDraft() {
     previewLayer.clearLayers();
     applyState(before);
     try {
-      persistState();
-      await writeSaveSlot(before);
+      await flushStateSave();
     } catch {
       // The in-memory rollback is still authoritative for this session.
     }
@@ -4390,7 +4392,7 @@ function openConstructionProject(projectId: string) {
       : item,
   );
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   void saveCurrentSlot("노선 개통");
   renderConstructionManager();
   renderAll(project.routeIds[0]);
@@ -4757,7 +4759,7 @@ async function refineAutomaticStationName(
       stations: plan.stations.map((station) => station.id === target.id ? { ...station, name: nextName } : station),
     }));
   }
-  persistState();
+  requestStateSave();
   renderAll(target.kind === "actual" ? target.id : undefined);
   setText(facilityReadout, `${nextName} · 주변 지역명 자동 적용`);
 }
@@ -4795,7 +4797,7 @@ function createStationAt(point: L.Point) {
   }
   playFeedback("build");
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(station.id);
   if (settings.autoStationNaming) {
     setText(facilityReadout, `${station.name} · 주변 지역명으로 자동 지정`);
@@ -4870,7 +4872,7 @@ function selectTransferStation(point: L.Point) {
   selectedTransferStationIds = [];
   selectedPlannedStationIds = [];
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(actualStationIds[0]);
 }
 
@@ -4896,7 +4898,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
       redoStack = [];
     }
     cleanupTransferData();
-    persistState();
+    requestStateSave();
     renderAll(focusedStationId);
     if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
     setText(facilityReadout, "남아 있던 환승 정보를 정리하고 각 노선의 일반역으로 분리했습니다");
@@ -4931,7 +4933,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
   selectedTransferStationIds = [];
   selectedPlannedStationIds = [];
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(focusedStationId);
   if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
   setText(facilityReadout, "환승 해제 완료 · 각 노선의 역을 개별 일반역으로 전환했습니다");
@@ -4947,7 +4949,7 @@ function removeStandaloneMultiRouteStation(station: Station) {
   selectedTransferStationIds = [];
   selectedPlannedStationIds = [];
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(station.id);
   if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
   setText(facilityReadout, "잔존 환승역을 각 노선의 개별 일반역으로 분리했습니다");
@@ -5666,7 +5668,7 @@ function finishDiagramStationDrag(event: PointerEvent) {
   if (!diagramDrag || diagramDrag.pointerId !== event.pointerId) return;
   diagramDrag = null;
   document.body.classList.remove("diagram-dragging");
-  persistState();
+  requestStateSave();
   void saveCurrentSlot("노선도 배치 저장");
 }
 
@@ -5706,7 +5708,7 @@ function calculateDiagramViewBox(positions: Map<string, DiagramPoint>) {
 
 function resetDiagramLayout() {
   diagramState = { ...diagramState, autoPositions: {}, manualPositions: {}, networkSignature: "" };
-  persistState();
+  requestStateSave();
   renderMetroDiagram();
   void saveCurrentSlot("노선도 자동 배치");
   showToast("수동 조정을 지우고 노선도를 다시 배치했습니다.");
@@ -5809,8 +5811,7 @@ async function importShareBundle() {
     const importedPlans = bundle.routeDesign.plans.map((plan) => cloneImportedPlan(plan));
     plans = [...plans, ...importedPlans];
     activePlanId = importedPlans[0]?.id ?? activePlanId;
-    persistState();
-    await writeSaveSlot(cloneState());
+    await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     renderMetroDiagram();
@@ -6134,8 +6135,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
       replacingPlannedRouteId = null;
     }
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
-    persistState();
-    await writeSaveSlot(cloneState());
+    await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     constructionDraft = null;
@@ -6240,7 +6240,7 @@ function createNewPlan() {
   plans = [...plans, plan];
   activePlanId = plan.id;
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderPlanningDialog();
   renderAll();
 }
@@ -6287,7 +6287,7 @@ function duplicateActivePlan() {
   plans = [...plans, copy];
   activePlanId = copy.id;
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderPlanningDialog();
   renderAll();
 }
@@ -6304,7 +6304,7 @@ function deleteActivePlan() {
       plans = plans.filter((item) => item.id !== plan.id);
       activePlanId = plans.find((item) => item.cityId === currentMeta.cityId)?.id ?? null;
       redoStack = [];
-      persistState();
+      requestStateSave();
       renderPlanningDialog();
       renderAll();
     },
@@ -6323,7 +6323,7 @@ function saveActivePlanMetadata() {
     notes: planNotesInput?.value.trim() ?? item.notes,
   }));
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderPlanningDialog();
   renderAll();
   showToast("계획 정보를 저장했습니다.");
@@ -6438,7 +6438,7 @@ function handlePlanAssetAction(action: string, assetId: string) {
     }));
   }
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderPlanningDialog();
   renderAll();
 }
@@ -6514,7 +6514,7 @@ function createPlannedStationAt(point: L.Point) {
   };
   updatePlan(plan.id, (item) => ({ ...item, stations: [...item.stations, station] }));
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll();
   showToast(settings.autoStationNaming ? `${station.name} 예정 역을 계획에 추가했습니다.` : "예정 역을 계획에 추가했습니다.");
   if (settings.autoStationNaming) {
@@ -6652,7 +6652,7 @@ function deletePlannedFacility(planId: string, kind: "station" | "depot", assetI
   }));
   selectedPlannedStationIds = selectedPlannedStationIds.filter((id) => id !== assetId);
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderPlanningDialog();
   renderAll();
   showToast(kind === "station" ? "예정 역을 계획에서 삭제했습니다." : "예정 차량기지를 계획에서 삭제했습니다.");
@@ -7033,8 +7033,7 @@ async function confirmPlanConversion() {
     }
     synchronizeGraphReferences();
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
-    persistState();
-    await writeSaveSlot(cloneState());
+    await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     closePlanConversionDialog();
@@ -7044,9 +7043,8 @@ async function confirmPlanConversion() {
     playFeedback("confirm");
   } catch (error) {
     applyState(before);
-    persistState();
     try {
-      await writeSaveSlot(before);
+      await flushStateSave();
     } catch {
       // In-memory rollback remains authoritative.
     }
@@ -7240,23 +7238,11 @@ function requestSaveSlotDeletion(slotId: string, slotName: string) {
 
 async function deleteSaveSlot(slotId: string) {
   const deletesActiveSlot = currentMeta.slotId === slotId;
-  const fallbackRaw = localStorage.getItem(fallbackSaveKey);
-  const legacyStateRaw = localStorage.getItem("draw-gyotong-state");
-  const legacyRoutesRaw = localStorage.getItem("draw-gyotong-routes");
-  const remainingFallbackSlots = readFallbackSlots().filter((state) => state.meta?.slotId !== slotId);
   try {
-    if (remainingFallbackSlots.length === 0) localStorage.removeItem(fallbackSaveKey);
-    else localStorage.setItem(fallbackSaveKey, JSON.stringify(remainingFallbackSlots));
-
-    try {
-      await getSaveSlotService().remove(slotId);
-    } catch (error) {
-      throw error;
-    }
+    await getSaveSlotService().remove(slotId);
 
     if (deletesActiveSlot) {
-      localStorage.removeItem("draw-gyotong-state");
-      localStorage.removeItem("draw-gyotong-routes");
+      localRecoveryStore.clear();
       if (autoSaveTimer) window.clearInterval(autoSaveTimer);
       autoSaveTimer = 0;
       resetWorld();
@@ -7270,12 +7256,6 @@ async function deleteSaveSlot(slotId: string) {
     showToast("세이브를 삭제했습니다.");
     playFeedback("confirm");
   } catch (error) {
-    if (fallbackRaw === null) localStorage.removeItem(fallbackSaveKey);
-    else localStorage.setItem(fallbackSaveKey, fallbackRaw);
-    if (legacyStateRaw === null) localStorage.removeItem("draw-gyotong-state");
-    else localStorage.setItem("draw-gyotong-state", legacyStateRaw);
-    if (legacyRoutesRaw === null) localStorage.removeItem("draw-gyotong-routes");
-    else localStorage.setItem("draw-gyotong-routes", legacyRoutesRaw);
     showError("세이브를 삭제하지 못했습니다. 저장 공간 상태를 확인한 뒤 다시 시도해 주세요.");
     console.error(error);
   }
@@ -7334,9 +7314,8 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
   };
   newsEvents = [createNewsEvent(0)];
   map.setView(cityConfigs[cityId].center, 12);
-  persistState();
   if (newGameButton) newGameButton.disabled = true;
-  const saved = await saveCurrentSlot("새 세이브", false);
+  const saved = await saveCurrentSlot("새 세이브", false, true);
   if (newGameButton) newGameButton.disabled = false;
   if (startScreen) startScreen.hidden = true;
   startAutoSave();
@@ -7395,21 +7374,25 @@ async function loadSlot(slotId: string) {
   map.setView(cityConfigs[currentMeta.cityId].center, 12);
   if (startScreen) startScreen.hidden = true;
   startAutoSave();
-  persistState();
+  requestStateSave();
   renderAll();
   setText(saveStatus, "불러옴");
 }
 
-async function saveCurrentSlot(label: string, reportError = true): Promise<boolean> {
+async function saveCurrentSlot(label: string, reportError = true, createOnly = false): Promise<boolean> {
   currentMeta = {
     ...currentMeta,
     updatedAt: Date.now(),
     unlockedCityIds: currentMeta.mode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : getUnlockedCityIds(),
   };
-  const state = cloneState();
-  state.meta = currentMeta;
   try {
-    await writeSaveSlot(state);
+    if (createOnly) {
+      const state = cloneState();
+      await getSaveSlotService().create(state);
+      localRecoveryStore.write(state);
+    } else {
+      await stateSaveRepository.flush();
+    }
     slotSummaries = await listSaveSlots();
     setText(saveStatus, label);
     return true;
@@ -7459,229 +7442,27 @@ function createDefaultMeta(): GameMeta {
   };
 }
 
-/**
- * 과거 버전 또는 localStorage에서 읽은 값을 현재 SaveState 구조로 승격한다.
- * 외부 입력을 그대로 신뢰하지 않고 누락 필드에 기본값을 채우므로, 저장 스키마를
- * 변경할 때는 기존 세이브가 계속 열리도록 이 함수에도 변환 규칙을 추가해야 한다.
- */
-function migrateSaveStateRecord(input: unknown): SaveState {
-  const source = input && typeof input === "object" ? (input as Partial<SaveState>) : {};
-  const defaultMeta = createDefaultMeta();
-  const sourceMeta: Partial<GameMeta> = source.meta ?? {};
-  const slotSeed = `${sourceMeta.createdAt ?? 0}:${sourceMeta.slotName ?? "legacy"}`;
-  const slotId = ensureStableId(sourceMeta.slotId, "slot", slotSeed);
-  const tutorialProgress = sourceMeta.tutorialProgress
-    ? { ...createTutorialProgress(), ...sourceMeta.tutorialProgress }
-    : createTutorialProgress();
-  const meta: GameMeta = {
-    ...defaultMeta,
-    ...sourceMeta,
-    slotId,
-    slotName: sourceMeta.slotName?.trim() || defaultMeta.slotName,
-    unlockedCityIds: Array.isArray(sourceMeta.unlockedCityIds) && sourceMeta.unlockedCityIds.length > 0 ? sourceMeta.unlockedCityIds : ["seoul"],
-    playTimeSeconds: Math.max(0, sourceMeta.playTimeSeconds ?? 0),
-    tutorialStep: sourceMeta.tutorialProgress ? Math.max(0, sourceMeta.tutorialStep ?? 0) : sourceMeta.tutorialCompleted ? tutorialSteps.length - 1 : 0,
-    tutorialProgress,
-  };
-  const migratedRoutes = (Array.isArray(source.routes) ? source.routes : []).map((route, index) => {
-    const routeId = ensureStableId(route?.id, "route", `${slotId}:${index}`);
-    return {
-      ...route,
-      id: routeId,
-      coordinates: Array.isArray(route?.coordinates) ? route.coordinates : [],
-      disabledSegments: Array.isArray(route?.disabledSegments) ? route.disabledSegments : [],
-      nodes: (route?.nodes ?? []).map((node, nodeIndex) => ({
-        ...node,
-        id: ensureStableId(node.id, "node", `${routeId}:${nodeIndex}:${node.position?.join(",")}`),
-      })),
-      segments: (route?.segments ?? []).map((segment, segmentIndex) => ({
-        ...segment,
-        id: ensureStableId(segment.id, "segment", `${routeId}:${segmentIndex}:${segment.coordinates?.flat().join(",")}`),
-        enabled: segment.enabled ?? true,
-      })),
-      branches: (route?.branches ?? []).map((branch, branchIndex) => ({
-        ...branch,
-        id: ensureStableId(branch.id, "branch", `${routeId}:${branchIndex}`),
-        segmentIds: branch.segmentIds ?? [],
-        dispatchWeight: branch.dispatchWeight ?? 1,
-      })),
-      servicePatterns: (route?.servicePatterns ?? []).map((pattern, patternIndex) => ({
-        ...pattern,
-        id: ensureStableId(pattern.id, "pattern", `${routeId}:${pattern.kind}:${patternIndex}`),
-        branchIds: pattern.branchIds ?? [],
-        dispatchMode: "equal" as const,
-      })),
-    } as RouteLine;
-  });
-  const migratedStations = (Array.isArray(source.stations) ? source.stations : []).map((station, index) => ({
-    ...station,
-    id: ensureStableId(station?.id, "station", `${slotId}:${index}:${station?.position?.join(",")}`),
-    demand: Number.isFinite(station?.demand) ? Math.max(0, Math.round(station!.demand)) : 0,
-    connectedRouteIds: station?.connectedRouteIds ?? [],
-    routeNodeIds: station?.routeNodeIds ?? [],
-  })) as Station[];
-  const savedDemandZones = Array.isArray(source.demandZones) ? source.demandZones : [];
-  const migratedDemandZones = savedDemandZones.length > 0
-    ? savedDemandZones
-    : createLegacyDemandZones(
-      migratedStations.map((station) => ({
-        id: station.id,
-        position: station.position,
-        operational: true,
-        legacyDemand: station.realizedDemand ?? station.demand,
-      })),
-    );
-  const demandDay = normalizeAnalysisState(source.analysisState).dayIndex;
-  const demandAllocation = allocateCatchmentDemand(
-    migratedDemandZones,
-    migratedStations.map((station) => ({
-      id: station.id,
-      position: station.position,
-      operational: true,
-      legacyDemand: station.realizedDemand ?? station.demand,
-    })),
-    demandDay,
-    "daytime",
-  );
-  const sourceDemandStates = new Map(
-    (Array.isArray(source.stationDemandStates) ? source.stationDemandStates : [])
-      .filter((state) => state && typeof state.stationId === "string")
-      .map((state) => [state.stationId, state]),
-  );
-  const migratedDemandStates = migratedStations.map((station) => {
-    const existing = sourceDemandStates.get(station.id);
-    const created = createStationDemandState(
-      {
-        id: station.id,
-        position: station.position,
-        operational: true,
-        legacyDemand: station.realizedDemand ?? station.demand,
-      },
-      demandAllocation,
-      demandDay,
-    );
-    if (!existing) return created;
-    const potentialDemand = Math.max(0, Math.round(demandAllocation.stationPotential.get(station.id) ?? created.potentialDemand));
-    const realizedDemand = Math.min(
-      potentialDemand,
-      Number.isFinite(existing.realizedDemand) ? Math.max(0, Math.round(existing.realizedDemand)) : created.realizedDemand,
-    );
-    return {
-      ...created,
-      ...existing,
-      potentialDemand,
-      realizedDemand,
-      previousRealizedDemand: Number.isFinite(existing.previousRealizedDemand)
-        ? Math.min(potentialDemand, Math.max(0, Math.round(existing.previousRealizedDemand)))
-        : realizedDemand,
-      transitCaptureRate: potentialDemand > 0 ? realizedDemand / potentialDemand : 0,
-      targetCaptureRate: Math.min(1, Math.max(0, Number.isFinite(existing.targetCaptureRate) ? existing.targetCaptureRate : created.targetCaptureRate)),
-      catchmentWeight: demandAllocation.stationCatchmentWeight.get(station.id) ?? created.catchmentWeight,
-      areaProfile: demandAllocation.stationAreaProfile.get(station.id) ?? created.areaProfile,
-    };
-  });
-  const migratedDepots = (Array.isArray(source.depots) ? source.depots : []).map((depot, index) => ({
-    ...depot,
-    id: ensureStableId(depot?.id, "depot", `${slotId}:${index}`),
-    connectedRouteIds: depot?.connectedRouteIds ?? [],
-  })) as Depot[];
-  return {
-    schemaVersion: currentSaveSchemaVersion,
-    meta,
-    routes: migratedRoutes,
-    stations: migratedStations,
-    demandZones: migratedDemandZones,
-    stationDemandStates: migratedDemandStates,
-    transfers: (Array.isArray(source.transfers) ? source.transfers : []).map((transfer, index) => ({
-      ...transfer,
-      id: ensureStableId(transfer?.id, "transfer", `${slotId}:${index}`),
-      stationIds: transfer?.stationIds ?? [],
-    })) as TransferGroup[],
-    depots: migratedDepots,
-    plans: migratePlansWithStableIds(Array.isArray(source.plans) ? source.plans : [], slotId),
-    diagramState: source.diagramState,
-    analysisState: normalizeAnalysisState(source.analysisState),
-    statisticsState: normalizeStatisticsState(source.statisticsState),
-    constructionProjects: normalizeConstructionProjects(
-      (Array.isArray(source.constructionProjects) ? source.constructionProjects : []).map((project, index) => ({
-        ...project,
-        id: ensureStableId(project?.id, "construction", `${slotId}:${index}:${project?.name ?? ""}`),
-        events: (project?.events ?? []).map((event, eventIndex) => ({
-          ...event,
-          id: ensureStableId(event?.id, "construction-event", `${slotId}:${index}:${eventIndex}`),
-        })),
-      })),
-    ),
-    newsEvents: normalizeNewsEvents(
-      (Array.isArray(source.newsEvents) ? source.newsEvents : []).map((event, index) => ({
-        ...event,
-        id: ensureStableId(event?.id, "news", `${slotId}:${index}:${event?.title ?? ""}`),
-      })),
-    ),
-    trainFleets: Array.isArray(source.trainFleets) ? source.trainFleets.map((fleet, index) => ({
-      ...fleet,
-      id: ensureStableId(fleet?.id, "fleet", `${slotId}:${index}`),
-    })) : [],
-    expressConfigs: Array.isArray(source.expressConfigs) ? source.expressConfigs : [],
-    passengerGroups: Array.isArray(source.passengerGroups) ? source.passengerGroups : [],
-    loans: Array.isArray(source.loans) ? source.loans.map((loan, index) => ({
-      ...loan,
-      id: ensureStableId(loan?.id, "loan", `${slotId}:${index}`),
-    })) : [],
-    economy: { ...defaultEconomy, ...(source.economy ?? {}) },
-  };
-}
-
-function migratePlansWithStableIds(sourcePlans: ConstructionPlan[], slotId: string): ConstructionPlan[] {
-  return sourcePlans.map((plan, planIndex) => {
-    const planId = ensureStableId(plan?.id, "plan", `${slotId}:${planIndex}:${plan?.name ?? ""}`);
-    return {
-      ...plan,
-      id: planId,
-      routes: (plan?.routes ?? []).map((route, routeIndex) => {
-        const routeId = ensureStableId(route?.id, "planned-route", `${planId}:${routeIndex}`);
-        return {
-          ...route,
-          id: routeId,
-          segments: (route?.segments ?? []).map((segment, segmentIndex) => ({
-            ...segment,
-            id: ensureStableId(segment?.id, "planned-segment", `${routeId}:${segmentIndex}`),
-          })),
-          completedSegmentIds: route?.completedSegmentIds ?? [],
-        };
-      }),
-      stations: (plan?.stations ?? []).map((station, stationIndex) => ({
-        ...station,
-        id: ensureStableId(station?.id, "planned-station", `${planId}:${stationIndex}`),
-      })),
-      depots: (plan?.depots ?? []).map((depot, depotIndex) => ({
-        ...depot,
-        id: ensureStableId(depot?.id, "planned-depot", `${planId}:${depotIndex}`),
-      })),
-      transfers: (plan?.transfers ?? []).map((transfer, transferIndex) => ({
-        ...transfer,
-        id: ensureStableId(transfer?.id, "planned-transfer", `${planId}:${transferIndex}`),
-        stationIds: transfer?.stationIds ?? [],
-        actualStationIds: transfer?.actualStationIds ?? [],
-      })),
-    };
+function migrateGameSave(input: unknown): SaveState {
+  return migrateSaveStateRecord<SaveState>(input, {
+    defaultEconomy,
+    completedTutorialStep: tutorialSteps.length - 1,
   });
 }
 
 function getSaveSlotService() {
-  saveSlotServiceInstance ??= new SaveSlotService(new IndexedDbRepository<SaveState>({
+  saveSlotServiceInstance ??= createSaveSlotService<SaveState>({
     databaseName: "draw-gyotong-saves",
     version: saveDatabaseVersion,
     storeName: "slots",
     keyPath: "meta.slotId",
-    migrate: migrateSaveStateRecord,
-    fallback: { readAll: readFallbackSlots, write: writeFallbackSlot },
-  }));
+    migrate: migrateGameSave,
+  }, {
+    storage: localStorage,
+    key: fallbackSaveKey,
+    migrate: migrateGameSave,
+    maxEntries: 2,
+  });
   return saveSlotServiceInstance;
-}
-
-async function writeSaveSlot(state: SaveState) {
-  await getSaveSlotService().save(state);
 }
 
 async function readSaveSlot(slotId: string): Promise<SaveState | null> {
@@ -7708,27 +7489,6 @@ async function listSaveSlots(): Promise<SaveSlotSummary[]> {
       stationCount: state.stations?.length ?? 0,
     }))
     .sort((a, b) => b.updatedAt - a.updatedAt);
-}
-
-function readFallbackSlots(): SaveState[] {
-  try {
-    const raw = localStorage.getItem(fallbackSaveKey);
-    const slots = raw ? (JSON.parse(raw) as SaveState[]) : [];
-    return Array.isArray(slots) ? slots.filter((state) => state?.meta?.slotId).map(migrateSaveStateRecord) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeFallbackSlot(state: SaveState) {
-  const slotId = state.meta?.slotId;
-  if (!slotId) throw new Error("Save slot metadata is missing");
-  const slots = readFallbackSlots().filter((item) => item.meta?.slotId !== slotId);
-  slots.unshift(state);
-  // IndexedDB is the canonical multi-slot store. Keep only two full local
-  // recovery snapshots so a normal set of saves cannot exhaust the
-  // browser's much smaller localStorage quota.
-  localStorage.setItem(fallbackSaveKey, JSON.stringify(slots.slice(0, 2)));
 }
 
 function hasRouteGaps(route: RouteLine) {
@@ -8198,7 +7958,7 @@ function buyTrainsForSelectedRoute() {
   economy = { ...economy, cash: economy.cash - latestFleet.purchaseCost, trainSpent: economy.trainSpent + latestFleet.purchaseCost };
   playFeedback("confirm");
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(route.id);
 }
 
@@ -8232,7 +7992,7 @@ function toggleExpressForSelectedRoute() {
       : route,
   );
   redoStack = [];
-  persistState();
+  requestStateSave();
   updateExpressButton();
   renderAll(routeId);
 }
@@ -8257,7 +8017,7 @@ function toggleExpressStopAt(point: L.Point) {
       : item,
   );
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(station.id);
 }
 
@@ -8874,7 +8634,7 @@ function handleSuggestionClick(event: Event) {
     return;
   }
   renderAnalysisScreen();
-  persistState();
+  requestStateSave();
 }
 
 function setSuggestionDecision(id: string, status: SuggestionStatus, untilDay?: number) {
@@ -9058,7 +8818,7 @@ function openNewsScreen() {
   newsEvents = newsEvents.map((event) => (isNewsEventActive(event) ? { ...event, read: true } : event));
   renderNewsFeed();
   updateNewsBadge();
-  persistState();
+  requestStateSave();
   if (newsScreen) newsScreen.hidden = false;
   document.body.classList.add("news-open");
 }
@@ -9138,7 +8898,7 @@ function prepareNewsResponse(event: NewsEvent) {
   pushHistory();
   newsEvents = newsEvents.map((item) => (item.id === event.id ? { ...item, responsePrepared: true, read: true } : item));
   redoStack = [];
-  persistState();
+  requestStateSave();
   closeNewsScreen();
   if (event.relatedRouteIds[0]) {
     selectedOperationRouteId = event.relatedRouteIds[0];
@@ -9191,7 +8951,7 @@ function saveNetworkTitle() {
   pushHistory();
   currentMeta = { ...currentMeta, networkTitle: value || undefined };
   redoStack = [];
-  persistState();
+  requestStateSave();
   void saveCurrentSlot("철도망 제목 저장");
   renderStatisticsScreen();
   if (!diagramScreen?.hidden) renderMetroDiagram();
@@ -9406,7 +9166,7 @@ function handleStationManagerClick(event: Event) {
   }
   const memberIds = new Set(selectedStation ? getStationManagerMembers(selectedStation).map((station) => station.id) : []);
   stations = stations.map((station) => memberIds.has(station.id) ? { ...station, name } : station);
-  persistState();
+  requestStateSave();
   renderStationManager();
   requestUpdate("station-label", selectedStationManagerId);
   showToast("역 이름을 저장했습니다.");
@@ -9491,7 +9251,7 @@ function demolishDepots(depotIdsToRemove: string[]) {
     .map((project) => ({ ...project, depotIds: project.depotIds.filter((id) => !removedIds.has(id)) }))
     .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   renderAll(selectedRouteId ?? undefined);
   showToast(`${removedIds.size}개 차량기지를 철거했습니다.`);
   playFeedback("confirm");
@@ -10333,7 +10093,7 @@ function settleSimulationDay() {
     analysisState = { ...analysisState, lastNotifiedDay: analysisState.dayIndex };
     showToast(`운영 분석에 우선 확인 제안 ${criticalCount}건이 있습니다.`);
   }
-  persistState(true);
+  requestStateSave("immediate");
   renderAll(selectedOperationRouteId);
 }
 
@@ -10391,7 +10151,7 @@ function takeLoan() {
   ];
   economy = { ...economy, cash: economy.cash + principal, loanBalance: economy.loanBalance + principal };
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   renderAll(selectedOperationRouteId);
 }
 
@@ -10406,7 +10166,7 @@ function repayLoan() {
     .filter((loan) => loan.balance > 0);
   economy = { ...economy, cash: economy.cash - payment, loanBalance: Math.max(0, economy.loanBalance - payment) };
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   renderAll(selectedOperationRouteId);
 }
 
@@ -10719,7 +10479,7 @@ function expandDepot(id: string) {
     };
   });
   redoStack = [];
-  persistState();
+  requestStateSave();
   renderAll(id);
 }
 
@@ -11269,7 +11029,7 @@ function renderTrainManager() {
         trainFleets = trainFleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets + 1) : item);
         economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
         redoStack = [];
-        persistState();
+        requestStateSave();
         renderTrainManager();
         requestUpdate("fleet-service", route.id);
         showToast(`${route.name} 열차 1편성을 구입·추가 배치했습니다.`);
@@ -11289,7 +11049,7 @@ function renderTrainManager() {
           trainFleets = trainFleets.filter((f) => f.id !== fleetId);
         }
         redoStack = [];
-        persistState();
+        requestStateSave();
         renderTrainManager();
         requestUpdate("fleet-service", route.id);
         showToast(`${route.name} 열차 편성을 감축했습니다.`);
@@ -11328,7 +11088,7 @@ function renderTrainManager() {
 
     economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
     redoStack = [];
-    persistState();
+    requestStateSave();
     renderTrainManager();
     requestUpdate("fleet-service", route.id);
     playFeedback("confirm");
@@ -11380,7 +11140,7 @@ function saveLineManager() {
     { ...getExpressConfig(route.id), unlocked: expressEnabled || getExpressConfig(route.id).unlocked, enabled: expressEnabled },
   ];
   redoStack = [];
-  persistState();
+  requestStateSave("immediate");
   closeLineManager();
   requestUpdates([
     serviceChanged ? "network-structure" : styleChanged ? "route-style" : "fleet-service",
@@ -11426,7 +11186,7 @@ function demolishWholeLine(routeId: string) {
   selectedRouteId = null;
   selectedOperationRouteId = routes[0]?.id ?? "";
   redoStack = [];
-  persistState();
+  requestStateSave();
   closeLineManager();
   renderAll();
   showToast(`${route.name} 노선과 전용 역 ${removableStationIds.size}개를 철거했습니다.`);
@@ -11674,8 +11434,7 @@ async function erasePlannedRouteRange(planId: string, routeId: string, startInde
       transfers: item.transfers.filter((transfer) => !transfer.stationIds.some((stationId) => orphanStationIds.has(stationId))),
     }));
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
-    persistState();
-    await writeSaveSlot(cloneState());
+    await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     renderPlanningDialog();
@@ -11684,7 +11443,7 @@ async function erasePlannedRouteRange(planId: string, routeId: string, startInde
     playFeedback("confirm");
   } catch (error) {
     applyState(before);
-    persistState();
+    requestStateSave();
     renderAll();
     showError("계획 구간을 지우는 중 문제가 발생해 변경을 되돌렸습니다.");
     console.error(error);
@@ -11816,7 +11575,7 @@ function splitRouteAtRange(routeId: string, startIndex: number, endIndex: number
   const refund = Math.round(removedLength * baseCostPerKm * 0.35);
   economy = { ...economy, cash: economy.cash + refund, constructionSpent: Math.max(0, economy.constructionSpent - refund) };
   redoStack = [];
-  persistState();
+  requestStateSave();
   selectRoute(routeId, false);
   renderAll(routeId);
   showToast(`${route.name}을 두 노선으로 분리했습니다 · ${formatCost(refund)} 환급`);
@@ -11856,7 +11615,7 @@ function eraseRouteEndRange(route: RouteLine, remainingCoordinates: Array<[numbe
   const refund = Math.round(removedLength * baseCostPerKm * 0.35);
   economy = { ...economy, cash: economy.cash + refund, constructionSpent: Math.max(0, economy.constructionSpent - refund) };
   redoStack = [];
-  persistState();
+  requestStateSave();
   selectRoute(remaining?.id ?? null, false);
   renderAll(remaining?.id);
   showToast(remaining ? route.name + "의 끝 구간을 철거했습니다 · " + formatCost(refund) + " 환급" : route.name + "을 철거했습니다 · " + formatCost(refund) + " 환급");
@@ -11988,8 +11747,7 @@ async function mergePlannedRoutes(planId: string, firstEndpoint: PlannedRouteMer
       })),
     }));
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
-    persistState();
-    await writeSaveSlot(cloneState());
+    await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     renderPlanningDialog();
@@ -11998,7 +11756,7 @@ async function mergePlannedRoutes(planId: string, firstEndpoint: PlannedRouteMer
     playFeedback("confirm");
   } catch (error) {
     applyState(before);
-    persistState();
+    requestStateSave();
     renderAll();
     showError("계획 노선을 연결하는 중 문제가 발생해 변경을 되돌렸습니다.");
     console.error(error);
@@ -12109,7 +11867,7 @@ function confirmRouteMerge() {
   economy = { ...economy, cash: economy.cash - bridgeCost, constructionSpent: economy.constructionSpent + bridgeCost };
   cleanupTransferData();
   redoStack = [];
-  persistState();
+  requestStateSave();
   pendingMerge = null;
   if (mergeDialog) mergeDialog.hidden = true;
   selectRoute(first.id, false);
@@ -13060,7 +12818,7 @@ function undo() {
   redoStack = [...redoStack, cloneState()].slice(-maxHistory);
   applyState(undoStack[undoStack.length - 1]);
   undoStack = undoStack.slice(0, -1);
-  persistState();
+  requestStateSave();
   renderAll();
 }
 
@@ -13069,16 +12827,36 @@ function redo() {
   undoStack = [...undoStack, cloneState()].slice(-maxHistory);
   applyState(redoStack[redoStack.length - 1]);
   redoStack = redoStack.slice(0, -1);
-  persistState();
+  requestStateSave();
   renderAll();
 }
 
 function cloneState(): SaveState {
-  return JSON.parse(JSON.stringify({ schemaVersion: currentSaveSchemaVersion, meta: currentMeta, routes, stations, transfers, depots, plans, diagramState, analysisState, statisticsState, constructionProjects, newsEvents, trainFleets, expressConfigs, passengerGroups, loans, economy, demandZones, stationDemandStates })) as SaveState;
+  return captureGameState<SaveState>(
+    currentSaveSchemaVersion,
+    currentMeta,
+    routes,
+    stations,
+    transfers,
+    depots,
+    plans,
+    diagramState,
+    analysisState,
+    statisticsState,
+    constructionProjects,
+    newsEvents,
+    trainFleets,
+    expressConfigs,
+    passengerGroups,
+    loans,
+    economy,
+    demandZones,
+    stationDemandStates,
+  );
 }
 
 function applyState(state: SaveState) {
-  state = migrateSaveStateRecord(state);
+  state = migrateGameSave(state);
   currentMeta = { ...createDefaultMeta(), ...(state.meta ?? currentMeta) };
   routes = (state.routes ?? []).map((route) => rebuildRouteGraph(route));
   stations = state.stations;
@@ -13104,20 +12882,25 @@ function applyState(state: SaveState) {
   if (!state.statisticsState && economy.demand > 0) statisticsState = { ...statisticsState, totalPassengers: economy.demand };
 }
 
-const localSaveRepository = new SaveRepository({
+const stateSaveRepository = new SaveRepository({
   capture: () => measureTask("save-serialization", cloneState),
-  write: (state) => {
-    localStorage.setItem("draw-gyotong-state", serializeFiniteState(state));
-    localStorage.setItem("draw-gyotong-routes", serializeFiniteState(state.routes));
+  write: async (state) => {
+    localRecoveryStore.write(state);
+    await getSaveSlotService().save(state);
   },
   delayMs: 240,
-  onError: (error) => console.warn("[save] 빠른 복구 저장 실패", error),
+  onError: (error) => console.warn("[save] 상태 저장 실패", error),
 });
 
-function persistState(immediate = false) {
+function requestStateSave(kind: "normal" | "immediate" = "normal") {
   synchronizeGraphReferences();
-  if (immediate) void localSaveRepository.flush();
-  else localSaveRepository.request();
+  if (kind === "immediate") stateSaveRepository.requestImmediate();
+  else stateSaveRepository.request();
+}
+
+async function flushStateSave() {
+  synchronizeGraphReferences();
+  await stateSaveRepository.flush();
 }
 
 /**
@@ -13126,36 +12909,12 @@ function persistState(immediate = false) {
  */
 function loadSavedState() {
   try {
-    const savedState = localStorage.getItem("draw-gyotong-state");
+    const savedState = localRecoveryStore.read();
     if (savedState) {
-      const parsed = migrateSaveStateRecord(JSON.parse(savedState));
-      currentMeta = { ...createDefaultMeta(), ...(parsed.meta ?? {}) };
-      routes = Array.isArray(parsed.routes) ? parsed.routes.map((route) => rebuildRouteGraph(route)) : [];
-      stations = Array.isArray(parsed.stations) ? parsed.stations : [];
-      demandZones = Array.isArray(parsed.demandZones) ? parsed.demandZones : [];
-      stationDemandStates = Array.isArray(parsed.stationDemandStates) ? parsed.stationDemandStates : [];
-      demandStructureSignature = "";
-      demandServiceSignature = "";
-      demandContextSignature = "";
-      transfers = Array.isArray(parsed.transfers) ? parsed.transfers : [];
-      depots = Array.isArray(parsed.depots) ? parsed.depots : [];
-      plans = normalizePlans(Array.isArray(parsed.plans) ? parsed.plans : []);
-      diagramState = normalizeDiagramState(parsed.diagramState);
-      analysisState = normalizeAnalysisState(parsed.analysisState);
-      statisticsState = normalizeStatisticsState(parsed.statisticsState);
-      constructionProjects = normalizeConstructionProjects(parsed.constructionProjects);
-      newsEvents = normalizeNewsEvents(parsed.newsEvents);
-      trainFleets = Array.isArray(parsed.trainFleets) ? parsed.trainFleets.map((fleet: TrainFleet) => updateFleetSetCount(fleet, fleet.sets)) : [];
-      expressConfigs = Array.isArray(parsed.expressConfigs) ? parsed.expressConfigs : [];
-      passengerGroups = Array.isArray(parsed.passengerGroups) ? parsed.passengerGroups : [];
-      loans = Array.isArray(parsed.loans) ? parsed.loans : [];
-      economy = { ...defaultEconomy, ...(parsed.economy ?? {}) };
-      synchronizeGraphReferences();
-      if (!parsed.statisticsState && economy.demand > 0) statisticsState = { ...statisticsState, totalPassengers: economy.demand };
+      applyState(savedState);
       return;
     }
-    const savedRoutes = localStorage.getItem("draw-gyotong-routes");
-    routes = savedRoutes ? (JSON.parse(savedRoutes) as RouteLine[]).map((route) => rebuildRouteGraph(route)) : [];
+    routes = localRecoveryStore.readLegacyRoutes<RouteLine>().map((route) => rebuildRouteGraph(route));
   } catch {
     routes = [];
     stations = [];
@@ -13439,7 +13198,6 @@ function recordTutorialSignal(signal: "mapMoved" | "mapZoomed" | "colorSelected"
   const progress = getTutorialProgress();
   if (progress[signal]) return;
   currentMeta = { ...currentMeta, tutorialProgress: { ...progress, [signal]: true } };
-  persistState();
   if (refresh) updateTutorialProgress();
 }
 
@@ -13482,7 +13240,7 @@ function openTutorial(restart = false) {
       tutorialCompleted: false,
       tutorialProgress: createTutorialProgress(),
     };
-    persistState();
+    requestStateSave();
   }
   tutorialPanel.hidden = false;
   renderTutorial();
@@ -13517,7 +13275,7 @@ function updateTutorialProgress() {
   }
   if (changed) {
     currentMeta = { ...currentMeta, tutorialStep: step };
-    persistState();
+    requestStateSave();
     playFeedback("select");
   }
   renderTutorial();
@@ -13607,7 +13365,7 @@ function completeTutorial(skipped = true) {
   currentMeta = { ...currentMeta, tutorialStep: tutorialSteps.length - 1, tutorialCompleted: true };
   if (tutorialPanel) tutorialPanel.hidden = true;
   clearTutorialTargets();
-  persistState();
+  requestStateSave();
   void saveCurrentSlot(skipped ? "튜토리얼 건너뛰기" : "튜토리얼 완료");
   showToast(skipped ? "튜토리얼을 건너뛰었습니다. 도움말에서 언제든 다시 볼 수 있습니다." : "첫 노선 관제 교육을 완료했습니다.");
   playFeedback("confirm");

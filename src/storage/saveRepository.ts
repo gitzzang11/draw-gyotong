@@ -10,6 +10,7 @@ export interface SaveRepositoryOptions<T> {
 export class SaveRepository<T> {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private pending: Promise<void> | undefined;
+  private saveAgain = false;
   private readonly delayMs: number;
 
   constructor(private readonly options: SaveRepositoryOptions<T>) {
@@ -17,6 +18,10 @@ export class SaveRepository<T> {
   }
 
   request() {
+    if (this.pending) {
+      this.saveAgain = true;
+      return;
+    }
     if (this.timer !== undefined) this.clearTimer(this.timer);
     this.timer = this.setTimer(() => {
       this.timer = undefined;
@@ -29,12 +34,19 @@ export class SaveRepository<T> {
       this.clearTimer(this.timer);
       this.timer = undefined;
     }
-    const write = Promise.resolve().then(() => this.options.write(this.options.capture()));
-    const completion = write.finally(() => {
+    if (this.pending) {
+      this.saveAgain = true;
+      return this.pending;
+    }
+    const completion = this.drainWrites().finally(() => {
       if (this.pending === completion) this.pending = undefined;
     });
     this.pending = completion;
     return completion;
+  }
+
+  requestImmediate() {
+    void this.flush().catch((error) => this.options.onError?.(error));
   }
 
   cancel() {
@@ -48,5 +60,12 @@ export class SaveRepository<T> {
 
   private clearTimer(timer: ReturnType<typeof setTimeout>) {
     (this.options.clearTimer ?? clearTimeout)(timer);
+  }
+
+  private async drainWrites() {
+    do {
+      this.saveAgain = false;
+      await this.options.write(this.options.capture());
+    } while (this.saveAgain);
   }
 }
