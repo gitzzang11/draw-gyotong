@@ -58,7 +58,13 @@ import {
 import { calculateServiceCapacity } from "./simulation/capacity.ts";
 import { mergeOdPassengerGroup } from "./simulation/passengerAssignment.ts";
 import { measureTask } from "./dev/performanceMonitor.ts";
-import { ListenerRegistry } from "./map/listenerRegistry.ts";
+import { ListenerRegistry } from "./ui/listenerRegistry.ts";
+import { IndexedDbRepository } from "./storage/indexedDbRepository.ts";
+import { SaveSlotService } from "./storage/saveSlotService.ts";
+import { calculateAtomicDailySettlement } from "./simulation/finance/dailySettlement.ts";
+
+let saveSlotServiceInstance: SaveSlotService<SaveState> | null = null;
+const updateScheduler = new DirtyUpdateScheduler();
 
 // =============================================================================
 // 도메인 모델
@@ -7087,8 +7093,6 @@ function isPlanFullyConverted(plan: ConstructionPlan) {
  * 상태를 변경한 호출자는 개별 화면을 빠뜨리지 않도록 가능하면 이 진입점을 사용한다.
  * selectedId가 있으면 다시 그린 뒤에도 해당 노선의 선택 강조를 유지한다.
  */
-const updateScheduler = new DirtyUpdateScheduler();
-
 function requestUpdate(reason: UpdateReason, selectedId?: string) {
   requestUpdates([reason], selectedId);
 }
@@ -7244,20 +7248,10 @@ async function deleteSaveSlot(slotId: string) {
     if (remainingFallbackSlots.length === 0) localStorage.removeItem(fallbackSaveKey);
     else localStorage.setItem(fallbackSaveKey, JSON.stringify(remainingFallbackSlots));
 
-    let db: IDBDatabase | null = null;
     try {
-      db = await openSaveDb();
-      const transaction = db.transaction("slots", "readwrite");
-      const transactionComplete = idbTransactionDone(transaction);
-      await idbRequest(transaction.objectStore("slots").delete(slotId));
-      await transactionComplete;
+      await getSaveSlotService().remove(slotId);
     } catch (error) {
-      // The local backup is the supported fallback only when IndexedDB itself is unavailable.
-      // If an opened database cannot commit the delete, restore the backup rather than showing a slot
-      // that would be resurrected from IndexedDB on the next launch.
-      if (db) throw error;
-    } finally {
-      db?.close();
+      throw error;
     }
 
     if (deletesActiveSlot) {
@@ -7342,15 +7336,15 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
   map.setView(cityConfigs[cityId].center, 12);
   persistState();
   if (newGameButton) newGameButton.disabled = true;
-  const saved = await saveCurrentSlot("새 세이브");
+  const saved = await saveCurrentSlot("새 세이브", false);
   if (newGameButton) newGameButton.disabled = false;
-  if (!saved) {
-    showError("세이브를 만들지 못했습니다. 브라우저 저장 공간을 확인해 주세요.");
-    return;
-  }
   if (startScreen) startScreen.hidden = true;
   startAutoSave();
   renderAll();
+  if (!saved) {
+    setText(saveStatus, "저장 비활성");
+    showToast("게임은 시작했지만 현재 브라우저에 저장할 수 없습니다. 저장 권한과 여유 공간을 확인해 주세요.");
+  }
 }
 
 function resetWorld() {
@@ -7406,7 +7400,7 @@ async function loadSlot(slotId: string) {
   setText(saveStatus, "불러옴");
 }
 
-async function saveCurrentSlot(label: string): Promise<boolean> {
+async function saveCurrentSlot(label: string, reportError = true): Promise<boolean> {
   currentMeta = {
     ...currentMeta,
     updatedAt: Date.now(),
@@ -7419,9 +7413,22 @@ async function saveCurrentSlot(label: string): Promise<boolean> {
     slotSummaries = await listSaveSlots();
     setText(saveStatus, label);
     return true;
-  } catch {
+  } catch (error) {
+    console.error("[save] 슬롯 저장 실패", error);
     setText(saveStatus, "저장 실패");
-    showError("저장 공간에 접근할 수 없습니다. 브라우저 저장 공간을 확인해 주세요.");
+    const storageErrors = error instanceof AggregateError ? error.errors : [error];
+    const storageNames = storageErrors.map((cause) =>
+      cause instanceof DOMException
+        ? cause.name
+        : cause instanceof Error
+          ? cause.name
+          : "UnknownError",
+    );
+    const storageReason =
+      storageErrors.some((cause) => cause instanceof DOMException && cause.name === "QuotaExceededError")
+        ? `브라우저 저장 공간이 가득 찼습니다. 오래된 세이브를 삭제해 주세요. (${storageNames.join(" / ")})`
+        : `IndexedDB와 로컬 백업에 모두 저장하지 못했습니다. 시크릿 모드·사이트 저장 권한을 확인해 주세요. (${storageNames.join(" / ")})`;
+    if (reportError) showError(storageReason);
     return false;
   }
 }
@@ -7661,79 +7668,28 @@ function migratePlansWithStableIds(sourcePlans: ConstructionPlan[], slotId: stri
   });
 }
 
-function openSaveDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("draw-gyotong-saves", saveDatabaseVersion);
-    request.onupgradeneeded = (event) => {
-      const db = request.result;
-      const store = db.objectStoreNames.contains("slots")
-        ? request.transaction!.objectStore("slots")
-        : db.createObjectStore("slots", { keyPath: "meta.slotId" });
-      if (event.oldVersion < 2) {
-        const cursorRequest = store.openCursor();
-        cursorRequest.onsuccess = () => {
-          const cursor = cursorRequest.result;
-          if (!cursor) return;
-          cursor.update(migrateSaveStateRecord(cursor.value));
-          cursor.continue();
-        };
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+function getSaveSlotService() {
+  saveSlotServiceInstance ??= new SaveSlotService(new IndexedDbRepository<SaveState>({
+    databaseName: "draw-gyotong-saves",
+    version: saveDatabaseVersion,
+    storeName: "slots",
+    keyPath: "meta.slotId",
+    migrate: migrateSaveStateRecord,
+    fallback: { readAll: readFallbackSlots, write: writeFallbackSlot },
+  }));
+  return saveSlotServiceInstance;
 }
 
 async function writeSaveSlot(state: SaveState) {
-  const migratedState = migrateSaveStateRecord(state);
-  writeFallbackSlot(migratedState);
-  try {
-    const db = await openSaveDb();
-    try {
-      await idbRequest(db.transaction("slots", "readwrite").objectStore("slots").put(migratedState));
-    } finally {
-      db.close();
-    }
-  } catch {
-    // The local backup was already written; IndexedDB is an enhancement.
-  }
+  await getSaveSlotService().save(state);
 }
 
 async function readSaveSlot(slotId: string): Promise<SaveState | null> {
-  try {
-    const db = await openSaveDb();
-    try {
-      const state = (await idbRequest(db.transaction("slots", "readonly").objectStore("slots").get(slotId))) as SaveState | undefined;
-      if (state) return migrateSaveStateRecord(state);
-    } finally {
-      db.close();
-    }
-  } catch {
-    // Local backup keeps the game playable when IndexedDB is unavailable.
-  }
-  return readFallbackSlots().find((state) => state.meta?.slotId === slotId) ?? null;
+  return getSaveSlotService().load(slotId);
 }
 
 async function listSaveSlots(): Promise<SaveSlotSummary[]> {
-  let indexedStates: SaveState[] = [];
-  try {
-    const db = await openSaveDb();
-    try {
-      indexedStates = ((await idbRequest(db.transaction("slots", "readonly").objectStore("slots").getAll())) as SaveState[]).map(migrateSaveStateRecord);
-    } finally {
-      db.close();
-    }
-  } catch {
-    indexedStates = [];
-  }
-  const statesById = new Map<string, SaveState>();
-  for (const state of [...indexedStates, ...readFallbackSlots()]) {
-    const slotId = state.meta?.slotId;
-    if (!slotId) continue;
-    const current = statesById.get(slotId);
-    if (!current || (state.meta?.updatedAt ?? 0) >= (current.meta?.updatedAt ?? 0)) statesById.set(slotId, state);
-  }
-  return Array.from(statesById.values())
+  return (await getSaveSlotService().list())
     .filter((state) => state.meta)
     .map((state) => ({
       slotId: state.meta!.slotId,
@@ -7769,22 +7725,10 @@ function writeFallbackSlot(state: SaveState) {
   if (!slotId) throw new Error("Save slot metadata is missing");
   const slots = readFallbackSlots().filter((item) => item.meta?.slotId !== slotId);
   slots.unshift(state);
-  localStorage.setItem(fallbackSaveKey, JSON.stringify(slots.slice(0, 12)));
-}
-
-function idbRequest<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function idbTransactionDone(transaction: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve();
-    transaction.onabort = () => reject(transaction.error ?? new Error("IndexedDB transaction aborted"));
-    transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB transaction failed"));
-  });
+  // IndexedDB is the canonical multi-slot store. Keep only two full local
+  // recovery snapshots so a normal set of saves cannot exhaust the
+  // browser's much smaller localStorage quota.
+  localStorage.setItem(fallbackSaveKey, JSON.stringify(slots.slice(0, 2)));
 }
 
 function hasRouteGaps(route: RouteLine) {
@@ -10343,26 +10287,18 @@ function settleSimulationDay() {
   advanceDemandForGameDay(analysisState.dayIndex + 1, economy.fare);
   regeneratePassengerGroups();
   const settlement = calculateCurrentOperatingForecast(trainFleets, economy.fare);
-  const fareRevenue = settlement.revenue;
   const maintenance = calculateDailyMaintenance();
-  const loanInterest = loans.reduce((sum, loan) => sum + loan.balance * (loan.interestRate / 365), 0);
-  const loanPayment = loans.reduce((sum, loan) => sum + loan.monthlyPayment / 30, 0);
-  const principalRepaid = Math.max(0, Math.round(loanPayment - loanInterest));
-  economy = {
-    ...economy,
-    revenue: fareRevenue,
+  const atomicSettlement = calculateAtomicDailySettlement({
+    economy,
+    loans,
+    forecast: settlement,
     maintenance,
-    satisfaction: settlement.satisfaction,
-    loanBalance: Math.round(loans.reduce((sum, loan) => sum + loan.balance, 0)),
-    cash: currentMeta.mode === "sandbox" ? 999999999 : Math.round(economy.cash + settlement.netProfit),
-  };
-  loans = loans
-    .map((loan) => {
-      const interest = loan.balance * (loan.interestRate / 365);
-      const principalPaid = Math.max(0, loan.monthlyPayment / 30 - interest);
-      return { ...loan, balance: Math.max(0, Math.round(loan.balance - principalPaid)) };
-    })
-    .filter((loan) => loan.balance > 0);
+    sandbox: currentMeta.mode === "sandbox",
+  });
+  const fareRevenue = atomicSettlement.economy.revenue;
+  const principalRepaid = atomicSettlement.principalRepaid;
+  economy = atomicSettlement.economy;
+  loans = atomicSettlement.loans;
   updateCareerProgress();
   analysisState = { ...analysisState, dayIndex: analysisState.dayIndex + 1, lastFingerprint: "" };
   updateNewsEventsForDay();
@@ -13175,6 +13111,7 @@ const localSaveRepository = new SaveRepository({
     localStorage.setItem("draw-gyotong-routes", serializeFiniteState(state.routes));
   },
   delayMs: 240,
+  onError: (error) => console.warn("[save] 빠른 복구 저장 실패", error),
 });
 
 function persistState(immediate = false) {

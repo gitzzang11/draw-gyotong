@@ -4,6 +4,7 @@ export interface SaveRepositoryOptions<T> {
   delayMs?: number;
   setTimer?: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>;
   clearTimer?: (timer: ReturnType<typeof setTimeout>) => void;
+  onError?: (error: unknown) => void;
 }
 
 export class SaveRepository<T> {
@@ -19,7 +20,7 @@ export class SaveRepository<T> {
     if (this.timer !== undefined) this.clearTimer(this.timer);
     this.timer = this.setTimer(() => {
       this.timer = undefined;
-      void this.flush();
+      void this.flush().catch((error) => this.options.onError?.(error));
     }, this.delayMs);
   }
 
@@ -28,7 +29,7 @@ export class SaveRepository<T> {
       this.clearTimer(this.timer);
       this.timer = undefined;
     }
-    const write = Promise.resolve(this.options.write(this.options.capture()));
+    const write = Promise.resolve().then(() => this.options.write(this.options.capture()));
     const completion = write.finally(() => {
       if (this.pending === completion) this.pending = undefined;
     });

@@ -30,4 +30,19 @@ describe("SaveRepository", () => {
       '{"valid":2,"invalid":0,"huge":0}',
     );
   });
+
+  it("reports a debounced write failure without an unhandled rejection", async () => {
+    vi.useFakeTimers();
+    const onError = vi.fn();
+    const repository = new SaveRepository({
+      capture: () => 1,
+      write: () => { throw new Error("blocked"); },
+      delayMs: 10,
+      onError,
+    });
+    repository.request();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(onError).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+  });
 });
