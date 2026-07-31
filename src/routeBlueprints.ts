@@ -186,22 +186,15 @@ export function splitSegmentAtJunction<T extends {
 }>(segment: T, junction: JunctionBlueprint, junctionNodeId: string): [T, T] {
   if (junction.sourceSegmentId !== segment.id) throw new Error("Junction does not reference the selected segment.");
   if (segment.coordinates.length < 2) throw new Error("Segment geometry is invalid.");
-  const position: [number, number] = [junction.position.lat, junction.position.lng];
-  const left = {
-    ...segment,
-    id: `${segment.id}:a:${junction.id}`,
-    toNodeId: junctionNodeId,
-    coordinates: [segment.coordinates[0], position],
-    lengthKm: segment.lengthKm * junction.splitRatio,
-  };
-  const right = {
-    ...segment,
-    id: `${segment.id}:b:${junction.id}`,
-    fromNodeId: junctionNodeId,
-    coordinates: [position, segment.coordinates.at(-1)!],
-    lengthKm: segment.lengthKm * (1 - junction.splitRatio),
-  };
-  return [left, right];
+  const result = splitRouteSegment({
+    segment,
+    junctionPosition: [junction.position.lat, junction.position.lng],
+    splitRatio: junction.splitRatio,
+    junctionNodeId,
+    beforeId: `${segment.id}:a:${junction.id}`,
+    afterId: `${segment.id}:b:${junction.id}`,
+  });
+  return [result.beforeSegment, result.afterSegment];
 }
 
 export function validateRouteBlueprint(input: {
@@ -263,3 +256,4 @@ export async function atomicRouteOperation<T>(snapshot: () => T, restore: (state
 function error(code: string, message: string): PlanningValidationError {
   return { code, message, severity: "error" };
 }
+import { splitRouteSegment } from "./geometry/constructionGeometry.ts";

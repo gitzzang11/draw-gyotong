@@ -82,15 +82,33 @@ describe("save migrations", () => {
     const migrated = migrateSaveStateRecord<MigratedSave>({
       ...legacySave(3),
       plans: [{
-        id: "plan-a", name: "계획", routes: [], stations: [], depots: [], transfers: [],
-        connections: [{ id: "connection-a", status: "under-construction", sourceEntityId: "a", targetEntityId: "b" }],
+        id: "plan-a", name: "계획",
+        routes: [{
+          id: "planned-route-a", name: "연장", color: "#123456", coordinates: [], segments: [],
+          completedSegmentIds: [], expectedCost: 0, constructionDays: 1, expectedDemand: 0,
+          expectedRevenue: 0, transferEffect: 0, rootLineId: "line-root",
+          targetLineId: "line-target", parentBlueprintId: "extension-parent",
+          branches: [{ branchId: "branch-a", junctionNodeId: "junction-node-a", segmentIds: ["segment-new"] }],
+        }],
+        stations: [], depots: [], transfers: [],
+        connections: [{
+          id: "connection-a", status: "completed", sourceEntityId: "a", targetEntityId: "b",
+          appliedAt: 1234, actualEntityIds: ["segment-new"],
+        }],
         junctions: [{ id: "junction-a", targetLineId: "line-a", sourceSegmentId: "segment-a", position: { lat: 37.5, lng: 127 }, splitRatio: .4, createsStation: false, status: "approved" }],
         routePlanningDrafts: [{ id: "draft-a", tool: "branch", stage: "drawing" }],
       }],
     });
-    expect(migrated.plans?.[0].connections?.[0]).toMatchObject({ id: "connection-a", operationType: "connection", status: "under-construction" });
+    expect(migrated.plans?.[0].connections?.[0]).toMatchObject({ id: "connection-a", operationType: "connection", status: "completed" });
     expect(migrated.plans?.[0].junctions?.[0]).toMatchObject({ id: "junction-a", status: "approved", splitRatio: .4 });
     expect(migrated.plans?.[0].routePlanningDrafts).toHaveLength(1);
+    expect(migrated.plans?.[0].routes?.[0]).toMatchObject({
+      rootLineId: "line-root",
+      targetLineId: "line-target",
+      parentBlueprintId: "extension-parent",
+      branches: [{ branchId: "branch-a", junctionNodeId: "junction-node-a", segmentIds: ["segment-new"] }],
+    });
+    expect(migrated.plans?.[0].connections?.[0]).toMatchObject({ appliedAt: 1234, actualEntityIds: ["segment-new"] });
   });
 
   it("marks an incomplete completed connection as failed instead of replaying it on restore", () => {

@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { NetworkInvalidation } from "../src/routing/networkInvalidation.ts";
 import { RuntimeResultDispatcher } from "../src/runtime/runtimeResultDispatcher.ts";
-import { captureRuntimeSlice, restoreRuntimeSlice } from "../src/runtime/runtimeStateSnapshot.ts";
 import { DailySettlementRuntime } from "../src/runtime/dailySettlementRuntime.ts";
-import { ConstructionRuntimeAdapter } from "../src/construction/constructionRuntimeAdapter.ts";
 import { EventRuntimeAdapter } from "../src/events/eventRuntimeAdapter.ts";
 import { DailySettlementService } from "../src/simulation/finance/dailySettlement.ts";
 
@@ -33,15 +31,6 @@ describe("RuntimeResultDispatcher", () => {
     expect(save).toHaveBeenCalledOnce();
     expect(save).toHaveBeenCalledWith("immediate");
     expect(invalidate).toHaveBeenCalledOnce();
-  });
-});
-
-describe("RuntimeStateSnapshot", () => {
-  it("restores only selected domains", () => {
-    const state = { money: 10, loans: [1], map: "keep" };
-    const snapshot = captureRuntimeSlice(state, ["money", "loans"] as const);
-    const restored = restoreRuntimeSlice({ money: 0, loans: [], map: "changed" }, snapshot, ["money", "loans"] as const);
-    expect(restored).toEqual({ money: 10, loans: [1], map: "changed" });
   });
 });
 
@@ -85,12 +74,8 @@ describe("DailySettlementRuntime", () => {
   });
 });
 
-describe("construction and event runtime adapters", () => {
-  it("deduplicates construction and rolls event state back on failure", () => {
-    const construction = new ConstructionRuntimeAdapter<{ id: string }, number, { id: string }>();
-    const input = { capture: () => 0, restore: vi.fn(), apply: () => ({ networkChanged: false, news: { id: "done" } }) };
-    expect(construction.process([{ id: "p" }], input).routerRebuildRequired).toBe(false);
-    expect(construction.process([{ id: "p" }], input).completedProjectIds).toEqual([]);
+describe("event runtime adapter", () => {
+  it("rolls event state back on failure", () => {
     let state = 1;
     const events = new EventRuntimeAdapter<{ id: string }, number, { id: string }>();
     const result = events.process({

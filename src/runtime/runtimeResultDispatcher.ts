@@ -1,6 +1,6 @@
 import type { UpdateDomain } from "../updateScheduler.ts";
 
-export interface DispatchableRuntimeResult<TNews = unknown> {
+interface DispatchableRuntimeResult<TNews = unknown> {
   updateDomains?: readonly UpdateDomain[];
   newsEvents?: readonly TNews[];
   requiresSave?: boolean;
@@ -9,7 +9,7 @@ export interface DispatchableRuntimeResult<TNews = unknown> {
   error?: unknown;
 }
 
-export interface RuntimeResultDispatcherContext<TNews> {
+interface RuntimeResultDispatcherContext<TNews> {
   requestUpdates(domains: UpdateDomain[]): void;
   requestSave(mode: "normal" | "immediate"): void | Promise<void>;
   appendNews(events: readonly TNews[]): boolean;
@@ -42,4 +42,3 @@ export class RuntimeResultDispatcher<TNews = unknown> {
     if (save) await this.context.requestSave(save);
   }
 }
-

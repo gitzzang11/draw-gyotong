@@ -48,7 +48,7 @@ import {
 } from "./demandModel.ts";
 import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
 import type { Branch, ConstructionMode, Depot, RouteLine, RouteNode, RouteNodeKind, RouteSegment, ServicePattern, Station, TransferGroup } from "./domain/networkTypes.ts";
-import type { ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus } from "./domain/constructionTypes.ts";
+import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus, ManualTransferEndpoint, PlanPriority, PlanStatus, PlannedDepot, PlannedRoute, PlannedStation } from "./domain/constructionTypes.ts";
 import type { EconomyState, Loan, StatisticsState } from "./domain/financeStateTypes.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
@@ -136,6 +136,14 @@ import { EventRuntimeAdapter } from "./events/eventRuntimeAdapter.ts";
 import { RuntimeResultDispatcher } from "./runtime/runtimeResultDispatcher.ts";
 import { DailySettlementRuntime, type DailySettlementRuntimeContext } from "./runtime/dailySettlementRuntime.ts";
 import { NetworkInvalidation } from "./routing/networkInvalidation.ts";
+import {
+  createConnectionSegment,
+  findNearestConnectionStation,
+  findPolylineInsertionIndex,
+  mergeRouteGeometry,
+  normalizeConnectionPolyline,
+  polylineLengthMeters,
+} from "./geometry/constructionGeometry.ts";
 
 let saveSlotServiceInstance: SaveSlotService<SaveState> | null = null;
 const updateScheduler = new DirtyUpdateScheduler();
@@ -164,96 +172,6 @@ type ToolMode =
   | "transfer"
   | "depot"
   | "expressStop";
-type PlanStatus = "draft" | "review" | "insufficient" | "ready" | "partial" | "completed" | "on-hold";
-type PlanPriority = "low" | "normal" | "high" | "critical";
-
-type PlannedRoute = {
-  id: string;
-  name: string;
-  color: string;
-  coordinates: Array<[number, number]>;
-  segments: RouteSegment[];
-  completedSegmentIds: string[];
-  expectedCost: number;
-  constructionDays: number;
-  expectedDemand: number;
-  expectedRevenue: number;
-  transferEffect: number;
-  actualExtension?: { routeId: string; atStart: boolean };
-  actualRouteId?: string;
-  operationKind?: "new-line" | "extension";
-  rootLineId?: string;
-  targetLineId?: string;
-  parentBlueprintId?: string;
-  extensionAtStart?: boolean;
-  branches?: Array<{
-    branchId: string;
-    junctionNodeId: string;
-    segmentIds: string[];
-  }>;
-};
-
-type PlannedStation = {
-  id: string;
-  name: string;
-  position: [number, number];
-  plannedRouteIds: string[];
-  actualRouteIds: string[];
-  expectedDemand: number;
-  completed: boolean;
-  actualStationId?: string;
-};
-
-type PlannedDepot = {
-  id: string;
-  name: string;
-  polygon: Array<[number, number]>;
-  connectedPlannedRouteIds: string[];
-  connectedActualRouteIds: string[];
-  expectedCost: number;
-  constructionDays: number;
-  capacity: number;
-  completed: boolean;
-  actualDepotId?: string;
-};
-
-type PlannedTransfer = {
-  id: string;
-  stationIds: string[];
-  actualStationIds?: string[];
-  expectedEffect: number;
-  completed: boolean;
-};
-
-type ManualTransferEndpoint = {
-  kind: "actual" | "planned";
-  id: string;
-};
-
-type ConstructionPlan = {
-  id: string;
-  name: string;
-  cityId: CityId;
-  routes: PlannedRoute[];
-  stations: PlannedStation[];
-  depots: PlannedDepot[];
-  transfers: PlannedTransfer[];
-  connections?: ConnectionBlueprint[];
-  junctions?: JunctionBlueprint[];
-  routePlanningDrafts?: RoutePlanningSession[];
-  expectedTotalCost: number;
-  remainingCost: number;
-  expectedConstructionDays: number;
-  expectedDemand: number;
-  expectedRevenue: number;
-  terrainDifficulty: number;
-  transferEffect: number;
-  createdAt: number;
-  priority: PlanPriority;
-  notes: string;
-  status: PlanStatus;
-};
-
 type DiagramPoint = {
   x: number;
   y: number;
@@ -4688,26 +4606,18 @@ function resolveConnectionRouteId(plan: ConstructionPlan, connection: Connection
 function findConnectionStation(routeId: string, coordinate?: { lat: number; lng: number }) {
   const route = routes.find((item) => item.id === routeId);
   const fallback = route?.coordinates[0];
-  const point = coordinate ? L.latLng(coordinate.lat, coordinate.lng) : fallback ? L.latLng(...fallback) : null;
+  const point: [number, number] | null = coordinate ? [coordinate.lat, coordinate.lng] : fallback ?? null;
   if (!point) return undefined;
-  return stations
-    .filter((station) => station.connectedRouteIds.includes(routeId))
-    .map((station) => ({ station, distance: map.distance(point, L.latLng(...station.position)) }))
-    .sort((a, b) => a.distance - b.distance)[0]?.station;
+  return findNearestConnectionStation({ coordinate: point, stations, routeId })?.station;
 }
 
 function getPhysicalConnectionCoordinates(connection: ConnectionBlueprint, sourceRoute: RouteLine, targetRoute: RouteLine) {
   const declared = (connection.coordinates ?? []).map((coordinate) => [roundCoord(coordinate.lat), roundCoord(coordinate.lng)] as [number, number]);
-  const closestEndpoint = (route: RouteLine, point: [number, number] | undefined) =>
-    [...route.coordinates.slice(0, 1), ...route.coordinates.slice(-1)]
-      .map((coordinate) => ({ coordinate, distance: point ? map.distance(L.latLng(...coordinate), L.latLng(...point)) : 0 }))
-      .sort((a, b) => a.distance - b.distance)[0]!.coordinate;
-  const source = closestEndpoint(sourceRoute, declared[0]);
-  const target = closestEndpoint(targetRoute, declared.at(-1));
-  const points = declared.length >= 2 ? declared : [source, target];
-  if (!coordinatesEqual(points[0], source)) points.unshift(source);
-  if (!coordinatesEqual(points.at(-1)!, target)) points.push(target);
-  return points;
+  return normalizeConnectionPolyline({
+    sourceEndpoints: [...sourceRoute.coordinates.slice(0, 1), ...sourceRoute.coordinates.slice(-1)],
+    targetEndpoints: [...targetRoute.coordinates.slice(0, 1), ...targetRoute.coordinates.slice(-1)],
+    drawnCoordinates: declared,
+  }).coordinates;
 }
 
 function appendPhysicalConnectionSegment(connection: ConnectionBlueprint, sourceRoute: RouteLine, targetRoute: RouteLine) {
@@ -4721,18 +4631,14 @@ function appendPhysicalConnectionSegment(connection: ConnectionBlueprint, source
   if (!sourceNode) throw new Error("Physical connection source endpoint is missing.");
   const terminalNodeId = stableEntityId("connection-node", connection.id);
   const branchId = stableEntityId("connection-branch", connection.id);
-  const lengthKm = calculateLengthKmPrecise(coordinates.map(([lat, lng]) => L.latLng(lat, lng)));
-  const segment: RouteSegment = {
+  const segment = createConnectionSegment({
     id: segmentId,
     fromNodeId: sourceNode.id,
     toNodeId: terminalNodeId,
     coordinates,
-    lengthKm,
-    terrainImpact: { riverCrossings: 0, mountainSegments: 0 },
-    constructionMode: "bridge",
     constructionCost: 0,
-    enabled: true,
-  };
+  });
+  const lengthKm = segment.lengthKm;
   const branch: Branch = {
     id: branchId,
     name: `${targetRoute.name} connection`,
@@ -4761,28 +4667,25 @@ function appendDepotAccessSegment(connection: ConnectionBlueprint, depot: Depot,
     [0, 0],
   );
   const declared = (connection.coordinates ?? []).map((point) => [roundCoord(point.lat), roundCoord(point.lng)] as [number, number]);
-  const source = [...route.coordinates.slice(0, 1), ...route.coordinates.slice(-1)]
-    .map((coordinate) => ({ coordinate, distance: map.distance(L.latLng(...coordinate), L.latLng(...(declared[0] ?? depotPoint))) }))
-    .sort((a, b) => a.distance - b.distance)[0]!.coordinate;
-  const coordinates = declared.length >= 2 ? declared : [source, depotPoint];
-  if (!coordinatesEqual(coordinates[0], source)) coordinates.unshift(source);
-  if (!coordinatesEqual(coordinates.at(-1)!, depotPoint)) coordinates.push(depotPoint);
+  const normalized = normalizeConnectionPolyline({
+    sourceEndpoints: [...route.coordinates.slice(0, 1), ...route.coordinates.slice(-1)],
+    targetEndpoints: [depotPoint],
+    drawnCoordinates: declared,
+  });
+  const coordinates = normalized.coordinates;
+  const source = coordinates[0];
   const sourceNode = (route.nodes ?? []).find((node) => coordinatesEqual(node.position, source));
   if (!sourceNode) throw new Error("Depot access source endpoint is missing.");
   const terminalNodeId = stableEntityId("depot-access-node", connection.id);
   const branchId = stableEntityId("depot-access-branch", connection.id);
-  const lengthKm = calculateLengthKmPrecise(coordinates.map(([lat, lng]) => L.latLng(lat, lng)));
-  const segment: RouteSegment = {
+  const segment = createConnectionSegment({
     id: segmentId,
     fromNodeId: sourceNode.id,
     toNodeId: terminalNodeId,
     coordinates,
-    lengthKm,
-    terrainImpact: { riverCrossings: 0, mountainSegments: 0 },
-    constructionMode: "bridge",
     constructionCost: 0,
-    enabled: true,
-  };
+  });
+  const lengthKm = segment.lengthKm;
   const branch: Branch = {
     id: branchId,
     name: `${depot.name} depot access`,
@@ -4802,6 +4705,7 @@ function appendDepotAccessSegment(connection: ConnectionBlueprint, depot: Depot,
   return [segmentId, terminalNodeId, branchId];
 }
 
+// 여러 도메인 참조를 함께 바꾸는 원자적 트랜잭션이다. 부분 이전은 이중 적용·복구 오류를 만들 수 있어 중앙 GameState 도입 전까지 이 경계를 유지한다.
 function applyCompletedConnectionProject(project: ConstructionProject) {
   const plan = plans.find((item) => item.id === project.sourcePlanId);
   const connection = plan?.connections?.find((item) => item.id === project.blueprintId);
@@ -4874,21 +4778,20 @@ function applyCompletedConnectionProject(project: ConstructionProject) {
 function mergeCompletedConnectionRoutes(first: RouteLine, second: RouteLine, connection: ConnectionBlueprint) {
   const sourceHint = connection.coordinates?.[0];
   const targetHint = connection.coordinates?.at(-1);
-  const firstAtStart = sourceHint
-    ? map.distance(L.latLng(...first.coordinates[0]), L.latLng(sourceHint.lat, sourceHint.lng)) < map.distance(L.latLng(...first.coordinates.at(-1)!), L.latLng(sourceHint.lat, sourceHint.lng))
-    : false;
-  const secondAtStart = targetHint
-    ? map.distance(L.latLng(...second.coordinates[0]), L.latLng(targetHint.lat, targetHint.lng)) < map.distance(L.latLng(...second.coordinates.at(-1)!), L.latLng(targetHint.lat, targetHint.lng))
-    : true;
-  const firstCoordinates = firstAtStart ? [...first.coordinates].reverse() : first.coordinates;
-  const secondCoordinates = secondAtStart ? second.coordinates : [...second.coordinates].reverse();
   const bridge = connection.coordinates?.length
     ? connection.coordinates.map((point) => [roundCoord(point.lat), roundCoord(point.lng)] as [number, number])
-    : smoothCoordinateBridge(firstCoordinates.at(-1)!, secondCoordinates[0]);
+    : smoothCoordinateBridge(first.coordinates.at(-1)!, second.coordinates[0]);
+  const mergedGeometry = mergeRouteGeometry({
+    first: first.coordinates,
+    second: second.coordinates,
+    firstHint: sourceHint ? [sourceHint.lat, sourceHint.lng] : undefined,
+    secondHint: targetHint ? [targetHint.lat, targetHint.lng] : undefined,
+    bridge,
+  });
   const merged = rebuildRouteGraph({
     ...first,
-    coordinates: [...firstCoordinates, ...bridge.slice(1, -1), ...secondCoordinates],
-    lengthKm: Math.round((first.lengthKm + second.lengthKm + calculateLengthKmPrecise(bridge.map(([lat, lng]) => L.latLng(lat, lng)))) * 1000) / 1000,
+    coordinates: mergedGeometry.coordinates,
+    lengthKm: Math.round((first.lengthKm + second.lengthKm + polylineLengthMeters(bridge) / 1000) * 1000) / 1000,
     constructionCost: first.constructionCost + second.constructionCost,
     riverCrossings: first.riverCrossings + second.riverCrossings,
     mountainSegments: first.mountainSegments + second.mountainSegments,
@@ -4937,6 +4840,7 @@ function advanceJunctionToConstruction(junction: JunctionBlueprint) {
   return next;
 }
 
+// 노선·segment·branch·blueprint를 함께 바꾸는 원자적 트랜잭션이다. 중앙 GameState 없이 부분 이전하지 않는다.
 function applyCompletedJunctionProject(project: ConstructionProject) {
   const junction = project.junctionBlueprint;
   const targetRoute = junction ? routes.find((route) => route.id === junction.targetLineId) : undefined;
@@ -4967,7 +4871,7 @@ function applyCompletedJunctionProject(project: ConstructionProject) {
   if (branchCoordinates.length < 2) throw new Error("Junction branch geometry is invalid.");
   const terminalNodeId = stableEntityId("branch-terminal", staged.id);
   const branchSegmentId = stableEntityId("branch-segment", staged.id);
-  const branchLength = calculateLengthKmPrecise(branchCoordinates.map(([lat, lng]) => L.latLng(lat, lng)));
+  const branchLength = polylineLengthMeters(branchCoordinates) / 1000;
   const branchSegment: RouteSegment = {
     id: branchSegmentId,
     fromNodeId: junctionNodeId,
@@ -4979,7 +4883,7 @@ function applyCompletedJunctionProject(project: ConstructionProject) {
     constructionCost: project.baseCost,
     enabled: true,
   };
-  const insertionIndex = findRouteInsertionIndex(targetRoute.coordinates, L.latLng(...junctionPosition));
+  const insertionIndex = findPolylineInsertionIndex(targetRoute.coordinates, junctionPosition);
   const coordinates = targetRoute.coordinates.some((coordinate) => coordinatesEqual(coordinate, junctionPosition))
     ? targetRoute.coordinates
     : [...targetRoute.coordinates.slice(0, insertionIndex), junctionPosition, ...targetRoute.coordinates.slice(insertionIndex)];

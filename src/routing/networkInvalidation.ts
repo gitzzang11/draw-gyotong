@@ -1,4 +1,4 @@
-export type NetworkChangeKind =
+type NetworkChangeKind =
   | "station-add" | "station-remove" | "segment-add" | "segment-remove"
   | "transfer-add" | "transfer-remove" | "physical-connection" | "junction"
   | "extension" | "merge" | "closure"
@@ -11,7 +11,7 @@ const structuralChanges = new Set<NetworkChangeKind>([
   "extension", "merge", "closure",
 ]);
 
-export interface NetworkInvalidationResult {
+interface NetworkInvalidationResult {
   generation: number;
   rebuildRouter: boolean;
   changedNodeIds: string[];
@@ -32,4 +32,3 @@ export class NetworkInvalidation {
     };
   }
 }
-

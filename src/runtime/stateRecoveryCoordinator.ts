@@ -1,14 +1,14 @@
 import type { UpdateDomain, UpdateReason } from "../updateScheduler.ts";
 
-export type RecoveryScope = "partial" | "full";
+type RecoveryScope = "partial" | "full";
 
-export interface RecoveryPlan {
+interface RecoveryPlan {
   scope: RecoveryScope;
   domains: UpdateDomain[];
   rebuildRouter: boolean;
 }
 
-export interface StateRecoveryContext<T> {
+interface StateRecoveryContext<T> {
   capture(): T;
   restore(snapshot: T): void;
   requestUpdates(domains: UpdateDomain[], reason: UpdateReason): void;
@@ -41,4 +41,3 @@ export class StateRecoveryCoordinator<T> {
     }
   }
 }
-
