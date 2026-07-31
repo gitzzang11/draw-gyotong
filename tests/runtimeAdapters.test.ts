@@ -5,6 +5,7 @@ import { captureRuntimeSlice, restoreRuntimeSlice } from "../src/runtime/runtime
 import { DailySettlementRuntime } from "../src/runtime/dailySettlementRuntime.ts";
 import { ConstructionRuntimeAdapter } from "../src/construction/constructionRuntimeAdapter.ts";
 import { EventRuntimeAdapter } from "../src/events/eventRuntimeAdapter.ts";
+import { DailySettlementService } from "../src/simulation/finance/dailySettlement.ts";
 
 describe("NetworkInvalidation", () => {
   it("increments only for structural changes and merges one evaluation", () => {
@@ -46,27 +47,41 @@ describe("RuntimeStateSnapshot", () => {
 
 describe("DailySettlementRuntime", () => {
   it("finalizes demand, calculates once and restores a failed settlement", () => {
-    let money = 10;
-    const calculate = vi.fn(() => ({ total: 3 }));
-    const runtime = new DailySettlementRuntime<number, { day: number }, { total: number }, { applied: boolean }>();
-    const result = runtime.settleDay({
-      getTargetDay: () => 2, wasSettled: () => false, capture: () => money,
-      restore: (snapshot) => { money = snapshot; }, finalizeDemand: () => { money = 20; },
-      buildInput: (day) => ({ day }), calculate, validate: () => undefined,
-      apply: () => ({ applied: true }), wasApplied: (applied) => applied.applied,
-      commit: () => [],
-    });
+    let economy = { cash: 10, fare: 1, autoFare: false, revenue: 0, maintenance: 0, constructionSpent: 0, trainSpent: 0, loanBalance: 0, satisfaction: 50, demand: 0 };
+    let statistics = { totalPassengers: 0, totalLoanRepaid: 0, dailyRecords: [] as Array<{ day: number; revenue: number; expenses: number; passengers: number; satisfaction: number; transitShare: number; assets: number; liabilities: number }> };
+    const service = new DailySettlementService();
+    const calculate = vi.spyOn(service, "calculate");
+    const runtime = new DailySettlementRuntime<{ day: number }, { lastSettledGameDay?: number }>();
+    const context = {
+      service,
+      getGameDay: () => 2,
+      getLastSettledGameDay: () => -1,
+      hasDailyRecord: (day: number) => statistics.dailyRecords.some((record) => record.day === day),
+      getGameMode: () => "career" as const,
+      getBankruptcyLimit: () => -1000,
+      getEconomy: () => economy,
+      getLoans: () => [],
+      getStatistics: () => statistics,
+      getPassengerGroups: () => [],
+      captureAuxiliary: () => ({ analysis: { day: 1 }, meta: {}, constructionProjects: [], stationDemandStates: [] }),
+      restoreState: (snapshot: { economy: typeof economy; statistics: typeof statistics }) => { economy = snapshot.economy; statistics = snapshot.statistics; },
+      prepareDay: () => ({ forecast: { revenue: 20, demand: 3, satisfaction: 60, crowding: 0, waitMin: 0 }, maintenance: { trains: 1, depots: 1, express: 0 }, constructionCostDue: 0, financesBefore: { transitShare: 0, assets: 10 }, totalPotential: 1, totalRealized: 1 }),
+      applyCommittedState: (state: { economy: typeof economy; statistics: typeof statistics }) => { economy = state.economy; statistics = state.statistics; },
+      commitDay: () => ({ newsEvents: [] }),
+    };
+    const result = runtime.settleDay(context);
     expect(result.applied).toBe(true);
     expect(result.requiresImmediateSave).toBe(true);
     expect(calculate).toHaveBeenCalledOnce();
-    const failed = runtime.settleDay({
-      getTargetDay: () => 3, wasSettled: () => false, capture: () => money,
-      restore: (snapshot) => { money = snapshot; }, finalizeDemand: () => { money = 99; },
-      buildInput: () => ({ day: 3 }), calculate: () => { throw new Error("fail"); },
-      validate: () => undefined, apply: () => ({ applied: false }), wasApplied: () => false, commit: () => [],
-    });
+    const duplicate = runtime.settleDay(context);
+    expect(duplicate.status).toBe("already-settled");
+    expect(calculate).toHaveBeenCalledOnce();
+    expect(result.updateDomains).not.toContain("network");
+    expect(result.updateDomains.some((domain) => domain.startsWith("map-"))).toBe(false);
+    const moneyBeforeFailure = economy.cash;
+    const failed = runtime.settleDay({ ...context, getGameDay: () => 3, prepareDay: () => { economy = { ...economy, cash: 999 }; throw new Error("fail"); } });
     expect(failed.error).toBeInstanceOf(Error);
-    expect(money).toBe(20);
+    expect(economy.cash).toBe(moneyBeforeFailure);
   });
 });
 

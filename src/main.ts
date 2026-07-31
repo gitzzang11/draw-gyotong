@@ -49,7 +49,7 @@ import {
 import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
 import type { Branch, ConstructionMode, Depot, RouteLine, RouteNode, RouteNodeKind, RouteSegment, ServicePattern, Station, TransferGroup } from "./domain/networkTypes.ts";
 import type { ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus } from "./domain/constructionTypes.ts";
-import type { DailyStatisticsRecord, EconomyState, Loan, StatisticsState } from "./domain/financeStateTypes.ts";
+import type { EconomyState, Loan, StatisticsState } from "./domain/financeStateTypes.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
 import { SaveRepository } from "./storage/saveRepository.ts";
@@ -134,11 +134,13 @@ import { EventCoordinator } from "./events/eventCoordinator.ts";
 import { NewsService } from "./events/newsService.ts";
 import { EventRuntimeAdapter } from "./events/eventRuntimeAdapter.ts";
 import { RuntimeResultDispatcher } from "./runtime/runtimeResultDispatcher.ts";
+import { DailySettlementRuntime, type DailySettlementRuntimeContext } from "./runtime/dailySettlementRuntime.ts";
 import { NetworkInvalidation } from "./routing/networkInvalidation.ts";
 
 let saveSlotServiceInstance: SaveSlotService<SaveState> | null = null;
 const updateScheduler = new DirtyUpdateScheduler();
 const dailySettlementService = new DailySettlementService();
+const dailySettlementRuntime = new DailySettlementRuntime<OperationAnalysisState, GameMeta, NewsEvent>();
 
 // =============================================================================
 // 도메인 모델
@@ -2257,7 +2259,6 @@ let selectedStationManagerId: string | null = null;
 let selectedOperationRouteId = "";
 let simSpeed = 0;
 let simMinutes = 360;
-let settlementInProgress = false;
 let activeStatisticsTab: "overview" | "routes" | "stations" | "city" = "overview";
 let selectedStatisticsRouteId = "";
 let selectedStatisticsStationId = "";
@@ -9346,7 +9347,7 @@ function hashNewsSeed(day: number, salt: string) {
   return Math.abs(hash >>> 0);
 }
 
-function updateNewsEventsForDay() {
+function updateNewsEventsForDay(dispatch = true) {
   const day = analysisState.dayIndex;
   const result = eventCoordinator.advanceDay(newsEvents, day, hashNewsSeed(day, currentMeta.slotId));
   newsEvents = result.events;
@@ -9363,8 +9364,9 @@ function updateNewsEventsForDay() {
     removeExpired: () => undefined,
     toNews: (event) => event,
   });
-  void runtimeResultDispatcher.dispatch([runtimeResult]);
+  if (dispatch) void runtimeResultDispatcher.dispatch([runtimeResult]);
   updateNewsBadge();
+  return runtimeResult;
 }
 
 function createNewsEvent(day: number): NewsEvent {
@@ -10740,25 +10742,34 @@ function advanceDemandForGameDay(gameDay: number, fare = economy.fare) {
  * 승객/수익/유지비/대출/공사/통계를 같은 시점에 확정해 서로 다른 날짜의 값이
  * 섞이지 않도록 한다.
  */
-function settleSimulationDay() {
-  const gameDay = analysisState.dayIndex + 1;
-  if (
-    settlementInProgress ||
-    (currentMeta.lastSettledGameDay ?? -1) >= gameDay ||
-    statisticsState.dailyRecords.some((record) => record.day === gameDay)
-  ) return;
-  settlementInProgress = true;
-  const snapshot = {
-    economy: { ...economy },
-    loans: loans.map((loan) => ({ ...loan })),
-    statisticsState: { ...statisticsState, dailyRecords: [...statisticsState.dailyRecords] },
-    analysisState: { ...analysisState },
-    currentMeta: { ...currentMeta },
+const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisState, GameMeta, NewsEvent> = {
+  service: dailySettlementService,
+  getGameDay: () => analysisState.dayIndex + 1,
+  getLastSettledGameDay: () => currentMeta.lastSettledGameDay ?? -1,
+  hasDailyRecord: (day) => statisticsState.dailyRecords.some((record) => record.day === day),
+  getGameMode: () => currentMeta.mode,
+  getBankruptcyLimit: () => difficultyConfigs[currentMeta.difficulty].bankruptcyLimit,
+  getEconomy: () => economy,
+  getLoans: () => loans,
+  getStatistics: () => statisticsState,
+  getPassengerGroups: () => passengerGroups,
+  captureAuxiliary: () => ({
+    analysis: { ...analysisState },
+    meta: { ...currentMeta },
     constructionProjects: constructionProjects.map((project) => ({ ...project, events: project.events.map((event) => ({ ...event })) })),
     stationDemandStates: stationDemandStates.map((state) => ({ ...state })),
-    passengerGroups: passengerGroups.map((group) => ({ ...group })),
-  };
-  try {
+  }),
+  restoreState: (snapshot) => {
+    economy = snapshot.economy;
+    loans = snapshot.loans;
+    statisticsState = snapshot.statistics;
+    passengerGroups = snapshot.passengerGroups;
+    analysisState = snapshot.auxiliary.analysis;
+    currentMeta = snapshot.auxiliary.meta;
+    constructionProjects = snapshot.auxiliary.constructionProjects;
+    stationDemandStates = snapshot.auxiliary.stationDemandStates;
+  },
+  prepareDay: (gameDay) => {
     ensureDemandSimulation();
     if (economy.autoFare) economy.fare = calculateAutoFare();
     regeneratePassengerGroups();
@@ -10769,59 +10780,26 @@ function settleSimulationDay() {
     const constructionCostDue = constructionProjects.flatMap((project) => project.events)
       .filter((event) => !event.applied && event.kind === "extra-cost" && event.triggerDay <= gameDay)
       .reduce((sum, event) => sum + Math.max(0, event.extraCost ?? 0), 0);
-    const result = dailySettlementService.calculate({
-      gameDay,
-      gameMode: currentMeta.mode,
-      currentMoney: economy.cash,
-      fareRevenue: forecast.revenue,
-      otherRevenue: 0,
-      lineMaintenanceCost: 0,
-      stationMaintenanceCost: 0,
-      trainMaintenanceCost: maintenance.trains,
-      depotMaintenanceCost: maintenance.depots,
-      expressOperatingCost: maintenance.express,
-      constructionCostDue,
-      demolitionCostDue: 0,
-      reconstructionCostDue: 0,
-      loans,
-      eventEffects: [],
-      bankruptcyRules: { limit: difficultyConfigs[currentMeta.difficulty].bankruptcyLimit },
-    });
-    dailySettlementService.validate(result);
     const financesBefore = calculateNetworkFinancials();
-    const totalPotential = stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0);
-    const totalRealized = stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0);
-    const dailyRecord: DailyStatisticsRecord = {
-      day: gameDay,
-      revenue: result.revenue.total,
-      expenses: result.expenses.total,
-      passengers: forecast.demand,
-      satisfaction: forecast.satisfaction,
-      transitShare: financesBefore.transitShare,
-      assets: financesBefore.assets + (result.moneyAfter - economy.cash),
-      liabilities: result.loanBalanceAfter,
-      crowding: forecast.crowding,
-      waitMin: forecast.waitMin,
-      captureRate: totalPotential > 0 ? totalRealized / totalPotential : 0,
+    return {
+      forecast,
+      maintenance,
+      constructionCostDue,
+      financesBefore,
+      totalPotential: stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0),
+      totalRealized: stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0),
     };
-    const applied = dailySettlementService.apply(
-      { economy: { ...economy, demand: forecast.demand, satisfaction: forecast.satisfaction }, loans, records: statisticsState.dailyRecords },
-      result,
-      dailyRecord,
-    );
-    if (!applied.applied) return;
-    economy = applied.economy;
-    loans = applied.loans;
-    statisticsState = {
-      ...statisticsState,
-      totalPassengers: statisticsState.totalPassengers + forecast.demand,
-      totalLoanRepaid: statisticsState.totalLoanRepaid + result.principalRepaid,
-      dailyRecords: applied.records.slice(-90),
-    };
+  },
+  applyCommittedState: (state) => {
+    economy = state.economy;
+    loans = state.loans;
+    statisticsState = state.statistics;
+  },
+  commitDay: (gameDay, bankrupt) => {
     analysisState = { ...analysisState, dayIndex: gameDay, lastFingerprint: "" };
     currentMeta = { ...currentMeta, lastSettledGameDay: gameDay };
-    updateCareerProgress(result.bankruptcy.isBankrupt);
-    updateNewsEventsForDay();
+    updateCareerProgress(bankrupt);
+    const eventResult = updateNewsEventsForDay(false);
     updateConstructionProjectsForDay();
     recordDemandSnapshot();
     refreshOperationSuggestions(true);
@@ -10830,24 +10808,19 @@ function settleSimulationDay() {
       analysisState = { ...analysisState, lastNotifiedDay: gameDay };
       showToast(`운영 분석에 우선 확인 제안 ${criticalCount}건이 있습니다.`);
     }
-    requestUpdate("daily-settlement", selectedOperationRouteId);
-    requestStateSave("immediate");
-  } catch (error) {
-    economy = snapshot.economy;
-    loans = snapshot.loans;
-    statisticsState = snapshot.statisticsState;
-    analysisState = snapshot.analysisState;
-    currentMeta = snapshot.currentMeta;
-    constructionProjects = snapshot.constructionProjects;
-    stationDemandStates = snapshot.stationDemandStates;
-    passengerGroups = snapshot.passengerGroups;
-    console.error("Daily settlement failed", error);
-    showError("일일 결산을 적용하지 못해 이전 경제 상태로 복구했습니다.");
-  } finally {
-    settlementInProgress = false;
-  }
-}
+    return { newsEvents: eventResult.newsEvents, updateDomains: eventResult.updateDomains };
+  },
+};
 
+function settleSimulationDay() {
+  const result = dailySettlementRuntime.settleDay(dailySettlementContext);
+  if (result.status === "failed") {
+    console.error("Daily settlement failed", result.error);
+    showError("일일 결산을 적용하지 못해 이전 경제 상태로 복구했습니다.");
+    return;
+  }
+  if (result.applied) void runtimeResultDispatcher.dispatch([result]);
+}
 function updateCareerProgress(bankrupt: boolean) {
   if (currentMeta.mode === "sandbox") {
     currentMeta = { ...currentMeta, unlockedCityIds: Object.keys(cityConfigs) as CityId[], bankrupt: false };
