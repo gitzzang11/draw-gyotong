@@ -5,10 +5,20 @@ export type UpdateDomain =
   | "capacity"
   | "congestion"
   | "finance"
-  | "map-entities"
-  | "trains"
-  | "hud"
-  | "panels"
+  | "map-lines"
+  | "map-stations"
+  | "map-trains"
+  | "map-depots"
+  | "map-blueprints"
+  | "map-construction"
+  | "map-selection"
+  | "map-lod"
+  | "hud-clock"
+  | "hud-finance"
+  | "hud-status"
+  | "active-panel"
+  | "workflow"
+  | "notifications"
   | "storage";
 
 export type UpdateReason =
@@ -19,44 +29,52 @@ export type UpdateReason =
   | "fare"
   | "network-structure"
   | "viewport"
-  | "clock";
+  | "selection"
+  | "mode"
+  | "clock"
+  | "construction-progress"
+  | "blueprint-preview"
+  | "panel"
+  | "notifications"
+  | "finance-only"
+  | "daily-settlement";
 
 const orderedDomains: UpdateDomain[] = [
-  "network",
-  "routes",
-  "demand",
-  "capacity",
-  "congestion",
-  "finance",
-  "map-entities",
-  "trains",
-  "hud",
-  "panels",
-  "storage",
+  "network", "routes", "demand", "capacity", "congestion", "finance",
+  "map-lines", "map-stations", "map-trains", "map-depots", "map-blueprints",
+  "map-construction", "map-selection", "map-lod", "hud-clock", "hud-finance",
+  "hud-status", "active-panel", "workflow", "notifications", "storage",
 ];
 
 const dependencies: Record<UpdateReason, readonly UpdateDomain[]> = {
   full: orderedDomains,
-  "station-label": ["map-entities", "panels", "storage"],
-  "route-style": ["routes", "map-entities", "hud", "panels", "storage"],
-  "fleet-service": ["capacity", "congestion", "finance", "trains", "hud", "panels", "storage"],
-  fare: ["demand", "congestion", "finance", "hud", "panels", "storage"],
+  "station-label": ["map-stations", "active-panel", "storage"],
+  "route-style": ["map-lines", "map-stations", "map-trains", "map-selection", "hud-status", "active-panel", "storage"],
+  "fleet-service": ["capacity", "congestion", "finance", "map-trains", "hud-status", "active-panel", "storage"],
+  fare: ["demand", "congestion", "finance", "hud-finance", "hud-status", "active-panel", "storage"],
   "network-structure": [
-    "network",
-    "routes",
-    "demand",
-    "capacity",
-    "congestion",
-    "finance",
-    "map-entities",
-    "trains",
-    "hud",
-    "panels",
-    "storage",
+    "network", "routes", "demand", "capacity", "congestion", "finance",
+    "map-lines", "map-stations", "map-trains", "map-depots", "map-selection",
+    "hud-status", "active-panel", "storage",
   ],
-  viewport: ["map-entities"],
-  clock: ["demand", "congestion", "finance", "trains", "hud", "panels"],
+  viewport: ["map-lod"],
+  selection: ["map-selection", "active-panel", "hud-status"],
+  mode: ["map-selection", "hud-status", "workflow", "active-panel"],
+  clock: ["hud-clock", "map-trains"],
+  "construction-progress": ["map-construction", "workflow", "notifications", "active-panel", "storage"],
+  "blueprint-preview": ["map-blueprints", "workflow"],
+  panel: ["active-panel"],
+  notifications: ["notifications"],
+  "finance-only": ["finance", "hud-finance", "active-panel", "storage"],
+  "daily-settlement": ["finance", "hud-finance", "hud-status", "active-panel", "notifications", "storage"],
 };
+
+export interface UpdateTrace {
+  requested: Record<string, number>;
+  executed: Record<string, number>;
+  merged: number;
+  reasons: string[];
+}
 
 export function domainsForUpdate(reason: UpdateReason): UpdateDomain[] {
   const selected = new Set(dependencies[reason]);
@@ -64,19 +82,60 @@ export function domainsForUpdate(reason: UpdateReason): UpdateDomain[] {
 }
 
 export class DirtyUpdateScheduler {
-  private readonly dirty = new Set<UpdateDomain>();
+  private dirty = new Set<UpdateDomain>();
+  private nextDirty = new Set<UpdateDomain>();
+  private flushing = false;
+  private readonly trace: UpdateTrace = { requested: {}, executed: {}, merged: 0, reasons: [] };
 
   mark(reason: UpdateReason) {
-    for (const domain of dependencies[reason]) this.dirty.add(domain);
+    this.markDomains(domainsForUpdate(reason), reason);
+  }
+
+  markDomains(domains: readonly UpdateDomain[], reason = "direct") {
+    const target = this.flushing ? this.nextDirty : this.dirty;
+    this.trace.reasons.push(reason);
+    for (const domain of domains) {
+      this.trace.requested[domain] = (this.trace.requested[domain] ?? 0) + 1;
+      if (target.has(domain)) this.trace.merged += 1;
+      target.add(domain);
+    }
   }
 
   consume(): UpdateDomain[] {
+    if (this.flushing) return [];
+    this.flushing = true;
     const result = orderedDomains.filter((domain) => this.dirty.has(domain));
     this.dirty.clear();
+    for (const domain of result) this.trace.executed[domain] = (this.trace.executed[domain] ?? 0) + 1;
     return result;
   }
 
+  finishFlush() {
+    this.flushing = false;
+    if (this.nextDirty.size > 0) {
+      this.dirty = this.nextDirty;
+      this.nextDirty = new Set();
+    }
+  }
+
   has(domain: UpdateDomain) {
-    return this.dirty.has(domain);
+    return this.dirty.has(domain) || this.nextDirty.has(domain);
+  }
+
+  get isFlushing() {
+    return this.flushing;
+  }
+
+  get hasPending() {
+    return this.dirty.size > 0 || this.nextDirty.size > 0;
+  }
+
+  snapshot(): UpdateTrace {
+    return {
+      requested: { ...this.trace.requested },
+      executed: { ...this.trace.executed },
+      merged: this.trace.merged,
+      reasons: [...this.trace.reasons],
+    };
   }
 }

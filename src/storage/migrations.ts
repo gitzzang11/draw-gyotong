@@ -5,7 +5,7 @@ import {
   type DemandZone,
 } from "../demandModel";
 
-export const CURRENT_SAVE_SCHEMA_VERSION = 3;
+export const CURRENT_SAVE_SCHEMA_VERSION = 4;
 
 type AnyRecord = Record<string, any>;
 
@@ -209,7 +209,8 @@ export function migrateSaveStateRecord<T>(input: unknown, options: SaveMigration
 function upgradeVersionedSource(input: AnyRecord): AnyRecord {
   const version = Math.max(1, Math.round(finiteNumber(input.schemaVersion, 1)));
   const version2 = version < 2 ? migrateVersion1To2(input) : { ...input };
-  return version < 3 ? migrateVersion2To3(version2) : version2;
+  const version3 = version < 3 ? migrateVersion2To3(version2) : version2;
+  return version < 4 ? migrateVersion3To4(version3) : version3;
 }
 
 function migrateVersion1To2(source: AnyRecord): AnyRecord {
@@ -233,6 +234,22 @@ function migrateVersion2To3(source: AnyRecord): AnyRecord {
     loans: arrayValue(source.loans),
     demandZones: arrayValue(source.demandZones),
     stationDemandStates: arrayValue(source.stationDemandStates),
+  };
+}
+
+function migrateVersion3To4(source: AnyRecord): AnyRecord {
+  return {
+    ...source,
+    schemaVersion: 4,
+    plans: arrayValue(source.plans).map((planValue) => {
+      const plan = asRecord(planValue);
+      return {
+        ...plan,
+        connections: arrayValue(plan.connections),
+        junctions: arrayValue(plan.junctions),
+        routePlanningDrafts: arrayValue(plan.routePlanningDrafts),
+      };
+    }),
   };
 }
 
@@ -267,8 +284,45 @@ function migratePlansWithStableIds(value: unknown, slotId: string) {
           actualStationIds: arrayValue(transfer.actualStationIds),
         };
       }),
+      connections: arrayValue(plan.connections).map((connectionValue, connectionIndex) => {
+        const connection = asRecord(connectionValue);
+        const status = normalizeBlueprintStatus(connection.status);
+        const actualEntityIds = arrayValue(connection.actualEntityIds);
+        const appliedAt = finiteNumber(connection.appliedAt, 0);
+        const incompleteCompletedConnection = status === "completed" && (appliedAt <= 0 || actualEntityIds.length === 0);
+        return {
+          ...connection,
+          id: ensureStableId(connection.id, "connection-blueprint", `${planId}:${connectionIndex}`),
+          operationType: "connection",
+          coordinates: arrayValue(connection.coordinates),
+          status: incompleteCompletedConnection ? "failed" : status,
+          appliedAt: appliedAt > 0 ? appliedAt : undefined,
+          actualEntityIds,
+          failureReason: incompleteCompletedConnection
+            ? stringValue(connection.failureReason, "Completed connection had no applied runtime result during restore.")
+            : connection.failureReason,
+        };
+      }),
+      junctions: arrayValue(plan.junctions).map((junctionValue, junctionIndex) => {
+        const junction = asRecord(junctionValue);
+        return {
+          ...junction,
+          id: ensureStableId(junction.id, "junction-blueprint", `${planId}:${junctionIndex}`),
+          status: normalizeBlueprintStatus(junction.status),
+          createsStation: Boolean(junction.createsStation),
+          splitRatio: finiteNumber(junction.splitRatio, 0.5),
+        };
+      }),
+      routePlanningDrafts: arrayValue(plan.routePlanningDrafts),
     };
   });
+}
+
+function normalizeBlueprintStatus(value: unknown) {
+  const status = stringValue(value, "draft");
+  return ["draft", "approved", "scheduled", "under-construction", "completed", "cancelled", "failed"].includes(status)
+    ? status
+    : "draft";
 }
 
 function migratePlanEntities(value: unknown, prefix: string, parentId: string) {

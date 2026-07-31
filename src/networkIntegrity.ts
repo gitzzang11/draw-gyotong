@@ -14,7 +14,7 @@ export type IntegrityPassengerGroup = {
   routeIds: string[];
   journey?: { stationIds: string[]; routeIds: string[] };
 };
-export type IntegrityProject = { routeIds: string[]; stationIds: string[]; depotIds: string[] };
+export type IntegrityProject = { routeIds: string[]; stationIds: string[]; depotIds: string[]; blueprintId?: string };
 export type IntegrityIssue = {
   code: string;
   entityId?: string;
@@ -126,7 +126,7 @@ export function synchronizeNetworkReferences<
       stationIds: project.stationIds.filter((stationId) => stationIds.has(stationId)),
       depotIds: project.depotIds.filter((depotId) => depotIds.has(depotId)),
     }))
-    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0) as C[];
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0 || Boolean(project.blueprintId)) as C[];
   return {
     stations: transferState.stations,
     transfers: transferState.transfers,

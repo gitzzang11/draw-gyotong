@@ -80,6 +80,45 @@ describe("graph routing", () => {
     expect(router.findJourney("a", "b")?.routeIds).toEqual(["main", "branch"]);
   });
 
+  it("uses a completed physical link as a bidirectional routeable connection", () => {
+    const stations: RoutingStation[] = [
+      { id: "a", position: [37.5, 126.9], routeIds: ["left"] },
+      { id: "left-end", position: [37.5, 126.92], routeIds: ["left"] },
+      { id: "right-end", position: [37.5, 126.93], routeIds: ["right"] },
+      { id: "b", position: [37.5, 126.95], routeIds: ["right"] },
+    ];
+    const service = (id: string, routeId: string, stopStationIds: string[]): RoutingService => ({
+      id,
+      routeId,
+      kind: "local",
+      paths: [{ id, coordinates: stopStationIds.map((stationId) => stations.find((station) => station.id === stationId)!.position) }],
+      stopStationIds,
+      speedKph: 35,
+      headwayMin: 4,
+      crowding: 0.7,
+    });
+    const network: RoutingNetwork = {
+      stations,
+      transfers: [],
+      services: [
+        service("left:local", "left", ["a", "left-end"]),
+        service("right:local", "right", ["right-end", "b"]),
+      ],
+      physicalLinks: [{
+        id: "link",
+        sourceStationId: "left-end",
+        targetStationId: "right-end",
+        sourceRouteId: "left",
+        targetRouteId: "right",
+        travelMin: 1,
+      }],
+    };
+    const router = new TransitRouter(network);
+    expect(router.findJourney("a", "b")?.routeIds).toEqual(["left", "right"]);
+    expect(router.findJourney("b", "a")?.routeIds).toEqual(["right", "left"]);
+    expect(buildNetworkSignature({ ...network, physicalLinks: [] })).not.toBe(buildNetworkSignature(network));
+  });
+
   it("returns no path for unavailable destinations, closed boarding stations and construction paths", () => {
     const network = chainNetwork(1);
     expect(new TransitRouter(network).findJourney("p0", "missing")).toBeNull();

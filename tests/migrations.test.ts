@@ -15,6 +15,7 @@ type MigratedSave = {
   depots: unknown[];
   trainFleets: unknown[];
   loans: unknown[];
+  plans?: Array<{ connections?: unknown[]; junctions?: unknown[]; routePlanningDrafts?: unknown[] }>;
   economy: { cash: number };
 };
 
@@ -75,5 +76,34 @@ describe("save migrations", () => {
     expect(migrated.routes).toEqual([]);
     expect(migrated.stations[0].demand).toBe(0);
     expect(Number.isFinite(migrated.meta.updatedAt)).toBe(true);
+  });
+
+  it("preserves connection and junction blueprints when restoring a plan", () => {
+    const migrated = migrateSaveStateRecord<MigratedSave>({
+      ...legacySave(3),
+      plans: [{
+        id: "plan-a", name: "계획", routes: [], stations: [], depots: [], transfers: [],
+        connections: [{ id: "connection-a", status: "under-construction", sourceEntityId: "a", targetEntityId: "b" }],
+        junctions: [{ id: "junction-a", targetLineId: "line-a", sourceSegmentId: "segment-a", position: { lat: 37.5, lng: 127 }, splitRatio: .4, createsStation: false, status: "approved" }],
+        routePlanningDrafts: [{ id: "draft-a", tool: "branch", stage: "drawing" }],
+      }],
+    });
+    expect(migrated.plans?.[0].connections?.[0]).toMatchObject({ id: "connection-a", operationType: "connection", status: "under-construction" });
+    expect(migrated.plans?.[0].junctions?.[0]).toMatchObject({ id: "junction-a", status: "approved", splitRatio: .4 });
+    expect(migrated.plans?.[0].routePlanningDrafts).toHaveLength(1);
+  });
+
+  it("marks an incomplete completed connection as failed instead of replaying it on restore", () => {
+    const migrated = migrateSaveStateRecord<any>({
+      ...legacySave(3),
+      plans: [{
+        id: "plan-a", name: "plan", routes: [], stations: [], depots: [], transfers: [],
+        connections: [{ id: "connection-a", status: "completed", sourceEntityId: "a", targetEntityId: "b" }],
+      }],
+    });
+    expect(migrated.plans[0].connections[0]).toMatchObject({
+      status: "failed",
+      actualEntityIds: [],
+    });
   });
 });

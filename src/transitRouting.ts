@@ -32,6 +32,15 @@ export type RoutingTransfer = {
   resistance: number;
 };
 
+export type RoutingPhysicalLink = {
+  id: string;
+  sourceStationId: string;
+  targetStationId: string;
+  sourceRouteId: string;
+  targetRouteId: string;
+  travelMin: number;
+};
+
 export type TransitLeg = {
   serviceId: string;
   routeId: string;
@@ -67,6 +76,7 @@ export type RoutingNetwork = {
   stations: RoutingStation[];
   services: RoutingService[];
   transfers: RoutingTransfer[];
+  physicalLinks?: RoutingPhysicalLink[];
 };
 
 type ProjectedStop = {
@@ -160,6 +170,7 @@ export function buildNetworkSignature(network: RoutingNetwork) {
       [...service.stopStationIds].sort(),
     ]),
     transfers: network.transfers.map((transfer) => [transfer.id, [...transfer.stationIds].sort(), transfer.walkMin, transfer.resistance]),
+    physicalLinks: (network.physicalLinks ?? []).map((link) => [link.id, link.sourceStationId, link.targetStationId, link.sourceRouteId, link.targetRouteId, link.travelMin]),
   });
 }
 
@@ -369,6 +380,30 @@ export class TransitRouter {
               transferStationId: station.id,
             });
           }
+        }
+      }
+    }
+    for (const link of this.network.physicalLinks ?? []) {
+      if (!stationsById.has(link.sourceStationId) || !stationsById.has(link.targetStationId)) continue;
+      const sourceServices = (this.servicesByStation.get(link.sourceStationId) ?? []).filter((service) => service.routeId === link.sourceRouteId);
+      const targetServices = (this.servicesByStation.get(link.targetStationId) ?? []).filter((service) => service.routeId === link.targetRouteId);
+      for (const [fromStationId, fromServices, toStationId, toServices] of [
+        [link.sourceStationId, sourceServices, link.targetStationId, targetServices],
+        [link.targetStationId, targetServices, link.sourceStationId, sourceServices],
+      ] as const) {
+        for (const fromService of fromServices) for (const toService of toServices) {
+          const waitTimeMin = Math.max(0.5, toService.headwayMin / 2);
+          this.addEdge({
+            kind: "switch",
+            from: stateKey(fromStationId, fromService.id),
+            to: stateKey(toStationId, toService.id),
+            cost: link.travelMin + waitTimeMin,
+            waitTimeMin,
+            transferTimeMin: link.travelMin,
+            resistanceCostMin: 0,
+            toServiceId: toService.id,
+            transferStationId: fromStationId,
+          });
         }
       }
     }
