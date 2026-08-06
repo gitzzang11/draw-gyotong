@@ -9,6 +9,7 @@ type PopulationZone = {
 
 export type PopulationCell = { latitude: number; longitude: number; population: number };
 export type GeographicBounds = { north: number; south: number; west: number; east: number };
+export type PopulationResolution = 100 | 250 | 500 | 1000;
 
 const cellSize = 1 / 1200;
 const decodedGrids = new Map<PopulationCityId, Uint16Array>();
@@ -38,21 +39,33 @@ export function getRealPopulationCount(cityId: PopulationCityId, position: [numb
   return index < 0 ? 0 : gridValues(cityId)[index];
 }
 
-/** Returns populated 100 m cells intersecting a geographic viewport. */
-export function getRealPopulationCells(cityId: PopulationCityId, bounds: GeographicBounds): PopulationCell[] {
+/** Returns populated cells aggregated from the 100 m WorldPop source grid. */
+export function getRealPopulationCells(
+  cityId: PopulationCityId,
+  bounds: GeographicBounds,
+  resolution: PopulationResolution = 100,
+): PopulationCell[] {
   const grid = worldPopKorea2020[cityId];
   const values = gridValues(cityId);
-  const firstColumn = Math.max(0, Math.floor((bounds.west - grid.west) / cellSize));
-  const lastColumn = Math.min(grid.columns - 1, Math.floor((bounds.east - grid.west) / cellSize));
-  const firstRow = Math.max(0, Math.floor((grid.north - bounds.north) / cellSize));
-  const lastRow = Math.min(grid.rows - 1, Math.floor((grid.north - bounds.south) / cellSize));
+  const grouping = resolution === 100 ? 1 : resolution === 250 ? 3 : resolution === 500 ? 6 : 12;
+  const firstColumn = Math.max(0, Math.floor((bounds.west - grid.west) / cellSize / grouping));
+  const lastColumn = Math.min(Math.ceil(grid.columns / grouping) - 1, Math.floor((bounds.east - grid.west) / cellSize / grouping));
+  const firstRow = Math.max(0, Math.floor((grid.north - bounds.north) / cellSize / grouping));
+  const lastRow = Math.min(Math.ceil(grid.rows / grouping) - 1, Math.floor((grid.north - bounds.south) / cellSize / grouping));
   const cells: PopulationCell[] = [];
   for (let row = firstRow; row <= lastRow; row += 1) {
     for (let column = firstColumn; column <= lastColumn; column += 1) {
-      const population = values[row * grid.columns + column];
+      let population = 0;
+      const rowStart = row * grouping;
+      const columnStart = column * grouping;
+      for (let innerRow = rowStart; innerRow < Math.min(grid.rows, rowStart + grouping); innerRow += 1) {
+        for (let innerColumn = columnStart; innerColumn < Math.min(grid.columns, columnStart + grouping); innerColumn += 1) {
+          population += values[innerRow * grid.columns + innerColumn];
+        }
+      }
       if (population > 0) cells.push({
-        latitude: grid.north - (row + 0.5) * cellSize,
-        longitude: grid.west + (column + 0.5) * cellSize,
+        latitude: grid.north - (rowStart + grouping / 2) * cellSize,
+        longitude: grid.west + (columnStart + grouping / 2) * cellSize,
         population,
       });
     }
@@ -68,7 +81,7 @@ function populationInDemandArea(cityId: PopulationCityId, position: [number, num
     south: position[0] - latitudeRadius,
     west: position[1] - longitudeRadius,
     east: position[1] + longitudeRadius,
-  }).reduce((total, cell) => total + cell.population, 0);
+  }, 100).reduce((total, cell) => total + cell.population, 0);
 }
 
 /** Mixes 100 m real-population distribution into the simulation's baseline demand. */

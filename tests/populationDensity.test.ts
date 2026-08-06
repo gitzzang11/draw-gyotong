@@ -32,6 +32,14 @@ describe("real population-density demand adjustment", () => {
     expect(adjusted[1].basePotentialDemand).toBeGreaterThan(adjusted[0].basePotentialDemand);
   });
 
+  it("aggregates the same 100 m source into coarser zoom levels", () => {
+    const cells = getRealPopulationCells("daejeon", boundsFor("daejeon"));
+    const kilometerCells = getRealPopulationCells("daejeon", boundsFor("daejeon"), 1000);
+    expect(kilometerCells.length).toBeLessThan(cells.length);
+    expect(kilometerCells.reduce((total, cell) => total + cell.population, 0))
+      .toBe(cells.reduce((total, cell) => total + cell.population, 0));
+  });
+
   it("does not apply the population adjustment twice to saved demand zones", () => {
     const sample = getRealPopulationCells("busan", boundsFor("busan"))[0];
     const zone = {

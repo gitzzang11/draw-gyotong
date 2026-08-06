@@ -13884,75 +13884,57 @@ function updateDynamicLayers() {
 
   populationDensityLayer.clearLayers();
   if (demandZones.length === 0) return;
-  if (map.getZoom() >= 14) {
-    renderPopulationDensityCells();
-    return;
-  }
-
-  const values = demandZones.map((zone) => zone.basePotentialDemand + zone.permanentPotentialDelta);
-  const nonZeroValues = values.filter((value) => value > 0).sort((left, right) => left - right);
-  if (nonZeroValues.length === 0) return;
-  const upperBound = nonZeroValues[Math.floor((nonZeroValues.length - 1) * 0.9)] ?? 1;
-
-  for (let index = 0; index < demandZones.length; index += 1) {
-    const zone = demandZones[index];
-    const population = values[index];
-    if (population <= 0) continue;
-    const density = Math.min(1, population / Math.max(1, upperBound));
-    const latitudeHalfStep = 0.0045;
-    const longitudeHalfStep = latitudeHalfStep / Math.max(0.25, Math.cos(zone.position[0] * Math.PI / 180));
-    L.rectangle([
-      [zone.position[0] - latitudeHalfStep, zone.position[1] - longitudeHalfStep],
-      [zone.position[0] + latitudeHalfStep, zone.position[1] + longitudeHalfStep],
-    ], {
-      pane: "populationDensityPane",
-      color: populationDensityColor(density),
-      weight: 0.45,
-      opacity: 0.36 + density * 0.2,
-      fillColor: populationDensityColor(density),
-      fillOpacity: 0.16 + Math.sqrt(density) * 0.48,
-      interactive: false,
-    }).addTo(populationDensityLayer);
-  }
+  renderPopulationDensityCells();
 }
 
 function renderPopulationDensityCells() {
   const bounds = map.getBounds();
+  const resolution = populationResolutionForZoom(map.getZoom());
   const cells = getRealPopulationCells(currentMeta.cityId, {
     north: bounds.getNorth(),
     south: bounds.getSouth(),
     west: bounds.getWest(),
     east: bounds.getEast(),
-  });
+  }, resolution);
   const values = cells.map((cell) => cell.population).sort((left, right) => left - right);
   const upperBound = values[Math.floor((values.length - 1) * 0.9)] ?? 1;
-  const latitudeHalfStep = 1 / 2400;
-
   for (const cell of cells) {
     const density = Math.min(1, cell.population / Math.max(1, upperBound));
-    const longitudeHalfStep = latitudeHalfStep / Math.max(0.25, Math.cos(cell.latitude * Math.PI / 180));
-    L.rectangle([
-      [cell.latitude - latitudeHalfStep, cell.longitude - longitudeHalfStep],
-      [cell.latitude + latitudeHalfStep, cell.longitude + longitudeHalfStep],
-    ], {
+    L.circle([cell.latitude, cell.longitude], {
       pane: "populationDensityPane",
+      radius: resolution * 1.05,
       color: populationDensityColor(density),
-      weight: 0.2,
-      opacity: 0.2 + density * 0.16,
+      weight: 0,
+      opacity: 0,
       fillColor: populationDensityColor(density),
-      fillOpacity: 0.13 + Math.sqrt(density) * 0.5,
+      fillOpacity: resolution === 100
+        ? 0.012 + Math.sqrt(density) * 0.1
+        : 0.035 + Math.sqrt(density) * 0.17,
       interactive: false,
     }).addTo(populationDensityLayer);
   }
 }
 
+function populationResolutionForZoom(zoom: number) {
+  if (zoom >= 16) return 100;
+  if (zoom >= 14) return 250;
+  if (zoom >= 12) return 500;
+  return 1000;
+}
+
 function populationDensityColor(density: number) {
-  if (density < 0.12) return "#1d4ed8";
-  if (density < 0.28) return "#06b6d4";
-  if (density < 0.5) return "#22c55e";
-  if (density < 0.72) return "#facc15";
-  if (density < 0.9) return "#fb923c";
-  return "#f43f5e";
+  const stops: ReadonlyArray<readonly [number, number, number]> = [
+    [29, 78, 216], [6, 182, 212], [34, 197, 94], [250, 204, 21], [251, 146, 60], [244, 63, 94],
+  ];
+  const clamped = Math.min(1, Math.max(0, density));
+  const scaled = clamped * (stops.length - 1);
+  const lowerIndex = Math.floor(scaled);
+  const upperIndex = Math.min(stops.length - 1, lowerIndex + 1);
+  const progress = scaled - lowerIndex;
+  const lower = stops[lowerIndex];
+  const upper = stops[upperIndex];
+  const channel = (index: number) => Math.round(lower[index] + (upper[index] - lower[index]) * progress);
+  return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
 }
 
 // Administrative and land-use overlays are retired from the game UI.
