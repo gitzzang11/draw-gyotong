@@ -18,7 +18,7 @@ describe("partial update dependencies", () => {
   });
 
   it("does not run simulation calculations for viewport changes", () => {
-    expect(domainsForUpdate("viewport")).toEqual(["map-lod"]);
+    expect(domainsForUpdate("viewport")).toEqual(["map-stations", "map-trains", "map-lod"]);
   });
 
   it("limits a route style change to line, station, train, and UI rendering", () => {
@@ -42,6 +42,11 @@ describe("partial update dependencies", () => {
     expect(domainsForUpdate("daily-settlement")).not.toContain("map-lines");
     expect(domainsForUpdate("daily-settlement")).not.toContain("network");
     expect(domainsForUpdate("daily-settlement")).not.toContain("routes");
+  });
+
+  it("refreshes the finance HUD when a saved game is loaded", () => {
+    expect(domainsForUpdate("finance-only")).toContain("hud-finance");
+    expect(domainsForUpdate("finance-only")).toContain("active-panel");
   });
 
   it("merges duplicate requests and records their reasons", () => {
@@ -87,7 +92,7 @@ describe("partial update dependencies", () => {
     const scheduler = new DirtyUpdateScheduler();
     for (let move = 0; move < 100; move += 1) scheduler.mark("viewport");
     for (let panel = 0; panel < 100; panel += 1) scheduler.mark("panel");
-    expect(scheduler.consume()).toEqual(["map-lod", "active-panel"]);
+    expect(scheduler.consume()).toEqual(["map-stations", "map-trains", "map-lod", "active-panel"]);
     scheduler.finishFlush();
     expect(scheduler.snapshot().executed.network).toBeUndefined();
     expect(scheduler.snapshot().executed.demand).toBeUndefined();

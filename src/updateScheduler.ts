@@ -57,7 +57,8 @@ const dependencies: Record<UpdateReason, readonly UpdateDomain[]> = {
     "map-lines", "map-stations", "map-trains", "map-depots", "map-selection",
     "hud-status", "active-panel", "storage",
   ],
-  viewport: ["map-lod"],
+  // Zoom changes affect layer visibility as well as the terrain/tile LOD.
+  viewport: ["map-stations", "map-trains", "map-lod"],
   selection: ["map-selection", "active-panel", "hud-status"],
   mode: ["map-selection", "hud-status", "workflow", "active-panel"],
   clock: ["hud-clock", "map-trains"],

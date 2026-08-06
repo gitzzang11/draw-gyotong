@@ -6062,7 +6062,7 @@ font-size: 12px;
   background: rgba(255, 255, 255, 0.025);
 }
 
-.construction-preview-panel > header > div {
+.construction-preview-panel > header > div:first-child {
   min-width: 0;
   display: grid;
   gap: 4px;
@@ -8915,6 +8915,17 @@ font-size: 12px;
   }
 }
 
+/* Keep the refresh action clear of the absolute close control. */
+.analysis-screen .analysis-header {
+  padding-right: 76px !important;
+}
+
+@media (max-width: 780px) {
+  .analysis-screen .analysis-header {
+    padding-right: 64px !important;
+  }
+}
+
 #refreshAnalysisButton:hover {
   border-color: #22d3ee;
   background: rgba(8, 145, 178, .24);
@@ -9299,7 +9310,7 @@ font-size: 12px;
 
 @media (max-width: 780px) {
   .analysis-screen { inset: 0; border: 0 !important; border-radius: 0 !important; }
-  .analysis-screen .analysis-header { min-height: 72px; padding: 12px 14px !important; }
+  .analysis-screen .analysis-header { min-height: 72px; padding: 12px 64px 12px 14px !important; }
   .analysis-heading p { display: none; }
   .analysis-heading > div { display: grid; gap: 1px; }
   .analysis-heading h2 { font-size: 20px !important; }
@@ -9385,4 +9396,1026 @@ font-size: 12px;
 
 .operating-forecast-row strong[data-operating-forecast] {
   color: #4ce0c3;
+}
+
+/* ========================================================================
+   MAP-FIRST UI REFRESH
+   A single visual layer for the game shell. Existing selectors and states
+   stay intact; this section only establishes the final visual contract.
+======================================================================== */
+:root {
+  --c-bg: #090d12;
+  --c-bg-glass: rgba(11, 16, 22, 0.94);
+  --c-panel: #111820;
+  --c-panel-solid: #111820;
+  --c-panel-hover: #18222c;
+  --c-border: rgba(191, 211, 222, 0.16);
+  --c-border-light: rgba(220, 237, 244, 0.28);
+  --c-border-strong: rgba(220, 237, 244, 0.4);
+  --c-primary: #55d9c0;
+  --c-primary-glow: rgba(85, 217, 192, 0.22);
+  --c-planning: #b89cff;
+  --c-construction: #f6c453;
+  --c-success: #55d9c0;
+  --c-warning: #f6c453;
+  --c-danger: #ff6b78;
+  --c-text-main: #edf5f7;
+  --c-text-muted: #a4b4bc;
+  --c-text-dim: #71818a;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.28);
+  --shadow-glow: 0 0 0 1px rgba(85, 217, 192, 0.2), 0 8px 22px rgba(0, 0, 0, 0.3);
+  --glass-blur: blur(10px);
+  --glass-blur-dense: blur(14px);
+  --ui-gap: 8px;
+}
+
+html,
+body,
+#app,
+.game-shell {
+  background: var(--c-bg);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button,
+.ops-button,
+.action-button,
+.primary-tool,
+.top-action-btn,
+.dialog-close,
+.compact-close {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+button:hover,
+.ops-button:hover,
+.action-button:hover,
+.primary-tool:hover,
+.top-action-btn:hover {
+  transform: translateY(-1px);
+}
+
+button:active,
+.ops-button:active,
+.action-button:active,
+.primary-tool:active,
+.top-action-btn:active {
+  transform: translateY(0);
+}
+
+.map {
+  background: #080D14;
+}
+
+/* Preserve the original map tile colors. */
+.leaflet-tile-pane {
+  filter: none;
+}
+
+.leaflet-container {
+  background: #080D14 !important;
+}
+
+/* Shared panel surface: quiet separation from the map, no glass spectacle. */
+.start-panel,
+.left-route-window,
+.route-settings-card,
+.construction-preview-panel,
+.analysis-screen,
+.statistics-screen,
+.station-manager-dialog,
+.depot-manager-dialog,
+.train-manager-dialog,
+.finance-dialog,
+.settings-dialog,
+.satisfaction-dialog,
+.menu-dialog {
+  background: rgba(15, 22, 29, 0.97) !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ========================================================================
+   START SCREEN
+======================================================================== */
+.start-screen {
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(7, 11, 15, 0.96) !important;
+  backdrop-filter: none;
+}
+
+.start-panel {
+  width: min(600px, 100%);
+  gap: 16px;
+  padding: 24px;
+}
+
+.start-head {
+  gap: 6px;
+  padding-bottom: 16px;
+  border-color: var(--c-border);
+}
+
+.hero-title {
+  color: var(--c-text-main);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  filter: none;
+  font-size: clamp(20px, 4vw, 26px);
+  letter-spacing: -0.03em;
+}
+
+.hero-subtitle,
+.hero-btn-text small,
+.setup-grid label,
+.slot-meta-row,
+.slot-date {
+  color: var(--c-text-muted);
+}
+
+.hero-action-btn,
+.start-section-card,
+.slot-card {
+  background: rgba(255, 255, 255, 0.025) !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+}
+
+.hero-action-btn {
+  min-height: 72px;
+  padding: 16px;
+}
+
+.hero-action-btn:hover,
+.slot-card:hover {
+  background: var(--c-panel-hover) !important;
+  border-color: var(--c-border-strong) !important;
+  transform: translateY(-1px);
+}
+
+.continue-btn {
+  background: rgba(85, 217, 192, 0.1) !important;
+  border-color: rgba(85, 217, 192, 0.46) !important;
+  box-shadow: inset 3px 0 0 var(--c-primary) !important;
+}
+
+.continue-btn:hover {
+  background: rgba(85, 217, 192, 0.16) !important;
+  box-shadow: inset 3px 0 0 var(--c-primary) !important;
+}
+
+.hero-btn-icon {
+  font-size: 20px;
+}
+
+.start-section-card {
+  gap: 12px;
+  padding: 16px;
+}
+
+.section-card-header {
+  padding-bottom: 10px;
+  border-color: var(--c-border);
+}
+
+.section-card-header span {
+  color: var(--c-primary);
+  background: rgba(85, 217, 192, 0.1);
+  border-radius: 4px;
+}
+
+.setup-grid select,
+.setup-grid input,
+input[type="text"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+  background: #0c131a !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.setup-grid select,
+.setup-grid input {
+  min-height: 44px;
+}
+
+.city-note {
+  background: rgba(85, 217, 192, 0.08);
+  border: 1px solid rgba(85, 217, 192, 0.24);
+  border-radius: var(--radius-sm);
+  color: var(--c-primary);
+}
+
+.slot-tag {
+  border-radius: 4px;
+}
+
+/* ========================================================================
+   MAP HUD
+======================================================================== */
+.hud.top-header-bar {
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.hud-brand-pill,
+.top-status-pills,
+.top-actions-row,
+.hud.build-panel {
+  background: rgba(11, 16, 22, 0.92) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.hud-brand-pill {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-md) !important;
+  font-size: 12px;
+}
+
+.hud-live-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(85, 217, 192, 0.12);
+}
+
+.top-status-pills {
+  justify-self: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px;
+  border-radius: var(--radius-md) !important;
+  overflow-x: auto;
+}
+
+.workspace-mode-pill,
+.status-pill {
+  border-radius: var(--radius-sm) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.workspace-mode-tab {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm) !important;
+  color: var(--c-text-muted);
+}
+
+.workspace-mode-tab.active,
+.workspace-mode-tab[data-workspace-mode="management"].active,
+.workspace-mode-tab[data-workspace-mode="planning"].active,
+.workspace-mode-tab[data-workspace-mode="construction"].active {
+  background: rgba(85, 217, 192, 0.16) !important;
+  color: var(--c-primary) !important;
+  border: 1px solid rgba(85, 217, 192, 0.38) !important;
+  box-shadow: none !important;
+}
+
+.workspace-mode-tab[data-workspace-mode="planning"].active {
+  background: rgba(184, 156, 255, 0.16) !important;
+  color: var(--c-planning) !important;
+  border-color: rgba(184, 156, 255, 0.42) !important;
+}
+
+.workspace-mode-tab[data-workspace-mode="construction"].active {
+  background: rgba(246, 196, 83, 0.16) !important;
+  color: var(--c-construction) !important;
+  border-color: rgba(246, 196, 83, 0.42) !important;
+}
+
+.cash-pill,
+.satisfaction-pill,
+.history-pill,
+.clock-pill {
+  min-height: 36px;
+  padding: 0 10px;
+  border-left: 1px solid var(--c-border) !important;
+  border-radius: 0 !important;
+}
+
+.cash-pill strong,
+.satisfaction-pill strong,
+.clock-pill strong,
+.time-readout-wrap span {
+  font-size: 12px;
+}
+
+.top-actions-row {
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md) !important;
+}
+
+.layer-menu summary,
+.top-action-btn {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: var(--radius-sm) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid transparent !important;
+  color: var(--c-text-muted) !important;
+}
+
+.layer-menu summary:hover,
+.top-action-btn:hover,
+.layer-menu[open] summary {
+  background: rgba(85, 217, 192, 0.1) !important;
+  border-color: rgba(85, 217, 192, 0.32) !important;
+  color: var(--c-primary) !important;
+  box-shadow: none !important;
+}
+
+.layer-options {
+  top: 48px;
+  border-radius: var(--radius-md);
+  background: #111820;
+  border: 1px solid var(--c-border);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: none;
+}
+
+/* ========================================================================
+   TOOL DOCK + CONTEXT FEEDBACK
+======================================================================== */
+.hud.build-panel {
+  bottom: max(10px, env(safe-area-inset-bottom));
+  max-width: calc(100vw - 20px);
+  padding: 6px;
+  gap: 6px;
+  border-radius: var(--radius-lg) !important;
+}
+
+.tool-group {
+  gap: 4px;
+}
+
+.tool-divider {
+  height: 28px;
+  margin: 0 2px;
+  background: var(--c-border);
+}
+
+.primary-tool {
+  position: relative;
+  min-height: 44px;
+  min-width: 68px;
+  padding: 0 10px;
+  gap: 6px;
+  border-radius: var(--radius-sm) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid transparent !important;
+  color: var(--c-text-main);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.primary-tool:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--c-border) !important;
+  box-shadow: none !important;
+}
+
+.primary-tool.active,
+#routeTool.active,
+#stationTool.active,
+#transferTool.active,
+#depotTool.active,
+#editTool.active,
+#extendTool.active,
+#reconnectTool.active,
+#branchTool.active,
+#mergeTool.active,
+#modifyToolsButton.active,
+#planningModeButton.active {
+  background: rgba(85, 217, 192, 0.13) !important;
+  color: var(--c-primary) !important;
+  border-color: rgba(85, 217, 192, 0.5) !important;
+  box-shadow: inset 3px 0 0 var(--c-primary) !important;
+  transform: none !important;
+}
+
+body[data-workspace-mode="planning"] .primary-tool.active,
+body[data-workspace-mode="planning"] #extendTool.active,
+body[data-workspace-mode="planning"] #branchTool.active,
+body[data-workspace-mode="planning"] #mergeTool.active,
+body[data-workspace-mode="planning"] #modifyToolsButton.active,
+body[data-workspace-mode="planning"] #planningModeButton.active {
+  background: rgba(184, 156, 255, 0.14) !important;
+  color: var(--c-planning) !important;
+  border-color: rgba(184, 156, 255, 0.52) !important;
+  box-shadow: inset 3px 0 0 var(--c-planning) !important;
+}
+
+.primary-tool.active::before,
+.danger-tool.active::before,
+#eraserTool.active::before {
+  content: "" !important;
+  width: 3px !important;
+  height: 18px !important;
+  margin: 0 1px 0 0 !important;
+  border-radius: 2px !important;
+  background: currentColor !important;
+  box-shadow: none !important;
+}
+
+.primary-tool.active svg,
+.primary-tool.active path,
+.primary-tool.active circle,
+.primary-tool.active line,
+.primary-tool.active rect {
+  stroke: currentColor !important;
+}
+
+.danger-tool.active,
+#eraserTool.active {
+  background: rgba(255, 107, 120, 0.14) !important;
+  color: var(--c-danger) !important;
+  border-color: rgba(255, 107, 120, 0.52) !important;
+  box-shadow: inset 3px 0 0 var(--c-danger) !important;
+}
+
+#modifyToolsCard {
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(78px, calc(env(safe-area-inset-bottom) + 72px));
+  width: min(240px, calc(100vw - 24px));
+  padding: 12px;
+  gap: 10px;
+  border-radius: var(--radius-lg) !important;
+  background: rgba(15, 22, 29, 0.98) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+}
+
+.modify-tools-card-heading,
+.route-settings-card-heading {
+  padding-bottom: 8px;
+  border-color: var(--c-border);
+}
+
+.modify-tools-card-heading span,
+.route-settings-card-heading span {
+  color: var(--c-text-dim);
+}
+
+.modify-tools-card-heading strong,
+.route-settings-card-heading strong {
+  font-size: 13px;
+}
+
+.modify-tools-grid {
+  gap: 6px;
+}
+
+.modify-tools-grid .primary-tool.compact {
+  min-height: 48px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm) !important;
+}
+
+.modify-tools-grid .primary-tool.compact:not(.active) {
+  background: rgba(255, 255, 255, 0.035) !important;
+  border-color: var(--c-border) !important;
+}
+
+.modify-tools-grid .danger-tool {
+  color: #ffb0b8;
+  background: rgba(255, 107, 120, 0.07) !important;
+}
+
+#routeSettingsCard {
+  left: max(12px, env(safe-area-inset-left)) !important;
+  bottom: max(78px, calc(env(safe-area-inset-bottom) + 72px)) !important;
+  width: min(340px, calc(100vw - 24px)) !important;
+  padding: 14px !important;
+  gap: 10px !important;
+  border-radius: var(--radius-lg) !important;
+  background: rgba(15, 22, 29, 0.98) !important;
+  border: 1px solid var(--c-border) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+}
+
+.route-settings-target {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.route-settings-edit-fields {
+  gap: 8px;
+}
+
+.route-settings-edit-fields > button,
+.route-settings-card button:not(.dialog-close) {
+  min-height: 44px;
+}
+
+.hud.bottom-right {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(78px, calc(env(safe-area-inset-bottom) + 72px));
+  z-index: 1040;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  max-width: min(460px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.mode-pill,
+.hint-row {
+  max-width: 100%;
+  padding: 6px 10px;
+  color: var(--c-text-main);
+  background: rgba(11, 16, 22, 0.9);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.mode-pill {
+  color: var(--c-primary);
+  font-weight: 900;
+}
+
+.hint-row {
+  color: var(--c-text-muted);
+  font-size: 10px;
+}
+
+.hint-row span + span::before {
+  content: " · ";
+  color: var(--c-text-dim);
+}
+
+.toast {
+  top: max(72px, calc(env(safe-area-inset-top) + 64px));
+  bottom: auto;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #18222c;
+  border: 1px solid var(--c-primary);
+  box-shadow: var(--shadow-card);
+  white-space: normal;
+  text-align: center;
+}
+
+#routeSettingsCard .ops-button.primary,
+#routeSettingsCard .action-button.primary,
+#routeSettingsCard button.primary {
+  color: var(--c-primary) !important;
+  background: rgba(85, 217, 192, 0.13) !important;
+  border: 1px solid rgba(85, 217, 192, 0.46) !important;
+  box-shadow: none !important;
+}
+
+#routeSettingsCard:not([hidden]) ~ .bottom-right,
+#modifyToolsCard:not([hidden]) ~ .bottom-right {
+  top: max(72px, calc(env(safe-area-inset-top) + 64px));
+  bottom: auto;
+}
+
+.tutorial-panel {
+  top: max(72px, calc(env(safe-area-inset-top) + 64px));
+  width: min(520px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  padding: 12px 14px;
+  align-items: start;
+  gap: 12px;
+  border-radius: var(--radius-md) !important;
+  background: rgba(15, 22, 29, 0.98) !important;
+  border: 1px solid var(--c-primary) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+}
+
+.tutorial-step {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: rgba(85, 217, 192, 0.12);
+  color: var(--c-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tutorial-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tutorial-copy strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.tutorial-copy p,
+.tutorial-copy small {
+  margin: 0;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tutorial-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tutorial-actions button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm) !important;
+}
+
+.tutorial-actions button:first-child {
+  color: var(--c-primary);
+  background: rgba(85, 217, 192, 0.1);
+  border-color: rgba(85, 217, 192, 0.34);
+}
+
+.game-shell:has(#tutorialPanel:not([hidden])) .bottom-right {
+  display: none;
+}
+
+.error-banner {
+  max-width: calc(100vw - 24px);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+/* Shared state badges: readable at a glance without turning every item into a chip. */
+.station-status,
+.slot-tag,
+.analysis-severity,
+.analysis-target,
+.construction-status,
+.project-status,
+.status-badge {
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+/* Mobile: retain touch targets while keeping every primary control reachable. */
+@media (max-width: 700px) {
+  .toast {
+    top: max(148px, calc(env(safe-area-inset-top) + 140px));
+  }
+
+  #tutorialPanel:not([hidden]) ~ #toast {
+    top: max(196px, calc(env(safe-area-inset-top) + 188px));
+  }
+
+  .hud.top-header-bar {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    gap: 6px;
+  }
+
+  .hud-brand-pill {
+    min-width: 0;
+    max-width: 100px;
+    padding: 0 10px;
+  }
+
+  .hud-brand-pill strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-status-pills {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: hidden;
+  }
+
+  .top-status-pills .cash-pill,
+  .top-status-pills .satisfaction-pill,
+  .top-status-pills .history-pill,
+  .top-status-pills .clock-pill {
+    display: none !important;
+  }
+
+  .workspace-mode-pill {
+    width: 100%;
+    border: 1px solid var(--c-border) !important;
+    background: rgba(11, 16, 22, 0.92) !important;
+  }
+
+  .workspace-mode-tabs {
+    width: 100%;
+  }
+
+  .workspace-mode-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .top-actions-row {
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .layer-menu summary,
+  .top-action-btn {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .hud.build-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    transform: none;
+    justify-content: flex-start;
+    overflow-x: auto;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  .primary-tool {
+    min-width: 64px;
+    min-height: 48px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+
+  .hud.bottom-right {
+    right: 12px;
+    bottom: max(76px, calc(env(safe-area-inset-bottom) + 70px));
+    max-width: calc(100vw - 24px);
+  }
+
+  .mode-pill,
+  .hint-row {
+    max-width: min(350px, calc(100vw - 24px));
+  }
+
+  #modifyToolsCard,
+  #routeSettingsCard {
+    bottom: max(76px, calc(env(safe-area-inset-bottom) + 70px));
+  }
+
+  #modifyToolsCard {
+    right: 12px;
+    width: min(240px, calc(100vw - 24px));
+  }
+
+  #routeSettingsCard {
+    left: 12px !important;
+    width: min(340px, calc(100vw - 24px)) !important;
+  }
+
+  .route-settings-edit-fields {
+    grid-template-columns: minmax(0, 1fr) 70px;
+  }
+
+  .start-panel {
+    padding: 18px;
+  }
+
+  .start-primary-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 700px) {
+  body[data-workspace-mode="management"] .management-tools {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: space-between;
+  }
+
+  body[data-workspace-mode="management"] .management-tools .primary-tool {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   WINDOW CLOSE CONTROLS
+   Keep every dismiss action in the same, predictable top-right position.
+------------------------------------------------------------------------- */
+.dialog-heading,
+.left-route-header,
+.right-line-header,
+.station-manager-header,
+.depot-manager-header,
+.satisfaction-dialog-header,
+.connection-dialog-header,
+.decision-dialog-header,
+.route-settings-card-heading,
+.diagram-header,
+.analysis-header,
+.statistics-header,
+.news-header {
+  position: relative;
+}
+
+.dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-right: 52px;
+  box-sizing: border-box;
+}
+
+.dialog-heading > .dialog-close,
+.left-route-header > .dialog-close,
+.right-line-header > .dialog-close,
+.station-manager-header > .dialog-close,
+.depot-manager-header > .dialog-close,
+.satisfaction-dialog-header > .dialog-close,
+.connection-dialog-header > .dialog-close,
+.decision-dialog-header > .dialog-close,
+.route-settings-card-heading > .dialog-close {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.left-route-header,
+.right-line-header,
+.station-manager-header,
+.depot-manager-header,
+.satisfaction-dialog-header,
+.connection-dialog-header,
+.decision-dialog-header {
+  padding-right: 52px;
+  box-sizing: border-box;
+}
+
+.route-settings-card-heading {
+  align-items: center;
+  padding-right: 44px;
+  box-sizing: border-box;
+}
+
+.route-settings-card-heading > .dialog-close.compact-close {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+}
+
+.planning-dialog .planning-dialog-heading,
+.plan-conversion-heading {
+  padding-right: 70px !important;
+}
+
+.construction-preview-panel > header {
+  position: relative;
+}
+
+.construction-preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.construction-preview-header-actions .dialog-close,
+.construction-preview-header-actions #toggleConstructionPreviewButton {
+  flex: 0 0 auto;
+}
+
+.tutorial-panel {
+  padding-right: 60px;
+}
+
+.tutorial-panel #tutorialSkipButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.diagram-header,
+.analysis-header,
+.statistics-header,
+.news-header {
+  padding-right: 76px !important;
+}
+
+.diagram-header .diagram-close,
+.analysis-header .analysis-close,
+.statistics-header .statistics-close,
+.news-header .news-close {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+.decision-dialog-header {
+  align-items: center;
+}
+
+@media (max-width: 700px) {
+  .dialog-heading,
+  .left-route-header,
+  .right-line-header,
+  .station-manager-header,
+  .depot-manager-header,
+  .satisfaction-dialog-header,
+  .connection-dialog-header,
+  .decision-dialog-header {
+    padding-right: 48px;
+  }
+
+  .dialog-heading > .dialog-close,
+  .left-route-header > .dialog-close,
+  .right-line-header > .dialog-close,
+  .station-manager-header > .dialog-close,
+  .depot-manager-header > .dialog-close,
+  .satisfaction-dialog-header > .dialog-close,
+  .connection-dialog-header > .dialog-close,
+  .decision-dialog-header > .dialog-close {
+    right: 0;
+  }
+
+  .diagram-header,
+  .analysis-header,
+  .statistics-header,
+  .news-header {
+    padding-right: 64px !important;
+  }
+
+  .diagram-header .diagram-close,
+  .analysis-header .analysis-close,
+  .statistics-header .statistics-close,
+  .news-header .news-close {
+    right: 12px;
+  }
+
+  .construction-preview-panel > header {
+    gap: 10px;
+    padding-right: 12px;
+  }
 }

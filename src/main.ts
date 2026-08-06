@@ -1,4 +1,4 @@
-import L, { type Coords, type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
+import L, { type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
@@ -62,6 +62,10 @@ import {
 import { calculateServiceCapacity } from "./simulation/capacity.ts";
 import { mergeOdPassengerGroup } from "./simulation/passengerAssignment.ts";
 import { measureTask } from "./dev/performanceMonitor.ts";
+import {
+  installManualVerificationStateHook,
+  type ManualVerificationState,
+} from "./dev/manualVerificationState.ts";
 import { ListenerRegistry } from "./ui/listenerRegistry.ts";
 import { HudRenderer } from "./ui/hudRenderer.ts";
 import { PanelManager } from "./ui/panelManager.ts";
@@ -921,9 +925,9 @@ app.innerHTML = `
           <div class="time-row" aria-label="time speed">
             <button class="time-button active pause-button" data-speed="0" type="button" aria-label="일시정지">Ⅱ</button>
             <button class="time-button" data-speed="2" type="button">x2</button>
-            <button class="time-button" data-speed="4" type="button">x4</button>
-            <button class="time-button" data-speed="8" type="button">x8</button>
-            <button class="time-button" data-speed="16" type="button">x16</button>
+            <button class="time-button" data-speed="5" type="button">x5</button>
+            <button class="time-button" data-speed="10" type="button">x10</button>
+            <button class="time-button" data-speed="100" type="button">x100</button>
           </div>
         </div>
       </div>
@@ -998,7 +1002,7 @@ app.innerHTML = `
 
 
     <section id="routeSettingsCard" class="hud route-settings-card" hidden aria-label="노선 설정">
-      <div class="route-settings-card-heading"><span>ROUTE SETTINGS</span><strong>노선 설정</strong></div>
+      <div class="route-settings-card-heading"><span>ROUTE SETTINGS</span><strong>노선 설정</strong><button id="closeRouteSettingsButton" class="dialog-close compact-close" type="button" aria-label="노선 설정 닫기">×</button></div>
       <div id="routeSettingsTarget" class="route-settings-target" hidden>
         <span id="routeSettingsTargetKicker">수정 대상</span>
         <div><i id="routeSettingsTargetSwatch" aria-hidden="true"></i><strong id="routeSettingsTargetName">노선을 선택하세요</strong></div>
@@ -1148,7 +1152,10 @@ app.innerHTML = `
     <section id="constructionPreviewPanel" class="construction-preview-panel" hidden aria-live="polite">
       <header>
         <div><span id="constructionPreviewKicker">CONSTRUCTION REVIEW</span><strong id="constructionPreviewTitle">건설 미리보기</strong><small id="constructionPreviewSubtitle">범위와 비용을 확인한 뒤 확정하세요.</small></div>
-        <button id="toggleConstructionPreviewButton" type="button" aria-expanded="true" aria-label="비용 정보 접기">⌃</button>
+        <div class="construction-preview-header-actions">
+          <button id="toggleConstructionPreviewButton" type="button" aria-expanded="true" aria-label="비용 정보 접기">⌃</button>
+          <button id="closeConstructionPreviewButton" class="dialog-close compact-close" type="button" aria-label="건설 미리보기 닫기">×</button>
+        </div>
       </header>
       <div id="constructionPreviewDetails" class="construction-preview-details">
         <div class="construction-summary">
@@ -1505,6 +1512,7 @@ app.innerHTML = `
             <span class="decision-kicker">WARNING ACTION</span>
             <h2 id="decisionTitle">작업 확인</h2>
           </div>
+          <button id="closeDecisionButton" class="dialog-close" type="button" aria-label="확인 창 닫기">×</button>
         </div>
         <p id="decisionMessage" class="decision-message-body"></p>
         <div class="decision-warning" id="decisionWarning" hidden></div>
@@ -1633,6 +1641,7 @@ const map = L.map("map", {
 const baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   subdomains: ["a", "b", "c"],
   maxZoom: 19,
+  noWrap: true,
   crossOrigin: true,
   updateWhenIdle: true,
   updateWhenZooming: false,
@@ -1643,6 +1652,7 @@ const baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
 const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
   subdomains: ["a", "b", "c"],
   maxZoom: 17,
+  noWrap: true,
   opacity: 0.38,
   crossOrigin: true,
   updateWhenIdle: true,
@@ -1652,6 +1662,7 @@ const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.p
 const railLayer = L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png", {
   subdomains: ["a", "b", "c"],
   maxZoom: 19,
+  noWrap: true,
   opacity: 0.72,
   crossOrigin: true,
   updateWhenIdle: true,
@@ -1827,6 +1838,7 @@ const errorRetryButton = document.querySelector<HTMLButtonElement>("#errorRetryB
 const errorDismissButton = document.querySelector<HTMLButtonElement>("#errorDismissButton");
 const toast = byId("toast");
 const routeSettingsCard = byId("routeSettingsCard");
+const closeRouteSettingsButton = document.querySelector<HTMLButtonElement>("#closeRouteSettingsButton");
 const routeSettingsTarget = byId("routeSettingsTarget");
 const routeSettingsTargetKicker = byId("routeSettingsTargetKicker");
 const routeSettingsTargetSwatch = byId("routeSettingsTargetSwatch");
@@ -1884,6 +1896,7 @@ const constructionPreviewTitle = byId("constructionPreviewTitle");
 const constructionPreviewKicker = byId("constructionPreviewKicker");
 const constructionPreviewSubtitle = byId("constructionPreviewSubtitle");
 const toggleConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#toggleConstructionPreviewButton");
+const closeConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#closeConstructionPreviewButton");
 const constructionPreviewDetails = byId("constructionPreviewDetails");
 const previewTotalCostLabel = byId("previewTotalCostLabel");
 const previewBalanceLabel = byId("previewBalanceLabel");
@@ -2025,6 +2038,7 @@ const lineManagerSummary = byId("lineManagerSummary");
 const decisionDialog = byId("decisionDialog");
 const decisionMessage = byId("decisionMessage");
 const decisionWarning = byId("decisionWarning");
+const closeDecisionButton = document.querySelector<HTMLButtonElement>("#closeDecisionButton");
 const decisionConfirmButton = document.querySelector<HTMLButtonElement>("#decisionConfirmButton");
 const decisionCancelButton = document.querySelector<HTMLButtonElement>("#decisionCancelButton");
 const decisionSaveDraftButton = document.querySelector<HTMLButtonElement>("#decisionSaveDraftButton");
@@ -2286,7 +2300,6 @@ const bootstrapController = new BootstrapController({
     renderAll();
     updateLod();
     updateDynamicLayers();
-    prefetchNearbyTiles(baseLayer);
   },
   connectAutosave: () => undefined,
   startLoop: () => {
@@ -2421,6 +2434,7 @@ confirmPlanConversionButton?.addEventListener("click", confirmPlanConversion);
 undoButton?.addEventListener("click", undo);
 redoButton?.addEventListener("click", redo);
 toggleConstructionPreviewButton?.addEventListener("click", toggleConstructionPreview);
+closeConstructionPreviewButton?.addEventListener("click", cancelActiveReview);
 cancelConstructionButton?.addEventListener("click", cancelActiveReview);
 confirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
 manageLineButton?.addEventListener("click", openLineManager);
@@ -2618,6 +2632,7 @@ closeSettingsButton?.addEventListener("click", closeSettings);
 settingsDialog?.addEventListener("click", (event) => {
   if (event.target === settingsDialog) closeSettings();
 });
+closeRouteSettingsButton?.addEventListener("click", () => setTool("pan"));
 saveRouteSettingsButton?.addEventListener("click", saveRouteSettings);
 soundToggle?.addEventListener("change", () => updateSettings({ soundEnabled: Boolean(soundToggle.checked) }));
 hapticsToggle?.addEventListener("change", () => updateSettings({ hapticsEnabled: Boolean(hapticsToggle.checked) }));
@@ -8103,7 +8118,7 @@ async function loadSlot(slotId: string) {
   if (startScreen) startScreen.hidden = true;
   startAutoSave();
   requestStateSave();
-  requestUpdate("blueprint-preview");
+  requestUpdates(["network-structure", "blueprint-preview", "finance-only"]);
   setText(saveStatus, "불러옴");
 }
 
@@ -8117,7 +8132,6 @@ async function saveCurrentSlot(label: string, reportError = true, createOnly = f
     if (createOnly) {
       const state = cloneState();
       await getSaveSlotService().create(state);
-      localRecoveryStore.write(state);
     } else {
       await stateSaveRepository.flush();
     }
@@ -9133,6 +9147,61 @@ function renderSuggestionCard(suggestion: OperationSuggestion) {
   </article>`;
 }
 
+function focusRouteOnMap(routeId: string, openManager = false) {
+  const route = routes.find((item) => item.id === routeId);
+  if (!route) return false;
+  selectRoute(route.id, false);
+  selectedOperationRouteId = route.id;
+  if (operationRouteSelect) operationRouteSelect.value = route.id;
+  updateOperationRouteOptions();
+  updateOperationHud();
+  if (route.coordinates.length > 1) {
+    map.fitBounds(
+      L.latLngBounds(route.coordinates.map(([lat, lng]) => L.latLng(lat, lng))),
+      { padding: [56, 56], maxZoom: 15, animate: true },
+    );
+  } else if (route.coordinates.length === 1) {
+    map.flyTo(L.latLng(route.coordinates[0][0], route.coordinates[0][1]), Math.max(map.getZoom(), 15));
+  }
+  if (openManager) openLineManager();
+  return true;
+}
+
+function focusStationOnMap(stationId: string, openManager = false) {
+  const station = stations.find((item) => item.id === stationId);
+  if (!station) return false;
+  const connectedRoute = routes.find((route) => station.connectedRouteIds.includes(route.id));
+  if (connectedRoute) {
+    selectedRouteId = connectedRoute.id;
+    selectedOperationRouteId = connectedRoute.id;
+    if (operationRouteSelect) operationRouteSelect.value = connectedRoute.id;
+    updateOperationRouteOptions();
+    updateOperationHud();
+  }
+  map.flyTo(L.latLng(station.position[0], station.position[1]), Math.max(map.getZoom(), 15), { animate: true });
+  if (openManager) openStationManager(station.id);
+  return true;
+}
+
+function focusDepotOnMap(depotId: string, openManager = false) {
+  const depot = depots.find((item) => item.id === depotId);
+  if (!depot) return false;
+  if (depot.polygon.length > 2) {
+    map.fitBounds(
+      L.latLngBounds(depot.polygon.map(([lat, lng]) => L.latLng(lat, lng))),
+      { padding: [56, 56], maxZoom: 16, animate: true },
+    );
+  }
+  if (openManager) openDepotManager(depot.id);
+  return true;
+}
+
+function focusTransferOnMap(transferId: string, openManager = false) {
+  const transfer = transfers.find((item) => item.id === transferId);
+  const stationId = transfer?.stationIds.find((id) => stations.some((station) => station.id === id));
+  return stationId ? focusStationOnMap(stationId, openManager) : false;
+}
+
 function handleSuggestionClick(event: Event) {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-command]");
   const card = button?.closest<HTMLElement>("[data-suggestion-id]");
@@ -9174,39 +9243,49 @@ function setSuggestionDecision(id: string, status: SuggestionStatus, untilDay?: 
 function executeSuggestion(suggestion: OperationSuggestion) {
   closeAnalysisScreen();
   if (suggestion.targetType === "route") {
-    selectedOperationRouteId = suggestion.targetId;
-    if (operationRouteSelect) operationRouteSelect.value = suggestion.targetId;
-    selectRoute(suggestion.targetId, false);
-    updateOperationRouteOptions();
-    updateOperationHud();
+    focusRouteOnMap(suggestion.targetId);
   }
   if (suggestion.actionKind === "buy-trains") {
-    if (setCountInput) setCountInput.value = String(Math.max(1, suggestion.actionValue ?? 1));
-    buyTrainButton?.focus();
-    showToast(`구매 수량을 ${suggestion.actionValue ?? 1}편성으로 설정했습니다. 구매 버튼을 눌러 확정하세요.`);
+    openLineManager();
+    openTrainManagerModal();
+    showToast(`열차 관리 화면을 열었습니다. ${suggestion.actionValue ?? 1}편성을 확인해 주세요.`);
   } else if (suggestion.actionKind === "review-fare") {
-    fareInput?.focus();
-    fareInput?.select();
-    showToast("현재 요금을 확인하세요. 변경 전에는 자금과 수요가 바뀌지 않습니다.");
+    if (routes.length > 0) {
+      focusRouteOnMap(selectedRouteId ?? routes[0].id, true);
+      lineFareInput?.focus();
+      lineFareInput?.select();
+      showToast("노선 설정의 운임 입력 위치로 이동했습니다. 현재 운임을 확인해 주세요.");
+    } else {
+      openFinanceDialog();
+      showToast("재정 관리 화면을 열었습니다. 현재 수요와 자금을 확인해 주세요.");
+    }
   } else if (suggestion.actionKind === "review-transfer") {
-    const transfer = transfers.find((item) => item.id === suggestion.targetId);
-    const station = stations.find((item) => transfer?.stationIds.includes(item.id));
-    if (station) map.flyTo(L.latLng(station.position[0], station.position[1]), Math.max(map.getZoom(), 15));
+    focusTransferOnMap(suggestion.targetId);
+    if (workspaceMode === "management") setWorkspaceMode("planning");
     setTool("transfer");
     showToast("환승 도구를 열었습니다. 두 역을 선택하면 실제 연결 정보를 검토할 수 있습니다.");
   } else if (suggestion.actionKind === "build-depot") {
+    if (workspaceMode === "management") setWorkspaceMode("planning");
     setTool("depot");
     showToast("차량기지 건설 도구를 열었습니다. 지도에 영역을 그리면 비용 미리보기가 표시됩니다.");
   } else if (suggestion.actionKind === "review-express") {
-    updateExpressButton();
-    expressButton?.focus();
-    showToast("급행 설정을 확인하세요. 버튼을 누르기 전에는 비용이나 운행이 바뀌지 않습니다.");
+    openLineManager();
+    expressServiceToggle?.focus();
+    expressServiceToggle?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    showToast("급행 설정 위치로 이동했습니다. 설정을 확인하세요.");
   } else if (suggestion.actionKind === "open-plan") {
     if (suggestion.targetType === "plan") activePlanId = suggestion.targetId;
     openPlanningDialog();
+  } else if (suggestion.actionKind === "focus-route") {
+    if (suggestion.targetType === "route") focusRouteOnMap(suggestion.targetId, true);
+    else if (suggestion.targetType === "station") focusStationOnMap(suggestion.targetId, true);
+    else if (suggestion.targetType === "depot") focusDepotOnMap(suggestion.targetId, true);
+    else if (suggestion.targetType === "transfer") focusTransferOnMap(suggestion.targetId, true);
+    else openFinanceDialog();
+    showToast(`${suggestion.targetLabel} 운영 화면으로 이동했습니다.`);
   } else {
     requestUpdate("selection", suggestion.targetId);
-    showToast(`${suggestion.targetLabel} 운영 화면을 열었습니다.`);
+    showToast(`${suggestion.targetLabel} 운영 화면으로 이동했습니다.`);
   }
 }
 
@@ -12075,6 +12154,7 @@ function closeDecisionDialog() {
 
 function bindDecisionDialogListeners() {
   if (decisionCancelButton) dialogManager.bind("decision", "cancel", decisionCancelButton, "click", closeDecisionDialog);
+  if (closeDecisionButton) dialogManager.bind("decision", "close", closeDecisionButton, "click", closeDecisionDialog);
   if (decisionSaveDraftButton) dialogManager.bind("decision", "save-draft", decisionSaveDraftButton, "click", saveRoutePlanningDraftAndChangeTool);
   if (decisionDialog) {
     dialogManager.bind("decision", "backdrop", decisionDialog, "click", (event) => {
@@ -13660,7 +13740,6 @@ function applyState(state: SaveState) {
 const stateSaveRepository = new SaveRepository({
   capture: () => measureTask("save-serialization", cloneState),
   write: async (state) => {
-    localRecoveryStore.write(state);
     await getSaveSlotService().save(state);
   },
   delayMs: 240,
@@ -13684,6 +13763,30 @@ const stateRecoveryCoordinator = new StateRecoveryCoordinator<SaveState>({
   },
   validate: synchronizeGraphReferences,
 });
+
+if (import.meta.env.DEV) {
+  installManualVerificationStateHook({
+    apply: (state: ManualVerificationState) => {
+      resetWorld();
+      applyState(state);
+      currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}) };
+      setWorkspaceMode("management");
+      setTool("pan");
+      if (tutorialPanel) tutorialPanel.hidden = true;
+    },
+    save: async () => {
+      currentMeta = { ...currentMeta, updatedAt: Date.now() };
+      await getSaveSlotService().save(cloneState());
+      slotSummaries = await listSaveSlots();
+      if (startScreen) startScreen.hidden = true;
+      map.setView(cityConfigs[currentMeta.cityId].center, 12);
+      startAutoSave();
+      renderAll();
+      requestUpdates(["network-structure", "blueprint-preview"]);
+    },
+    inspect: () => ({ state: cloneState(), updateTrace: updateScheduler.snapshot() }),
+  });
+}
 
 async function flushStateSave() {
   synchronizeGraphReferences();
@@ -13956,7 +14059,7 @@ const tutorialSteps = [
   { title: "노선 연결을 확인하세요", text: "차량기지 경계가 첫 노선 가까이에 닿아 연결된 상태인지 확인하세요.", target: "depot" },
   { title: "열차를 구매하고 배정하세요", text: "첫 노선을 선택한 상태에서 편성 수와 차량 수를 확인하고 구매하세요.", target: "train" },
   { title: "첫 노선을 개통하세요", text: "공사 현황에서 네 가지 개통 조건을 확인하고 노선 개통을 누르세요.", target: "opening" },
-  { title: "시간을 흐르게 하세요", text: "하단의 x1, x2, x4 또는 x8을 눌러 운행을 시작하세요.", target: "speed" },
+  { title: "시간을 흐르게 하세요", text: "하단의 x2, x5, x10 또는 x100을 눌러 운행을 시작하세요.", target: "speed" },
   { title: "첫 수익을 확인하세요", text: "하루 운행이 끝날 때까지 기다리세요. 첫 운임 수익이 기록되면 완료됩니다.", target: "revenue" },
 ] as const;
 
@@ -14352,17 +14455,6 @@ function showError(message: string, retry?: () => void) {
 function clearError() {
   retryAction = null;
   if (errorBanner) errorBanner.hidden = true;
-}
-
-function prefetchNearbyTiles(layer: TileLayer) {
-  const center = map.getCenter();
-  const zoom = Math.min(map.getZoom() + 1, 15);
-  [center, L.latLng(center.lat + 0.015, center.lng), L.latLng(center.lat - 0.015, center.lng), L.latLng(center.lat, center.lng + 0.02), L.latLng(center.lat, center.lng - 0.02)].forEach((point) => {
-    const tilePoint = map.project(point, zoom).divideBy(256).floor();
-    const coords = L.point(tilePoint.x, tilePoint.y) as Coords;
-    coords.z = zoom;
-    fetch(layer.getTileUrl(coords), { mode: "no-cors" }).catch(() => undefined);
-  });
 }
 
 function routeStyle(color: string, weight: number, opacity: number): L.PolylineOptions {
