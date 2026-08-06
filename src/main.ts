@@ -1049,26 +1049,28 @@ app.innerHTML = `
       </div>
       <div id="routeSettingsEditFields" class="route-settings-edit-fields">
         <label><span>이름</span><input id="draftRouteNameInput" type="text" maxlength="32" placeholder="자동 이름" autocomplete="off" /></label>
-        <div class="route-settings-color-field mobile-color-picker" data-color-input="draftRouteColorInput">
+        <div class="route-settings-color-field route-color-field" data-color-input="draftRouteColorInput">
           <span>노선 색상</span>
-          <div class="color-swatch-grid" role="group" aria-label="노선 색상 빠른 선택">
-            <button type="button" class="color-swatch" data-color-value="#e5484d" aria-label="레드" title="레드"></button>
-            <button type="button" class="color-swatch" data-color-value="#f59e0b" aria-label="오렌지" title="오렌지"></button>
-            <button type="button" class="color-swatch" data-color-value="#f3ca52" aria-label="옐로" title="옐로"></button>
-            <button type="button" class="color-swatch" data-color-value="#4ce0c3" aria-label="민트" title="민트"></button>
-            <button type="button" class="color-swatch" data-color-value="#22c55e" aria-label="그린" title="그린"></button>
-            <button type="button" class="color-swatch" data-color-value="#3b82f6" aria-label="블루" title="블루"></button>
-            <button type="button" class="color-swatch" data-color-value="#7aa7ff" aria-label="스카이 블루" title="스카이 블루"></button>
-            <button type="button" class="color-swatch" data-color-value="#8b5cf6" aria-label="퍼플" title="퍼플"></button>
-            <button type="button" class="color-swatch" data-color-value="#c477ff" aria-label="라일락" title="라일락"></button>
-            <button type="button" class="color-swatch" data-color-value="#ec4899" aria-label="핑크" title="핑크"></button>
-            <button type="button" class="color-swatch" data-color-value="#64748b" aria-label="그레이" title="그레이"></button>
-            <label class="custom-color-button" title="직접 색상 선택"><span>직접 선택</span><input id="draftRouteColorInput" type="color" value="#3277ff" aria-label="노선 색상 직접 선택" /></label>
-          </div>
+          <input id="draftRouteColorInput" type="color" value="#3277ff" tabindex="-1" aria-hidden="true" />
+          <button type="button" class="route-color-trigger" data-open-color-picker="draftRouteColorInput"><i aria-hidden="true"></i><span>색상 조절</span><b aria-hidden="true">›</b></button>
         </div>
         <button id="saveRouteSettingsButton" class="ops-button primary action-button action-button--setting" type="button"><span class="button-icon" aria-hidden="true">✓</span><span>설정 적용</span></button>
       </div>
     </section>
+
+    <div id="colorPickerDialog" class="dialog-backdrop color-picker-backdrop" hidden>
+      <section class="color-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="colorPickerTitle">
+        <header class="color-picker-header"><div><span>LINE APPEARANCE</span><h2 id="colorPickerTitle">노선 색상</h2></div><button id="closeColorPickerButton" class="dialog-close" type="button" aria-label="색상 조절 닫기">×</button></header>
+        <div id="colorPreview" class="color-preview"><i aria-hidden="true"></i><div><strong id="colorHexReadout">#4CE0C3</strong><small>노선에 적용될 미리보기</small></div></div>
+        <div class="color-controls">
+          <label><span>색조</span><output id="colorHueValue">180°</output><input id="colorHueRange" type="range" min="0" max="360" value="180" aria-label="색조" /></label>
+          <label><span>채도</span><output id="colorSaturationValue">70%</output><input id="colorSaturationRange" type="range" min="0" max="100" value="70" aria-label="채도" /></label>
+          <label><span>밝기</span><output id="colorLightnessValue">55%</output><input id="colorLightnessRange" type="range" min="0" max="100" value="55" aria-label="밝기" /></label>
+        </div>
+        <label class="color-hex-field"><span>HEX</span><input id="colorHexInput" type="text" maxlength="7" inputmode="text" autocomplete="off" spellcheck="false" aria-label="HEX 색상 코드" /></label>
+        <footer class="color-picker-actions"><button id="cancelColorPickerButton" type="button">취소</button><button id="applyColorPickerButton" class="primary" type="button">색상 적용</button></footer>
+      </section>
+    </div>
 
 
 
@@ -1516,22 +1518,10 @@ app.innerHTML = `
           <div class="metric-chip"><span>대기</span><strong id="waitReadout">-</strong></div>
         </div>
         <label class="manager-field"><span>노선 이름</span><input id="lineNameInput" maxlength="28" /></label>
-        <div class="manager-field mobile-color-picker" data-color-input="lineColorInput">
+        <div class="manager-field route-color-field" data-color-input="lineColorInput">
           <span>노선 색상</span>
-          <div class="color-swatch-grid" role="group" aria-label="노선 색상 빠른 선택">
-            <button type="button" class="color-swatch" data-color-value="#e5484d" aria-label="레드" title="레드"></button>
-            <button type="button" class="color-swatch" data-color-value="#f59e0b" aria-label="오렌지" title="오렌지"></button>
-            <button type="button" class="color-swatch" data-color-value="#f3ca52" aria-label="옐로" title="옐로"></button>
-            <button type="button" class="color-swatch" data-color-value="#4ce0c3" aria-label="민트" title="민트"></button>
-            <button type="button" class="color-swatch" data-color-value="#22c55e" aria-label="그린" title="그린"></button>
-            <button type="button" class="color-swatch" data-color-value="#3b82f6" aria-label="블루" title="블루"></button>
-            <button type="button" class="color-swatch" data-color-value="#7aa7ff" aria-label="스카이 블루" title="스카이 블루"></button>
-            <button type="button" class="color-swatch" data-color-value="#8b5cf6" aria-label="퍼플" title="퍼플"></button>
-            <button type="button" class="color-swatch" data-color-value="#c477ff" aria-label="라일락" title="라일락"></button>
-            <button type="button" class="color-swatch" data-color-value="#ec4899" aria-label="핑크" title="핑크"></button>
-            <button type="button" class="color-swatch" data-color-value="#64748b" aria-label="그레이" title="그레이"></button>
-            <label class="custom-color-button" title="직접 색상 선택"><span>직접 선택</span><input id="lineColorInput" type="color" aria-label="노선 색상 직접 선택" /></label>
-          </div>
+          <input id="lineColorInput" type="color" tabindex="-1" aria-hidden="true" />
+          <button type="button" class="route-color-trigger" data-open-color-picker="lineColorInput"><i aria-hidden="true"></i><span>색상 조절</span><b aria-hidden="true">›</b></button>
         </div>
         <label class="manager-field"><span>공개 상태</span><select id="lineVisibilitySelect"><option value="public">공개 노선</option><option value="planning">계획 노선</option></select></label>
         <label class="manager-field"><span>기본 요금 설정</span>
@@ -2118,17 +2108,57 @@ const saveLineManagerButton = document.querySelector<HTMLButtonElement>("#saveLi
 const deleteLineManagerButton = document.querySelector<HTMLButtonElement>("#deleteLineManagerButton");
 const lineNameInput = document.querySelector<HTMLInputElement>("#lineNameInput");
 const lineColorInput = document.querySelector<HTMLInputElement>("#lineColorInput");
+const colorPickerDialog = byId("colorPickerDialog");
+const closeColorPickerButton = document.querySelector<HTMLButtonElement>("#closeColorPickerButton");
+const cancelColorPickerButton = document.querySelector<HTMLButtonElement>("#cancelColorPickerButton");
+const applyColorPickerButton = document.querySelector<HTMLButtonElement>("#applyColorPickerButton");
+const colorPreview = byId("colorPreview");
+const colorHexReadout = byId("colorHexReadout");
+const colorHueRange = document.querySelector<HTMLInputElement>("#colorHueRange");
+const colorSaturationRange = document.querySelector<HTMLInputElement>("#colorSaturationRange");
+const colorLightnessRange = document.querySelector<HTMLInputElement>("#colorLightnessRange");
+const colorHueValue = byId("colorHueValue");
+const colorSaturationValue = byId("colorSaturationValue");
+const colorLightnessValue = byId("colorLightnessValue");
+const colorHexInput = document.querySelector<HTMLInputElement>("#colorHexInput");
+let colorPickerTarget: HTMLInputElement | null = null;
+let colorPickerHsl = { hue: 180, saturation: 70, lightness: 55 };
+
+function addFloatingWindowMinimizer(
+  windowElement: HTMLElement | null,
+  headerSelector: string,
+  label: string,
+) {
+  const header = windowElement?.querySelector<HTMLElement>(headerSelector);
+  if (!windowElement || !header || header.querySelector(".floating-minimize-button")) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "floating-minimize-button";
+  button.setAttribute("aria-label", `${label} 최소화`);
+  button.setAttribute("title", `${label} 최소화`);
+  button.textContent = "−";
+  button.addEventListener("click", () => {
+    const minimized = windowElement.classList.toggle("is-minimized");
+    button.textContent = minimized ? "+" : "−";
+    button.setAttribute("aria-label", minimized ? `${label} 복원` : `${label} 최소화`);
+    button.setAttribute("title", minimized ? `${label} 복원` : `${label} 최소화`);
+    button.setAttribute("aria-pressed", String(minimized));
+  });
+  header.append(button);
+}
+
+addFloatingWindowMinimizer(leftRouteWindow, ".left-route-header", "노선 목록");
+addFloatingWindowMinimizer(rightLineControlCard, ".right-line-header", "노선 제어");
+addFloatingWindowMinimizer(routeSettingsCard, ".route-settings-card-heading", "노선 설정");
+addFloatingWindowMinimizer(modifyToolsCard, ".modify-tools-card-heading", "수정 도구");
+addFloatingWindowMinimizer(constructionPreviewPanel, ".construction-preview-panel > header", "건설 미리보기");
 
 function syncColorPicker(input: HTMLInputElement | null) {
   if (!input) return;
   const normalizedColor = input.value.toLowerCase();
   document.querySelectorAll<HTMLElement>(`[data-color-input="${input.id}"]`).forEach((picker) => {
     picker.style.setProperty("--selected-route-color", normalizedColor);
-    picker.querySelectorAll<HTMLButtonElement>("[data-color-value]").forEach((button) => {
-      const selected = button.dataset.colorValue?.toLowerCase() === normalizedColor;
-      button.classList.toggle("selected", selected);
-      button.setAttribute("aria-pressed", String(selected));
-    });
   });
 }
 
@@ -2138,17 +2168,92 @@ function setColorPickerValue(input: HTMLInputElement | null, color: string) {
   syncColorPicker(input);
 }
 
-document.querySelectorAll<HTMLButtonElement>(".mobile-color-picker [data-color-value]").forEach((button) => {
+function hexToHsl(hex: string) {
+  const normalized = hex.replace("#", "");
+  const red = parseInt(normalized.slice(0, 2), 16) / 255;
+  const green = parseInt(normalized.slice(2, 4), 16) / 255;
+  const blue = parseInt(normalized.slice(4, 6), 16) / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+  if (delta === 0) return { hue: 0, saturation: 0, lightness: Math.round(lightness * 100) };
+  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  let hue = max === red ? ((green - blue) / delta) % 6 : max === green ? (blue - red) / delta + 2 : (red - green) / delta + 4;
+  hue = Math.round(hue * 60);
+  if (hue < 0) hue += 360;
+  return { hue, saturation: Math.round(saturation * 100), lightness: Math.round(lightness * 100) };
+}
+
+function hslToHex({ hue, saturation, lightness }: typeof colorPickerHsl) {
+  const s = saturation / 100;
+  const l = lightness / 100;
+  const chroma = (1 - Math.abs(2 * l - 1)) * s;
+  const segment = hue / 60;
+  const x = chroma * (1 - Math.abs((segment % 2) - 1));
+  const [red, green, blue] = segment < 1 ? [chroma, x, 0] : segment < 2 ? [x, chroma, 0] : segment < 3 ? [0, chroma, x] : segment < 4 ? [0, x, chroma] : segment < 5 ? [x, 0, chroma] : [chroma, 0, x];
+  const match = l - chroma / 2;
+  return `#${[red, green, blue].map((channel) => Math.round((channel + match) * 255).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+}
+
+function renderColorPicker() {
+  const hex = hslToHex(colorPickerHsl);
+  colorPreview?.style.setProperty("--picker-color", hex);
+  setText(colorHexReadout, hex);
+  if (colorHueRange) colorHueRange.value = String(colorPickerHsl.hue);
+  if (colorSaturationRange) colorSaturationRange.value = String(colorPickerHsl.saturation);
+  if (colorLightnessRange) colorLightnessRange.value = String(colorPickerHsl.lightness);
+  if (colorHexInput) colorHexInput.value = hex;
+  setText(colorHueValue, `${colorPickerHsl.hue}°`);
+  setText(colorSaturationValue, `${colorPickerHsl.saturation}%`);
+  setText(colorLightnessValue, `${colorPickerHsl.lightness}%`);
+}
+
+function openColorPicker(input: HTMLInputElement) {
+  colorPickerTarget = input;
+  colorPickerHsl = hexToHsl(input.value);
+  renderColorPicker();
+  if (colorPickerDialog) colorPickerDialog.hidden = false;
+}
+
+function closeColorPicker() {
+  if (colorPickerDialog) colorPickerDialog.hidden = true;
+  colorPickerTarget = null;
+}
+
+document.querySelectorAll<HTMLButtonElement>("[data-open-color-picker]").forEach((button) => {
   button.addEventListener("click", () => {
-    const picker = button.closest<HTMLElement>("[data-color-input]");
-    const inputId = picker?.dataset.colorInput;
-    const color = button.dataset.colorValue;
+    const inputId = button.dataset.openColorPicker;
     const input = inputId ? document.getElementById(inputId) as HTMLInputElement | null : null;
-    if (!input || !color) return;
-    setColorPickerValue(input, color);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    if (input) openColorPicker(input);
   });
 });
+
+const updateColorPickerChannel = () => {
+  colorPickerHsl = {
+    hue: Number(colorHueRange?.value ?? colorPickerHsl.hue),
+    saturation: Number(colorSaturationRange?.value ?? colorPickerHsl.saturation),
+    lightness: Number(colorLightnessRange?.value ?? colorPickerHsl.lightness),
+  };
+  renderColorPicker();
+};
+colorHueRange?.addEventListener("input", updateColorPickerChannel);
+colorSaturationRange?.addEventListener("input", updateColorPickerChannel);
+colorLightnessRange?.addEventListener("input", updateColorPickerChannel);
+colorHexInput?.addEventListener("change", () => {
+  const value = colorHexInput.value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(value)) colorPickerHsl = hexToHsl(value);
+  renderColorPicker();
+});
+applyColorPickerButton?.addEventListener("click", () => {
+  if (!colorPickerTarget) return closeColorPicker();
+  setColorPickerValue(colorPickerTarget, hslToHex(colorPickerHsl));
+  colorPickerTarget.dispatchEvent(new Event("input", { bubbles: true }));
+  closeColorPicker();
+});
+closeColorPickerButton?.addEventListener("click", closeColorPicker);
+cancelColorPickerButton?.addEventListener("click", closeColorPicker);
+if (colorPickerDialog) bindBackdropDismiss(colorPickerDialog, closeColorPicker);
 
 [draftRouteColorInput, lineColorInput].forEach((input) => {
   input?.addEventListener("input", () => syncColorPicker(input));
@@ -2826,6 +2931,19 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => undefined));
 }
 
+async function requestLandscapeOrientation() {
+  // Android's native activity is locked in the manifest. This only supplements
+  // installed PWAs and browsers that expose the Screen Orientation API.
+  try {
+    const orientation = screen.orientation as ScreenOrientation & { lock?: (mode: "landscape") => Promise<void> };
+    if (orientation.lock) await orientation.lock("landscape");
+  } catch {
+    // Browsers such as iOS Safari require a user gesture or do not permit locks.
+  }
+}
+
+void requestLandscapeOrientation();
+
 window.addEventListener("error", (event) => {
   console.error(event.error ?? event.message);
   showError("예상치 못한 오류가 발생했습니다. 저장된 게임은 유지됩니다.", () => window.location.reload());
@@ -2835,7 +2953,10 @@ window.addEventListener("unhandledrejection", (event) => {
   showError("데이터를 불러오는 중 문제가 발생했습니다. 네트워크를 확인해 주세요.", () => updateDynamicLayers());
 });
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && simSpeed > 0) gameLoopController.resume();
+  if (document.visibilityState === "visible") {
+    void requestLandscapeOrientation();
+    if (simSpeed > 0) gameLoopController.resume();
+  }
   if (document.visibilityState === "hidden") void saveCurrentSlot("백그라운드 저장");
 });
 

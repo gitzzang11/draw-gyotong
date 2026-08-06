@@ -11130,6 +11130,622 @@ button:active,
   }
 }
 
+/* -------------------------------------------------------------------------
+   COMPACT MOBILE SCALE
+   Map play benefits from more visible map area. Keep primary targets at 40px
+   while reducing surrounding chrome, typography, and panel spacing.
+------------------------------------------------------------------------- */
+@media (max-width: 700px) {
+  .hud.top-header-bar {
+    gap: 5px;
+  }
+
+  .workspace-mode-tab {
+    min-height: 40px;
+    font-size: 9px;
+  }
+
+  .top-actions-row {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .layer-menu summary,
+  .top-action-btn,
+  .history-action {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .hud.build-panel {
+    bottom: max(6px, env(safe-area-inset-bottom));
+    padding: 4px;
+    gap: 4px;
+  }
+
+  .tool-group {
+    gap: 4px;
+  }
+
+  .tool-divider {
+    height: 22px;
+    margin: 0 2px;
+  }
+
+  .primary-tool {
+    min-width: 56px;
+    min-height: 42px;
+    padding: 0 7px;
+    gap: 4px;
+    font-size: 9px;
+  }
+
+  .primary-tool svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .hud.bottom-right,
+  #modifyToolsCard,
+  #routeSettingsCard,
+  .construction-preview-panel {
+    bottom: max(62px, calc(env(safe-area-inset-bottom) + 56px));
+  }
+
+  .mode-pill,
+  .hint-row {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+
+  .hint-row {
+    font-size: 8px;
+  }
+
+  .start-screen {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  .start-panel {
+    gap: 10px;
+    padding: 14px;
+    border-radius: 14px !important;
+  }
+
+  .start-head {
+    padding-bottom: 10px;
+  }
+
+  .hero-title {
+    font-size: 19px;
+  }
+
+  .hero-subtitle {
+    font-size: 11px;
+  }
+
+  .hero-action-btn {
+    min-height: 58px;
+    padding: 11px;
+  }
+
+  .hero-btn-icon {
+    font-size: 19px;
+  }
+
+  .hero-btn-text strong {
+    font-size: 13px;
+  }
+
+  .hero-btn-text small {
+    font-size: 10px;
+  }
+
+  .start-section-card {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .section-card-header {
+    padding-bottom: 7px;
+  }
+
+  .city-option-card {
+    min-height: 88px;
+    padding: 9px;
+  }
+
+  .city-option-mark {
+    width: 30px;
+    height: 30px;
+    font-size: 8px;
+  }
+
+  .city-option-main strong {
+    font-size: 13px;
+  }
+
+  .city-option-stats em {
+    padding: 2px 4px;
+    font-size: 8px;
+  }
+
+  .setup-choice-card {
+    min-height: 56px;
+    padding: 7px;
+  }
+
+  .setup-choice-card > i {
+    flex-basis: 26px;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
+  .difficulty-choice-grid .setup-choice-card {
+    min-height: 52px;
+  }
+
+  .dialog-backdrop > .settings-dialog,
+  .dialog-backdrop > .finance-dialog,
+  .dialog-backdrop > .station-manager-dialog,
+  .dialog-backdrop > .depot-manager-dialog,
+  .dialog-backdrop > .train-manager-dialog,
+  .dialog-backdrop > .satisfaction-dialog,
+  .dialog-backdrop > .decision-dialog,
+  .dialog-backdrop > .merge-dialog,
+  .dialog-backdrop > .planning-dialog,
+  .dialog-backdrop > .plan-conversion-dialog,
+  .dialog-backdrop > .route-choice-dialog,
+  .dialog-backdrop > .ingame-menu-dialog {
+    max-height: min(84dvh, 620px) !important;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .hud.top-header-bar {
+    top: max(5px, env(safe-area-inset-top));
+    left: max(5px, env(safe-area-inset-left));
+    right: max(5px, env(safe-area-inset-right));
+  }
+
+  .hud-brand-pill {
+    min-height: 38px;
+    max-width: 64px;
+    font-size: 10px;
+  }
+
+  .top-status-pills .cash-pill {
+    min-height: 38px;
+  }
+
+  .hud.build-panel {
+    left: 5px;
+    right: 5px;
+  }
+
+  .primary-tool {
+    min-width: 52px;
+    min-height: 40px;
+  }
+
+  .start-panel {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .city-picker {
+    gap: 6px;
+  }
+
+  .city-option-card {
+    min-height: 78px;
+  }
+}
+
+/* Compact trigger + custom colour bottom sheet. */
+.route-color-field {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.route-color-field > span {
+  color: var(--c-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.route-color-field > input[type="color"] {
+  display: none !important;
+}
+
+.route-settings-edit-fields > .route-color-field {
+  grid-column: 1 / -1;
+}
+
+.route-color-trigger {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 34px;
+  padding: 5px 8px;
+  color: var(--c-text-main);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.route-color-trigger > i {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  background: var(--selected-route-color, #4ce0c3);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--selected-route-color, #4ce0c3) 24%, transparent);
+}
+
+.route-color-trigger > b {
+  color: var(--c-text-dim);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.color-picker-backdrop {
+  z-index: 1800;
+}
+
+.color-picker-dialog {
+  width: min(360px, calc(100vw - 20px));
+  max-height: min(620px, calc(100dvh - 20px));
+  padding: 16px;
+  overflow-y: auto;
+  color: var(--c-text-main);
+  border: 1px solid var(--c-border-light);
+  border-radius: 18px;
+  background: #101820;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.64);
+}
+
+.color-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.color-picker-header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.color-picker-header span {
+  color: var(--c-text-dim);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.color-picker-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.color-preview {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px;
+  margin-bottom: 13px;
+  border: 1px solid color-mix(in srgb, var(--picker-color, #4ce0c3) 48%, transparent);
+  border-radius: 13px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--picker-color, #4ce0c3) 20%, #111a23), #111a23);
+}
+
+.color-preview > i {
+  width: 38px;
+  height: 38px;
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  background: var(--picker-color, #4ce0c3);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--picker-color, #4ce0c3) 34%, transparent);
+}
+
+.color-preview > div {
+  display: grid;
+  gap: 2px;
+}
+
+.color-preview strong { font-size: 16px; letter-spacing: 0.04em; }
+.color-preview small { color: var(--c-text-muted); font-size: 10px; }
+
+.color-controls {
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--c-border);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.color-controls label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px 10px;
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.color-controls output {
+  color: var(--c-text-main);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.color-controls input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--picker-color, #4ce0c3);
+}
+
+#colorHueRange {
+  accent-color: #d946ef;
+}
+
+.color-hex-field {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.color-hex-field > span {
+  color: var(--c-text-dim);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.color-hex-field input {
+  min-height: 30px !important;
+  padding: 4px 0 !important;
+  color: var(--c-text-main) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 13px !important;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.color-picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.color-picker-actions button {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.color-picker-actions .primary {
+  color: #071116;
+  border-color: var(--picker-color, #4ce0c3);
+  background: var(--picker-color, #4ce0c3);
+}
+
+@media (max-width: 700px) {
+  .route-color-trigger {
+    min-height: 32px;
+    padding: 4px 7px;
+  }
+
+  .color-picker-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .color-picker-dialog {
+    width: 100%;
+    max-height: min(78dvh, 520px);
+    padding: 13px 14px max(13px, env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+  }
+
+  .color-picker-header { margin-bottom: 10px; }
+  .color-preview { padding: 9px; margin-bottom: 10px; }
+  .color-preview > i { width: 34px; height: 34px; }
+  .color-controls { gap: 8px; padding: 9px; }
+  .color-picker-actions { margin-top: 10px; }
+  .color-picker-actions button { min-height: 38px; }
+}
+
+/* -------------------------------------------------------------------------
+   MOBILE APP SHELL
+   Mobile uses a single, predictable bottom-sheet language for contextual
+   screens instead of scattering desktop side panels across the map.
+------------------------------------------------------------------------- */
+@media (max-width: 700px) {
+  .game-shell {
+    --mobile-dock-height: 52px;
+  }
+
+  .hud.top-header-bar {
+    z-index: 1100;
+  }
+
+  .top-status-pills {
+    scrollbar-width: none;
+  }
+
+  .top-status-pills::-webkit-scrollbar,
+  .hud.build-panel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .layer-options {
+    right: 0;
+    max-height: min(260px, calc(100dvh - 70px));
+    overflow-y: auto;
+  }
+
+  .left-route-window,
+  .right-line-control-card,
+  #routeSettingsCard,
+  #modifyToolsCard,
+  .construction-preview-panel {
+    position: fixed !important;
+    top: auto !important;
+    right: max(5px, env(safe-area-inset-right)) !important;
+    bottom: max(calc(var(--mobile-dock-height) + 7px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height))) !important;
+    left: max(5px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(56dvh, 430px) !important;
+    padding: 11px !important;
+    overflow: auto;
+    overscroll-behavior: contain;
+    border-radius: 15px 15px 10px 10px !important;
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.38) !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .left-route-window::before,
+  .right-line-control-card::before,
+  #routeSettingsCard::before,
+  #modifyToolsCard::before,
+  .construction-preview-panel::before {
+    display: block;
+    width: 32px;
+    height: 3px;
+    margin: 0 auto 9px;
+    content: "";
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  .left-route-window,
+  .right-line-control-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .left-route-header,
+  .right-line-header,
+  .route-settings-card-heading,
+  .construction-preview-panel > header {
+    min-height: 32px;
+  }
+
+  .left-route-list,
+  .right-line-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #modifyToolsCard {
+    max-height: min(250px, 46dvh) !important;
+  }
+
+  #modifyToolsCard .modify-tools-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  #modifyToolsCard .modify-tools-grid .primary-tool.compact {
+    min-height: 40px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  #routeSettingsCard {
+    max-height: min(290px, 50dvh) !important;
+  }
+
+  .right-line-control-card {
+    max-height: min(64dvh, 480px) !important;
+  }
+
+  .right-line-control-card .right-line-body {
+    padding-right: 1px;
+  }
+
+  .right-line-control-card .right-line-footer {
+    position: sticky;
+    bottom: -11px;
+    padding-top: 8px;
+    padding-bottom: max(1px, env(safe-area-inset-bottom));
+    background: #0f161d;
+  }
+
+  .construction-preview-panel {
+    max-height: min(62dvh, 450px) !important;
+  }
+
+  .construction-preview-panel > footer {
+    position: sticky;
+    bottom: -11px;
+    padding-bottom: 7px;
+    background: #0f161d;
+  }
+
+  .toast {
+    top: max(56px, calc(env(safe-area-inset-top) + 50px));
+    max-width: min(360px, calc(100vw - 24px));
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .left-route-window,
+  .right-line-control-card,
+  #routeSettingsCard,
+  #modifyToolsCard,
+  .construction-preview-panel {
+    right: max(4px, env(safe-area-inset-right)) !important;
+    bottom: max(52px, calc(env(safe-area-inset-bottom) + 48px)) !important;
+    left: max(4px, env(safe-area-inset-left)) !important;
+    max-height: min(52dvh, 300px) !important;
+    padding: 8px !important;
+  }
+
+  #modifyToolsCard {
+    max-height: min(200px, 42dvh) !important;
+  }
+
+  .left-route-window::before,
+  .right-line-control-card::before,
+  #routeSettingsCard::before,
+  #modifyToolsCard::before,
+  .construction-preview-panel::before {
+    margin-bottom: 6px;
+  }
+}
+
 /* 실행 취소/다시 실행 버튼도 터치 영역을 확보한다. */
 .history-action {
   width: var(--touch-target);
@@ -11142,4 +11758,190 @@ button:active,
 .train-icon .train-body {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.38), inset 0 -3px 0 rgba(0, 0, 0, 0.14);
   opacity: 0.92;
+}
+
+/* Floating map windows stay out of the play area and can be collapsed to a header. */
+.floating-minimize-button {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5fbff;
+  font: 700 18px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+/* Keep map windows compact by default on desktop as well as on mobile. */
+.left-route-window,
+#routeSettingsCard {
+  width: min(270px, calc(100vw - 24px)) !important;
+  max-height: min(56dvh, 430px) !important;
+  overflow: auto;
+}
+
+.right-line-control-card,
+#modifyToolsCard {
+  width: min(286px, calc(100vw - 24px)) !important;
+  max-height: min(58dvh, 450px) !important;
+  overflow: auto;
+}
+
+.construction-preview-panel {
+  width: min(310px, calc(100vw - 24px)) !important;
+  max-height: min(56dvh, 430px) !important;
+  overflow: auto;
+}
+
+.left-route-header .floating-minimize-button,
+.right-line-header .floating-minimize-button,
+.route-settings-card-heading .floating-minimize-button {
+  position: absolute;
+  top: 50%;
+  right: 38px;
+  z-index: 3;
+  transform: translateY(-50%);
+  opacity: 1 !important;
+}
+
+.modify-tools-card-heading .floating-minimize-button {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 3;
+  transform: translateY(-50%);
+  opacity: 1 !important;
+}
+
+.left-route-header,
+.right-line-header,
+.route-settings-card-heading,
+.modify-tools-card-heading {
+  padding-right: 74px !important;
+}
+
+#modifyToolsCard .modify-tools-card-heading {
+  padding-right: 38px !important;
+}
+
+.floating-minimize-button:active {
+  transform: scale(0.94);
+}
+
+/* The same compact form is available on desktop, not only on touch layouts. */
+.left-route-window.is-minimized,
+.right-line-control-card.is-minimized,
+#routeSettingsCard.is-minimized,
+#modifyToolsCard.is-minimized,
+.construction-preview-panel.is-minimized {
+  width: 220px !important;
+  min-height: 0 !important;
+  max-height: 52px !important;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+  overflow: hidden !important;
+}
+
+.left-route-window.is-minimized > :not(.left-route-header),
+.right-line-control-card.is-minimized > :not(.right-line-header),
+#routeSettingsCard.is-minimized > :not(.route-settings-card-heading),
+#modifyToolsCard.is-minimized > :not(.modify-tools-card-heading),
+.construction-preview-panel.is-minimized > :not(header) {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .left-route-window,
+  #routeSettingsCard {
+    right: auto !important;
+    left: max(5px, env(safe-area-inset-left)) !important;
+    width: min(248px, calc(100vw - 10px)) !important;
+    max-height: min(42dvh, 270px) !important;
+  }
+
+  .right-line-control-card,
+  #modifyToolsCard,
+  .construction-preview-panel {
+    right: max(5px, env(safe-area-inset-right)) !important;
+    left: auto !important;
+    width: min(264px, calc(100vw - 10px)) !important;
+    max-height: min(44dvh, 285px) !important;
+  }
+
+  .construction-preview-panel {
+    width: min(286px, calc(100vw - 10px)) !important;
+  }
+
+  .left-route-header,
+  .right-line-header,
+  .route-settings-card-heading,
+  .modify-tools-card-heading {
+    position: relative;
+    padding-right: 38px !important;
+  }
+
+  .left-route-header .floating-minimize-button,
+  .right-line-header .floating-minimize-button,
+  .route-settings-card-heading .floating-minimize-button {
+    position: absolute;
+    top: 50%;
+    right: 34px;
+    transform: translateY(-50%);
+  }
+
+  .modify-tools-card-heading .floating-minimize-button {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+  }
+
+  .construction-preview-header-actions .floating-minimize-button {
+    flex: 0 0 auto;
+  }
+
+  .left-route-window.is-minimized,
+  .right-line-control-card.is-minimized,
+  #routeSettingsCard.is-minimized,
+  #modifyToolsCard.is-minimized,
+  .construction-preview-panel.is-minimized {
+    width: min(176px, calc(100vw - 10px)) !important;
+    min-height: 0 !important;
+    max-height: 48px !important;
+    padding: 6px 9px !important;
+    overflow: hidden !important;
+  }
+
+  .left-route-window.is-minimized > :not(.left-route-header),
+  .right-line-control-card.is-minimized > :not(.right-line-header),
+  #routeSettingsCard.is-minimized > :not(.route-settings-card-heading),
+  #modifyToolsCard.is-minimized > :not(.modify-tools-card-heading),
+  .construction-preview-panel.is-minimized > :not(header) {
+    display: none !important;
+  }
+
+  .construction-preview-panel.is-minimized #toggleConstructionPreviewButton {
+    display: none !important;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .left-route-window,
+  #routeSettingsCard {
+    width: min(218px, calc(100vw - 8px)) !important;
+    max-height: min(38dvh, 210px) !important;
+  }
+
+  .right-line-control-card,
+  #modifyToolsCard {
+    width: min(232px, calc(100vw - 8px)) !important;
+    max-height: min(40dvh, 220px) !important;
+  }
+
+  .construction-preview-panel {
+    width: min(250px, calc(100vw - 8px)) !important;
+    max-height: min(40dvh, 225px) !important;
+  }
 }

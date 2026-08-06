@@ -1,6 +1,6 @@
 {
   "name": "draw-gyotong",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,9 @@
     "cap:sync": "npm run build && cap sync android && npm run cap:patch-android",
     "cap:patch-android": "node scripts/patch-capacitor-agp.cjs",
     "android": "npm run cap:sync && cap open android",
-    "apk:debug": "npm run cap:sync && cd android && gradlew.bat assembleDebug",
+    "apk:patch": "node scripts/bump-version.cjs patch && npm run apk:debug",
+    "apk:minor": "node scripts/bump-version.cjs minor && npm run apk:debug",
+    "apk:debug": "npm run cap:sync && cd android && gradlew.bat assembleDebug && node -e \"require('fs').mkdirSync('../release_apk',{recursive:true});require('fs').copyFileSync('app/build/outputs/apk/debug/app-debug.apk', '../release_apk/draw-gyotong-v' + require('../package.json').version + '.apk')\"",
     "apk:release": "npm run cap:sync && cd android && gradlew.bat assembleRelease",
     "aab:release": "npm run cap:sync && cd android && gradlew.bat bundleRelease"
   },
