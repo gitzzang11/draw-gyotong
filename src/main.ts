@@ -46,6 +46,7 @@ import {
   type DemandZone,
   type StationDemandState,
 } from "./demandModel.ts";
+import { applyRealPopulationDensity, getRealPopulationCells } from "./populationDensity.ts";
 import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
 import type { Branch, ConstructionMode, Depot, RouteLine, RouteNode, RouteNodeKind, RouteSegment, ServicePattern, Station, TransferGroup } from "./domain/networkTypes.ts";
 import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus, ManualTransferEndpoint, PlanPriority, PlanStatus, PlannedDepot, PlannedRoute, PlannedStation } from "./domain/constructionTypes.ts";
@@ -161,7 +162,7 @@ const dailySettlementRuntime = new DailySettlementRuntime<OperationAnalysisState
 // 이 파일에서 공유하는 게임 상태의 형태를 한곳에 정의한다.
 // =============================================================================
 
-type OverlayKey = "administrative" | "landuse" | "rail";
+type OverlayKey = "administrative" | "landuse" | "rail" | "population";
 type LodMode = "overview" | "district" | "build";
 type WorkspaceMode = "management" | "planning" | "construction";
 type ToolMode =
@@ -701,10 +702,24 @@ const newsEventCatalog: Record<
   recession: { tone: "change", title: "지역 경기 둔화", summary: "통행 수요가 줄지만 합리적인 운임으로 이용을 유도할 수 있습니다.", demandMultiplier: 0.92, operatingCostMultiplier: 1.04, duration: [7, 12], action: "review-fare", actionLabel: "운임 전략 검토" },
 };
 
-const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; demandMultiplier: number; constructionMultiplier: number; mountainMultiplier: number; riverMultiplier: number; description: string }> = {
+type CityConfig = {
+  name: string;
+  center: LatLngExpression;
+  mapBounds: L.LatLngBoundsExpression;
+  minZoom: number;
+  demandMultiplier: number;
+  constructionMultiplier: number;
+  mountainMultiplier: number;
+  riverMultiplier: number;
+  description: string;
+};
+
+const cityConfigs: Record<CityId, CityConfig> = {
   seoul: {
     name: "서울",
     center: [37.5665, 126.978],
+    mapBounds: [[37.38, 126.65], [37.76, 127.3]],
+    minZoom: 10,
     demandMultiplier: 1.45,
     constructionMultiplier: 1,
     mountainMultiplier: 1,
@@ -714,6 +729,8 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
   busan: {
     name: "부산",
     center: [35.1796, 129.0756],
+    mapBounds: [[34.98, 128.72], [35.42, 129.35]],
+    minZoom: 10,
     demandMultiplier: 1.05,
     constructionMultiplier: 1.25,
     mountainMultiplier: 1.55,
@@ -723,6 +740,8 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
   daejeon: {
     name: "대전",
     center: [36.3504, 127.3845],
+    mapBounds: [[36.17, 127.2], [36.55, 127.62]],
+    minZoom: 11,
     demandMultiplier: 0.9,
     constructionMultiplier: 0.95,
     mountainMultiplier: 0.9,
@@ -732,6 +751,8 @@ const cityConfigs: Record<CityId, { name: string; center: LatLngExpression; dema
   gwangju: {
     name: "광주",
     center: [35.1595, 126.8526],
+    mapBounds: [[35.02, 126.62], [35.32, 127.1]],
+    minZoom: 11,
     demandMultiplier: 0.82,
     constructionMultiplier: 0.9,
     mountainMultiplier: 0.95,
@@ -806,6 +827,7 @@ const overlayState: Record<OverlayKey, boolean> = {
   administrative: false,
   landuse: false,
   rail: true,
+  population: false,
 };
 
 // =============================================================================
@@ -887,9 +909,10 @@ app.innerHTML = `
     
     <!-- LEVEL 1: TOP EXECUTIVE COMMAND HUD -->
     <header class="hud top-header-bar" aria-label="game status bar">
-      <div class="hud-brand-pill">
+      <div class="hud-brand-pill" aria-label="현재 지역 선택">
         <span class="hud-live-dot"></span>
         <strong id="cityHudReadout">서울 관제 네트워크</strong>
+        <svg class="region-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </div>
 
       <div class="top-status-pills" aria-label="game metrics">
@@ -941,6 +964,8 @@ app.innerHTML = `
             </summary>
             <div class="layer-options">
               <button class="layer-toggle active" data-layer="rail" aria-pressed="true"><span class="layer-dot rail"></span><span>기존 철도</span></button>
+              <button class="layer-toggle" data-layer="population" aria-pressed="false"><span class="layer-dot population"></span><span>인구 밀도</span></button>
+              <div class="population-density-legend" aria-label="인구 밀도 범례"><span>낮음</span><i></i><span>높음</span></div>
             </div>
           </details>
         </nav>
@@ -1628,8 +1653,10 @@ const map = L.map("map", {
   attributionControl: false,
   center: SEOUL,
   zoom: 12,
-  minZoom: 7,
+  minZoom: cityConfigs.seoul.minZoom,
   maxZoom: 18,
+  maxBounds: cityConfigs.seoul.mapBounds,
+  maxBoundsViscosity: 1,
   preferCanvas: true,
   inertia: true,
   inertiaDeceleration: 2800,
@@ -1638,6 +1665,14 @@ const map = L.map("map", {
   markerZoomAnimation: false,
   touchZoom: "center",
 });
+
+function applyCityMapConstraints(cityId: CityId) {
+  const city = cityConfigs[cityId];
+  map.setMinZoom(city.minZoom);
+  map.setMaxBounds(city.mapBounds);
+  map.setView(city.center, Math.max(12, city.minZoom));
+  updateDynamicLayers();
+}
 
 const baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   subdomains: ["a", "b", "c"],
@@ -1664,7 +1699,7 @@ const railLayer = L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}
   subdomains: ["a", "b", "c"],
   maxZoom: 19,
   noWrap: true,
-  opacity: 0.72,
+  opacity: 0.35,
   crossOrigin: true,
   updateWhenIdle: true,
   keepBuffer: 2,
@@ -1690,6 +1725,8 @@ const landuseLayer = L.geoJSON(undefined, {
   },
 });
 
+const populationDensityLayer = L.layerGroup();
+
 const facilityInteractionPane = map.createPane("facilityInteractionPane");
 facilityInteractionPane.style.zIndex = "690";
 facilityInteractionPane.style.pointerEvents = "none";
@@ -1700,8 +1737,11 @@ const stationInteractionPane = map.createPane("stationInteractionPane");
 stationInteractionPane.style.zIndex = "780";
 stationInteractionPane.style.pointerEvents = "none";
 const routeSelectionPane = map.createPane("routeSelectionPane");
-routeSelectionPane.style.zIndex = "390";
+routeSelectionPane.style.zIndex = "460";
 routeSelectionPane.style.pointerEvents = "none";
+const populationDensityPane = map.createPane("populationDensityPane");
+populationDensityPane.style.zIndex = "350";
+populationDensityPane.style.pointerEvents = "none";
 
 const mapLayers = new LayerManager(map);
 const previewLayer = mapLayers.get("construction-preview");
@@ -1722,10 +1762,11 @@ const constructionRenderer = new ConstructionRenderer(
   mapLayers.get("construction"),
   mapLayers.get("draft-renderer"),
 );
-const layers: Record<OverlayKey, TileLayer | GeoJSON> = {
+const layers: Record<OverlayKey, L.Layer> = {
   administrative: adminLayer,
   landuse: landuseLayer,
   rail: railLayer,
+  population: populationDensityLayer,
 };
 
 // =============================================================================
@@ -7879,6 +7920,7 @@ async function initializeGameShell() {
     slotSummaries = [];
   }
   if (slotSummaries.length === 0) loadSavedState();
+  applyCityMapConstraints(currentMeta.cityId);
   updateEconomyHud();
   renderStartScreen();
   if (slotSummaries.length > 0 && startScreen) startScreen.hidden = false;
@@ -8037,7 +8079,7 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
   };
   updateEconomyHud();
   newsEvents = [createNewsEvent(0)];
-  map.setView(cityConfigs[cityId].center, 12);
+  applyCityMapConstraints(cityId);
   if (newGameButton) newGameButton.disabled = true;
   const saved = await saveCurrentSlot("새 세이브", false, true);
   if (newGameButton) newGameButton.disabled = false;
@@ -8096,7 +8138,7 @@ async function loadSlot(slotId: string) {
   applyState(state);
   currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}), slotId };
   updateEconomyHud();
-  map.setView(cityConfigs[currentMeta.cityId].center, 12);
+  applyCityMapConstraints(currentMeta.cityId);
   if (startScreen) startScreen.hidden = true;
   startAutoSave();
   requestStateSave();
@@ -8311,7 +8353,7 @@ function reconcileMapStations(selectedId?: string) {
       express: isExpressStop,
       transfer: isTransferStation,
       operational: isStationOperational(station.id),
-      showLabel: map.getZoom() >= 15,
+      showLabel: isSelected || map.getZoom() >= 15,
     };
   });
   stationRenderer.reconcileEntities(stationEntities, connectionEntities);
@@ -10385,6 +10427,7 @@ function refreshDemandCatchments() {
     // compete for these zones instead of creating another copy of demand.
     demandZones = createLegacyDemandZones(inputs, demandZones);
   }
+  demandZones = applyRealPopulationDensity(currentMeta.cityId, demandZones);
   const allocation = allocateCatchmentDemand(
     demandZones,
     inputs,
@@ -10415,6 +10458,7 @@ function refreshDemandCatchments() {
     };
   });
   synchronizeStationDemandMirrors();
+  if (overlayState.population) updateDynamicLayers();
 }
 
 function buildDemandStructureFingerprint() {
@@ -13757,7 +13801,7 @@ if (import.meta.env.DEV) {
       await getSaveSlotService().save(cloneState());
       slotSummaries = await listSaveSlots();
       if (startScreen) startScreen.hidden = true;
-      map.setView(cityConfigs[currentMeta.cityId].center, 12);
+      applyCityMapConstraints(currentMeta.cityId);
       startAutoSave();
       renderAll();
       requestUpdates(["network-structure", "blueprint-preview"]);
@@ -13833,7 +13877,82 @@ function getLodMode(zoom: number): LodMode {
 }
 
 function updateDynamicLayers() {
-  // Only the existing-railway toggle remains; its on/off state is user-controlled.
+  if (!overlayState.population) {
+    populationDensityLayer.clearLayers();
+    return;
+  }
+
+  populationDensityLayer.clearLayers();
+  if (demandZones.length === 0) return;
+  if (map.getZoom() >= 14) {
+    renderPopulationDensityCells();
+    return;
+  }
+
+  const values = demandZones.map((zone) => zone.basePotentialDemand + zone.permanentPotentialDelta);
+  const nonZeroValues = values.filter((value) => value > 0).sort((left, right) => left - right);
+  if (nonZeroValues.length === 0) return;
+  const upperBound = nonZeroValues[Math.floor((nonZeroValues.length - 1) * 0.9)] ?? 1;
+
+  for (let index = 0; index < demandZones.length; index += 1) {
+    const zone = demandZones[index];
+    const population = values[index];
+    if (population <= 0) continue;
+    const density = Math.min(1, population / Math.max(1, upperBound));
+    const latitudeHalfStep = 0.0045;
+    const longitudeHalfStep = latitudeHalfStep / Math.max(0.25, Math.cos(zone.position[0] * Math.PI / 180));
+    L.rectangle([
+      [zone.position[0] - latitudeHalfStep, zone.position[1] - longitudeHalfStep],
+      [zone.position[0] + latitudeHalfStep, zone.position[1] + longitudeHalfStep],
+    ], {
+      pane: "populationDensityPane",
+      color: populationDensityColor(density),
+      weight: 0.45,
+      opacity: 0.36 + density * 0.2,
+      fillColor: populationDensityColor(density),
+      fillOpacity: 0.16 + Math.sqrt(density) * 0.48,
+      interactive: false,
+    }).addTo(populationDensityLayer);
+  }
+}
+
+function renderPopulationDensityCells() {
+  const bounds = map.getBounds();
+  const cells = getRealPopulationCells(currentMeta.cityId, {
+    north: bounds.getNorth(),
+    south: bounds.getSouth(),
+    west: bounds.getWest(),
+    east: bounds.getEast(),
+  });
+  const values = cells.map((cell) => cell.population).sort((left, right) => left - right);
+  const upperBound = values[Math.floor((values.length - 1) * 0.9)] ?? 1;
+  const latitudeHalfStep = 1 / 2400;
+
+  for (const cell of cells) {
+    const density = Math.min(1, cell.population / Math.max(1, upperBound));
+    const longitudeHalfStep = latitudeHalfStep / Math.max(0.25, Math.cos(cell.latitude * Math.PI / 180));
+    L.rectangle([
+      [cell.latitude - latitudeHalfStep, cell.longitude - longitudeHalfStep],
+      [cell.latitude + latitudeHalfStep, cell.longitude + longitudeHalfStep],
+    ], {
+      pane: "populationDensityPane",
+      color: populationDensityColor(density),
+      weight: 0.2,
+      opacity: 0.2 + density * 0.16,
+      fillColor: populationDensityColor(density),
+      fillOpacity: 0.13 + Math.sqrt(density) * 0.5,
+      interactive: false,
+    }).addTo(populationDensityLayer);
+  }
+}
+
+function populationDensityColor(density: number) {
+  if (density < 0.12) return "#1d4ed8";
+  if (density < 0.28) return "#06b6d4";
+  if (density < 0.5) return "#22c55e";
+  if (density < 0.72) return "#facc15";
+  if (density < 0.9) return "#fb923c";
+  return "#f43f5e";
 }
 
 // Administrative and land-use overlays are retired from the game UI.

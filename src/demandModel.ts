@@ -53,6 +53,9 @@ export interface DemandZone {
   id: string;
   position: [number, number];
   basePotentialDemand: number;
+  /** Real-population adjustment applied to the game's base demand. */
+  populationDensityFactor?: number;
+  populationDensitySource?: "worldpop-100m-2020";
   areaProfile: AreaProfile;
   permanentPotentialDelta: number;
   appliedPermanentEventIds: string[];
@@ -265,6 +268,12 @@ export function normalizeDemandZone(zone: DemandZone): DemandZone {
   return {
     ...zone,
     basePotentialDemand: finiteNonNegative(zone.basePotentialDemand),
+    populationDensityFactor: zone.populationDensityFactor === undefined
+      ? undefined
+      : finiteNonNegative(zone.populationDensityFactor),
+    populationDensitySource: zone.populationDensitySource === "worldpop-100m-2020"
+      ? zone.populationDensitySource
+      : undefined,
     permanentPotentialDelta: finiteNonNegative(zone.permanentPotentialDelta),
     areaProfile: profiles.includes(zone.areaProfile) ? zone.areaProfile : "mixed",
     appliedPermanentEventIds: Array.isArray(zone.appliedPermanentEventIds)

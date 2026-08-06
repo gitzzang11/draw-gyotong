@@ -25,6 +25,7 @@ vi.mock("leaflet", () => {
     latlng: unknown;
     constructor(latlng: unknown, style: Record<string, unknown> = {}) { super([], style); this.latlng = latlng; }
     setLatLng(latlng: unknown) { this.latlng = latlng; return this; }
+    setRadius(radius: number) { this.style = { ...this.style, radius }; return this; }
     openTooltip() { return this; }
   }
   class Marker {
@@ -108,7 +109,7 @@ describe("incremental map renderers (mocked Leaflet; no DOM)", () => {
     expect(renderer.renderedIds).toEqual(new Set(["line-1"]));
   });
 
-  it("keeps the base line unchanged and creates at most one selection halo", () => {
+  it("keeps the base line unchanged and creates a selection halo with emphasis", () => {
     const group = L.layerGroup();
     const selection = L.layerGroup();
     const renderer = new LineRenderer(group, selection, "routeSelectionPane");
@@ -117,23 +118,23 @@ describe("incremental map renderers (mocked Leaflet; no DOM)", () => {
     const baseStyles = baseLayers.map((layer) => ({ ...(layer as L.Polyline & { style: Record<string, unknown> }).style }));
     renderer.reconcileEntities([line({ selected: true })]);
     expect(group.getLayers()).toEqual(baseLayers);
-    expect(selection.getLayers()).toHaveLength(1);
+    expect(selection.getLayers()).toHaveLength(2);
     expect(baseLayers.map((layer) => (layer as L.Polyline & { style: Record<string, unknown> }).style)).toEqual(baseStyles);
     renderer.reconcileEntities([line({ selected: true, lod: "build" })]);
-    expect(selection.getLayers()).toHaveLength(1);
+    expect(selection.getLayers()).toHaveLength(2);
     renderer.reconcileEntities([line({ selected: false, lod: "build" })]);
     expect(selection.getLayers()).toHaveLength(0);
   });
 
-  it("moves the selection halo when another line is selected", () => {
+  it("moves the selection halo and emphasis when another line is selected", () => {
     const group = L.layerGroup();
     const selection = L.layerGroup();
     const renderer = new LineRenderer(group, selection);
     renderer.reconcileEntities([line({ selected: true }), line({ id: "line-2" })]);
-    expect(selection.getLayers()).toHaveLength(1);
+    expect(selection.getLayers()).toHaveLength(2);
     const firstHalo = selection.getLayers()[0];
     renderer.reconcileEntities([line(), line({ id: "line-2", selected: true })]);
-    expect(selection.getLayers()).toHaveLength(1);
+    expect(selection.getLayers()).toHaveLength(2);
     expect(selection.getLayers()[0]).not.toBe(firstHalo);
   });
 

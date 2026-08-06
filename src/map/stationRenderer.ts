@@ -21,20 +21,26 @@ export interface TransferConnectionEntity {
 export class StationRenderer {
   private readonly stations: EntityRenderer<StationRenderEntity, L.CircleMarker>;
   private readonly transfers: EntityRenderer<TransferConnectionEntity, L.Polyline>;
+  private readonly rings = new Map<L.CircleMarker, L.CircleMarker>();
 
   constructor(private readonly layer: L.LayerGroup, private readonly pane = "stationInteractionPane") {
     this.stations = new EntityRenderer({
       create: (entity) => {
         const marker = L.circleMarker(entity.position, { interactive: false, pane: this.pane }).addTo(this.layer);
         this.updateStation(marker, entity);
+        this.updateRing(marker, entity);
         return marker;
       },
       update: (marker, entity, previous) => {
         if (entity.position[0] !== previous.position[0] || entity.position[1] !== previous.position[1]) marker.setLatLng(entity.position);
         this.updateStation(marker, entity);
+        this.updateRing(marker, entity);
       },
       remove: (marker) => {
         marker.unbindTooltip();
+        const ring = this.rings.get(marker);
+        if (ring) this.layer.removeLayer(ring);
+        this.rings.delete(marker);
         this.layer.removeLayer(marker);
       },
     });
@@ -65,9 +71,9 @@ export class StationRenderer {
 
   private updateStation(marker: L.CircleMarker, entity: StationRenderEntity) {
     marker.setStyle({
-      radius: entity.express || entity.selected ? 8 : 6,
+      radius: entity.express ? 8 : 6,
       color: "#111111",
-      weight: entity.selected ? 3.5 : 2.5,
+      weight: 2.5,
       fillColor: entity.transfer ? "#ffffff" : entity.express ? "#ff5d5d" : entity.color,
       fillOpacity: entity.operational ? 1 : 0.25,
       dashArray: entity.operational ? undefined : "3 4",
@@ -84,6 +90,36 @@ export class StationRenderer {
     } else {
       marker.unbindTooltip();
     }
+  }
+
+  private updateRing(marker: L.CircleMarker, entity: StationRenderEntity) {
+    const baseRadius = entity.express ? 8 : 6;
+    const existing = this.rings.get(marker);
+    if (!entity.selected) {
+      if (existing) {
+        this.layer.removeLayer(existing);
+        this.rings.delete(marker);
+      }
+      return;
+    }
+    if (!existing) {
+      const ring = L.circleMarker(entity.position, {
+        interactive: false,
+        pane: this.pane,
+        className: "station-selection-ring",
+      }).addTo(this.layer);
+      this.rings.set(marker, ring);
+    }
+    const ring = this.rings.get(marker)!;
+    ring.setLatLng(entity.position);
+    ring.setRadius(baseRadius + 5);
+    ring.setStyle({
+      color: entity.color,
+      weight: 2,
+      opacity: 0.95,
+      fillColor: "transparent",
+      fillOpacity: 0,
+    });
   }
 
   private transferStyle(): L.PolylineOptions {

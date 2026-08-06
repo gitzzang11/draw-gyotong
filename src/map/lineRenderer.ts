@@ -16,6 +16,7 @@ export interface LineRenderEntity {
 
 type RenderedPath = {
   halo?: L.Polyline;
+  emphasis?: L.Polyline;
   outline: L.Polyline;
   line: L.Polyline;
 };
@@ -93,11 +94,20 @@ export class LineRenderer {
           interactive: false,
           pane: this.selectionPane,
         }).addTo(this.selectionLayer);
+        path.emphasis = L.polyline(latLngs, {
+          interactive: false,
+          pane: this.selectionPane,
+        }).addTo(this.selectionLayer);
       } else if (!entity.selected && path.halo) {
         this.selectionLayer.removeLayer(path.halo);
         path.halo = undefined;
+        if (path.emphasis) {
+          this.selectionLayer.removeLayer(path.emphasis);
+          path.emphasis = undefined;
+        }
       }
       path.halo?.setLatLngs(latLngs);
+      path.emphasis?.setLatLngs(latLngs);
       this.applyStyle(path, entity);
     });
   }
@@ -105,21 +115,29 @@ export class LineRenderer {
   private applyStyle(path: RenderedPath, entity: LineRenderEntity) {
     const low = entity.lod === "overview";
     const middle = entity.lod === "district";
-    const haloWeight = low ? 9 : middle ? 12 : 16;
     const outlineWeight = low ? 6 : middle ? 9 : 13;
     const routeWeight = low ? 4 : middle ? 5 : 6;
+    const emphasisWeight = routeWeight + 3;
+    const haloWeight = emphasisWeight + 6;
     path.halo?.setStyle({
-      color: "rgba(255, 255, 255, 0.82)",
+      color: "rgba(255, 255, 255, 0.6)",
       weight: haloWeight,
-      opacity: 0.82,
+      opacity: 0.6,
       lineCap: "round",
       lineJoin: "round",
     });
-    path.outline.setStyle({ color: "rgba(4, 10, 14, 0.82)", weight: outlineWeight, opacity: 0.92 });
+    path.emphasis?.setStyle({
+      color: entity.color,
+      weight: emphasisWeight,
+      opacity: 0.95,
+      lineCap: "round",
+      lineJoin: "round",
+    });
+    path.outline.setStyle({ color: "rgba(4, 10, 14, 0.9)", weight: outlineWeight, opacity: 0.95 });
     path.line.setStyle({
       color: entity.color,
       weight: routeWeight,
-      opacity: entity.underConstruction ? 0.46 : entity.planning ? 0.58 : entity.paused ? 0.68 : 0.98,
+      opacity: entity.underConstruction ? 0.42 : entity.planning ? 0.54 : entity.paused ? 0.62 : 0.72,
       dashArray: entity.underConstruction ? "5 10" : entity.planning ? "10 8" : undefined,
       lineCap: "round",
       lineJoin: "round",
@@ -128,6 +146,7 @@ export class LineRenderer {
 
   private removePath(path: RenderedPath) {
     if (path.halo) this.selectionLayer.removeLayer(path.halo);
+    if (path.emphasis) this.selectionLayer.removeLayer(path.emphasis);
     this.layer.removeLayer(path.outline);
     this.layer.removeLayer(path.line);
   }
