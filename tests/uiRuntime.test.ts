@@ -105,6 +105,17 @@ describe("UI runtime ownership", () => {
     expect(panels.listeners.size).toBe(0);
   });
 
+  it("cleans backdrop pointer listeners after close", () => {
+    const backdrop = element();
+    const panels = new PanelManager().register({ id: "dialog:decision", element: backdrop });
+    const dialogs = new DialogManager(panels);
+    dialogs.open("decision");
+    dialogs.bindBackdropDismiss("decision", backdrop, vi.fn());
+    expect(panels.listeners.size).toBe(3);
+    dialogs.close("decision");
+    expect(panels.listeners.size).toBe(0);
+  });
+
   it("runs a rapidly clicked confirmation once", () => {
     const backdrop = element();
     const button = new EventTarget();

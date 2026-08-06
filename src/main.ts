@@ -67,6 +67,7 @@ import {
   type ManualVerificationState,
 } from "./dev/manualVerificationState.ts";
 import { ListenerRegistry } from "./ui/listenerRegistry.ts";
+import { bindBackdropDismiss } from "./ui/backdropDismiss.ts";
 import { HudRenderer } from "./ui/hudRenderer.ts";
 import { PanelManager } from "./ui/panelManager.ts";
 import { StationPanel } from "./ui/stationPanel.ts";
@@ -2403,14 +2404,10 @@ planOverviewButton?.addEventListener("click", openPlanningDialog);
 constructionManagerButton?.addEventListener("click", openConstructionManager);
 constructionOverviewButton?.addEventListener("click", openConstructionManager);
 closeConstructionManagerButton?.addEventListener("click", closeConstructionManager);
-constructionManagerDialog?.addEventListener("click", (event) => {
-  if (event.target === constructionManagerDialog) closeConstructionManager();
-});
+if (constructionManagerDialog) bindBackdropDismiss(constructionManagerDialog, closeConstructionManager);
 constructionProjectList?.addEventListener("click", handleConstructionManagerClick);
 closePlanningButton?.addEventListener("click", closePlanningDialog);
-planningDialog?.addEventListener("click", (event) => {
-  if (event.target === planningDialog) closePlanningDialog();
-});
+if (planningDialog) bindBackdropDismiss(planningDialog, closePlanningDialog);
 activePlanSelect?.addEventListener("change", () => {
   activePlanId = activePlanSelect.value || null;
   renderPlanningDialog();
@@ -2423,9 +2420,7 @@ savePlanButton?.addEventListener("click", saveActivePlanMetadata);
 convertPlanButton?.addEventListener("click", openPlanConversionDialog);
 closePlanConversionButton?.addEventListener("click", closePlanConversionDialog);
 cancelPlanConversionButton?.addEventListener("click", closePlanConversionDialog);
-planConversionDialog?.addEventListener("click", (event) => {
-  if (event.target === planConversionDialog) closePlanConversionDialog();
-});
+if (planConversionDialog) bindBackdropDismiss(planConversionDialog, closePlanConversionDialog);
 planConversionItems?.addEventListener("change", handlePlanConversionSelectionChange);
 selectAllPlanConversionButton?.addEventListener("click", () => setAllPlanConversionSelection(true));
 clearPlanConversionButton?.addEventListener("click", () => setAllPlanConversionSelection(false));
@@ -2452,9 +2447,7 @@ lineAutoFareButton?.addEventListener("click", () => {
 });
 closeLineButton?.addEventListener("click", () => selectRoute(null));
 closeRouteChoiceButton?.addEventListener("click", closeRouteChoice);
-routeChoiceDialog?.addEventListener("click", (event) => {
-  if (event.target === routeChoiceDialog) closeRouteChoice();
-});
+if (routeChoiceDialog) bindBackdropDismiss(routeChoiceDialog, closeRouteChoice);
 closeLineManagerButton?.addEventListener("click", () => {
   closeLineManager();
   selectRoute(null);
@@ -2465,9 +2458,7 @@ cancelLineManagerButton?.addEventListener("click", () => {
 });
 openTrainManagerFromLineCardButton?.addEventListener("click", openTrainManagerModal);
 closeTrainManagerButton?.addEventListener("click", closeTrainManagerModal);
-trainManagerDialog?.addEventListener("click", (event) => {
-  if (event.target === trainManagerDialog) closeTrainManagerModal();
-});
+if (trainManagerDialog) bindBackdropDismiss(trainManagerDialog, closeTrainManagerModal);
 saveLineManagerButton?.addEventListener("click", saveLineManager);
 deleteLineManagerButton?.addEventListener("click", requestWholeLineDemolition);
 document.addEventListener("keydown", (event) => {
@@ -2481,14 +2472,10 @@ operationRouteSelect?.addEventListener("change", () => {
 });
 cashPill?.addEventListener("click", openFinanceDialog);
 closeFinanceButton?.addEventListener("click", closeFinanceDialog);
-financeDialog?.addEventListener("click", (event) => {
-  if (event.target === financeDialog) closeFinanceDialog();
-});
+if (financeDialog) bindBackdropDismiss(financeDialog, closeFinanceDialog);
 satisfactionPill?.addEventListener("click", openSatisfactionDialog);
 closeSatisfactionButton?.addEventListener("click", closeSatisfactionDialog);
-satisfactionDialog?.addEventListener("click", (event) => {
-  if (event.target === satisfactionDialog) closeSatisfactionDialog();
-});
+if (satisfactionDialog) bindBackdropDismiss(satisfactionDialog, closeSatisfactionDialog);
 openStatisticsFromFinanceButton?.addEventListener("click", () => {
   closeFinanceDialog();
   openStatisticsScreen();
@@ -2501,9 +2488,7 @@ dialogAutoFareButton?.addEventListener("click", () => {
 });
 menuButton?.addEventListener("click", openInGameMenu);
 closeInGameMenuButton?.addEventListener("click", closeInGameMenu);
-inGameMenuDialog?.addEventListener("click", (event) => {
-  if (event.target === inGameMenuDialog) closeInGameMenu();
-});
+if (inGameMenuDialog) bindBackdropDismiss(inGameMenuDialog, closeInGameMenu);
 menuSaveTabButton?.addEventListener("click", () => switchInGameMenuTab("save"));
 menuLoadTabButton?.addEventListener("click", () => switchInGameMenuTab("load"));
 menuQuickSaveButton?.addEventListener("click", () => {
@@ -2551,13 +2536,9 @@ statisticsButton?.addEventListener("click", openStatisticsScreen);
 closeStatisticsButton?.addEventListener("click", closeStatisticsScreen);
 
 closeStationManagerButton?.addEventListener("click", closeStationManager);
-stationManagerDialog?.addEventListener("click", (event) => {
-  if (event.target === stationManagerDialog) closeStationManager();
-});
+if (stationManagerDialog) bindBackdropDismiss(stationManagerDialog, closeStationManager);
 closeDepotManagerButton?.addEventListener("click", closeDepotManager);
-depotManagerDialog?.addEventListener("click", (event) => {
-  if (event.target === depotManagerDialog) closeDepotManager();
-});
+if (depotManagerDialog) bindBackdropDismiss(depotManagerDialog, closeDepotManager);
 newsButton?.addEventListener("click", openNewsScreen);
 closeNewsButton?.addEventListener("click", closeNewsScreen);
 newsFilter?.addEventListener("change", renderNewsFeed);
@@ -2629,9 +2610,7 @@ metroDiagramSvg?.addEventListener("pointercancel", finishDiagramStationDrag);
 helpButton?.addEventListener("click", () => openTutorial(true));
 guideButton?.addEventListener("click", () => openTutorial(true));
 closeSettingsButton?.addEventListener("click", closeSettings);
-settingsDialog?.addEventListener("click", (event) => {
-  if (event.target === settingsDialog) closeSettings();
-});
+if (settingsDialog) bindBackdropDismiss(settingsDialog, closeSettings);
 closeRouteSettingsButton?.addEventListener("click", () => setTool("pan"));
 saveRouteSettingsButton?.addEventListener("click", saveRouteSettings);
 soundToggle?.addEventListener("change", () => updateSettings({ soundEnabled: Boolean(soundToggle.checked) }));
@@ -12157,9 +12136,7 @@ function bindDecisionDialogListeners() {
   if (closeDecisionButton) dialogManager.bind("decision", "close", closeDecisionButton, "click", closeDecisionDialog);
   if (decisionSaveDraftButton) dialogManager.bind("decision", "save-draft", decisionSaveDraftButton, "click", saveRoutePlanningDraftAndChangeTool);
   if (decisionDialog) {
-    dialogManager.bind("decision", "backdrop", decisionDialog, "click", (event) => {
-      if (event.target === decisionDialog) closeDecisionDialog();
-    });
+    dialogManager.bindBackdropDismiss("decision", decisionDialog, closeDecisionDialog);
   }
   if (decisionConfirmButton) {
     dialogManager.bindConfirmation("decision", decisionConfirmButton, () => {
@@ -12548,9 +12525,7 @@ function bindConnectionDialogListeners() {
   if (redesignMergeButton) dialogManager.bind("connection", "redesign", redesignMergeButton, "click", redesignConnection);
   if (confirmMergeButton) dialogManager.bindConfirmation("connection", confirmMergeButton, () => confirmConnectionDialog());
   if (mergeDialog) {
-    dialogManager.bind("connection", "backdrop", mergeDialog, "click", (event) => {
-      if (event.target === mergeDialog) closeMergeDialog();
-    });
+    dialogManager.bindBackdropDismiss("connection", mergeDialog, closeMergeDialog);
   }
   if (mergeChoiceList) {
     dialogManager.bind("connection", "choice", mergeChoiceList, "change", (event) => {

@@ -1,4 +1,5 @@
 import { PanelManager } from "./panelManager";
+import { createBackdropDismissHandlers } from "./backdropDismiss";
 
 export function renderConnectionTargetCard(name: string, color: string, location: string, label: string) {
   return `<article class="connection-target-card" style="--connection-color:${color}">
@@ -34,6 +35,13 @@ export class DialogManager {
 
   bind(kind: string, key: string, target: EventTarget, type: keyof GlobalEventHandlersEventMap, handler: (event: Event) => void) {
     return this.manager.bind(`dialog:${kind}`, key, target, type, handler);
+  }
+
+  bindBackdropDismiss(kind: string, backdrop: HTMLElement, closeModal: () => void) {
+    const handlers = createBackdropDismissHandlers(closeModal);
+    this.bind(kind, "backdrop:pointerdown", backdrop, "pointerdown", (event) => handlers.pointerDown(event as PointerEvent));
+    this.bind(kind, "backdrop:pointerup", backdrop, "pointerup", (event) => handlers.pointerUp(event as PointerEvent));
+    this.bind(kind, "backdrop:pointercancel", backdrop, "pointercancel", handlers.pointerCancel);
   }
 
   bindConfirmation(kind: string, target: EventTarget, action: (event: Event) => void | Promise<void>) {
