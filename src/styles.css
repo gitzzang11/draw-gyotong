@@ -9683,7 +9683,7 @@ textarea {
   left: max(12px, env(safe-area-inset-left));
   right: max(12px, env(safe-area-inset-right));
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 12px;
 }

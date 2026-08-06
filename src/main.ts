@@ -909,12 +909,6 @@ app.innerHTML = `
     
     <!-- LEVEL 1: TOP EXECUTIVE COMMAND HUD -->
     <header class="hud top-header-bar" aria-label="game status bar">
-      <div class="hud-brand-pill" aria-label="현재 지역 선택">
-        <span class="hud-live-dot"></span>
-        <strong id="cityHudReadout">서울 관제 네트워크</strong>
-        <svg class="region-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-      </div>
-
       <div class="top-status-pills" aria-label="game metrics">
         <div id="workspaceModeBar" class="status-pill workspace-mode-pill" aria-label="작업 모드">
           <div class="workspace-mode-tabs" role="tablist" aria-label="상위 작업 모드">
