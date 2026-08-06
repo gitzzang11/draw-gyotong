@@ -7879,6 +7879,7 @@ async function initializeGameShell() {
     slotSummaries = [];
   }
   if (slotSummaries.length === 0) loadSavedState();
+  updateEconomyHud();
   renderStartScreen();
   if (slotSummaries.length > 0 && startScreen) startScreen.hidden = false;
   if (slotSummaries.length === 0 && routes.length > 0) {
@@ -8034,6 +8035,7 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
     ...defaultEconomy,
     cash: mode === "sandbox" ? 999999999 : difficultyConfigs[difficulty].startCash,
   };
+  updateEconomyHud();
   newsEvents = [createNewsEvent(0)];
   map.setView(cityConfigs[cityId].center, 12);
   if (newGameButton) newGameButton.disabled = true;
@@ -8093,6 +8095,7 @@ async function loadSlot(slotId: string) {
   if (!state) return;
   applyState(state);
   currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}), slotId };
+  updateEconomyHud();
   map.setView(cityConfigs[currentMeta.cityId].center, 12);
   if (startScreen) startScreen.hidden = true;
   startAutoSave();
