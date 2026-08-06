@@ -10540,6 +10540,596 @@ button:active,
   border-top-color: rgba(11, 16, 22, 0.92);
 }
 
+/* -------------------------------------------------------------------------
+   MOBILE PLAYABILITY
+   The desktop HUD keeps its information density. On touch devices the same
+   controls become thumb-sized, scroll independently, and respect browser UI
+   and display cut-outs without covering the map interaction area.
+------------------------------------------------------------------------- */
+@media (pointer: coarse), (max-width: 700px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="search"],
+  select,
+  textarea {
+    min-height: 48px;
+    font-size: 16px;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .hud.build-panel {
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 8px;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+
+  .hud.build-panel .tool-group,
+  .hud.build-panel .primary-tool {
+    scroll-snap-align: start;
+  }
+
+  .hud.build-panel .primary-tool {
+    min-height: 48px;
+  }
+
+  .layer-options,
+  .left-route-list,
+  .dialog-backdrop > section,
+  .dialog-backdrop > div > section {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Keep the current budget visible on typical landscape phones while avoiding
+   crowding on narrow portrait screens. The daily delta remains available in
+   the finance panel. */
+@media (pointer: coarse) and (min-width: 501px) and (max-width: 700px) and (orientation: landscape) {
+  .top-status-pills .cash-pill {
+    display: inline-flex !important;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .top-status-pills .cash-pill .pill-icon,
+  .top-status-pills .cash-pill .net-readout {
+    display: none;
+  }
+
+  .top-status-pills .cash-pill #cashReadout {
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Modal content becomes a reachable bottom sheet instead of a centred card
+   that can be hidden by the mobile browser chrome or software keyboard. */
+@media (max-width: 700px) {
+  .dialog-backdrop {
+    align-items: end;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  }
+
+  .dialog-backdrop > .settings-dialog,
+  .dialog-backdrop > .finance-dialog,
+  .dialog-backdrop > .station-manager-dialog,
+  .dialog-backdrop > .depot-manager-dialog,
+  .dialog-backdrop > .train-manager-dialog,
+  .dialog-backdrop > .satisfaction-dialog,
+  .dialog-backdrop > .decision-dialog,
+  .dialog-backdrop > .merge-dialog,
+  .dialog-backdrop > .planning-dialog,
+  .dialog-backdrop > .plan-conversion-dialog,
+  .dialog-backdrop > .route-choice-dialog,
+  .dialog-backdrop > .ingame-menu-dialog {
+    width: min(100%, 680px) !important;
+    max-height: min(88dvh, 680px) !important;
+    margin: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    border-radius: 18px 18px 0 0 !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dialog-backdrop .dialog-close,
+  .dialog-backdrop .compact-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .dialog-backdrop button:not(.dialog-close):not(.compact-close) {
+    min-height: 44px;
+  }
+}
+
+/* Safari does not always obey the manifest orientation before installation.
+   Portrait remains playable, but its dock and context panels leave a larger
+   vertical map area and don't overlap the browser gesture area. */
+@media (max-width: 700px) and (orientation: portrait) {
+  .hud.top-header-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .hud.bottom-right {
+    bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
+  }
+
+  #modifyToolsCard,
+  #routeSettingsCard,
+  .construction-preview-panel {
+    bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
+  }
+
+  .hint-row {
+    display: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   ROUTE COLOR PICKER
+   Native colour inputs differ between Android and iOS and are hard to use
+   one-handed. This palette follows the familiar app pattern: common choices
+   are immediate, while the last control still opens the platform picker for
+   a custom line colour.
+------------------------------------------------------------------------- */
+.mobile-color-picker {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.mobile-color-picker > span {
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.color-swatch {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--swatch-color, transparent) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.color-swatch[data-color-value="#e5484d"] { --swatch-color: #e5484d; }
+.color-swatch[data-color-value="#f59e0b"] { --swatch-color: #f59e0b; }
+.color-swatch[data-color-value="#f3ca52"] { --swatch-color: #f3ca52; }
+.color-swatch[data-color-value="#4ce0c3"] { --swatch-color: #4ce0c3; }
+.color-swatch[data-color-value="#22c55e"] { --swatch-color: #22c55e; }
+.color-swatch[data-color-value="#3b82f6"] { --swatch-color: #3b82f6; }
+.color-swatch[data-color-value="#7aa7ff"] { --swatch-color: #7aa7ff; }
+.color-swatch[data-color-value="#8b5cf6"] { --swatch-color: #8b5cf6; }
+.color-swatch[data-color-value="#c477ff"] { --swatch-color: #c477ff; }
+.color-swatch[data-color-value="#ec4899"] { --swatch-color: #ec4899; }
+.color-swatch[data-color-value="#64748b"] { --swatch-color: #64748b; }
+
+.color-swatch::after {
+  content: "";
+  width: 13px;
+  height: 7px;
+  border-bottom: 2px solid #fff;
+  border-left: 2px solid #fff;
+  opacity: 0;
+  transform: rotate(-45deg) translate(1px, -2px);
+}
+
+.color-swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--swatch-color), 0 5px 12px color-mix(in srgb, var(--swatch-color) 40%, transparent);
+}
+
+.color-swatch.selected::after {
+  opacity: 1;
+}
+
+.custom-color-button {
+  display: flex;
+  grid-column: span 2;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 10px;
+  color: var(--c-text-muted);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.custom-color-button input[type="color"] {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 50%;
+  background: transparent !important;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.custom-color-button input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.custom-color-button input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+
+.route-settings-edit-fields > .mobile-color-picker {
+  grid-column: 1 / -1;
+}
+
+.right-line-control-card .mobile-color-picker {
+  margin-top: 2px;
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  .color-swatch,
+  .custom-color-button {
+    min-height: 46px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   CITY PICKER
+   Replaces the browser select with a compact, app-like card chooser. The
+   hidden select remains the source of truth so existing save and unlock logic
+   stays unchanged.
+------------------------------------------------------------------------- */
+.setup-city-field {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+  min-width: 0;
+}
+
+.setup-field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.setup-field-label > span {
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.setup-field-label > small {
+  color: var(--c-text-dim);
+  font-size: 10px;
+}
+
+.city-native-select {
+  display: none !important;
+}
+
+.city-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.city-option-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "mark main state"
+    "stats stats state";
+  align-items: center;
+  gap: 8px 9px;
+  min-width: 0;
+  min-height: 94px;
+  padding: 11px;
+  overflow: hidden;
+  color: var(--c-text-main);
+  text-align: left;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--city-card-accent) 9%, #121927), #0c131a 72%);
+  box-shadow: none;
+}
+
+.city-option-card::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  content: "";
+  background: var(--city-card-accent);
+  opacity: 0.7;
+}
+
+.city-option-card:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--city-card-accent) 60%, var(--c-border));
+  transform: translateY(-1px);
+}
+
+.city-option-card.selected {
+  border-color: var(--city-card-accent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--city-card-accent) 22%, #121927), #101923 72%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--city-card-accent) 30%, transparent), 0 8px 18px color-mix(in srgb, var(--city-card-accent) 15%, transparent);
+}
+
+.city-option-card.selected::before {
+  opacity: 1;
+}
+
+.city-option-card.locked {
+  color: var(--c-text-dim);
+  background: rgba(255, 255, 255, 0.025);
+  cursor: not-allowed;
+  filter: saturate(0.35);
+}
+
+.city-option-mark {
+  display: grid;
+  grid-area: mark;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--city-card-accent);
+  border: 1px solid color-mix(in srgb, var(--city-card-accent) 54%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--city-card-accent) 13%, transparent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.city-option-main {
+  display: grid;
+  grid-area: main;
+  min-width: 0;
+  gap: 2px;
+}
+
+.city-option-main strong {
+  overflow: hidden;
+  color: var(--c-text-main);
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-option-main small {
+  color: var(--c-text-muted);
+  font-size: 10px;
+}
+
+.city-option-stats {
+  display: flex;
+  grid-area: stats;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.city-option-stats em {
+  padding: 3px 5px;
+  color: var(--c-text-muted);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.city-option-check,
+.city-option-lock {
+  display: grid;
+  grid-area: state;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: 50%;
+  font-size: 13px;
+  font-style: normal;
+}
+
+.city-option-card.selected .city-option-check {
+  color: #071116;
+  border-color: var(--city-card-accent);
+  background: var(--city-card-accent);
+}
+
+.city-option-lock {
+  color: var(--c-text-dim);
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  .city-picker {
+    gap: 9px;
+  }
+
+  .city-option-card {
+    min-height: 104px;
+    padding: 12px;
+  }
+}
+
+/* App-style mode and difficulty controls. The native selects remain in the
+   DOM for the existing game setup flow, while cards provide the touch UI. */
+.setup-choice-field {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.setup-native-select {
+  display: none !important;
+}
+
+.setup-choice-grid {
+  display: grid;
+  gap: 7px;
+}
+
+.mode-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.difficulty-choice-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.setup-choice-card {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 9px;
+  overflow: hidden;
+  color: var(--c-text-muted);
+  text-align: left;
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.026);
+  box-shadow: none;
+}
+
+.setup-choice-card > i {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--c-text-dim);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.setup-choice-card > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.setup-choice-card strong {
+  overflow: hidden;
+  color: var(--c-text-main);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-choice-card small {
+  overflow: hidden;
+  color: var(--c-text-dim);
+  font-size: 9px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setup-choice-card:hover {
+  border-color: var(--c-border-light);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.setup-choice-card.selected {
+  color: var(--c-primary);
+  border-color: rgba(85, 217, 192, 0.62);
+  background: rgba(85, 217, 192, 0.11);
+  box-shadow: inset 3px 0 0 var(--c-primary);
+}
+
+.setup-choice-card.selected > i {
+  color: #071116;
+  background: var(--c-primary);
+}
+
+.mode-choice-grid .setup-choice-card[data-choice-value="career"].selected {
+  color: #f3ca52;
+  border-color: rgba(243, 202, 82, 0.62);
+  background: rgba(243, 202, 82, 0.1);
+  box-shadow: inset 3px 0 0 #f3ca52;
+}
+
+.mode-choice-grid .setup-choice-card[data-choice-value="career"].selected > i {
+  background: #f3ca52;
+}
+
+.difficulty-choice-grid .setup-choice-card {
+  min-height: 58px;
+  justify-content: center;
+  padding: 8px 5px;
+  text-align: center;
+}
+
+.difficulty-choice-grid .setup-choice-card > span {
+  justify-items: center;
+}
+
+.difficulty-choice-grid .setup-choice-card[data-choice-value="hard"].selected {
+  color: #ff9aa5;
+  border-color: rgba(255, 107, 120, 0.64);
+  background: rgba(255, 107, 120, 0.1);
+  box-shadow: inset 0 -3px 0 #ff6b78;
+}
+
+.difficulty-choice-grid .setup-choice-card[data-choice-value="easy"].selected {
+  color: #7decc7;
+  border-color: rgba(76, 224, 195, 0.62);
+  background: rgba(76, 224, 195, 0.1);
+  box-shadow: inset 0 -3px 0 #4ce0c3;
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  .setup-choice-card {
+    min-height: 68px;
+  }
+
+  .difficulty-choice-grid .setup-choice-card {
+    min-height: 62px;
+  }
+}
+
+@media (max-width: 390px) {
+  .setup-choice-card small {
+    display: none;
+  }
+
+  .setup-choice-card {
+    min-height: 50px;
+  }
+}
+
 /* 실행 취소/다시 실행 버튼도 터치 영역을 확보한다. */
 .history-action {
   width: var(--touch-target);

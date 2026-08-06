@@ -3,3 +3,10 @@ dist/
 .vite/
 *.local
 tmp/
+android/.gradle/
+android/.idea/
+android/build/
+android/app/build/
+.idea/
+*.apk
+*.aab

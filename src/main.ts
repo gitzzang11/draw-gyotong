@@ -886,9 +886,28 @@ app.innerHTML = `
             <h2>⚙️ 새 세이브 옵션 설정</h2>
           </div>
           <div class="setup-grid">
-            <label><span>도시 선택</span><select id="citySelect"></select></label>
-            <label><span>게임 모드</span><select id="modeSelect"><option value="sandbox">샌드박스 (자금 무제한)</option><option value="career">커리어 (경영 도전)</option></select></label>
-            <label><span>난이도</span><select id="difficultySelect"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select></label>
+            <section class="setup-city-field" aria-labelledby="cityPickerLabel">
+              <div class="setup-field-label"><span id="cityPickerLabel">도시 선택</span><small>운영할 도시를 선택하세요</small></div>
+              <select id="citySelect" class="city-native-select" aria-hidden="true" tabindex="-1"></select>
+              <div id="cityPicker" class="city-picker" role="radiogroup" aria-labelledby="cityPickerLabel"></div>
+            </section>
+            <section class="setup-choice-field" data-choice-input="modeSelect" aria-labelledby="modePickerLabel">
+              <div class="setup-field-label"><span id="modePickerLabel">게임 모드</span><small>운영 방식</small></div>
+              <select id="modeSelect" class="setup-native-select" aria-hidden="true" tabindex="-1"><option value="sandbox">샌드박스 (자금 무제한)</option><option value="career">커리어 (경영 도전)</option></select>
+              <div class="setup-choice-grid mode-choice-grid" role="radiogroup" aria-labelledby="modePickerLabel">
+                <button class="setup-choice-card" type="button" data-choice-value="sandbox" role="radio"><i aria-hidden="true">∞</i><span><strong>샌드박스</strong><small>자유 건설 · 자금 제한 없음</small></span></button>
+                <button class="setup-choice-card" type="button" data-choice-value="career" role="radio"><i aria-hidden="true">◆</i><span><strong>커리어</strong><small>자금 관리 · 도시 해금</small></span></button>
+              </div>
+            </section>
+            <section class="setup-choice-field" data-choice-input="difficultySelect" aria-labelledby="difficultyPickerLabel">
+              <div class="setup-field-label"><span id="difficultyPickerLabel">난이도</span><small>비용과 목표</small></div>
+              <select id="difficultySelect" class="setup-native-select" aria-hidden="true" tabindex="-1"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
+              <div class="setup-choice-grid difficulty-choice-grid" role="radiogroup" aria-labelledby="difficultyPickerLabel">
+                <button class="setup-choice-card" type="button" data-choice-value="easy" role="radio"><span><strong>쉬움</strong><small>여유롭게 시작</small></span></button>
+                <button class="setup-choice-card" type="button" data-choice-value="normal" role="radio"><span><strong>보통</strong><small>표준 경영</small></span></button>
+                <button class="setup-choice-card" type="button" data-choice-value="hard" role="radio"><span><strong>어려움</strong><small>도전적인 운영</small></span></button>
+              </div>
+            </section>
             <label><span>세이브 이름</span><input id="slotNameInput" value="서울 1호 계획" maxlength="20" placeholder="슬롯 이름을 입력하세요" /></label>
           </div>
           <div class="city-note" id="cityNote">✨ 서울: 높은 수요, 강 많음</div>
@@ -1030,7 +1049,23 @@ app.innerHTML = `
       </div>
       <div id="routeSettingsEditFields" class="route-settings-edit-fields">
         <label><span>이름</span><input id="draftRouteNameInput" type="text" maxlength="32" placeholder="자동 이름" autocomplete="off" /></label>
-        <label class="route-settings-color-field"><span>색상</span><input id="draftRouteColorInput" type="color" value="#3277ff" aria-label="노선 색상" /></label>
+        <div class="route-settings-color-field mobile-color-picker" data-color-input="draftRouteColorInput">
+          <span>노선 색상</span>
+          <div class="color-swatch-grid" role="group" aria-label="노선 색상 빠른 선택">
+            <button type="button" class="color-swatch" data-color-value="#e5484d" aria-label="레드" title="레드"></button>
+            <button type="button" class="color-swatch" data-color-value="#f59e0b" aria-label="오렌지" title="오렌지"></button>
+            <button type="button" class="color-swatch" data-color-value="#f3ca52" aria-label="옐로" title="옐로"></button>
+            <button type="button" class="color-swatch" data-color-value="#4ce0c3" aria-label="민트" title="민트"></button>
+            <button type="button" class="color-swatch" data-color-value="#22c55e" aria-label="그린" title="그린"></button>
+            <button type="button" class="color-swatch" data-color-value="#3b82f6" aria-label="블루" title="블루"></button>
+            <button type="button" class="color-swatch" data-color-value="#7aa7ff" aria-label="스카이 블루" title="스카이 블루"></button>
+            <button type="button" class="color-swatch" data-color-value="#8b5cf6" aria-label="퍼플" title="퍼플"></button>
+            <button type="button" class="color-swatch" data-color-value="#c477ff" aria-label="라일락" title="라일락"></button>
+            <button type="button" class="color-swatch" data-color-value="#ec4899" aria-label="핑크" title="핑크"></button>
+            <button type="button" class="color-swatch" data-color-value="#64748b" aria-label="그레이" title="그레이"></button>
+            <label class="custom-color-button" title="직접 색상 선택"><span>직접 선택</span><input id="draftRouteColorInput" type="color" value="#3277ff" aria-label="노선 색상 직접 선택" /></label>
+          </div>
+        </div>
         <button id="saveRouteSettingsButton" class="ops-button primary action-button action-button--setting" type="button"><span class="button-icon" aria-hidden="true">✓</span><span>설정 적용</span></button>
       </div>
     </section>
@@ -1481,7 +1516,23 @@ app.innerHTML = `
           <div class="metric-chip"><span>대기</span><strong id="waitReadout">-</strong></div>
         </div>
         <label class="manager-field"><span>노선 이름</span><input id="lineNameInput" maxlength="28" /></label>
-        <label class="manager-field"><span>노선 색상</span><input id="lineColorInput" type="color" /></label>
+        <div class="manager-field mobile-color-picker" data-color-input="lineColorInput">
+          <span>노선 색상</span>
+          <div class="color-swatch-grid" role="group" aria-label="노선 색상 빠른 선택">
+            <button type="button" class="color-swatch" data-color-value="#e5484d" aria-label="레드" title="레드"></button>
+            <button type="button" class="color-swatch" data-color-value="#f59e0b" aria-label="오렌지" title="오렌지"></button>
+            <button type="button" class="color-swatch" data-color-value="#f3ca52" aria-label="옐로" title="옐로"></button>
+            <button type="button" class="color-swatch" data-color-value="#4ce0c3" aria-label="민트" title="민트"></button>
+            <button type="button" class="color-swatch" data-color-value="#22c55e" aria-label="그린" title="그린"></button>
+            <button type="button" class="color-swatch" data-color-value="#3b82f6" aria-label="블루" title="블루"></button>
+            <button type="button" class="color-swatch" data-color-value="#7aa7ff" aria-label="스카이 블루" title="스카이 블루"></button>
+            <button type="button" class="color-swatch" data-color-value="#8b5cf6" aria-label="퍼플" title="퍼플"></button>
+            <button type="button" class="color-swatch" data-color-value="#c477ff" aria-label="라일락" title="라일락"></button>
+            <button type="button" class="color-swatch" data-color-value="#ec4899" aria-label="핑크" title="핑크"></button>
+            <button type="button" class="color-swatch" data-color-value="#64748b" aria-label="그레이" title="그레이"></button>
+            <label class="custom-color-button" title="직접 색상 선택"><span>직접 선택</span><input id="lineColorInput" type="color" aria-label="노선 색상 직접 선택" /></label>
+          </div>
+        </div>
         <label class="manager-field"><span>공개 상태</span><select id="lineVisibilitySelect"><option value="public">공개 노선</option><option value="planning">계획 노선</option></select></label>
         <label class="manager-field"><span>기본 요금 설정</span>
           <div class="line-fare-wrap">
@@ -1836,6 +1887,7 @@ const startScreen = byId("startScreen");
 const modeSelect = document.querySelector<HTMLSelectElement>("#modeSelect");
 const difficultySelect = document.querySelector<HTMLSelectElement>("#difficultySelect");
 const citySelect = document.querySelector<HTMLSelectElement>("#citySelect");
+const cityPicker = byId("cityPicker");
 const slotNameInput = document.querySelector<HTMLInputElement>("#slotNameInput");
 const cityNote = byId("cityNote");
 const newGameButton = document.querySelector<HTMLButtonElement>("#newGameButton");
@@ -2066,6 +2118,42 @@ const saveLineManagerButton = document.querySelector<HTMLButtonElement>("#saveLi
 const deleteLineManagerButton = document.querySelector<HTMLButtonElement>("#deleteLineManagerButton");
 const lineNameInput = document.querySelector<HTMLInputElement>("#lineNameInput");
 const lineColorInput = document.querySelector<HTMLInputElement>("#lineColorInput");
+
+function syncColorPicker(input: HTMLInputElement | null) {
+  if (!input) return;
+  const normalizedColor = input.value.toLowerCase();
+  document.querySelectorAll<HTMLElement>(`[data-color-input="${input.id}"]`).forEach((picker) => {
+    picker.style.setProperty("--selected-route-color", normalizedColor);
+    picker.querySelectorAll<HTMLButtonElement>("[data-color-value]").forEach((button) => {
+      const selected = button.dataset.colorValue?.toLowerCase() === normalizedColor;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  });
+}
+
+function setColorPickerValue(input: HTMLInputElement | null, color: string) {
+  if (!input) return;
+  input.value = color;
+  syncColorPicker(input);
+}
+
+document.querySelectorAll<HTMLButtonElement>(".mobile-color-picker [data-color-value]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const picker = button.closest<HTMLElement>("[data-color-input]");
+    const inputId = picker?.dataset.colorInput;
+    const color = button.dataset.colorValue;
+    const input = inputId ? document.getElementById(inputId) as HTMLInputElement | null : null;
+    if (!input || !color) return;
+    setColorPickerValue(input, color);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+});
+
+[draftRouteColorInput, lineColorInput].forEach((input) => {
+  input?.addEventListener("input", () => syncColorPicker(input));
+  syncColorPicker(input);
+});
 const lineVisibilitySelect = document.querySelector<HTMLSelectElement>("#lineVisibilitySelect");
 const localServiceToggle = document.querySelector<HTMLInputElement>("#localServiceToggle");
 const expressServiceToggle = document.querySelector<HTMLInputElement>("#expressServiceToggle");
@@ -2610,8 +2698,44 @@ continueButton?.addEventListener("click", () => {
   const latest = slotSummaries[0];
   if (latest) loadSlot(latest.slotId);
 });
-modeSelect?.addEventListener("change", renderCityOptions);
+function syncSetupChoice(input: HTMLSelectElement | null) {
+  if (!input) return;
+  document.querySelectorAll<HTMLElement>(`[data-choice-input="${input.id}"]`).forEach((field) => {
+    field.querySelectorAll<HTMLButtonElement>("[data-choice-value]").forEach((button) => {
+      const selected = button.dataset.choiceValue === input.value;
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-checked", String(selected));
+    });
+  });
+}
+
+document.querySelectorAll<HTMLElement>("[data-choice-input]").forEach((field) => {
+  field.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-choice-value]");
+    const inputId = field.dataset.choiceInput;
+    const input = inputId ? document.getElementById(inputId) as HTMLSelectElement | null : null;
+    const value = button?.dataset.choiceValue;
+    if (!button || !input || !value || input.value === value) return;
+    input.value = value;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+});
+
+modeSelect?.addEventListener("change", () => {
+  syncSetupChoice(modeSelect);
+  renderCityOptions();
+});
+difficultySelect?.addEventListener("change", () => syncSetupChoice(difficultySelect));
 citySelect?.addEventListener("change", updateCityNote);
+cityPicker?.addEventListener("click", (event) => {
+  const card = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-city-id]");
+  const cityId = card?.dataset.cityId as CityId | undefined;
+  if (!cityId || card?.disabled || !citySelect) return;
+  citySelect.value = cityId;
+  updateCityNote();
+});
+syncSetupChoice(modeSelect);
+syncSetupChoice(difficultySelect);
 saveButton?.addEventListener("click", () => saveCurrentSlot("수동 저장"));
 openDiagramButton?.addEventListener("click", openDiagramScreen);
 diagramToolButton?.addEventListener("click", openDiagramScreen);
@@ -8025,19 +8149,47 @@ function renderCityOptions() {
   const selectedMode = (modeSelect?.value as GameMode) || "sandbox";
   const unlocked = selectedMode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : getUnlockedCityIds();
   const current = (citySelect.value as CityId) || "seoul";
-  citySelect.innerHTML = (Object.keys(cityConfigs) as CityId[])
+  const cityIds = Object.keys(cityConfigs) as CityId[];
+  citySelect.innerHTML = cityIds
     .map((cityId) => {
       const locked = !unlocked.includes(cityId);
       return `<option value="${cityId}" ${locked ? "disabled" : ""}>${cityConfigs[cityId].name}${locked ? " 잠김" : ""}</option>`;
     })
     .join("");
   citySelect.value = unlocked.includes(current) ? current : "seoul";
+  const cityPresentation: Record<CityId, { code: string; accent: string; landmark: string }> = {
+    seoul: { code: "SEO", accent: "#4ce0c3", landmark: "수도권" },
+    busan: { code: "BSN", accent: "#4f9bff", landmark: "해안 도시" },
+    daejeon: { code: "DJN", accent: "#f3ca52", landmark: "중부 거점" },
+    gwangju: { code: "GWJ", accent: "#c477ff", landmark: "남부 도시" },
+  };
+  if (cityPicker) {
+    cityPicker.innerHTML = cityIds.map((cityId) => {
+      const city = cityConfigs[cityId];
+      const presentation = cityPresentation[cityId];
+      const locked = !unlocked.includes(cityId);
+      const selected = cityId === citySelect.value;
+      const demand = city.demandMultiplier >= 1.2 ? "수요 높음" : city.demandMultiplier <= 0.85 ? "수요 낮음" : "수요 보통";
+      const cost = city.constructionMultiplier > 1 ? "공사비 높음" : city.constructionMultiplier < 1 ? "공사비 절감" : "공사비 보통";
+      return `<button type="button" class="city-option-card${selected ? " selected" : ""}${locked ? " locked" : ""}" data-city-id="${cityId}" role="radio" aria-checked="${selected}" ${locked ? "disabled" : ""} style="--city-card-accent:${presentation.accent}">
+        <span class="city-option-mark">${presentation.code}</span>
+        <span class="city-option-main"><strong>${city.name}</strong><small>${presentation.landmark}</small></span>
+        <span class="city-option-stats"><em>${demand}</em><em>${cost}</em></span>
+        ${locked ? "<i class=\"city-option-lock\" aria-label=\"잠김\">🔒</i>" : "<i class=\"city-option-check\" aria-hidden=\"true\">✓</i>"}
+      </button>`;
+    }).join("");
+  }
   updateCityNote();
 }
 
 function updateCityNote() {
   const cityId = ((citySelect?.value as CityId) || "seoul");
   setText(cityNote, `${cityConfigs[cityId].name}: ${cityConfigs[cityId].description}`);
+  cityPicker?.querySelectorAll<HTMLButtonElement>("[data-city-id]").forEach((card) => {
+    const selected = card.dataset.cityId === cityId;
+    card.classList.toggle("selected", selected);
+    card.setAttribute("aria-checked", String(selected));
+  });
 }
 
 function getUnlockedCityIds() {
@@ -11497,6 +11649,7 @@ function openLineManager() {
     fare: String(economy.fare),
     autoFare: economy.autoFare,
   });
+  syncColorPicker(lineColorInput);
   playFeedback("select");
 }
 
@@ -14396,7 +14549,7 @@ function updateRouteSettingsCard(tool: ToolMode) {
     routeSettingsTargetSwatch?.style.setProperty("--target-route-color", "#64748b");
   }
   if (draftRouteNameInput) draftRouteNameInput.value = draftRouteName;
-  if (draftRouteColorInput) draftRouteColorInput.value = selectedColor;
+  setColorPickerValue(draftRouteColorInput, selectedColor);
 }
 
 function showRouteSettingsTarget(
@@ -14421,7 +14574,7 @@ function showRouteSettingsTarget(
     draftRouteName = route.name;
     selectedColor = route.color;
     if (draftRouteNameInput) draftRouteNameInput.value = route.name;
-    if (draftRouteColorInput) draftRouteColorInput.value = route.color;
+    setColorPickerValue(draftRouteColorInput, route.color);
   }
 }
 

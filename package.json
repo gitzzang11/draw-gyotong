@@ -9,12 +9,22 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "cap:add:android": "cap add android",
+    "cap:sync": "npm run build && cap sync android && npm run cap:patch-android",
+    "cap:patch-android": "node scripts/patch-capacitor-agp.cjs",
+    "android": "npm run cap:sync && cap open android",
+    "apk:debug": "npm run cap:sync && cd android && gradlew.bat assembleDebug",
+    "apk:release": "npm run cap:sync && cd android && gradlew.bat assembleRelease",
+    "aab:release": "npm run cap:sync && cd android && gradlew.bat bundleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@types/leaflet": "^1.9.20",
     "typescript": "^5.9.3",
     "vite": "^8.1.5",
