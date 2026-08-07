@@ -11778,79 +11778,85 @@ button:active,
   opacity: 0.92;
 }
 
-/* Floating map windows stay out of the play area and can be collapsed to a header. */
-.floating-minimize-button {
-  display: inline-grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: #f5fbff;
-  font: 700 18px/1 system-ui, sans-serif;
-  cursor: pointer;
-}
-
-/* Keep map windows compact by default on desktop as well as on mobile. */
-.left-route-window,
-#routeSettingsCard {
-  width: min(270px, calc(100vw - 24px)) !important;
-  max-height: min(56dvh, 430px) !important;
-  overflow: auto;
-}
-
-.right-line-control-card,
-#modifyToolsCard {
-  width: min(286px, calc(100vw - 24px)) !important;
-  max-height: min(58dvh, 450px) !important;
-  overflow: auto;
-}
-
-.construction-preview-panel {
-  width: min(310px, calc(100vw - 24px)) !important;
-  max-height: min(56dvh, 430px) !important;
-  overflow: auto;
-}
-
-.left-route-header .floating-minimize-button,
-.right-line-header .floating-minimize-button,
-.route-settings-card-heading .floating-minimize-button {
-  position: absolute;
-  top: 50%;
-  right: 38px;
-  z-index: 3;
-  transform: translateY(-50%);
-  opacity: 1 !important;
-}
-
-.modify-tools-card-heading .floating-minimize-button {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  z-index: 3;
-  transform: translateY(-50%);
-  opacity: 1 !important;
-}
-
+/* Floating map windows header layout & minimizer button styling */
 .left-route-header,
 .right-line-header,
 .route-settings-card-heading,
-.modify-tools-card-heading {
-  padding-right: 74px !important;
+.modify-tools-card-heading,
+.construction-preview-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  position: relative !important;
+  padding-right: 0 !important;
 }
 
-#modifyToolsCard .modify-tools-card-heading {
-  padding-right: 38px !important;
+.construction-preview-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.floating-minimize-button {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+  max-width: 26px !important;
+  max-height: 26px !important;
+  aspect-ratio: 1 / 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f5fbff !important;
+  font: 800 14px/1 system-ui, sans-serif !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  align-self: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.floating-minimize-button:hover {
+  background: rgba(85, 217, 192, 0.15) !important;
+  color: #55d9c0 !important;
+  border-color: rgba(85, 217, 192, 0.4) !important;
 }
 
 .floating-minimize-button:active {
   transform: scale(0.94);
 }
 
-/* -------------------------------------------------------------------------
-   MINIMIZED WINDOW SUMMARIES, SINGLE SCROLL & CLOSE BUTTON RATIO
-------------------------------------------------------------------------- */
+/* 1:1 Aspect Ratio for Close Buttons */
+.dialog-close,
+.compact-close,
+#closeRouteSettingsButton,
+#closeConstructionPreviewButton {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+  max-width: 26px !important;
+  max-height: 26px !important;
+  aspect-ratio: 1 / 1 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  line-height: 1 !important;
+  font-size: 15px !important;
+  flex-shrink: 0 !important;
+  align-self: center !important;
+  box-sizing: border-box !important;
+}
+
+/* Minimized Header Summaries */
 .minimized-swatch {
   display: inline-block;
   width: 10px;
@@ -11865,9 +11871,7 @@ button:active,
 .construction-preview-header-summary {
   display: none;
   align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  margin-right: 6px;
+  gap: 6px;
 }
 
 #routeSettingsHeaderName {
@@ -11906,26 +11910,6 @@ button:active,
   cursor: not-allowed;
 }
 
-/* Minimum 1:1 Aspect Ratio for Close Buttons */
-.dialog-close,
-.compact-close,
-#closeRouteSettingsButton,
-#closeConstructionPreviewButton {
-  width: 26px !important;
-  height: 26px !important;
-  min-width: 26px !important;
-  min-height: 26px !important;
-  aspect-ratio: 1 / 1 !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  line-height: 1 !important;
-  font-size: 15px !important;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-}
-
 /* Remove Inner Nested Scrolls (창 내부 이중 스크롤 제거) */
 .left-route-list,
 .route-settings-edit-fields,
@@ -11951,7 +11935,7 @@ button:active,
   -webkit-overflow-scrolling: touch;
 }
 
-/* Minimized Floating Windows */
+/* Minimized Floating Window Layout */
 .left-route-window.is-minimized,
 .right-line-control-card.is-minimized,
 #routeSettingsCard.is-minimized,
@@ -11974,7 +11958,8 @@ button:active,
   display: none !important;
 }
 
-.construction-preview-panel.is-minimized #toggleConstructionPreviewButton {
+/* 건설 미리보기/기획 검토 창 최소화 전용 구성: [ 건설 예상 비용 | 건설 확정 버튼 | 펼치기 버튼 | X 버튼 ] */
+.construction-preview-panel.is-minimized .header-title-group {
   display: none !important;
 }
 

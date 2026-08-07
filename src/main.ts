@@ -1215,14 +1215,17 @@ app.innerHTML = `
     <div id="toast" class="toast" hidden role="status"></div>
 
     <section id="constructionPreviewPanel" class="construction-preview-panel" hidden aria-live="polite">
-      <header>
-        <div><span id="constructionPreviewKicker">CONSTRUCTION REVIEW</span><strong id="constructionPreviewTitle">건설 미리보기</strong><small id="constructionPreviewSubtitle">범위와 비용을 확인한 뒤 확정하세요.</small></div>
+      <header class="construction-preview-header">
+        <div class="header-title-group">
+          <span id="constructionPreviewKicker">CONSTRUCTION REVIEW</span>
+          <strong id="constructionPreviewTitle">건설 미리보기</strong>
+          <small id="constructionPreviewSubtitle">범위와 비용을 확인한 뒤 확정하세요.</small>
+        </div>
         <div id="constructionPreviewHeaderSummary" class="construction-preview-header-summary">
           <strong id="headerPreviewCost">0억</strong>
           <button id="headerConfirmConstructionButton" class="header-confirm-btn" type="button">건설 확정</button>
         </div>
         <div class="construction-preview-header-actions">
-          <button id="toggleConstructionPreviewButton" type="button" aria-expanded="true" aria-label="비용 정보 접기">⌃</button>
           <button id="closeConstructionPreviewButton" class="dialog-close compact-close" type="button" aria-label="건설 미리보기 닫기">×</button>
         </div>
       </header>
@@ -1989,7 +1992,6 @@ const constructionPreviewPanel = byId("constructionPreviewPanel");
 const constructionPreviewTitle = byId("constructionPreviewTitle");
 const constructionPreviewKicker = byId("constructionPreviewKicker");
 const constructionPreviewSubtitle = byId("constructionPreviewSubtitle");
-const toggleConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#toggleConstructionPreviewButton");
 const closeConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#closeConstructionPreviewButton");
 const constructionPreviewDetails = byId("constructionPreviewDetails");
 const previewTotalCostLabel = byId("previewTotalCostLabel");
@@ -2154,21 +2156,28 @@ function addFloatingWindowMinimizer(
   button.setAttribute("aria-label", `${label} 최소화`);
   button.setAttribute("title", `${label} 최소화`);
   button.textContent = "−";
-  button.addEventListener("click", () => {
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
     const minimized = windowElement.classList.toggle("is-minimized");
-    button.textContent = minimized ? "+" : "−";
+    button.textContent = minimized ? "⤢" : "−";
     button.setAttribute("aria-label", minimized ? `${label} 복원` : `${label} 최소화`);
     button.setAttribute("title", minimized ? `${label} 복원` : `${label} 최소화`);
     button.setAttribute("aria-pressed", String(minimized));
   });
-  header.append(button);
+
+  const closeBtn = header.querySelector(".dialog-close, .compact-close");
+  if (closeBtn && closeBtn.parentElement) {
+    closeBtn.parentElement.insertBefore(button, closeBtn);
+  } else {
+    header.append(button);
+  }
 }
 
 addFloatingWindowMinimizer(leftRouteWindow, ".left-route-header", "노선 목록");
 addFloatingWindowMinimizer(rightLineControlCard, ".right-line-header", "노선 제어");
 addFloatingWindowMinimizer(routeSettingsCard, ".route-settings-card-heading", "노선 설정");
 addFloatingWindowMinimizer(modifyToolsCard, ".modify-tools-card-heading", "수정 도구");
-addFloatingWindowMinimizer(constructionPreviewPanel, ".construction-preview-panel > header", "건설 미리보기");
+addFloatingWindowMinimizer(constructionPreviewPanel, ".construction-preview-header", "건설 미리보기");
 
 function syncColorPicker(input: HTMLInputElement | null) {
   if (!input) return;
@@ -2426,7 +2435,6 @@ let selectedConnectionChoice: ConnectionChoiceId = "merge";
 const connectionSubmissionGuard = new ConnectionSubmissionGuard();
 let constructionDraft: ConstructionDraft | null = null;
 let demolitionReview: DemolitionReview | null = null;
-let constructionPreviewCollapsed = false;
 let knownObstacles: Obstacle[] = [];
 let selectedTransferStationIds: string[] = [];
 let selectedDepotId: string | null = null;
@@ -2672,7 +2680,6 @@ fundPlanWithLoanButton?.addEventListener("click", fundPlanWithLoan);
 confirmPlanConversionButton?.addEventListener("click", confirmPlanConversion);
 undoButton?.addEventListener("click", undo);
 redoButton?.addEventListener("click", redo);
-toggleConstructionPreviewButton?.addEventListener("click", toggleConstructionPreview);
 closeConstructionPreviewButton?.addEventListener("click", cancelActiveReview);
 cancelConstructionButton?.addEventListener("click", cancelActiveReview);
 confirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
@@ -4131,13 +4138,7 @@ function stageEditDraft(handle: RouteHandleMove, coordinates: Array<[number, num
   renderConstructionDraft();
 }
 
-function toggleConstructionPreview() {
-  constructionPreviewCollapsed = !constructionPreviewCollapsed;
-  if (constructionPreviewDetails) constructionPreviewDetails.hidden = constructionPreviewCollapsed;
-  toggleConstructionPreviewButton?.setAttribute("aria-expanded", String(!constructionPreviewCollapsed));
-  toggleConstructionPreviewButton?.setAttribute("aria-label", constructionPreviewCollapsed ? "비용 정보 펼치기" : "비용 정보 접기");
-  if (toggleConstructionPreviewButton) toggleConstructionPreviewButton.textContent = constructionPreviewCollapsed ? "⌄" : "⌃";
-}
+
 
 function renderConstructionDraft() {
   renderConstructionPanel();
@@ -4249,14 +4250,10 @@ function openDemolitionReview(review: DemolitionReview) {
   if (constructionDraft) cancelConstructionDraft();
   demolitionReview = review;
   document.body.classList.add("construction-reviewing");
-  constructionPreviewCollapsed = false;
   constructionPreviewPanel.hidden = false;
   constructionPreviewPanel.dataset.reviewMode = review.planning ? "planning" : "construction";
   constructionPreviewPanel.dataset.reviewTool = "eraser";
   if (constructionPreviewDetails) constructionPreviewDetails.hidden = false;
-  toggleConstructionPreviewButton?.setAttribute("aria-expanded", "true");
-  toggleConstructionPreviewButton?.setAttribute("aria-label", "철거 정보 접기");
-  if (toggleConstructionPreviewButton) toggleConstructionPreviewButton.textContent = "⌃";
   setText(constructionPreviewKicker, review.planning ? "PLANNING DEMOLITION" : "CONSTRUCTION DEMOLITION");
   setText(constructionPreviewTitle, "철거 검토");
   setText(constructionPreviewSubtitle, review.description);
