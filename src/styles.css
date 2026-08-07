@@ -11848,17 +11848,121 @@ button:active,
   transform: scale(0.94);
 }
 
-/* The same compact form is available on desktop, not only on touch layouts. */
+/* -------------------------------------------------------------------------
+   MINIMIZED WINDOW SUMMARIES, SINGLE SCROLL & CLOSE BUTTON RATIO
+------------------------------------------------------------------------- */
+.minimized-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--target-route-color, var(--c-primary));
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.route-settings-header-summary,
+.construction-preview-header-summary {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  margin-right: 6px;
+}
+
+#routeSettingsHeaderName {
+  font-size: 11px;
+  color: var(--c-primary);
+  font-weight: 700;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#headerPreviewCost {
+  font-size: 11px;
+  color: var(--c-primary);
+  font-weight: 800;
+}
+
+.header-confirm-btn {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(85, 217, 192, 0.22);
+  color: #55d9c0;
+  border: 1px solid rgba(85, 217, 192, 0.6);
+  cursor: pointer;
+}
+
+.header-confirm-btn:hover {
+  background: rgba(85, 217, 192, 0.35);
+}
+
+.header-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Minimum 1:1 Aspect Ratio for Close Buttons */
+.dialog-close,
+.compact-close,
+#closeRouteSettingsButton,
+#closeConstructionPreviewButton {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+  aspect-ratio: 1 / 1 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  line-height: 1 !important;
+  font-size: 15px !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Remove Inner Nested Scrolls (창 내부 이중 스크롤 제거) */
+.left-route-list,
+.route-settings-edit-fields,
+.modify-tools-grid,
+.construction-preview-details,
+.setup-grid,
+.slot-list,
+.dialog-body {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Single Scroll Container for Floating Windows */
+.left-route-window,
+.right-line-control-card,
+#routeSettingsCard,
+#modifyToolsCard,
+.construction-preview-panel,
+.dialog-backdrop > section,
+.dialog-backdrop > div > section {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Minimized Floating Windows */
 .left-route-window.is-minimized,
 .right-line-control-card.is-minimized,
 #routeSettingsCard.is-minimized,
 #modifyToolsCard.is-minimized,
 .construction-preview-panel.is-minimized {
-  width: 220px !important;
+  width: auto !important;
+  min-width: 210px !important;
+  max-width: min(340px, calc(100vw - 16px)) !important;
   min-height: 0 !important;
-  max-height: 52px !important;
-  padding-top: 7px !important;
-  padding-bottom: 7px !important;
+  max-height: 44px !important;
+  padding: 4px 8px !important;
   overflow: hidden !important;
 }
 
@@ -11870,79 +11974,13 @@ button:active,
   display: none !important;
 }
 
-@media (max-width: 700px) {
-  .left-route-window,
-  #routeSettingsCard {
-    right: auto !important;
-    left: max(5px, env(safe-area-inset-left)) !important;
-    width: min(248px, calc(100vw - 10px)) !important;
-    max-height: min(42dvh, 270px) !important;
-  }
+.construction-preview-panel.is-minimized #toggleConstructionPreviewButton {
+  display: none !important;
+}
 
-  .right-line-control-card,
-  #modifyToolsCard,
-  .construction-preview-panel {
-    right: max(5px, env(safe-area-inset-right)) !important;
-    left: auto !important;
-    width: min(264px, calc(100vw - 10px)) !important;
-    max-height: min(44dvh, 285px) !important;
-  }
-
-  .construction-preview-panel {
-    width: min(286px, calc(100vw - 10px)) !important;
-  }
-
-  .left-route-header,
-  .right-line-header,
-  .route-settings-card-heading,
-  .modify-tools-card-heading {
-    position: relative;
-    padding-right: 38px !important;
-  }
-
-  .left-route-header .floating-minimize-button,
-  .right-line-header .floating-minimize-button,
-  .route-settings-card-heading .floating-minimize-button {
-    position: absolute;
-    top: 50%;
-    right: 34px;
-    transform: translateY(-50%);
-  }
-
-  .modify-tools-card-heading .floating-minimize-button {
-    position: absolute;
-    top: 50%;
-    right: 0;
-    transform: translateY(-50%);
-  }
-
-  .construction-preview-header-actions .floating-minimize-button {
-    flex: 0 0 auto;
-  }
-
-  .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized,
-  #routeSettingsCard.is-minimized,
-  #modifyToolsCard.is-minimized,
-  .construction-preview-panel.is-minimized {
-    width: min(176px, calc(100vw - 10px)) !important;
-    min-height: 0 !important;
-    max-height: 48px !important;
-    padding: 6px 9px !important;
-    overflow: hidden !important;
-  }
-
-  .left-route-window.is-minimized > :not(.left-route-header),
-  .right-line-control-card.is-minimized > :not(.right-line-header),
-  #routeSettingsCard.is-minimized > :not(.route-settings-card-heading),
-  #modifyToolsCard.is-minimized > :not(.modify-tools-card-heading),
-  .construction-preview-panel.is-minimized > :not(header) {
-    display: none !important;
-  }
-
-  .construction-preview-panel.is-minimized #toggleConstructionPreviewButton {
-    display: none !important;
-  }
+#routeSettingsCard.is-minimized .route-settings-header-summary,
+.construction-preview-panel.is-minimized .construction-preview-header-summary {
+  display: inline-flex !important;
 }
 
 @media (max-width: 700px) and (orientation: landscape) {

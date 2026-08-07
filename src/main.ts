@@ -1041,7 +1041,15 @@ app.innerHTML = `
 
 
     <section id="routeSettingsCard" class="hud route-settings-card" hidden aria-label="노선 설정">
-      <div class="route-settings-card-heading"><span>ROUTE SETTINGS</span><strong>노선 설정</strong><button id="closeRouteSettingsButton" class="dialog-close compact-close" type="button" aria-label="노선 설정 닫기">×</button></div>
+      <div class="route-settings-card-heading">
+        <span>ROUTE SETTINGS</span>
+        <strong>노선 설정</strong>
+        <div id="routeSettingsHeaderSummary" class="route-settings-header-summary">
+          <i id="routeSettingsHeaderSwatch" class="minimized-swatch" aria-hidden="true"></i>
+          <strong id="routeSettingsHeaderName">노선</strong>
+        </div>
+        <button id="closeRouteSettingsButton" class="dialog-close compact-close" type="button" aria-label="노선 설정 닫기">×</button>
+      </div>
       <div id="routeSettingsTarget" class="route-settings-target" hidden>
         <span id="routeSettingsTargetKicker">수정 대상</span>
         <div><i id="routeSettingsTargetSwatch" aria-hidden="true"></i><strong id="routeSettingsTargetName">노선을 선택하세요</strong></div>
@@ -1209,6 +1217,10 @@ app.innerHTML = `
     <section id="constructionPreviewPanel" class="construction-preview-panel" hidden aria-live="polite">
       <header>
         <div><span id="constructionPreviewKicker">CONSTRUCTION REVIEW</span><strong id="constructionPreviewTitle">건설 미리보기</strong><small id="constructionPreviewSubtitle">범위와 비용을 확인한 뒤 확정하세요.</small></div>
+        <div id="constructionPreviewHeaderSummary" class="construction-preview-header-summary">
+          <strong id="headerPreviewCost">0억</strong>
+          <button id="headerConfirmConstructionButton" class="header-confirm-btn" type="button">건설 확정</button>
+        </div>
         <div class="construction-preview-header-actions">
           <button id="toggleConstructionPreviewButton" type="button" aria-expanded="true" aria-label="비용 정보 접기">⌃</button>
           <button id="closeConstructionPreviewButton" class="dialog-close compact-close" type="button" aria-label="건설 미리보기 닫기">×</button>
@@ -1917,6 +1929,10 @@ const errorDismissButton = document.querySelector<HTMLButtonElement>("#errorDism
 const toast = byId("toast");
 const routeSettingsCard = byId("routeSettingsCard");
 const closeRouteSettingsButton = document.querySelector<HTMLButtonElement>("#closeRouteSettingsButton");
+const routeSettingsHeaderSwatch = byId("routeSettingsHeaderSwatch");
+const routeSettingsHeaderName = byId("routeSettingsHeaderName");
+const headerPreviewCost = byId("headerPreviewCost");
+const headerConfirmConstructionButton = document.querySelector<HTMLButtonElement>("#headerConfirmConstructionButton");
 const routeSettingsTarget = byId("routeSettingsTarget");
 const routeSettingsTargetKicker = byId("routeSettingsTargetKicker");
 const routeSettingsTargetSwatch = byId("routeSettingsTargetSwatch");
@@ -2660,6 +2676,7 @@ toggleConstructionPreviewButton?.addEventListener("click", toggleConstructionPre
 closeConstructionPreviewButton?.addEventListener("click", cancelActiveReview);
 cancelConstructionButton?.addEventListener("click", cancelActiveReview);
 confirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
+headerConfirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
 manageLineButton?.addEventListener("click", openLineManager);
 selectedLineColor?.addEventListener("click", openLineManager);
 lineAutoFareButton?.addEventListener("click", () => {
@@ -4154,8 +4171,9 @@ function renderConstructionPanel() {
   setText(previewRiverCountLabel, "강 통과");
   setText(previewStationCountLabel, "역 연결/설치");
   setText(previewDepotConnectionLabel, "차량기지 연결");
-  setText(constructionPreviewTitle, copy.title);
-  setText(previewTotalCost, analysis.totalCost < 0 ? `${formatCost(Math.abs(analysis.totalCost))} 환급` : formatCost(analysis.totalCost));
+  const costStr = analysis.totalCost < 0 ? `${formatCost(Math.abs(analysis.totalCost))} 환급` : formatCost(analysis.totalCost);
+  setText(previewTotalCost, costStr);
+  setText(headerPreviewCost, costStr);
   setText(previewBalance, planningMode ? "기획안 저장" : formatSignedCost(analysis.balanceAfter));
   setText(previewDuration, formatConstructionDuration(analysis.durationDays));
   setText(previewLength, analysis.lengthKm < 1 ? `${Math.round(analysis.lengthKm * 1000)}m` : `${analysis.lengthKm.toFixed(2)}km`);
@@ -4245,7 +4263,9 @@ function openDemolitionReview(review: DemolitionReview) {
   setText(previewTotalCostLabel, review.planning ? "계획 비용" : "예상 환급");
   setText(previewBalanceLabel, "처리 대상");
   setText(previewDurationLabel, "처리 시점");
-  setText(previewTotalCost, review.planning ? "차감 없음" : review.refund > 0 ? formatCost(review.refund) : "환급 없음");
+  const demoCostStr = review.planning ? "차감 없음" : review.refund > 0 ? formatCost(review.refund) : "환급 없음";
+  setText(previewTotalCost, demoCostStr);
+  setText(headerPreviewCost, demoCostStr);
   setText(previewBalance, `${review.routeCount + review.stationCount + review.depotCount}개 시설`);
   setText(previewDuration, "확정 즉시");
   setText(previewLengthLabel, "삭제 노선 길이");
@@ -14671,6 +14691,8 @@ function updateRouteSettingsCard(tool: ToolMode) {
   }
   if (draftRouteNameInput) draftRouteNameInput.value = draftRouteName;
   setColorPickerValue(draftRouteColorInput, selectedColor);
+  setText(routeSettingsHeaderName, draftRouteName || "노선 설정");
+  routeSettingsHeaderSwatch?.style.setProperty("background-color", selectedColor);
 }
 
 function showRouteSettingsTarget(
@@ -14682,7 +14704,10 @@ function showRouteSettingsTarget(
   routeSettingsTarget.hidden = false;
   const context = activeTool === "extend" ? "연장 대상" : activeTool === "branch" ? "분기 대상" : "연결 대상";
   setText(routeSettingsTargetKicker, context);
-  setText(routeSettingsTargetName, secondary ? `${route.name} ↔ ${secondary.name}` : route.name);
+  const targetTitle = secondary ? `${route.name} ↔ ${secondary.name}` : route.name;
+  setText(routeSettingsTargetName, targetTitle);
+  setText(routeSettingsHeaderName, targetTitle);
+  routeSettingsHeaderSwatch?.style.setProperty("background-color", route.color);
   setText(
     routeSettingsTargetMeta,
     secondary
@@ -14777,6 +14802,28 @@ function finishLoading() {
   }, 420);
 }
 
+let hintTimer: number | undefined;
+
+function dismissHintAndToast() {
+  if (hintTimer) {
+    window.clearTimeout(hintTimer);
+    hintTimer = undefined;
+  }
+  if (hintRow && hintRow.innerHTML !== "") {
+    hintRow.innerHTML = "";
+  }
+  if (toast && !toast.hidden) {
+    toast.classList.remove("is-visible");
+    toast.hidden = true;
+  }
+}
+
+document.addEventListener("pointerdown", () => {
+  if ((hintRow && hintRow.innerHTML !== "") || (toast && !toast.hidden && toast.classList.contains("is-visible"))) {
+    dismissHintAndToast();
+  }
+}, { passive: true });
+
 function showToast(message: string) {
   if (!toast) return;
   setText(toast, message);
@@ -14784,12 +14831,16 @@ function showToast(message: string) {
   toast.classList.remove("is-visible");
   requestAnimationFrame(() => toast.classList.add("is-visible"));
   window.clearTimeout(toastTimer);
+  if (hintTimer) window.clearTimeout(hintTimer);
+
   toastTimer = window.setTimeout(() => {
     toast?.classList.remove("is-visible");
     window.setTimeout(() => {
       if (toast) toast.hidden = true;
     }, 180);
-  }, 2200);
+  }, 3000);
+
+  hintTimer = window.setTimeout(dismissHintAndToast, 3000);
 }
 
 function showError(message: string, retry?: () => void) {
@@ -14838,10 +14889,14 @@ function roundCoord(value: number) {
 
 function setHint(items: string[]) {
   if (hintRow) hintRow.innerHTML = items.map((item) => `<span>${item}</span>`).join("");
+  if (hintTimer) window.clearTimeout(hintTimer);
+  
   if (items.length > 0) {
     const text = items.join(" · ");
     if (text !== "한 손가락 이동 · 핀치 줌") {
       showToast(text);
+    } else {
+      hintTimer = window.setTimeout(dismissHintAndToast, 3000);
     }
   }
 }
