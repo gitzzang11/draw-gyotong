@@ -9679,31 +9679,31 @@ textarea {
    MAP HUD
 ======================================================================== */
 .hud.top-header-bar {
-  top: max(12px, env(safe-area-inset-top));
-  left: max(12px, env(safe-area-inset-left));
-  right: max(12px, env(safe-area-inset-right));
+  top: max(6px, env(safe-area-inset-top));
+  left: max(6px, env(safe-area-inset-left));
+  right: max(6px, env(safe-area-inset-right));
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 12px;
+  gap: 6px;
 }
 
 .hud-brand-pill,
 .top-status-pills,
 .top-actions-row,
 .hud.build-panel {
-  background: rgba(11, 16, 22, 0.92) !important;
-  border: 1px solid var(--c-border) !important;
-  box-shadow: var(--shadow-lg) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: rgba(10, 15, 22, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }
 
 .hud-brand-pill {
-  min-height: var(--touch-target);
-  padding: 0 10px 0 12px;
-  border-radius: var(--radius-md) !important;
-  font-size: 12px;
+  min-height: 34px;
+  padding: 0 8px 0 10px;
+  border-radius: var(--radius-sm) !important;
+  font-size: 11px;
   color: var(--c-text-main);
 }
 
@@ -9720,24 +9720,25 @@ textarea {
 }
 
 .hud-live-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   background: var(--c-primary);
-  box-shadow: 0 0 0 3px rgba(85, 217, 192, 0.12);
+  box-shadow: 0 0 0 2px rgba(85, 217, 192, 0.15);
 }
 
 .top-status-pills {
   justify-self: center;
   max-width: 100%;
   min-width: 0;
-  padding: 4px;
-  border-radius: var(--radius-md) !important;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm) !important;
   overflow-x: auto;
+  align-items: center;
 }
 
 .workspace-mode-pill,
 .status-pill {
-  border-radius: var(--radius-sm) !important;
+  border-radius: var(--radius-xs, 4px) !important;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
@@ -9745,82 +9746,128 @@ textarea {
 }
 
 .workspace-mode-tab {
-  min-height: var(--touch-target);
-  padding: 0 12px;
-  border-radius: var(--radius-sm) !important;
-  color: var(--c-text-muted);
+  position: relative;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 4px !important;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
   font-weight: 700;
+  border: 1px solid transparent !important;
+  transition: all 0.15s ease;
+}
+
+/* Minimum 44px touch target for touch screens */
+.workspace-mode-tab::after,
+.primary-tool::after,
+.top-action-btn::after,
+.history-action::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  pointer-events: auto;
+}
+
+.workspace-mode-tab:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.05) !important;
 }
 
 .workspace-mode-tab.active,
-.workspace-mode-tab[data-workspace-mode="management"].active,
-.workspace-mode-tab[data-workspace-mode="planning"].active,
-.workspace-mode-tab[data-workspace-mode="construction"].active {
-  background: rgba(85, 217, 192, 0.16) !important;
-  color: var(--c-primary) !important;
-  border: 1px solid rgba(85, 217, 192, 0.38) !important;
-  box-shadow: none !important;
+.workspace-mode-tab[data-workspace-mode="management"].active {
+  background: rgba(85, 217, 192, 0.22) !important;
+  color: #55d9c0 !important;
+  border: 1px solid rgba(85, 217, 192, 0.6) !important;
+  box-shadow: 0 0 8px rgba(85, 217, 192, 0.25) !important;
   font-weight: 800;
+  opacity: 1;
 }
 
 .workspace-mode-tab[data-workspace-mode="planning"].active {
-  background: rgba(184, 156, 255, 0.16) !important;
-  color: var(--c-planning) !important;
-  border-color: rgba(184, 156, 255, 0.42) !important;
+  background: rgba(184, 156, 255, 0.22) !important;
+  color: #b89cff !important;
+  border: 1px solid rgba(184, 156, 255, 0.6) !important;
+  box-shadow: 0 0 8px rgba(184, 156, 255, 0.25) !important;
   font-weight: 800;
+  opacity: 1;
 }
 
 .workspace-mode-tab[data-workspace-mode="construction"].active {
-  background: rgba(246, 196, 83, 0.16) !important;
-  color: var(--c-construction) !important;
-  border-color: rgba(246, 196, 83, 0.42) !important;
+  background: rgba(246, 196, 83, 0.22) !important;
+  color: #f6c453 !important;
+  border: 1px solid rgba(246, 196, 83, 0.6) !important;
+  box-shadow: 0 0 8px rgba(246, 196, 83, 0.25) !important;
   font-weight: 800;
+  opacity: 1;
 }
 
 .cash-pill,
 .satisfaction-pill,
 .history-pill,
 .clock-pill {
-  min-height: var(--touch-target);
-  padding: 0 10px;
-  border-left: 1px solid var(--c-border) !important;
+  min-height: 32px;
+  padding: 0 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 0 !important;
+}
+
+.history-pill .history-action {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 4px;
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.history-pill .history-action:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .cash-pill strong,
 .satisfaction-pill strong,
 .clock-pill strong,
 .time-readout-wrap span {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .top-actions-row {
-  gap: var(--touch-target-gap);
-  padding: 4px;
-  border-radius: var(--radius-md) !important;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm) !important;
+  align-items: center;
 }
 
 .layer-menu summary,
 .top-action-btn {
-  width: var(--touch-target) !important;
-  height: var(--touch-target) !important;
-  border-radius: var(--radius-sm) !important;
-  background: rgba(255, 255, 255, 0.035) !important;
+  position: relative;
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
   border: 1px solid transparent !important;
-  color: var(--c-text-muted) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
 }
 
 .layer-menu summary:hover,
 .top-action-btn:hover,
 .layer-menu[open] summary {
-  background: rgba(85, 217, 192, 0.1) !important;
-  border-color: rgba(85, 217, 192, 0.32) !important;
-  color: var(--c-primary) !important;
+  background: rgba(85, 217, 192, 0.12) !important;
+  border-color: rgba(85, 217, 192, 0.4) !important;
+  color: #55d9c0 !important;
   box-shadow: none !important;
 }
 
 .layer-options {
-  top: 50px;
+  top: 42px;
   border-radius: var(--radius-md);
   background: #111820;
   border: 1px solid var(--c-border);
@@ -9832,72 +9879,39 @@ textarea {
    TOOL DOCK + CONTEXT FEEDBACK
 ======================================================================== */
 .hud.build-panel {
-  bottom: max(10px, env(safe-area-inset-bottom));
-  max-width: calc(100vw - 20px);
-  padding: 6px;
-  gap: 6px;
-  border-radius: var(--radius-lg) !important;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  gap: 4px;
+  border-radius: var(--radius-md) !important;
 }
 
 .tool-group {
-  gap: var(--touch-target-gap);
+  gap: 3px;
 }
 
 .tool-divider {
-  height: 28px;
-  margin: 0 4px;
-  background: var(--c-border);
+  height: 20px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .primary-tool {
   position: relative;
-  min-height: 44px;
-  min-width: 68px;
-  padding: 0 10px;
-  gap: 6px;
-  border-radius: var(--radius-sm) !important;
-  background: rgba(255, 255, 255, 0.035) !important;
+  min-height: 36px;
+  min-width: 54px;
+  padding: 0 8px;
+  gap: 4px;
+  border-radius: 4px !important;
+  background: transparent !important;
   border: 1px solid transparent !important;
-  color: var(--c-text-main);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
+  transition: all 0.15s ease;
 }
 
 .primary-tool:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: var(--c-border) !important;
-  box-shadow: none !important;
-}
-
-.primary-tool.active,
-#routeTool.active,
-#stationTool.active,
-#transferTool.active,
-#depotTool.active,
-#editTool.active,
-#extendTool.active,
-#reconnectTool.active,
-#branchTool.active,
-#mergeTool.active,
-#modifyToolsButton.active,
-#planningModeButton.active {
-  background: rgba(85, 217, 192, 0.16) !important;
-  color: var(--c-primary) !important;
-  border: 1px solid rgba(85, 217, 192, 0.42) !important;
-  box-shadow: none !important;
-  transform: none !important;
-  font-weight: 800;
-}
-
-body[data-workspace-mode="planning"] .primary-tool.active,
-body[data-workspace-mode="planning"] #extendTool.active,
-body[data-workspace-mode="planning"] #branchTool.active,
-body[data-workspace-mode="planning"] #mergeTool.active,
-body[data-workspace-mode="planning"] #modifyToolsButton.active,
-body[data-workspace-mode="planning"] #planningModeButton.active {
-  background: rgba(184, 156, 255, 0.16) !important;
-  color: var(--c-planning) !important;
-  border-color: rgba(184, 156, 255, 0.46) !important;
   box-shadow: none !important;
   font-weight: 800;
 }
@@ -10571,7 +10585,7 @@ button:active,
   }
 
   .hud.build-panel .primary-tool {
-    min-height: 48px;
+    min-height: 36px;
   }
 
   .layer-options,
@@ -11306,29 +11320,33 @@ button:active,
 
 @media (max-width: 700px) and (orientation: landscape) {
   .hud.top-header-bar {
-    top: max(5px, env(safe-area-inset-top));
-    left: max(5px, env(safe-area-inset-left));
-    right: max(5px, env(safe-area-inset-right));
+    top: max(4px, env(safe-area-inset-top));
+    left: max(4px, env(safe-area-inset-left));
+    right: max(4px, env(safe-area-inset-right));
   }
 
   .hud-brand-pill {
-    min-height: 38px;
+    min-height: 30px;
     max-width: 64px;
     font-size: 10px;
   }
 
   .top-status-pills .cash-pill {
-    min-height: 38px;
+    min-height: 30px;
   }
 
   .hud.build-panel {
-    left: 5px;
-    right: 5px;
+    left: 4px;
+    right: 4px;
+    bottom: max(4px, env(safe-area-inset-bottom));
+    padding: 3px;
   }
 
   .primary-tool {
-    min-width: 52px;
-    min-height: 40px;
+    min-width: 48px;
+    min-height: 32px;
+    padding: 0 6px;
+    font-size: 10px;
   }
 
   .start-panel {
