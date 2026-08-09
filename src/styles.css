@@ -11986,3 +11986,2288 @@ button:active,
     max-height: min(40dvh, 225px) !important;
   }
 }
+
+/* -------------------------------------------------------------------------
+   LANDSCAPE START SCREEN
+   The title screen keeps the map visible around a wide command panel. The
+   two live actions stay at the top, while setup and saved slots share the
+   remaining height just like the reference layout.
+------------------------------------------------------------------------- */
+@media (orientation: landscape) and (max-width: 1280px) {
+  .start-screen {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    background: rgba(7, 11, 15, 0.78) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+
+  .start-panel {
+    width: min(1180px, calc(100% - 16px));
+    height: min(704px, calc(100dvh - 16px));
+    max-height: calc(100dvh - 16px);
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 0.96fr) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px !important;
+  }
+
+  .start-head {
+    grid-column: 1 / -1;
+    min-width: 0;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: clamp(10px, 1.6vw, 22px);
+    padding-bottom: 8px;
+  }
+
+  .start-head svg {
+    width: clamp(24px, 2.5vw, 32px);
+    height: clamp(24px, 2.5vw, 32px);
+    flex-shrink: 0;
+  }
+
+  .brand-title-group {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .hero-title {
+    min-width: 0;
+    font-size: clamp(18px, 2.2vw, 28px);
+    white-space: nowrap;
+  }
+
+  .hero-subtitle {
+    min-width: 0;
+    font-size: clamp(9px, 1.05vw, 14px);
+    white-space: nowrap;
+  }
+
+  .start-primary-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .hero-action-btn {
+    min-width: 0;
+    min-height: clamp(54px, 10dvh, 78px);
+    padding: 12px 16px;
+  }
+
+  .hero-btn-content,
+  .hero-btn-text {
+    min-width: 0;
+  }
+
+  .hero-btn-icon {
+    font-size: clamp(18px, 2.1vw, 24px);
+  }
+
+  .start-section-card {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    overscroll-behavior: contain;
+  }
+
+  .setup-card {
+    grid-column: 1;
+  }
+
+  .slots-card {
+    grid-column: 2;
+  }
+
+  .section-card-header {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .section-card-header h2 {
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .setup-grid {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .setup-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    align-items: stretch;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .setup-footer > label {
+    min-width: 0;
+  }
+
+  .setup-footer input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    color: var(--c-text-main);
+    background: #0c131a !important;
+    border: 1px solid var(--c-border) !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  .setup-footer .city-note {
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+  }
+
+  .city-picker {
+    min-width: 0;
+  }
+
+  .city-option-card,
+  .setup-choice-card {
+    min-width: 0;
+  }
+
+  .slot-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .slot-entry,
+  .slot-card,
+  .slot-card-main,
+  .slot-title-row {
+    min-width: 0;
+  }
+
+  .slot-card {
+    min-height: 74px;
+    padding: 12px 14px;
+  }
+
+  .slot-delete-button {
+    width: 48px;
+    height: 74px;
+  }
+}
+
+/* Phone landscape has very little vertical room, so each column scrolls
+   independently while the header and the two real launch actions remain in
+   view. */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
+  .start-screen {
+    padding: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
+  }
+
+  .start-panel {
+    width: calc(100% - 8px);
+    height: calc(100dvh - 8px);
+    max-height: none;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 14px !important;
+  }
+
+  .start-head {
+    gap: 10px;
+    padding-bottom: 6px;
+  }
+
+  .hero-title {
+    font-size: clamp(16px, 3vw, 21px);
+  }
+
+  .hero-subtitle {
+    font-size: clamp(8px, 1.6vw, 11px);
+  }
+
+  .start-primary-actions {
+    gap: 8px;
+  }
+
+  .hero-action-btn {
+    min-height: 48px;
+    padding: 8px 10px;
+  }
+
+  .hero-btn-content {
+    gap: 8px;
+  }
+
+  .hero-btn-icon {
+    font-size: 18px;
+  }
+
+  .hero-btn-text {
+    gap: 1px;
+  }
+
+  .hero-btn-text strong {
+    font-size: 12px;
+  }
+
+  .hero-btn-text small {
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .start-section-card {
+    gap: 7px;
+    padding: 10px;
+  }
+
+  .section-card-header {
+    gap: 6px;
+    padding-bottom: 6px;
+  }
+
+  .section-card-header span {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .section-card-header h2 {
+    font-size: 13px;
+  }
+
+  .setup-grid {
+    gap: 6px;
+  }
+
+  .setup-field-label {
+    gap: 5px;
+  }
+
+  .setup-field-label > span,
+  .setup-field-label > small,
+  .setup-grid label {
+    font-size: 9px;
+  }
+
+  .city-picker {
+    gap: 6px;
+  }
+
+  .city-option-card {
+    min-height: 64px;
+    gap: 5px 6px;
+    padding: 7px;
+    border-radius: 10px;
+  }
+
+  .city-option-mark {
+    width: 27px;
+    height: 27px;
+    font-size: 8px;
+  }
+
+  .city-option-main strong {
+    font-size: 12px;
+  }
+
+  .city-option-main small {
+    font-size: 9px;
+  }
+
+  .city-option-stats {
+    gap: 3px;
+  }
+
+  .city-option-stats em {
+    padding: 2px 4px;
+    font-size: 8px;
+  }
+
+  .setup-choice-grid {
+    gap: 5px;
+  }
+
+  .setup-choice-card {
+    min-height: 44px;
+    padding: 6px;
+    gap: 5px;
+    border-radius: 9px;
+  }
+
+  .setup-choice-card > i {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+    font-size: 13px;
+  }
+
+  .setup-choice-card strong {
+    font-size: 11px;
+  }
+
+  .setup-choice-card small {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 8px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .difficulty-choice-grid .setup-choice-card {
+    min-height: 42px;
+  }
+
+  .setup-footer {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 6px;
+  }
+
+  .setup-footer .city-note {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .setup-footer input {
+    min-height: 34px !important;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .slot-list {
+    gap: 6px;
+  }
+
+  .slot-card {
+    min-height: 62px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .slot-card-main {
+    gap: 3px;
+  }
+
+  .slot-title-row {
+    gap: 4px;
+  }
+
+  .slot-name {
+    font-size: 12px;
+  }
+
+  .slot-badges {
+    gap: 3px;
+  }
+
+  .slot-tag {
+    padding: 2px 4px;
+    font-size: 8px;
+  }
+
+  .slot-meta-row {
+    gap: 5px;
+    font-size: 9px;
+  }
+
+  .slot-cash {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .slot-date {
+    font-size: 8px;
+  }
+
+  .slot-delete-button {
+    width: 40px;
+    height: 62px;
+  }
+
+  .slot-delete-button svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   FLOATING WINDOW ACTIONS / MINIMIZED ALIGNMENT
+   Keep minimize and close controls in one predictable action group. When a
+   window is minimized, the visible title or summary stays centered while
+   the actions remain docked to the right edge.
+------------------------------------------------------------------------- */
+.floating-window-actions,
+.construction-preview-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+  flex: 0 0 auto !important;
+  min-width: max-content;
+  margin-left: auto !important;
+}
+
+.left-route-header,
+.right-line-header,
+.route-settings-card-heading,
+.modify-tools-card-heading,
+.construction-preview-header {
+  padding-right: 0 !important;
+}
+
+.floating-window-actions .dialog-close,
+.floating-window-actions .compact-close,
+.construction-preview-header-actions .dialog-close,
+.construction-preview-header-actions .compact-close {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+}
+
+.modify-tools-card-heading > .floating-minimize-button {
+  margin-left: auto !important;
+}
+
+.left-route-window.is-minimized > .left-route-header,
+.right-line-control-card.is-minimized > .right-line-header,
+#routeSettingsCard.is-minimized > .route-settings-card-heading,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading,
+.construction-preview-panel.is-minimized > header {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-height: 26px !important;
+  padding: 0 !important;
+  border-bottom: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#routeSettingsCard.is-minimized .route-settings-card-heading > span,
+#routeSettingsCard.is-minimized .route-settings-card-heading > strong,
+.construction-preview-panel.is-minimized .header-title-group {
+  display: none !important;
+}
+
+#routeSettingsCard.is-minimized .route-settings-header-summary,
+.construction-preview-panel.is-minimized .construction-preview-header-summary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+.left-route-window.is-minimized > .left-route-header > .floating-window-actions,
+.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions,
+#routeSettingsCard.is-minimized > .route-settings-card-heading > .floating-window-actions,
+.construction-preview-panel.is-minimized > header .construction-preview-header-actions {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0 !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+}
+
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0 !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+}
+
+.floating-minimize-button:active {
+  transform: scale(0.94);
+}
+
+.left-route-window.is-minimized .floating-minimize-button:active,
+.right-line-control-card.is-minimized .floating-minimize-button:active,
+#routeSettingsCard.is-minimized .floating-minimize-button:active,
+#modifyToolsCard.is-minimized .floating-minimize-button:active,
+.construction-preview-panel.is-minimized .floating-minimize-button:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+/* Full-screen workspaces must reach every edge of the game viewport. Their
+   internal headers still provide safe-area padding where the device needs it,
+   while the workspace surface itself no longer leaves a frame around the map. */
+.diagram-screen,
+.analysis-screen,
+.statistics-screen,
+.news-screen {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+
+/* -------------------------------------------------------------------------
+   LANDSCAPE POPUP WINDOWS
+   Popup dialogs use the same wide-screen language as the landscape start
+   screen: centered panels, compact headers, and two-column information flow.
+   The dialog remains scrollable when a short phone viewport cannot show every
+   report section at once.
+------------------------------------------------------------------------- */
+@media (orientation: landscape) and (max-width: 1280px) {
+  .dialog-backdrop {
+    align-items: center;
+    justify-items: center;
+    padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  }
+
+  .dialog-backdrop > section,
+  .dialog-backdrop > div > section {
+    max-height: calc(100dvh - 12px) !important;
+  }
+
+  .finance-dialog {
+    width: min(900px, calc(100vw - 16px)) !important;
+    max-height: min(90dvh, calc(100dvh - 12px)) !important;
+    padding: 16px !important;
+    gap: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+    align-items: start;
+    overflow-y: auto;
+    border-radius: 18px !important;
+  }
+
+  .finance-dialog > .dialog-heading,
+  .finance-dialog > .finance-stats-grid {
+    grid-column: 1 / -1;
+  }
+
+  .finance-dialog > #financeForecastContent {
+    grid-column: 1;
+    grid-row: 3 / span 2;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .finance-dialog > .finance-section:nth-last-child(2) {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .finance-dialog > .finance-section:last-child {
+    grid-column: 2;
+    grid-row: 4;
+  }
+
+  .finance-dialog .dialog-heading {
+    padding-bottom: 8px;
+  }
+
+  .finance-dialog .dialog-heading h2 {
+    font-size: clamp(18px, 2.2vw, 24px);
+  }
+
+  .finance-dialog .dialog-heading span {
+    font-size: 9px;
+  }
+
+  .finance-stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .finance-card {
+    min-width: 0;
+    gap: 4px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .finance-card span {
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .finance-val {
+    overflow: hidden;
+    font-size: clamp(13px, 2vw, 18px);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .finance-section {
+    min-width: 0;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .finance-section h3 {
+    font-size: 13px;
+  }
+
+  .finance-desc {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .finance-actions-row {
+    gap: 8px;
+  }
+
+  .finance-btn,
+  .finance-nav-btn {
+    min-height: 42px;
+    padding: 9px;
+    font-size: 11px;
+  }
+
+  .operating-forecast-card {
+    height: 100%;
+    margin: 0;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .operating-forecast-card header {
+    gap: 8px;
+    margin-bottom: 7px;
+  }
+
+  .operating-forecast-card header strong {
+    font-size: 11px;
+  }
+
+  .operating-forecast-card header small {
+    font-size: 8px;
+    text-align: right;
+  }
+
+  .operating-forecast-head,
+  .operating-forecast-row {
+    grid-template-columns: minmax(72px, 1fr) minmax(58px, 0.8fr) minmax(58px, 0.8fr);
+    gap: 5px;
+  }
+
+  .operating-forecast-head,
+  .operating-forecast-row {
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+
+  .operating-forecast-head {
+    font-size: 8px;
+  }
+
+  .operating-forecast-row {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-size: 9px;
+  }
+
+  .operating-forecast-row strong {
+    font-size: 10px;
+  }
+
+  .satisfaction-dialog {
+    width: min(1080px, calc(100vw - 16px)) !important;
+    max-height: min(92dvh, calc(100dvh - 12px)) !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 20px !important;
+  }
+
+  .satisfaction-dialog-header {
+    flex: 0 0 auto;
+    padding: 16px 22px 12px;
+  }
+
+  .satisfaction-dialog-header h2 {
+    font-size: clamp(19px, 2.4vw, 25px);
+  }
+
+  .satisfaction-dialog-header p {
+    font-size: 11px;
+  }
+
+  .satisfaction-dialog-content {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 22px 22px;
+    gap: 14px;
+  }
+}
+
+/* A horizontal phone has less height but enough width for the report's
+   summary, four factors, and two detail columns to remain side by side. */
+@media (orientation: landscape) and (max-width: 760px) {
+  .dialog-backdrop {
+    padding: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
+  }
+
+  .finance-dialog,
+  .satisfaction-dialog {
+    width: calc(100vw - 8px) !important;
+    max-height: calc(100dvh - 8px) !important;
+  }
+
+  .finance-dialog {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 8px;
+    padding: 10px !important;
+  }
+
+  .finance-dialog .dialog-heading {
+    padding-bottom: 6px;
+  }
+
+  .finance-dialog .dialog-heading h2 {
+    font-size: 16px;
+  }
+
+  .finance-dialog .dialog-heading span {
+    padding: 2px 6px;
+    font-size: 8px;
+  }
+
+  .finance-stats-grid {
+    gap: 6px;
+  }
+
+  .finance-card {
+    padding: 8px 7px;
+  }
+
+  .finance-card span {
+    font-size: 8px;
+  }
+
+  .finance-val {
+    font-size: clamp(12px, 2.5vw, 15px);
+  }
+
+  .finance-section {
+    gap: 6px;
+    padding: 9px;
+  }
+
+  .finance-section h3 {
+    font-size: 11px;
+  }
+
+  .finance-desc {
+    font-size: 9px;
+  }
+
+  .finance-actions-row {
+    gap: 5px;
+  }
+
+  .finance-btn,
+  .finance-nav-btn {
+    min-height: 36px;
+    padding: 7px 5px;
+    font-size: 9px;
+  }
+
+  .operating-forecast-card {
+    padding: 8px;
+  }
+
+  .operating-forecast-card header {
+    display: grid;
+    gap: 2px;
+    margin-bottom: 5px;
+  }
+
+  .operating-forecast-card header small {
+    text-align: left;
+  }
+
+  .operating-forecast-head,
+  .operating-forecast-row {
+    grid-template-columns: minmax(58px, 1fr) minmax(44px, 0.8fr) minmax(44px, 0.8fr);
+    gap: 3px;
+  }
+
+  .operating-forecast-head,
+  .operating-forecast-row {
+    padding-right: 3px;
+    padding-left: 3px;
+  }
+
+  .operating-forecast-head {
+    font-size: 7px;
+  }
+
+  .operating-forecast-row {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 8px;
+  }
+
+  .operating-forecast-row strong {
+    font-size: 9px;
+  }
+
+  .satisfaction-dialog-header {
+    gap: 12px;
+    padding: 10px 14px 8px;
+  }
+
+  .satisfaction-dialog-header p {
+    display: block;
+    margin-top: 4px;
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  .satisfaction-dialog-content {
+    gap: 10px;
+    padding: 10px 14px 14px;
+  }
+
+  .satisfaction-hero {
+    grid-template-columns: 84px minmax(0, 1fr) minmax(88px, auto);
+    gap: 10px;
+    min-height: 100px;
+    padding: 10px;
+  }
+
+  .satisfaction-score-ring {
+    width: 78px;
+    height: 78px;
+  }
+
+  .satisfaction-score-ring::before {
+    width: 60px;
+    height: 60px;
+  }
+
+  .satisfaction-score-ring strong {
+    font-size: 24px;
+  }
+
+  .satisfaction-change {
+    grid-column: auto;
+    min-width: 88px;
+    padding: 8px;
+    text-align: right;
+  }
+
+  .satisfaction-change span {
+    margin-bottom: 3px;
+    font-size: 8px;
+  }
+
+  .satisfaction-change strong {
+    font-size: 13px;
+  }
+
+  .satisfaction-level {
+    margin-bottom: 5px;
+    padding: 3px 6px;
+    font-size: 8px;
+  }
+
+  .satisfaction-hero-copy h3 {
+    font-size: 14px;
+  }
+
+  .satisfaction-hero-copy p {
+    margin-top: 4px;
+    font-size: 9px;
+  }
+
+  .satisfaction-factor-section,
+  .satisfaction-trend-card,
+  .satisfaction-journey-card,
+  .satisfaction-recommendations {
+    padding: 10px;
+    border-radius: 13px;
+  }
+
+  .satisfaction-section-heading {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .satisfaction-section-heading > div > span {
+    margin-bottom: 3px;
+    font-size: 8px;
+  }
+
+  .satisfaction-section-heading h3 {
+    font-size: 12px;
+  }
+
+  .satisfaction-section-heading em {
+    font-size: 8px;
+  }
+
+  .satisfaction-factor-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .satisfaction-factor {
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .satisfaction-factor > div {
+    grid-template-columns: 22px 1fr;
+    gap: 1px 5px;
+  }
+
+  .satisfaction-factor > div > i {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    font-size: 11px;
+  }
+
+  .satisfaction-factor > div > span {
+    font-size: 8px;
+  }
+
+  .satisfaction-factor > div > strong {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .satisfaction-factor > b {
+    margin: 7px 0 6px;
+  }
+
+  .satisfaction-factor > small {
+    font-size: 8px;
+  }
+
+  .satisfaction-detail-grid {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 8px;
+  }
+
+  .satisfaction-trend {
+    height: 90px;
+    gap: 4px;
+  }
+
+  .satisfaction-trend > div > strong {
+    font-size: 8px;
+  }
+
+  .satisfaction-trend > div > span {
+    font-size: 7px;
+  }
+
+  .satisfaction-journey-list {
+    gap: 5px;
+  }
+
+  .satisfaction-journey-list article {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .satisfaction-journey-list article strong {
+    font-size: 9px;
+  }
+
+  .satisfaction-journey-list article span {
+    font-size: 8px;
+  }
+
+  .satisfaction-journey-list article > em {
+    font-size: 11px;
+  }
+
+  .satisfaction-recommendations > div:last-child {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .satisfaction-recommendations article {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .satisfaction-recommendations article > i {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+    border-radius: 7px;
+    font-size: 11px;
+  }
+
+  .satisfaction-recommendations article strong {
+    font-size: 9px;
+  }
+
+  .satisfaction-recommendations article span {
+    font-size: 8px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   MOBILE MODIFY TOOLS
+   Keep the edit palette compact so it does not cover the network map or the
+   bottom tool dock. Portrait uses a readable 2x2 grid; landscape uses one
+   short row because the phone has more horizontal room than vertical room.
+------------------------------------------------------------------------- */
+@media (max-width: 700px) {
+  #modifyToolsCard {
+    position: fixed !important;
+    top: auto !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: max(calc(var(--mobile-dock-height, 52px) + 8px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 8px)) !important;
+    left: auto !important;
+    width: min(220px, calc(100vw - 16px)) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: min(44dvh, 220px) !important;
+    padding: 8px !important;
+    gap: 7px !important;
+    overflow-y: auto !important;
+    border-radius: 14px !important;
+  }
+
+  .modify-tools-card-heading {
+    min-height: 24px;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0 2px 5px !important;
+  }
+
+  .modify-tools-card-heading span {
+    font-size: 8px;
+  }
+
+  .modify-tools-card-heading strong {
+    font-size: 12px;
+  }
+
+  .modify-tools-grid {
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .modify-tools-grid .primary-tool.compact {
+    min-width: 0;
+    min-height: 38px !important;
+    padding: 0 6px !important;
+    gap: 4px;
+    border-radius: 9px !important;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .modify-tools-grid .primary-tool.compact svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  #modifyToolsCard {
+    width: min(208px, calc(100vw - 16px)) !important;
+    max-height: min(34dvh, 150px) !important;
+    padding: 7px !important;
+    gap: 6px !important;
+  }
+
+  .modify-tools-card-heading {
+    min-height: 22px;
+    padding-bottom: 4px !important;
+  }
+
+  .modify-tools-card-heading span {
+    font-size: 7px;
+  }
+
+  .modify-tools-card-heading strong {
+    font-size: 11px;
+  }
+
+  .modify-tools-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
+  body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .modify-tools-grid .primary-tool.compact {
+    min-height: 34px !important;
+    padding: 0 3px !important;
+    gap: 2px;
+    border-radius: 7px !important;
+    font-size: 8px;
+  }
+
+  .modify-tools-grid .primary-tool.compact svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   MODIFY TOOLS — ICON PALETTE
+   Replace the dense text-first card with a small visual tool palette. The
+   existing buttons and actions stay intact; only their presentation changes.
+------------------------------------------------------------------------- */
+#modifyToolsCard {
+  width: min(280px, calc(100vw - 24px)) !important;
+  padding: 12px !important;
+  gap: 10px !important;
+  border: 1px solid rgba(85, 217, 192, 0.28) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(165deg, rgba(8, 20, 25, 0.98), rgba(15, 22, 29, 0.98)) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+}
+
+#modifyToolsCard::before {
+  width: 34px;
+  height: 3px;
+  margin: 0 auto 1px;
+  background: linear-gradient(90deg, transparent, rgba(85, 217, 192, 0.8), transparent);
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading {
+  min-height: 32px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 0 0 9px !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > span {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border: 1px solid rgba(85, 217, 192, 0.24);
+  border-radius: 999px;
+  color: #55d9c0;
+  background: rgba(85, 217, 192, 0.08);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > strong {
+  color: #f3fbff;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > .floating-minimize-button {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  margin-left: auto !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #dcecf0 !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact {
+  width: 100% !important;
+  min-width: 0;
+  min-height: 64px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 8px 3px !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  border-radius: 11px !important;
+  color: #dbe8ed !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.03) !important;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: #8ea9b3;
+  transition: color 0.16s ease, filter 0.16s ease;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact span {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact:hover {
+  transform: translateY(-1px);
+  border-color: rgba(85, 217, 192, 0.52) !important;
+  color: #f4ffff !important;
+  background: rgba(85, 217, 192, 0.12) !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2), 0 0 14px rgba(85, 217, 192, 0.1) !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact:hover svg,
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact.active svg {
+  color: #55d9c0;
+  filter: drop-shadow(0 0 5px rgba(85, 217, 192, 0.3));
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact.active {
+  border-color: rgba(85, 217, 192, 0.88) !important;
+  color: #071116 !important;
+  background: linear-gradient(145deg, #69e4ca, #37bda5) !important;
+  box-shadow: 0 8px 22px rgba(42, 194, 164, 0.22), inset 0 1px rgba(255, 255, 255, 0.45) !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact.active svg {
+  color: #071116;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .danger-tool {
+  border-color: rgba(255, 107, 120, 0.34) !important;
+  color: #ffb3ba !important;
+  background: rgba(255, 107, 120, 0.07) !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .danger-tool:hover,
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .danger-tool.active {
+  border-color: rgba(255, 107, 120, 0.78) !important;
+  color: #fff5f6 !important;
+  background: linear-gradient(145deg, rgba(255, 107, 120, 0.3), rgba(173, 47, 73, 0.38)) !important;
+  box-shadow: 0 8px 20px rgba(255, 75, 100, 0.15) !important;
+}
+
+#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact:focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: 2px;
+}
+
+body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .modify-tools-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+@media (max-width: 700px) {
+  #modifyToolsCard {
+    width: min(236px, calc(100vw - 16px)) !important;
+    padding: 9px !important;
+    gap: 8px !important;
+    border-radius: 15px !important;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-card-heading {
+    min-height: 27px !important;
+    padding-bottom: 7px !important;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > span {
+    padding: 3px 6px;
+    font-size: 7px;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > strong {
+    font-size: 12px;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact {
+    min-height: 54px !important;
+    gap: 4px !important;
+    padding: 6px 2px !important;
+    border-radius: 9px !important;
+    font-size: 9px;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  #modifyToolsCard {
+    width: min(236px, calc(100vw - 16px)) !important;
+    padding: 8px !important;
+    gap: 7px !important;
+  }
+
+  #modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact {
+    min-height: 48px !important;
+    font-size: 8px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   ROUTE LIST — MINIMIZED BAR
+   A minimized route list should read as a compact status bar, not as a
+   collapsed copy of the full drawer. The route title stays readable while
+   restore and close remain separate, touch-friendly controls.
+------------------------------------------------------------------------- */
+.left-route-window.is-minimized {
+  position: absolute !important;
+  width: min(286px, calc(100vw - 16px)) !important;
+  min-width: 210px !important;
+  max-width: min(286px, calc(100vw - 16px)) !important;
+  height: 54px !important;
+  max-height: 54px !important;
+  padding: 7px 8px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(56, 189, 248, 0.36) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, rgba(8, 26, 39, 0.98), rgba(15, 22, 29, 0.98)) !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48), 0 0 22px rgba(56, 189, 248, 0.12) !important;
+}
+
+.left-route-window.is-minimized::before {
+  display: none !important;
+}
+
+.left-route-window.is-minimized::after {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  content: "";
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #38bdf8, #4ce0c3);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.55);
+}
+
+.left-route-window.is-minimized > .left-route-header {
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 0 2px !important;
+  border-bottom: 0 !important;
+}
+
+.left-route-window.is-minimized .left-route-title-group {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 8px;
+  flex: 1 1 auto;
+}
+
+.left-route-window.is-minimized .left-route-sub {
+  grid-column: 1;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 7px;
+  color: #7dd3fc !important;
+  background: rgba(56, 189, 248, 0.1);
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.left-route-window.is-minimized .left-route-title {
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  color: #f7fcff !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-route-window.is-minimized > .left-route-header > .floating-window-actions {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  line-height: 1 !important;
+  font-size: 15px !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button {
+  border: 1px solid rgba(85, 217, 192, 0.42) !important;
+  color: #6ee7d0 !important;
+  background: rgba(85, 217, 192, 0.12) !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .dialog-close {
+  border: 1px solid rgba(251, 113, 133, 0.32) !important;
+  color: #fda4af !important;
+  background: rgba(251, 113, 133, 0.08) !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+@media (max-width: 700px) {
+  .left-route-window.is-minimized {
+    position: fixed !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    bottom: max(calc(var(--mobile-dock-height, 52px) + 8px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 8px)) !important;
+    width: min(252px, calc(100vw - 16px)) !important;
+    max-width: calc(100vw - 16px) !important;
+    height: 50px !important;
+    max-height: 50px !important;
+    padding: 6px 7px !important;
+    border-radius: 14px !important;
+  }
+
+  .left-route-window.is-minimized > .left-route-header {
+    min-height: 36px !important;
+    gap: 8px !important;
+  }
+
+  .left-route-window.is-minimized .left-route-sub {
+    padding: 3px 5px;
+    font-size: 7px !important;
+  }
+
+  .left-route-window.is-minimized .left-route-title {
+    font-size: 13px !important;
+  }
+
+  .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+  .left-route-window.is-minimized .floating-window-actions > .dialog-close {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .left-route-window.is-minimized {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    bottom: max(calc(var(--mobile-dock-height, 52px) + 6px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 6px)) !important;
+    width: min(260px, calc(100vw - 16px)) !important;
+    height: 48px !important;
+    max-height: 48px !important;
+  }
+}
+
+/* Minimized route list content: show only route names and their colours. */
+.left-route-minimized-summary {
+  display: none;
+}
+
+.left-route-window.is-minimized .left-route-title-group {
+  display: none !important;
+}
+
+.left-route-window.is-minimized .left-route-minimized-summary {
+  min-width: 0;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.left-route-window.is-minimized .left-route-minimized-summary::-webkit-scrollbar {
+  display: none;
+}
+
+/* Minimized controls: keep hover, keyboard-focus, active and pressed states
+   visible on every compact window, not just on the route-list window. */
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease,
+    color 140ms ease, filter 140ms ease, transform 100ms ease;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:hover,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:hover,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:hover,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:hover,
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button[aria-pressed="true"],
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--minimized-accent-strong) 82%, #ffffff) !important;
+  color: #d9fff8 !important;
+  background: color-mix(in srgb, var(--minimized-accent-strong) 26%, rgba(8, 20, 28, 0.9)) !important;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--minimized-accent-strong) 28%, transparent),
+    inset 0 1px rgba(255, 255, 255, 0.16);
+  filter: brightness(1.08);
+}
+
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:hover,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:hover,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:hover,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:hover {
+  border-color: rgba(251, 113, 133, 0.82) !important;
+  color: #ffe4e8 !important;
+  background: rgba(251, 113, 133, 0.22) !important;
+  box-shadow: 0 0 14px rgba(251, 113, 133, 0.22), inset 0 1px rgba(255, 255, 255, 0.14);
+  filter: brightness(1.08);
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:active,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:active,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:active,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:active,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:active,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:active,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:active,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:active,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:active {
+  transform: scale(0.92);
+  filter: brightness(1.16);
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:focus-visible,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:focus-visible,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:focus-visible,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:focus-visible,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:focus-visible,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--minimized-accent-strong) 86%, #ffffff);
+  outline-offset: 2px;
+}
+
+.construction-preview-panel.is-minimized .header-confirm-btn:not(:disabled):hover {
+  border-color: rgba(251, 191, 36, 0.82) !important;
+  color: #fff7d6 !important;
+  background: rgba(251, 191, 36, 0.22) !important;
+  box-shadow: 0 0 14px rgba(251, 191, 36, 0.22), inset 0 1px rgba(255, 255, 255, 0.14);
+  filter: brightness(1.08);
+}
+
+.construction-preview-panel.is-minimized .header-confirm-btn:not(:disabled):active {
+  transform: scale(0.94);
+  filter: brightness(1.16);
+}
+
+.construction-preview-panel.is-minimized .header-confirm-btn:focus-visible {
+  outline: 2px solid #fcd34d;
+  outline-offset: 2px;
+}
+
+.left-route-window.is-minimized .left-route-minimized-route:hover,
+.left-route-window.is-minimized .left-route-minimized-route.is-selected {
+  border-color: color-mix(in srgb, var(--route-color) 94%, #ffffff);
+  background: color-mix(in srgb, var(--route-color) 23%, rgba(8, 18, 25, 0.86));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--route-color) 32%, transparent),
+    inset 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.left-route-window.is-minimized .left-route-minimized-route:active {
+  transform: scale(0.96);
+}
+
+.left-route-minimized-route {
+  min-width: 0;
+  max-width: 150px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--route-color) 44%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--route-color) 78%, #ffffff);
+  background: color-mix(in srgb, var(--route-color) 13%, rgba(8, 18, 25, 0.86));
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.left-route-minimized-route i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border: 2px solid rgba(255, 255, 255, 0.86);
+  border-radius: 50%;
+  background: var(--route-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--route-color) 72%, transparent);
+}
+
+.left-route-minimized-route strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.left-route-minimized-route.is-selected {
+  border-color: color-mix(in srgb, var(--route-color) 82%, #ffffff);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--route-color) 24%, transparent), inset 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.left-route-minimized-empty {
+  color: #8798a4;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .left-route-minimized-route {
+    max-width: 116px;
+    gap: 4px;
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+
+  .left-route-minimized-route i {
+    width: 7px;
+    height: 7px;
+    flex-basis: 7px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   SHARED MINIMIZED WINDOW SYSTEM
+   Apply the route-list status-bar language consistently to every floating
+   window that supports minimization.
+------------------------------------------------------------------------- */
+.left-route-window.is-minimized,
+.right-line-control-card.is-minimized,
+#routeSettingsCard.is-minimized,
+#modifyToolsCard.is-minimized,
+.construction-preview-panel.is-minimized {
+  --minimized-accent: #38bdf8;
+  --minimized-accent-strong: #4ce0c3;
+  position: absolute !important;
+  width: min(286px, calc(100vw - 16px)) !important;
+  min-width: 210px !important;
+  max-width: min(286px, calc(100vw - 16px)) !important;
+  height: 54px !important;
+  max-height: 54px !important;
+  padding: 7px 8px !important;
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--minimized-accent) 42%, transparent) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, rgba(8, 26, 39, 0.98), rgba(15, 22, 29, 0.98)) !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48), 0 0 22px color-mix(in srgb, var(--minimized-accent) 14%, transparent) !important;
+}
+
+.left-route-window.is-minimized::before,
+.right-line-control-card.is-minimized::before,
+#routeSettingsCard.is-minimized::before,
+#modifyToolsCard.is-minimized::before,
+.construction-preview-panel.is-minimized::before {
+  display: none !important;
+}
+
+.left-route-window.is-minimized::after,
+.right-line-control-card.is-minimized::after,
+#routeSettingsCard.is-minimized::after,
+#modifyToolsCard.is-minimized::after,
+.construction-preview-panel.is-minimized::after {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  content: "";
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, var(--minimized-accent), var(--minimized-accent-strong));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--minimized-accent) 55%, transparent);
+}
+
+.left-route-window.is-minimized > .left-route-header,
+.right-line-control-card.is-minimized > .right-line-header,
+#routeSettingsCard.is-minimized > .route-settings-card-heading,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading,
+.construction-preview-panel.is-minimized > header {
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 0 2px !important;
+  border-bottom: 0 !important;
+}
+
+.left-route-window.is-minimized .left-route-title-group,
+.right-line-control-card.is-minimized .right-line-title-group {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 8px;
+  flex: 1 1 auto;
+}
+
+.left-route-window.is-minimized .left-route-sub,
+.right-line-control-card.is-minimized .right-line-sub,
+#routeSettingsCard.is-minimized > .route-settings-card-heading > span,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > span {
+  display: inline-flex !important;
+  align-items: center;
+  width: fit-content;
+  margin: 0 !important;
+  padding: 4px 6px;
+  border: 1px solid color-mix(in srgb, var(--minimized-accent) 30%, transparent);
+  border-radius: 7px;
+  color: #7dd3fc !important;
+  background: color-mix(in srgb, var(--minimized-accent) 10%, transparent);
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.left-route-window.is-minimized .left-route-title,
+.right-line-control-card.is-minimized .right-line-title,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f7fcff !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#routeSettingsCard.is-minimized > .route-settings-card-heading > strong {
+  display: none !important;
+}
+
+#routeSettingsCard.is-minimized .route-settings-header-summary {
+  min-width: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex: 1 1 auto;
+  margin: 0 !important;
+  overflow: hidden;
+}
+
+#routeSettingsCard.is-minimized #routeSettingsHeaderName {
+  min-width: 0;
+  overflow: hidden;
+  color: #f7fcff !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.construction-preview-panel.is-minimized .construction-preview-header-summary {
+  min-width: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  flex: 1 1 auto;
+  margin: 0 !important;
+  overflow: hidden;
+}
+
+.construction-preview-panel.is-minimized .construction-preview-header-summary::before {
+  padding: 4px 6px;
+  content: "BUILD REVIEW";
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  border-radius: 7px;
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.1);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.construction-preview-panel.is-minimized #headerPreviewCost {
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fafc !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.construction-preview-panel.is-minimized .header-confirm-btn {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 7px;
+  border-radius: 8px;
+  font-size: 9px;
+}
+
+.left-route-window.is-minimized > .left-route-header > .floating-window-actions,
+.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions,
+#routeSettingsCard.is-minimized > .route-settings-card-heading > .floating-window-actions,
+.construction-preview-panel.is-minimized > header .construction-preview-header-actions {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+}
+
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  transform: none !important;
+  margin-left: auto !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  line-height: 1 !important;
+  font-size: 15px !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button {
+  border: 1px solid color-mix(in srgb, var(--minimized-accent-strong) 42%, transparent) !important;
+  color: var(--minimized-accent-strong) !important;
+  background: color-mix(in srgb, var(--minimized-accent-strong) 12%, transparent) !important;
+}
+
+.left-route-window.is-minimized .floating-window-actions > .dialog-close,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+  border: 1px solid rgba(251, 113, 133, 0.32) !important;
+  color: #fda4af !important;
+  background: rgba(251, 113, 133, 0.08) !important;
+}
+
+@media (max-width: 700px) {
+  .left-route-window.is-minimized,
+  #routeSettingsCard.is-minimized {
+    position: fixed !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+  }
+
+  .right-line-control-card.is-minimized,
+  #modifyToolsCard.is-minimized,
+  .construction-preview-panel.is-minimized {
+    position: fixed !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    left: auto !important;
+  }
+
+  .left-route-window.is-minimized,
+  .right-line-control-card.is-minimized,
+  #routeSettingsCard.is-minimized,
+  #modifyToolsCard.is-minimized,
+  .construction-preview-panel.is-minimized {
+    bottom: max(calc(var(--mobile-dock-height, 52px) + 8px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 8px)) !important;
+    width: min(252px, calc(100vw - 16px)) !important;
+    max-width: calc(100vw - 16px) !important;
+    height: 50px !important;
+    max-height: 50px !important;
+    padding: 6px 7px !important;
+    border-radius: 14px !important;
+  }
+
+  .left-route-window.is-minimized > .left-route-header,
+  .right-line-control-card.is-minimized > .right-line-header,
+  #routeSettingsCard.is-minimized > .route-settings-card-heading,
+  #modifyToolsCard.is-minimized > .modify-tools-card-heading,
+  .construction-preview-panel.is-minimized > header {
+    min-height: 36px !important;
+    gap: 8px !important;
+  }
+
+  .left-route-window.is-minimized .left-route-sub,
+  .right-line-control-card.is-minimized .right-line-sub,
+  #routeSettingsCard.is-minimized > .route-settings-card-heading > span,
+  #modifyToolsCard.is-minimized > .modify-tools-card-heading > span,
+  .construction-preview-panel.is-minimized .construction-preview-header-summary::before {
+    padding: 3px 5px;
+    font-size: 7px !important;
+  }
+
+  .left-route-window.is-minimized .left-route-title,
+  .right-line-control-card.is-minimized .right-line-title,
+  #modifyToolsCard.is-minimized > .modify-tools-card-heading > strong {
+    font-size: 13px !important;
+  }
+
+  #routeSettingsCard.is-minimized #routeSettingsHeaderName,
+  .construction-preview-panel.is-minimized #headerPreviewCost {
+    font-size: 12px !important;
+  }
+
+  .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+  .left-route-window.is-minimized .floating-window-actions > .dialog-close,
+  .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
+  .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
+  #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
+  #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
+  #modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
+  .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
+  .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    max-width: 28px !important;
+    max-height: 28px !important;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .left-route-window.is-minimized,
+  .right-line-control-card.is-minimized,
+  #routeSettingsCard.is-minimized,
+  #modifyToolsCard.is-minimized,
+  .construction-preview-panel.is-minimized {
+    bottom: max(calc(var(--mobile-dock-height, 52px) + 6px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 6px)) !important;
+    width: min(260px, calc(100vw - 16px)) !important;
+    height: 48px !important;
+    max-height: 48px !important;
+  }
+}
+
+/* Final route-list minimization override: the bar contains only route names
+   and their colour markers; the window controls remain in the action group. */
+.left-route-window.is-minimized .left-route-title-group {
+  display: none !important;
+}
+
+.left-route-window.is-minimized .left-route-minimized-summary {
+  min-width: 0;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.left-route-window.is-minimized .left-route-minimized-summary::-webkit-scrollbar {
+  display: none;
+}
+
+/* The compact modify-tools button has a later positioning rule with
+   !important, so repeat its pressed transform at the end of the cascade. */
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:active {
+  transform: scale(0.92) !important;
+}
+
+/* Keep every action in a minimized bar on the same visual shape. */
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
+.left-route-window.is-minimized .floating-window-actions > .dialog-close,
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
+#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
+#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
+#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
+.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close,
+.construction-preview-panel.is-minimized .header-confirm-btn {
+  border-radius: 10px !important;
+  box-sizing: border-box !important;
+}
+
+.construction-preview-panel.is-minimized .header-confirm-btn {
+  height: 30px !important;
+  min-height: 30px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 10px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 700px) {
+  .construction-preview-panel.is-minimized .header-confirm-btn {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 8px !important;
+  }
+}
+
+/* Shared floating-window action shape. Keep every window header control in
+   the same rounded-square language, including full-screen workspaces and
+   dialog-backed floating panels. */
+.left-route-window .floating-minimize-button,
+.left-route-window .dialog-close,
+.right-line-control-card .floating-minimize-button,
+.right-line-control-card .dialog-close,
+#routeSettingsCard .floating-minimize-button,
+#routeSettingsCard .dialog-close,
+#closeRouteSettingsButton,
+#modifyToolsCard .floating-minimize-button,
+.construction-preview-panel .floating-minimize-button,
+.construction-preview-panel .dialog-close,
+#closeConstructionPreviewButton,
+.construction-preview-panel .header-confirm-btn,
+.dialog-backdrop .dialog-close,
+.diagram-screen .diagram-close,
+.analysis-screen .analysis-close,
+.statistics-screen .statistics-close,
+.news-screen .news-close,
+.tutorial-panel #tutorialSkipButton {
+  border-radius: 10px !important;
+  box-sizing: border-box !important;
+}
+
+.dialog-backdrop .dialog-close,
+.diagram-screen .diagram-close,
+.analysis-screen .analysis-close,
+.statistics-screen .statistics-close,
+.news-screen .news-close,
+.tutorial-panel #tutorialSkipButton {
+  aspect-ratio: 1 / 1 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+}
+
+/* Mobile HUD scale: reduce the top status bar and bottom tool dock while
+   preserving their scroll and touch behavior. */
+@media (max-width: 700px) {
+  .game-shell {
+    --mobile-dock-height: 44px;
+  }
+
+  .hud.top-header-bar {
+    gap: 3px;
+  }
+
+  .hud-brand-pill {
+    min-height: 28px;
+    max-width: 64px;
+    padding: 0 6px 0 8px;
+    font-size: 9px;
+  }
+
+  .workspace-mode-tab {
+    min-height: 32px;
+    padding: 0 5px;
+    font-size: 8px;
+  }
+
+  .top-actions-row {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .layer-menu summary,
+  .top-action-btn,
+  .history-action {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+
+  .top-status-pills .cash-pill,
+  .top-status-pills .satisfaction-pill,
+  .top-status-pills .history-pill,
+  .top-status-pills .clock-pill {
+    min-height: 28px;
+  }
+
+  .hud.build-panel {
+    bottom: max(4px, env(safe-area-inset-bottom));
+    padding: 2px;
+    gap: 2px;
+    border-radius: 12px !important;
+  }
+
+  .hud.build-panel .tool-group {
+    gap: 2px;
+  }
+
+  .hud.build-panel .tool-divider {
+    height: 18px;
+    margin: 0 1px;
+  }
+
+  .hud.build-panel .primary-tool {
+    min-width: 48px;
+    min-height: 36px;
+    padding: 0 5px;
+    gap: 3px;
+    font-size: 8px;
+  }
+
+  .hud.build-panel .primary-tool svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+@media (max-width: 700px) and (orientation: landscape) {
+  .game-shell {
+    --mobile-dock-height: 38px;
+  }
+
+  .hud.top-header-bar {
+    top: max(2px, env(safe-area-inset-top));
+    left: max(4px, env(safe-area-inset-left));
+    right: max(4px, env(safe-area-inset-right));
+  }
+
+  .hud-brand-pill {
+    min-height: 24px;
+    max-width: 54px;
+    font-size: 8px;
+  }
+
+  .workspace-mode-tab {
+    min-height: 28px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  .top-actions-row {
+    gap: 1px;
+    padding: 1px;
+  }
+
+  .layer-menu summary,
+  .top-action-btn,
+  .history-action {
+    width: 30px !important;
+    min-width: 30px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+  }
+
+  .hud.build-panel {
+    bottom: max(3px, env(safe-area-inset-bottom));
+    padding: 2px;
+    gap: 1px;
+  }
+
+  .hud.build-panel .tool-group {
+    gap: 1px;
+  }
+
+  .hud.build-panel .tool-divider {
+    height: 16px;
+    margin: 0 1px;
+  }
+
+  .hud.build-panel .primary-tool {
+    min-width: 43px;
+    min-height: 30px;
+    padding: 0 4px;
+    gap: 2px;
+    font-size: 8px;
+  }
+
+  .hud.build-panel .primary-tool svg {
+    width: 12px;
+    height: 12px;
+  }
+}

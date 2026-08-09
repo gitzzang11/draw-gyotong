@@ -908,9 +908,11 @@ app.innerHTML = `
                 <button class="setup-choice-card" type="button" data-choice-value="hard" role="radio"><span><strong>어려움</strong><small>도전적인 운영</small></span></button>
               </div>
             </section>
-            <label><span>세이브 이름</span><input id="slotNameInput" value="서울 1호 계획" maxlength="20" placeholder="슬롯 이름을 입력하세요" /></label>
           </div>
-          <div class="city-note" id="cityNote">✨ 서울: 높은 수요, 강 많음</div>
+          <div class="setup-footer">
+            <label><span>세이브 이름</span><input id="slotNameInput" value="서울 1호 계획" maxlength="20" placeholder="슬롯 이름을 입력하세요" /></label>
+            <div class="city-note" id="cityNote">✨ 서울: 높은 수요, 강 많음</div>
+          </div>
         </section>
 
         <!-- Level 4: Save Slots Archive Panel -->
@@ -1099,6 +1101,7 @@ app.innerHTML = `
           <span class="left-route-sub">ROUTE OVERVIEW</span>
           <h3 class="left-route-title">노선 목록</h3>
         </div>
+        <div id="leftRouteMinimizedSummary" class="left-route-minimized-summary" aria-label="최소화된 노선 목록"></div>
         <button id="closeLeftRouteWindowButton" class="dialog-close compact-close" type="button" aria-label="닫기">×</button>
       </div>
 
@@ -1844,6 +1847,7 @@ const headwayReadout = byId("headwayReadout");
 const leftRouteWindow = byId("leftRouteWindow");
 const closeLeftRouteWindowButton = byId("closeLeftRouteWindowButton");
 const leftRouteList = byId("leftRouteList");
+const leftRouteMinimizedSummary = byId("leftRouteMinimizedSummary");
 const leftRouteTotalCount = byId("leftRouteTotalCount");
 const leftRouteTotalKm = byId("leftRouteTotalKm");
 const leftRouteNewButton = byId("leftRouteNewButton");
@@ -2166,7 +2170,12 @@ function addFloatingWindowMinimizer(
   });
 
   const closeBtn = header.querySelector(".dialog-close, .compact-close");
-  if (closeBtn && closeBtn.parentElement) {
+  if (closeBtn && closeBtn.parentElement === header) {
+    const actions = document.createElement("div");
+    actions.className = "floating-window-actions";
+    header.insertBefore(actions, closeBtn);
+    actions.append(button, closeBtn);
+  } else if (closeBtn && closeBtn.parentElement) {
     closeBtn.parentElement.insertBefore(button, closeBtn);
   } else {
     header.append(button);
@@ -11731,6 +11740,14 @@ function renderLeftRouteWindow() {
   const totalKm = routes.reduce((sum, r) => sum + r.lengthKm, 0);
   setText(leftRouteTotalCount, `${routes.length}개`);
   setText(leftRouteTotalKm, `${totalKm.toFixed(1)} km`);
+  if (leftRouteMinimizedSummary) {
+    leftRouteMinimizedSummary.innerHTML = routes.length === 0
+      ? `<span class="left-route-minimized-empty">노선 없음</span>`
+      : routes.map((route) => `
+          <span class="left-route-minimized-route${route.id === selectedRouteId ? " is-selected" : ""}" style="--route-color:${escapeHtml(route.color)}" title="${escapeHtml(route.name)}">
+            <i aria-hidden="true"></i><strong>${escapeHtml(route.name)}</strong>
+          </span>`).join("");
+  }
   linePanel.renderRouteList(routes.map((route) => ({
     id: route.id,
     name: escapeHtml(route.name),
