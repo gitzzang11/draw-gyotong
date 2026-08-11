@@ -1,0 +1,505 @@
+/* Mobile-only system menu. Desktop presentation remains in styles.css. */
+
+@media (max-width: 980px) and (orientation: landscape),
+  (max-width: 700px) and (orientation: portrait) {
+  #inGameMenuDialog {
+    --mobile-menu-bg: #0a141d;
+    --mobile-menu-surface: #101c26;
+    --mobile-menu-surface-active: #123f45;
+    --mobile-menu-border: #243641;
+    --mobile-menu-border-strong: #3b5360;
+    --mobile-menu-text: #e8f1f4;
+    --mobile-menu-text-secondary: #9fb1b9;
+    --mobile-menu-text-muted: #687c85;
+    --mobile-menu-accent: #25d0d6;
+    --mobile-menu-accent-strong: #58f0e8;
+    --mobile-menu-danger: #ff6577;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    box-sizing: border-box;
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left)) !important;
+    background: rgb(3 8 12 / 86%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  #inGameMenuDialog [hidden] {
+    display: none !important;
+  }
+
+  #inGameMenuDialog > .ingame-menu-dialog {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--mobile-menu-border-strong) !important;
+    border-radius: 6px !important;
+    background: var(--mobile-menu-bg) !important;
+    color: var(--mobile-menu-text) !important;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 38%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    animation: mobile-system-menu-enter 180ms ease-out both !important;
+  }
+
+  #inGameMenuDialog .dialog-heading {
+    flex: 0 0 52px !important;
+    min-height: 52px !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+    padding: 7px 8px 7px 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--mobile-menu-border-strong) !important;
+    border-radius: 0 !important;
+    background: var(--mobile-menu-bg) !important;
+  }
+
+  #inGameMenuDialog .dialog-heading > div {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  #inGameMenuDialog .dialog-heading span {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--mobile-menu-accent) !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.12em !important;
+    white-space: nowrap;
+  }
+
+  #inGameMenuDialog .dialog-heading h2 {
+    margin: 0 !important;
+    color: var(--mobile-menu-text) !important;
+    font-size: 16px !important;
+    line-height: 20px !important;
+    font-weight: 700 !important;
+  }
+
+  #inGameMenuDialog #closeInGameMenuButton {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 1px solid transparent !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    color: var(--mobile-menu-text-secondary) !important;
+    box-shadow: none !important;
+  }
+
+  #inGameMenuDialog #closeInGameMenuButton:active {
+    border-color: var(--mobile-menu-border-strong) !important;
+    background: var(--mobile-menu-surface) !important;
+    color: var(--mobile-menu-text) !important;
+    transform: scale(0.96);
+  }
+
+  #inGameMenuDialog .ingame-menu-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: grid !important;
+    grid-template-columns: 156px minmax(0, 1fr);
+    grid-template-rows: 56px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "tabs content"
+      "secondary content"
+      "footer content";
+    gap: 0 !important;
+    overflow: hidden !important;
+    background: var(--mobile-menu-bg);
+  }
+
+  #inGameMenuDialog .save-load-horizontal-box {
+    grid-area: tabs;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 6px !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--mobile-menu-border-strong) !important;
+    border-bottom: 1px solid var(--mobile-menu-border) !important;
+    border-radius: 0 !important;
+    background: var(--mobile-menu-bg) !important;
+  }
+
+  #inGameMenuDialog .save-load-tab-btn {
+    position: relative;
+    min-width: 0;
+    min-height: 44px !important;
+    padding: 0 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    overflow: hidden;
+    border: 1px solid transparent !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    color: var(--mobile-menu-text-secondary) !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transform: none !important;
+  }
+
+  #inGameMenuDialog .save-load-tab-btn.active {
+    border-color: var(--mobile-menu-accent) !important;
+    background: var(--mobile-menu-surface-active) !important;
+    color: var(--mobile-menu-accent-strong) !important;
+    box-shadow: inset 0 -3px 0 var(--mobile-menu-accent) !important;
+  }
+
+  #inGameMenuDialog .menu-action-icon {
+    display: none !important;
+  }
+
+  #inGameMenuDialog .save-tab-pane {
+    grid-area: content;
+    min-width: 0;
+    min-height: 0;
+    margin: 0 !important;
+    padding: 16px 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--mobile-menu-surface) !important;
+    box-shadow: none !important;
+  }
+
+  #inGameMenuDialog .save-tab-pane[hidden] {
+    display: none !important;
+  }
+
+  #inGameMenuDialog .menu-save-info {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 0 0 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    border-bottom: 1px solid var(--mobile-menu-border) !important;
+  }
+
+  #inGameMenuDialog .save-title {
+    color: var(--mobile-menu-text) !important;
+    font-size: 14px !important;
+    line-height: 18px;
+    font-weight: 700 !important;
+  }
+
+  #inGameMenuDialog .save-sub {
+    overflow: hidden;
+    color: var(--mobile-menu-text-secondary) !important;
+    font-size: 11px !important;
+    line-height: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #inGameMenuDialog .save-title::first-letter {
+    font-size: 0;
+  }
+
+  #inGameMenuDialog #menuQuickSaveButton {
+    width: 100%;
+    min-height: 52px !important;
+    margin-top: auto !important;
+    padding: 0 14px !important;
+    border: 1px solid var(--mobile-menu-accent) !important;
+    border-radius: 4px !important;
+    background: var(--mobile-menu-surface-active) !important;
+    color: var(--mobile-menu-accent-strong) !important;
+    box-shadow: none !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    transform: none !important;
+  }
+
+  #inGameMenuDialog #menuQuickSaveButton:active {
+    background: color-mix(in srgb, var(--mobile-menu-accent) 24%, var(--mobile-menu-bg)) !important;
+    transform: scale(0.99) !important;
+  }
+
+  #inGameMenuDialog .menu-slot-list {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  #inGameMenuDialog .menu-slot-empty {
+    padding: 20px 8px !important;
+    color: var(--mobile-menu-text-muted) !important;
+    font-size: 12px !important;
+    text-align: center;
+  }
+
+  #inGameMenuDialog .menu-slot-item {
+    flex: 0 0 auto;
+    min-height: 54px;
+    box-sizing: border-box;
+    padding: 7px 0 7px 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px;
+    border: 0 !important;
+    border-bottom: 1px solid var(--mobile-menu-border) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  #inGameMenuDialog .menu-slot-item.active-slot {
+    background: var(--mobile-menu-surface-active) !important;
+    box-shadow: inset 3px 0 0 var(--mobile-menu-accent) !important;
+  }
+
+  #inGameMenuDialog .slot-item-info {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  #inGameMenuDialog .slot-item-info strong,
+  #inGameMenuDialog .slot-item-info span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #inGameMenuDialog .slot-item-info strong {
+    color: var(--mobile-menu-text) !important;
+    font-size: 12px !important;
+  }
+
+  #inGameMenuDialog .slot-item-info span {
+    color: var(--mobile-menu-text-secondary) !important;
+    font-size: 10px !important;
+  }
+
+  #inGameMenuDialog .slot-item-load-btn {
+    flex: 0 0 auto;
+    min-width: 72px;
+    min-height: 44px !important;
+    align-self: stretch;
+    padding: 0 10px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--mobile-menu-border-strong) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--mobile-menu-accent-strong) !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+
+  #inGameMenuDialog .menu-secondary-actions {
+    grid-area: secondary;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 2px !important;
+    border-right: 1px solid var(--mobile-menu-border-strong);
+    background: var(--mobile-menu-bg);
+  }
+
+  #inGameMenuDialog .menu-settings-btn,
+  #inGameMenuDialog .menu-footer-btn {
+    width: 100%;
+    min-height: 44px !important;
+    padding: 0 9px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    border: 1px solid transparent !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    color: var(--mobile-menu-text-secondary) !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+    font-weight: 650 !important;
+    text-align: left;
+    transform: none !important;
+  }
+
+  #inGameMenuDialog .menu-settings-btn:active,
+  #inGameMenuDialog .menu-footer-btn:active {
+    border-color: var(--mobile-menu-border-strong) !important;
+    background: var(--mobile-menu-surface) !important;
+  }
+
+  #inGameMenuDialog .menu-footer-row {
+    grid-area: footer;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 6px !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+    border-top: 1px solid var(--mobile-menu-border) !important;
+    border-right: 1px solid var(--mobile-menu-border-strong) !important;
+    background: var(--mobile-menu-bg) !important;
+  }
+
+  #inGameMenuDialog .menu-footer-btn.title-btn {
+    border-color: color-mix(in srgb, var(--mobile-menu-danger) 36%, transparent) !important;
+    color: var(--mobile-menu-danger) !important;
+  }
+
+  #inGameMenuDialog .menu-footer-btn.resume-btn {
+    border-color: var(--mobile-menu-accent) !important;
+    background: var(--mobile-menu-surface-active) !important;
+    color: var(--mobile-menu-accent-strong) !important;
+  }
+
+  #inGameMenuDialog button:focus-visible {
+    outline: 2px solid var(--mobile-menu-accent-strong) !important;
+    outline-offset: -2px;
+  }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  #inGameMenuDialog .dialog-heading {
+    flex-basis: 56px !important;
+    min-height: 56px !important;
+  }
+
+  #inGameMenuDialog .ingame-menu-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 52px minmax(0, 1fr) 52px auto;
+    grid-template-areas:
+      "tabs"
+      "content"
+      "secondary"
+      "footer";
+  }
+
+  #inGameMenuDialog .save-load-horizontal-box,
+  #inGameMenuDialog .menu-secondary-actions,
+  #inGameMenuDialog .menu-footer-row {
+    border-right: 0 !important;
+  }
+
+  #inGameMenuDialog .save-load-horizontal-box {
+    padding: 4px 6px !important;
+  }
+
+  #inGameMenuDialog .save-tab-pane {
+    padding: 14px !important;
+  }
+
+  #inGameMenuDialog .menu-secondary-actions {
+    padding: 4px 6px !important;
+    border-top: 1px solid var(--mobile-menu-border) !important;
+  }
+
+  #inGameMenuDialog .menu-settings-btn {
+    justify-content: center !important;
+  }
+
+  #inGameMenuDialog .menu-footer-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #inGameMenuDialog .menu-footer-btn {
+    justify-content: center !important;
+    text-align: center;
+  }
+}
+
+@media (max-width: 700px) and (max-height: 390px) and (orientation: landscape) {
+  #inGameMenuDialog .dialog-heading {
+    flex-basis: 48px !important;
+    min-height: 48px !important;
+  }
+
+  #inGameMenuDialog .dialog-heading span {
+    display: none !important;
+  }
+
+  #inGameMenuDialog .ingame-menu-body {
+    grid-template-columns: 148px minmax(0, 1fr);
+    grid-template-rows: 50px minmax(0, 1fr) auto;
+  }
+
+  #inGameMenuDialog .save-load-horizontal-box,
+  #inGameMenuDialog .menu-secondary-actions,
+  #inGameMenuDialog .menu-footer-row {
+    padding: 3px !important;
+  }
+
+  #inGameMenuDialog .save-tab-pane {
+    padding: 12px 14px !important;
+  }
+
+  #inGameMenuDialog .menu-save-info {
+    padding-bottom: 8px !important;
+  }
+
+  #inGameMenuDialog #menuQuickSaveButton {
+    min-height: 48px !important;
+  }
+
+  #inGameMenuDialog .menu-settings-btn,
+  #inGameMenuDialog .menu-footer-btn {
+    min-height: 40px !important;
+  }
+}
+
+@keyframes mobile-system-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #inGameMenuDialog > .ingame-menu-dialog {
+    animation: none !important;
+  }
+}
