@@ -77,4 +77,17 @@ describe("getStationTransferInfo", () => {
     expect(after?.isTransfer).toBe(false);
     expect(after?.transferLinks).toEqual([]);
   });
+
+  it("does not mark a multi-route station as a transfer without an explicit link", () => {
+    const info = getStationTransferInfo({
+      stationId: "station-a",
+      stations: [{ id: "station-a", name: "교차역", connectedRouteIds: ["line-1", "line-2"] }],
+      routes,
+      transfers: [],
+      passengerGroups: [],
+    });
+    expect(info?.connectedLines).toHaveLength(2);
+    expect(info?.isTransfer).toBe(false);
+    expect(info?.transferLinks).toEqual([]);
+  });
 });

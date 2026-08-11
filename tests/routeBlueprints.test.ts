@@ -86,6 +86,16 @@ describe("route blueprints", () => {
     expect(getAvailableConnectionTypes(source, { ...target, deleted: true })).toEqual([]);
   });
 
+  it("persists the exact endpoint selected by the user", () => {
+    const blueprint = createConnectionBlueprint({
+      id: "endpoint-safe",
+      source: { id: "a", type: "line-endpoint", lineId: "line-1", endpoint: "end" },
+      target: { id: "b", type: "line-endpoint", lineId: "line-2", endpoint: "start" },
+      connectionType: "physical-track",
+    });
+    expect(blueprint).toMatchObject({ sourceEndpoint: "end", targetEndpoint: "start" });
+  });
+
   it("splits a segment atomically around an explicit junction", () => {
     const junction = createJunctionBlueprint({
       id: "junction-bp", targetLineId: "line-1", sourceSegmentId: "segment-1",

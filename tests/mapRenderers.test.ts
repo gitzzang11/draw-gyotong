@@ -13,10 +13,19 @@ vi.mock("leaflet", () => {
     latlngs: unknown;
     style: Record<string, unknown> = {};
     tooltip?: string;
+    group?: LayerGroup;
     constructor(latlngs: unknown, style: Record<string, unknown> = {}) { this.latlngs = latlngs; this.style = style; }
-    addTo(group: LayerGroup) { group.addLayer(this); return this; }
+    addTo(group: LayerGroup) { this.group = group; group.addLayer(this); return this; }
     setLatLngs(latlngs: unknown) { this.latlngs = latlngs; return this; }
     setStyle(style: Record<string, unknown>) { this.style = { ...this.style, ...style }; return this; }
+    bringToBack() {
+      if (this.group) this.group.layers = [this, ...this.group.layers.filter((layer) => layer !== this)];
+      return this;
+    }
+    bringToFront() {
+      if (this.group) this.group.layers = [...this.group.layers.filter((layer) => layer !== this), this];
+      return this;
+    }
     bindTooltip(value: string) { this.tooltip = value; return this; }
     unbindTooltip() { this.tooltip = undefined; return this; }
   }
@@ -124,6 +133,22 @@ describe("incremental map renderers (mocked Leaflet; no DOM)", () => {
     expect(selection.getLayers()).toHaveLength(2);
     renderer.reconcileEntities([line({ selected: false, lod: "build" })]);
     expect(selection.getLayers()).toHaveLength(0);
+  });
+
+  it("keeps branch outlines below all colored strokes for a seamless junction", () => {
+    const group = L.layerGroup();
+    const renderer = new LineRenderer(group);
+    renderer.reconcileEntities([line({
+      paths: [
+        [[37.5, 127], [37.51, 127.01], [37.52, 127.02]],
+        [[37.51, 127.01], [37.515, 127.03]],
+      ],
+    })]);
+    const colors = group.getLayers().map((layer) =>
+      (layer as L.Polyline & { style: Record<string, unknown> }).style.color
+    );
+    expect(colors.slice(0, 2)).toEqual(["rgba(4, 10, 14, 0.9)", "rgba(4, 10, 14, 0.9)"]);
+    expect(colors.slice(2)).toEqual(["#ff0000", "#ff0000"]);
   });
 
   it("moves the selection halo and emphasis when another line is selected", () => {

@@ -1,6 +1,7 @@
 import L, { type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
+import "./command-console.css";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
 import {
   buildNetworkSignature,
@@ -60,7 +61,17 @@ import {
   migrateSaveStateRecord,
   stableEntityId,
 } from "./storage/migrations.ts";
-import { calculateServiceCapacity } from "./simulation/capacity.ts";
+import {
+  calculateServiceOperations,
+  normalizeServiceStops,
+} from "./simulation/expressService.ts";
+import {
+  applyStopPreset,
+  calculateOperatingServiceOperation,
+  normalizeOperatingService,
+  type OperatingService,
+  type StopPreset,
+} from "./operatingService.ts";
 import { mergeOdPassengerGroup } from "./simulation/passengerAssignment.ts";
 import { measureTask } from "./dev/performanceMonitor.ts";
 import {
@@ -106,7 +117,7 @@ import {
   type ConstructionRenderEntity,
 } from "./map/constructionRenderer.ts";
 import { getStationTransferInfo } from "./stationTransferInfo.ts";
-import { mergeLineExtension, type LineExtensionPayload } from "./lineExtension.ts";
+import { mergeLineExtension, resolveReferencedLineColor, type LineExtensionPayload } from "./lineExtension.ts";
 import {
   cancelRoutePlanning,
   createRoutePlanningSession,
@@ -258,6 +269,7 @@ type CityId = "seoul" | "busan" | "daejeon" | "gwangju";
 type TrainFleet = {
   id: string;
   routeId: string;
+  serviceId?: string;
   trainType: TrainType;
   cars: number;
   sets: number;
@@ -386,6 +398,7 @@ type SaveState = {
   constructionProjects?: ConstructionProject[];
   newsEvents?: NewsEvent[];
   trainFleets?: TrainFleet[];
+  operatingServices?: OperatingService[];
   expressConfigs?: ExpressConfig[];
   passengerGroups?: PassengerGroup[];
   loans?: Loan[];
@@ -1018,6 +1031,7 @@ app.innerHTML = `
       <div class="tool-group management-tools">
         <button id="selectTool" class="primary-tool workspace-management-tool" type="button" aria-pressed="true" aria-label="지도 탐색"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg><span>탐색</span></button>
         <button id="manageLineTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>노선 목록</span></button>
+        <button id="expressButton" class="primary-tool express-service-tool workspace-management-tool" type="button" aria-pressed="false" aria-label="급행 운행 설정" title="선택한 노선의 급행 운행을 설정합니다"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8z"/></svg><span id="expressButtonLabel">급행 해금</span></button>
         <button id="manageOperationsTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>운영 현황</span></button>
         <button id="analysisButton" class="primary-tool workspace-management-tool" type="button" aria-label="운영 분석 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-7"/></svg><span>운영 분석</span><em id="analysisBadge" hidden>0</em></button>
         <button id="planOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="계획 목록 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>계획 목록</span></button>
@@ -1422,9 +1436,9 @@ app.innerHTML = `
       <section class="planning-dialog" role="dialog" aria-modal="true" aria-labelledby="planningDialogTitle">
         <div class="dialog-heading planning-dialog-heading">
           <div class="planning-heading-copy">
-            <span>NETWORK PORTFOLIO</span>
-            <h2 id="planningDialogTitle">노선 기획안</h2>
-            <p>아이디어를 정리하고 예상 비용과 효과를 비교한 뒤 건설로 전환하세요.</p>
+            <span>PLANNING PORTFOLIO</span>
+            <h2 id="planningDialogTitle">기획 목록</h2>
+            <p>기획안을 비교하고 포함된 노선과 시설을 관리합니다.</p>
           </div>
           <button id="closePlanningButton" class="dialog-close" type="button" aria-label="계획 관리 닫기">×</button>
         </div>
@@ -1432,8 +1446,8 @@ app.innerHTML = `
           <label class="planning-selector"><span>현재 기획안</span><select id="activePlanSelect" aria-label="활성 계획"></select></label>
           <div class="planning-toolbar-actions">
             <button id="newPlanButton" type="button"><span aria-hidden="true">＋</span> 새 기획안</button>
-            <button id="duplicatePlanButton" type="button">복제</button>
-            <button id="deletePlanButton" class="planning-delete-button" type="button">삭제</button>
+            <button id="duplicatePlanButton" type="button"><span aria-hidden="true">▣</span> 복제</button>
+            <button id="deletePlanButton" class="planning-delete-button" type="button"><span aria-hidden="true">⌫</span> 삭제</button>
           </div>
         </div>
         <div class="planning-layout">
@@ -1555,7 +1569,25 @@ app.innerHTML = `
         </div>
         <div class="manager-summary" id="lineManagerSummary"></div>
 
-        <div class="right-line-action-box">
+        <details id="operatingServiceSection" class="operating-service-section" open>
+          <summary><span>운행 계통</span><strong id="operatingServiceCount">0개</strong></summary>
+          <div id="operatingServiceList" class="operating-service-list"></div>
+          <button id="addOperatingServiceButton" type="button" class="add-operating-service-button">＋ 운행 계통 추가</button>
+          <form id="operatingServiceEditor" class="operating-service-editor" hidden>
+            <div class="operating-service-editor-head"><strong id="operatingServiceEditorTitle">새 운행 계통</strong><button id="cancelOperatingServiceButton" type="button" aria-label="계통 편집 닫기">×</button></div>
+            <label><span>계통 이름</span><input id="operatingServiceNameInput" maxlength="28" required /></label>
+            <label><span>운행 경로 · 분기 방향</span><select id="operatingServicePathSelect"></select></label>
+            <div class="operating-service-presets" aria-label="정차 프리셋">
+              <button type="button" data-service-preset="all">일반 · 전 역</button>
+              <button type="button" data-service-preset="transfer">급행 · 환승역</button>
+              <button type="button" data-service-preset="terminal">직행 · 양 끝역</button>
+            </div>
+            <div><span class="operating-service-field-label">정차역</span><div id="operatingServiceStopList" class="operating-service-stop-list"></div></div>
+            <div class="operating-service-editor-actions"><button id="deleteOperatingServiceButton" type="button" class="danger" hidden>계통 삭제</button><button type="submit" class="primary">계통 저장</button></div>
+          </form>
+        </details>
+
+        <div id="operatingServiceTrainAction" class="right-line-action-box" hidden>
           <button id="openTrainManagerFromLineCardButton" type="button" class="open-train-manager-btn">
             🚆 열차 운행 및 편성 관리
           </button>
@@ -1600,6 +1632,29 @@ app.innerHTML = `
           <button id="decisionSaveDraftButton" class="decision-btn" type="button" hidden>임시 저장 후 변경</button>
           <button id="decisionConfirmButton" class="decision-btn confirm-btn" type="button">확인</button>
         </div>
+      </section>
+    </div>
+
+    <div id="saveEditorDialog" class="dialog-backdrop" hidden>
+      <section class="save-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="saveEditorTitle">
+        <header class="save-editor-header">
+          <div><span>SAVE FILE SETTINGS</span><h2 id="saveEditorTitle">세이브 수정</h2></div>
+          <button id="closeSaveEditorButton" class="dialog-close" type="button" aria-label="세이브 수정창 닫기">×</button>
+        </header>
+        <form id="saveEditorForm" class="save-editor-form">
+          <label class="save-editor-name-field"><span>세이브 이름</span><input id="saveEditorNameInput" maxlength="20" required autocomplete="off" /></label>
+          <div class="save-editor-setting-grid">
+            <label><span>게임 모드</span><select id="saveEditorModeSelect"><option value="sandbox">샌드박스</option><option value="career">커리어</option></select></label>
+            <label><span>난이도</span><select id="saveEditorDifficultySelect"><option value="easy">쉬움</option><option value="normal">보통</option><option value="hard">어려움</option></select></label>
+          </div>
+          <label><span>철도망 제목</span><input id="saveEditorNetworkTitleInput" maxlength="40" placeholder="비워두면 도시 이름을 사용합니다" autocomplete="off" /></label>
+          <div class="save-editor-city-lock"><span>운영 도시</span><strong id="saveEditorCityReadout">서울</strong><small>기존 노선 좌표와 수요 데이터를 보호하기 위해 도시는 변경할 수 없습니다.</small></div>
+          <p id="saveEditorError" class="save-editor-error" hidden></p>
+          <footer class="save-editor-actions">
+            <button id="cancelSaveEditorButton" type="button">취소</button>
+            <button id="submitSaveEditorButton" class="primary" type="submit">변경사항 저장</button>
+          </footer>
+        </form>
       </section>
     </div>
 
@@ -1902,6 +1957,17 @@ const cityNote = byId("cityNote");
 const newGameButton = document.querySelector<HTMLButtonElement>("#newGameButton");
 const continueButton = document.querySelector<HTMLButtonElement>("#continueButton");
 const slotList = byId("slotList");
+const saveEditorDialog = byId("saveEditorDialog");
+const saveEditorForm = document.querySelector<HTMLFormElement>("#saveEditorForm");
+const closeSaveEditorButton = document.querySelector<HTMLButtonElement>("#closeSaveEditorButton");
+const cancelSaveEditorButton = document.querySelector<HTMLButtonElement>("#cancelSaveEditorButton");
+const submitSaveEditorButton = document.querySelector<HTMLButtonElement>("#submitSaveEditorButton");
+const saveEditorNameInput = document.querySelector<HTMLInputElement>("#saveEditorNameInput");
+const saveEditorModeSelect = document.querySelector<HTMLSelectElement>("#saveEditorModeSelect");
+const saveEditorDifficultySelect = document.querySelector<HTMLSelectElement>("#saveEditorDifficultySelect");
+const saveEditorNetworkTitleInput = document.querySelector<HTMLInputElement>("#saveEditorNetworkTitleInput");
+const saveEditorCityReadout = byId("saveEditorCityReadout");
+const saveEditorError = byId("saveEditorError");
 const saveButton = document.querySelector<HTMLButtonElement>("#saveButton");
 const menuButton = document.querySelector<HTMLButtonElement>("#menuButton");
 const openDiagramButton = document.querySelector<HTMLButtonElement>("#openDiagramButton");
@@ -1955,6 +2021,7 @@ const carCountInput = document.querySelector<HTMLInputElement>("#carCountInput")
 const setCountInput = document.querySelector<HTMLInputElement>("#setCountInput");
 const buyTrainButton = document.querySelector<HTMLButtonElement>("#buyTrainButton");
 const expressButton = document.querySelector<HTMLButtonElement>("#expressButton");
+const expressButtonLabel = document.querySelector<HTMLElement>("#expressButtonLabel");
 const analysisButton = document.querySelector<HTMLButtonElement>("#analysisButton");
 const analysisBadge = byId("analysisBadge");
 const statisticsButton = document.querySelector<HTMLButtonElement>("#statisticsButton");
@@ -2170,6 +2237,7 @@ function addFloatingWindowMinimizer(
   });
 
   const closeBtn = header.querySelector(".dialog-close, .compact-close");
+  closeBtn?.classList.add("floating-close-button");
   if (closeBtn && closeBtn.parentElement === header) {
     const actions = document.createElement("div");
     actions.className = "floating-window-actions";
@@ -2298,6 +2366,19 @@ const localServiceToggle = document.querySelector<HTMLInputElement>("#localServi
 const expressServiceToggle = document.querySelector<HTMLInputElement>("#expressServiceToggle");
 const operationPausedToggle = document.querySelector<HTMLInputElement>("#operationPausedToggle");
 const lineManagerSummary = byId("lineManagerSummary");
+const lineManagerTitle = byId("lineManagerTitle");
+const operatingServiceSection = document.querySelector<HTMLDetailsElement>("#operatingServiceSection");
+const operatingServiceCount = byId("operatingServiceCount");
+const operatingServiceList = byId("operatingServiceList");
+const addOperatingServiceButton = document.querySelector<HTMLButtonElement>("#addOperatingServiceButton");
+const operatingServiceEditor = document.querySelector<HTMLFormElement>("#operatingServiceEditor");
+const operatingServiceEditorTitle = byId("operatingServiceEditorTitle");
+const operatingServiceNameInput = document.querySelector<HTMLInputElement>("#operatingServiceNameInput");
+const operatingServicePathSelect = document.querySelector<HTMLSelectElement>("#operatingServicePathSelect");
+const operatingServiceStopList = byId("operatingServiceStopList");
+const cancelOperatingServiceButton = document.querySelector<HTMLButtonElement>("#cancelOperatingServiceButton");
+const deleteOperatingServiceButton = document.querySelector<HTMLButtonElement>("#deleteOperatingServiceButton");
+const operatingServiceTrainAction = byId("operatingServiceTrainAction");
 const decisionDialog = byId("decisionDialog");
 const decisionMessage = byId("decisionMessage");
 const decisionWarning = byId("decisionWarning");
@@ -2383,6 +2464,7 @@ let statisticsState: StatisticsState = { ...defaultStatisticsState, dailyRecords
 let constructionProjects: ConstructionProject[] = [];
 let newsEvents: NewsEvent[] = [];
 let trainFleets: TrainFleet[] = [];
+let operatingServices: OperatingService[] = [];
 let expressConfigs: ExpressConfig[] = [];
 let passengerGroups: PassengerGroup[] = [];
 let segmentCongestion: SegmentCongestion[] = [];
@@ -2398,6 +2480,8 @@ let loans: Loan[] = [];
 let economy: EconomyState = { ...defaultEconomy };
 let currentMeta: GameMeta = createDefaultMeta();
 let slotSummaries: SaveSlotSummary[] = [];
+let editingSaveSlotId: string | null = null;
+let hasActiveGameSession = false;
 let undoStack: SaveState[] = [];
 let redoStack: SaveState[] = [];
 let overpassAbort: AbortController | null = null;
@@ -2405,9 +2489,11 @@ let lastOverpassKey = "";
 let debounceTimer = 0;
 let selectedTrainFleetId: string | null = null;
 let selectedTrainSetNumber: number | null = null;
+let selectedOperatingServiceId: string | null = null;
+let editingOperatingServiceId: string | null = null;
+let operatingServiceDraftPreset: StopPreset = "all";
 let selectedColor = routeColors[0];
 let draftRouteName = "";
-let hasDraftRouteSettings = false;
 let eraserRadiusPx = 20;
 let activeTool: ToolMode = "pan";
 let workspaceMode: WorkspaceMode = "management";
@@ -2574,7 +2660,10 @@ const mapInputListeners = new ListenerRegistry();
 mapInputListeners.add("map:pointerdown", mapContainer, "pointerdown", onPointerDown, { passive: false });
 mapInputListeners.add("map:pointermove", mapContainer, "pointermove", onPointerMove, { passive: false });
 mapInputListeners.add("map:pointerup", mapContainer, "pointerup", onPointerUp, { passive: false });
-mapInputListeners.add("map:pointercancel", mapContainer, "pointercancel", cancelActiveDrawing, { passive: false });
+mapInputListeners.add("map:pointercancel", mapContainer, "pointercancel", onPointerCancel, { passive: false });
+mapInputListeners.add("window:pointermove-fallback", window, "pointermove", onWindowPointerMove, { passive: false, capture: true });
+mapInputListeners.add("window:pointerup-fallback", window, "pointerup", onWindowPointerUp, { passive: false, capture: true });
+mapInputListeners.add("window:pointercancel-fallback", window, "pointercancel", onWindowPointerCancel, { passive: false, capture: true });
 
 map.whenReady(() => {
   void bootstrapController.initialize().then(() => {
@@ -2718,6 +2807,27 @@ cancelLineManagerButton?.addEventListener("click", () => {
   selectRoute(null);
 });
 openTrainManagerFromLineCardButton?.addEventListener("click", openTrainManagerModal);
+addOperatingServiceButton?.addEventListener("click", () => openOperatingServiceEditor());
+cancelOperatingServiceButton?.addEventListener("click", closeOperatingServiceEditor);
+operatingServicePathSelect?.addEventListener("change", () => renderOperatingServiceStopChoices());
+operatingServiceStopList?.addEventListener("change", () => {
+  operatingServiceDraftPreset = "custom";
+  operatingServiceEditor?.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => button.classList.remove("active"));
+  renderOperatingServiceStopChoices(
+    Array.from(operatingServiceStopList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+      .filter((input) => input.checked)
+      .map((input) => input.value),
+  );
+});
+operatingServiceEditor?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveOperatingServiceEditor();
+});
+operatingServiceList?.addEventListener("click", handleOperatingServiceListClick);
+operatingServiceEditor?.querySelectorAll<HTMLButtonElement>("[data-service-preset]").forEach((button) => {
+  button.addEventListener("click", () => applyOperatingServicePreset(button.dataset.servicePreset as StopPreset));
+});
+deleteOperatingServiceButton?.addEventListener("click", deleteSelectedOperatingService);
 closeTrainManagerButton?.addEventListener("click", closeTrainManagerModal);
 if (trainManagerDialog) bindBackdropDismiss(trainManagerDialog, closeTrainManagerModal);
 saveLineManagerButton?.addEventListener("click", saveLineManager);
@@ -2836,6 +2946,13 @@ continueButton?.addEventListener("click", () => {
   const latest = slotSummaries[0];
   if (latest) loadSlot(latest.slotId);
 });
+closeSaveEditorButton?.addEventListener("click", closeSaveEditor);
+cancelSaveEditorButton?.addEventListener("click", closeSaveEditor);
+saveEditorForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  void saveEditedSlot();
+});
+if (saveEditorDialog) bindBackdropDismiss(saveEditorDialog, closeSaveEditor);
 function syncSetupChoice(input: HTMLSelectElement | null) {
   if (!input) return;
   document.querySelectorAll<HTMLElement>(`[data-choice-input="${input.id}"]`).forEach((field) => {
@@ -3233,7 +3350,7 @@ function onPointerDown(event: PointerEvent) {
     activePointerId = event.pointerId;
     handlePreviewCoordinates = handle.originalCoordinates.map((coordinate) => [...coordinate] as [number, number]);
     map.dragging.disable();
-    mapContainer.setPointerCapture(event.pointerId);
+    captureDrawingPointer(event.pointerId);
     return;
   }
   if (activeTool === "station") {
@@ -3273,7 +3390,7 @@ function onPointerDown(event: PointerEvent) {
 
   if (constructionDraft && !planningContinuation) cancelConstructionDraft();
   activePlanningContinuation = planningContinuation;
-  if (planningContinuation && !hasDraftRouteSettings) selectedColor = planningContinuation.color;
+  if (planningContinuation) selectedColor = planningContinuation.color;
   replacingPlannedRouteId = planningContinuation?.plannedRouteId ?? null;
   if (planningContinuation) {
     const targetRoute = planningContinuation.plannedRouteId
@@ -3408,7 +3525,7 @@ function onPointerDown(event: PointerEvent) {
         : activePlanningContinuation
           ? [activePlanningContinuation.anchor]
           : [point];
-  mapContainer.setPointerCapture(event.pointerId);
+  captureDrawingPointer(event.pointerId);
   mapLayers.clear("construction-preview");
 
   if (activeTool === "route" || activeTool === "extend" || activeTool === "reconnect" || activeTool === "branch") {
@@ -3485,6 +3602,54 @@ function onPointerMove(event: PointerEvent) {
   }
 }
 
+function pointerTargetsMap(event: PointerEvent) {
+  return event.target instanceof Node && mapContainer.contains(event.target);
+}
+
+function captureDrawingPointer(pointerId: number) {
+  try {
+    mapContainer.setPointerCapture(pointerId);
+  } catch {
+    // Some Android WebViews can reject capture while their gesture recognizer
+    // is changing state. Window-level fallbacks keep the stroke continuous.
+  }
+}
+
+function releaseDrawingPointer(pointerId: number | null) {
+  if (pointerId === null) return;
+  try {
+    if (mapContainer.hasPointerCapture(pointerId)) mapContainer.releasePointerCapture(pointerId);
+  } catch {
+    // Pointer capture may already have been released by the browser.
+  }
+}
+
+function onWindowPointerMove(event: PointerEvent) {
+  if (activePointerId === null || event.pointerId !== activePointerId || pointerTargetsMap(event)) return;
+  onPointerMove(event);
+}
+
+function onWindowPointerUp(event: PointerEvent) {
+  if (activePointerId === null || event.pointerId !== activePointerId || pointerTargetsMap(event)) return;
+  onPointerUp(event);
+}
+
+function onWindowPointerCancel(event: PointerEvent) {
+  if (activePointerId === null || event.pointerId !== activePointerId || pointerTargetsMap(event)) return;
+  onPointerCancel(event);
+}
+
+function onPointerCancel(event: PointerEvent) {
+  if (activeTool === "pan") {
+    mapSelectionPointers.delete(event.pointerId);
+    if (mapSelectionGesture?.pointerId === event.pointerId) mapSelectionGesture = null;
+    return;
+  }
+  if (event.pointerId !== activePointerId) return;
+  event.preventDefault();
+  cancelActiveDrawing();
+}
+
 function onPointerUp(event: PointerEvent) {
   if (activeTool === "pan") {
     mapSelectionPointers.delete(event.pointerId);
@@ -3502,6 +3667,7 @@ function onPointerUp(event: PointerEvent) {
   if (activeTool === "edit" && activeHandleMove) {
     const handle = activeHandleMove;
     const preview = handlePreviewCoordinates;
+    releaseDrawingPointer(activePointerId);
     activePointerId = null;
     activeHandleMove = null;
     handlePreviewCoordinates = null;
@@ -3511,12 +3677,20 @@ function onPointerUp(event: PointerEvent) {
     if (constructionDraft) map.dragging.enable();
     return;
   }
+  // pointermove can lag behind pointerup on touch devices. Always preserve the
+  // actual release coordinate so endpoint snapping uses where the user lifted
+  // their finger, not the previous sampled move position.
+  const releasePoint = containerPointFromEvent(event);
+  if (rawDrawPoints.length === 0 || releasePoint.distanceTo(rawDrawPoints.at(-1)!) >= 1) {
+    rawDrawPoints.push(releasePoint);
+  }
   const finishedPoints = smoothScreenPoints(rawDrawPoints);
   const extension = activeExtension;
   const repair = activeRepair;
   const branch = activeBranch;
   const planningBranch = activePlanningBranch;
   const connectionSource = activeConnectionSource;
+  releaseDrawingPointer(activePointerId);
   activePointerId = null;
   activeExtension = null;
   activeRepair = null;
@@ -3551,7 +3725,7 @@ function beginEraserStroke(event: PointerEvent, point: L.Point) {
   activePointerId = event.pointerId;
   rawDrawPoints = [point];
   map.dragging.disable();
-  mapContainer.setPointerCapture(event.pointerId);
+  captureDrawingPointer(event.pointerId);
   mapLayers.clear("construction-preview");
   previewPolyline = L.polyline([map.containerPointToLatLng(point)], {
     color: "#ff6b6b",
@@ -4212,6 +4386,10 @@ function renderConstructionPanel() {
     confirmConstructionButton.disabled = blocked;
     confirmConstructionButton.textContent = planningMode ? "기획안에 추가" : constructionDraft.kind === "edit" ? "수정 확정" : constructionDraft.kind === "repair" ? "복구 확정" : "건설 확정";
   }
+  if (headerConfirmConstructionButton) {
+    headerConfirmConstructionButton.disabled = blocked;
+    headerConfirmConstructionButton.textContent = planningMode ? "기획 추가" : constructionDraft.kind === "edit" ? "수정 확정" : constructionDraft.kind === "repair" ? "복구 확정" : "건설 확정";
+  }
 }
 
 function renderRiverChoices() {
@@ -4297,6 +4475,10 @@ function openDemolitionReview(review: DemolitionReview) {
     confirmConstructionButton.disabled = false;
     confirmConstructionButton.textContent = review.confirmLabel;
   }
+  if (headerConfirmConstructionButton) {
+    headerConfirmConstructionButton.disabled = false;
+    headerConfirmConstructionButton.textContent = review.confirmLabel;
+  }
 }
 
 function cancelDemolitionReview() {
@@ -4381,7 +4563,6 @@ async function confirmConstructionDraft() {
     redoStack = [];
     constructionDraft = null;
     draftRouteName = "";
-    hasDraftRouteSettings = false;
     document.body.classList.remove("construction-reviewing");
     if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
     mapLayers.clear("construction-preview");
@@ -4917,6 +5098,8 @@ function getPhysicalConnectionCoordinates(connection: ConnectionBlueprint, sourc
     sourceEndpoints: [...sourceRoute.coordinates.slice(0, 1), ...sourceRoute.coordinates.slice(-1)],
     targetEndpoints: [...targetRoute.coordinates.slice(0, 1), ...targetRoute.coordinates.slice(-1)],
     drawnCoordinates: declared,
+    sourceEndpoint: connection.sourceEndpoint,
+    targetEndpoint: connection.targetEndpoint,
   }).coordinates;
 }
 
@@ -5076,16 +5259,14 @@ function applyCompletedConnectionProject(project: ConstructionProject) {
 }
 
 function mergeCompletedConnectionRoutes(first: RouteLine, second: RouteLine, connection: ConnectionBlueprint) {
-  const sourceHint = connection.coordinates?.[0];
-  const targetHint = connection.coordinates?.at(-1);
-  const bridge = connection.coordinates?.length
-    ? connection.coordinates.map((point) => [roundCoord(point.lat), roundCoord(point.lng)] as [number, number])
-    : smoothCoordinateBridge(first.coordinates.at(-1)!, second.coordinates[0]);
+  const bridge = getPhysicalConnectionCoordinates(connection, first, second);
+  const sourceHint = bridge[0];
+  const targetHint = bridge.at(-1)!;
   const mergedGeometry = mergeRouteGeometry({
     first: first.coordinates,
     second: second.coordinates,
-    firstHint: sourceHint ? [sourceHint.lat, sourceHint.lng] : undefined,
-    secondHint: targetHint ? [targetHint.lat, targetHint.lng] : undefined,
+    firstHint: sourceHint,
+    secondHint: targetHint,
     bridge,
   });
   const merged = rebuildRouteGraph({
@@ -5690,16 +5871,16 @@ function createStationAt(point: L.Point) {
   }
 
   pushHistory();
-  const nearRoutes = findRoutesNearLatLng(snap.latLng, 55);
+  const connectedRouteIds = [snap.route.id];
   const stationId = createId("station");
   const stationName = createAutomaticStationName(snap.latLng, `Station ${stations.length + 1}`, stationId);
   const station: Station = {
     id: stationId,
     name: stationName,
     position: [roundCoord(snap.latLng.lat), roundCoord(snap.latLng.lng)],
-    demand: estimateStationDemand(snap.latLng, nearRoutes.length),
-    connectedRouteIds: nearRoutes.length > 0 ? nearRoutes : [snap.route.id],
-    routeNodeIds: (nearRoutes.length > 0 ? nearRoutes : [snap.route.id])
+    demand: estimateStationDemand(snap.latLng, connectedRouteIds.length),
+    connectedRouteIds,
+    routeNodeIds: connectedRouteIds
       .map((routeId) => findNearestGraphNodeId(routes.find((route) => route.id === routeId), snap.latLng))
       .filter((id): id is string => Boolean(id)),
   };
@@ -6902,6 +7083,44 @@ function updatePlan(planId: string, updater: (plan: ConstructionPlan) => Constru
   plans = plans.map((plan) => (plan.id === planId ? recalculatePlan(updater(plan)) : plan));
 }
 
+function getRouteServiceOperations(routeId: string, fleetSource = trainFleets) {
+  const route = routes.find((item) => item.id === routeId);
+  const routeStations = stations.filter((station) => station.connectedRouteIds.includes(routeId) && isStationOperational(station.id));
+  const serviceIds = new Set(operatingServices.filter((service) => service.routeIds.includes(routeId)).map((service) => service.id));
+  const routeFleets = fleetSource.filter((fleet) => fleet.serviceId ? serviceIds.has(fleet.serviceId) : fleet.routeId === routeId);
+  const express = expressConfigs.find((config) => config.routeId === routeId && config.enabled);
+  const expressEnabled = Boolean(
+    route?.expressServiceEnabled !== false &&
+    express &&
+    express.stopStationIds.filter((id) => routeStations.some((station) => station.id === id)).length >= 2,
+  );
+  return calculateServiceOperations({
+    routeLengthKm: route?.lengthKm ?? 0,
+    routeStationIds: routeStations.map((station) => station.id),
+    expressStopStationIds: express?.stopStationIds,
+    fleets: routeFleets.map((fleet) => ({
+      sets: fleet.sets,
+      capacityPerSet: getFleetCapacityPerSet(fleet),
+      speedKph: trainCatalog[fleet.trainType].speedKmh,
+      trainType: fleet.trainType,
+    })),
+    servicePathCount: route ? Math.max(1, getTrainServicePaths(route).length) : 1,
+    expressEnabled,
+    localEnabled: route?.localServiceEnabled !== false,
+  });
+}
+
+function getCustomServiceOperations(routeId: string, fleetSource = trainFleets) {
+  return operatingServices
+    .filter((service) => service.routeIds.includes(routeId))
+    .map((service) => ({ service, operation: getOperatingServiceOperation(service, fleetSource) }));
+}
+
+function getFleetsServingRoute(routeId: string, fleetSource = trainFleets) {
+  const serviceIds = new Set(operatingServices.filter((service) => service.routeIds.includes(routeId)).map((service) => service.id));
+  return fleetSource.filter((fleet) => fleet.serviceId ? serviceIds.has(fleet.serviceId) : fleet.routeId === routeId);
+}
+
 /**
  * 계획에 포함된 자산을 기준으로 비용·기간·수요·수익을 다시 집계한다.
  * 계획 자산이 추가/삭제/완공될 때 파생 값을 직접 수정하지 말고 이 함수를 거쳐
@@ -7060,7 +7279,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
           plan.routes.find((item) => item.id === plannedReplacementId)?.name ||
           extensionTarget?.name ||
           `계획 노선 ${plan.routes.length + 1}`,
-        color: extensionTarget?.color ?? selectedColor,
+        color: extensionTarget?.color ?? existingPlannedRoute?.color ?? selectedColor,
         coordinates: draft.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
         segments: graph.segments,
         completedSegmentIds: [],
@@ -7091,7 +7310,6 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
     redoStack = [];
     constructionDraft = null;
     draftRouteName = "";
-    hasDraftRouteSettings = false;
     document.body.classList.remove("construction-reviewing");
     if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
     mapLayers.clear("construction-preview");
@@ -7305,7 +7523,7 @@ function renderPlanningDialog() {
   if (planNotesInput) planNotesInput.value = plan.notes;
   if (planSummary)
     planSummary.innerHTML = `
-      <div><span>예상 총비용</span><strong>${formatCost(plan.expectedTotalCost)}</strong></div>
+      <div class="plan-summary-primary"><span>예상 총비용</span><strong>${formatCost(plan.expectedTotalCost)}</strong></div>
       <div><span>남은 건설비</span><strong>${formatCost(plan.remainingCost)}</strong></div>
       <div><span>예상 수요</span><strong>${plan.expectedDemand.toLocaleString("ko-KR")}명</strong></div>
       <div><span>예상 수익</span><strong>${formatCost(plan.expectedRevenue)}/년</strong></div>
@@ -7321,9 +7539,9 @@ function renderPlanAssets(plan: ConstructionPlan) {
   const routeItems = plan.routes
     .map((route) => {
       const completed = route.completedSegmentIds.length;
-      return `<article class="plan-asset-card">
+      return `<article class="plan-asset-card" data-asset-kind="route">
         <i style="--asset-color:${route.color}"></i>
-        <div><strong>${escapeHtml(route.name)}</strong><span>${completed}/${route.segments.length}구간 완공 · ${formatCost(route.expectedCost)} · 수요 ${route.expectedDemand.toLocaleString("ko-KR")}</span></div>
+        <div class="plan-asset-copy"><small>노선</small><strong>${escapeHtml(route.name)}</strong><span>${completed}/${route.segments.length}구간 완공 · ${formatCost(route.expectedCost)} · 수요 ${route.expectedDemand.toLocaleString("ko-KR")}</span></div>
         <div class="asset-actions">
           <button type="button" data-plan-action="redraw-route" data-asset-id="${route.id}">경로 수정</button>
           <button type="button" data-plan-action="duplicate-route" data-asset-id="${route.id}">복제</button>
@@ -7333,9 +7551,9 @@ function renderPlanAssets(plan: ConstructionPlan) {
     })
     .join("");
   const facilities = [
-    ...plan.stations.map((station) => `<article class="plan-asset-card facility"><div><strong>${escapeHtml(station.name)}</strong><span>예정 역 · 수요 ${station.expectedDemand.toLocaleString("ko-KR")}${station.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-station" data-asset-id="${station.id}">삭제</button></article>`),
-    ...plan.depots.map((depot) => `<article class="plan-asset-card facility"><div><strong>${escapeHtml(depot.name)}</strong><span>예정 차량기지 · ${depot.capacity}편성 · ${formatCost(depot.expectedCost)}${depot.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-depot" data-asset-id="${depot.id}">삭제</button></article>`),
-    ...plan.transfers.map((transfer) => `<article class="plan-asset-card facility"><div><strong>예정 환승 연결</strong><span>환승 효과 +${transfer.expectedEffect}${transfer.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-transfer" data-asset-id="${transfer.id}">삭제</button></article>`),
+    ...plan.stations.map((station) => `<article class="plan-asset-card facility" data-asset-kind="station"><div class="plan-asset-copy"><small>역</small><strong>${escapeHtml(station.name)}</strong><span>예상 수요 ${station.expectedDemand.toLocaleString("ko-KR")}${station.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-station" data-asset-id="${station.id}">삭제</button></article>`),
+    ...plan.depots.map((depot) => `<article class="plan-asset-card facility" data-asset-kind="depot"><div class="plan-asset-copy"><small>기지</small><strong>${escapeHtml(depot.name)}</strong><span>${depot.capacity}편성 · ${formatCost(depot.expectedCost)}${depot.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-depot" data-asset-id="${depot.id}">삭제</button></article>`),
+    ...plan.transfers.map((transfer) => `<article class="plan-asset-card facility" data-asset-kind="transfer"><div class="plan-asset-copy"><small>환승</small><strong>예정 환승 연결</strong><span>환승 효과 +${transfer.expectedEffect}${transfer.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-transfer" data-asset-id="${transfer.id}">삭제</button></article>`),
   ].join("");
   planAssetList.innerHTML = routeItems || facilities ? routeItems + facilities : `<div class="planning-empty">계획 모드에서 노선이나 시설을 추가하세요.</div>`;
   planAssetList.querySelectorAll<HTMLButtonElement>("[data-plan-action]").forEach((button) => {
@@ -7402,9 +7620,10 @@ function renderPlanComparison() {
     .filter((plan) => plan.cityId === currentMeta.cityId)
     .sort((a, b) => b.expectedDemand - a.expectedDemand)
     .map(
-      (plan) => `<button type="button" class="comparison-card ${plan.id === activePlanId ? "active" : ""}" data-plan-id="${plan.id}">
-        <span>${statusLabels[plan.status]} · ${formatPriority(plan.priority)}</span>
+      (plan) => `<button type="button" class="comparison-card status-${plan.status} ${plan.id === activePlanId ? "active" : ""}" data-plan-id="${plan.id}">
+        <span class="comparison-card-top"><em>${statusLabels[plan.status]}</em><b>${formatPriority(plan.priority)}</b></span>
         <strong>${escapeHtml(plan.name)}</strong>
+        <small>노선 ${plan.routes.length} · 역 ${plan.stations.length} · 기지 ${plan.depots.length} · 환승 ${plan.transfers.length}</small>
         <dl><div><dt>비용</dt><dd>${formatCost(plan.expectedTotalCost)}</dd></div><div><dt>수요</dt><dd>${plan.expectedDemand.toLocaleString("ko-KR")}</dd></div><div><dt>수익</dt><dd>${formatCost(plan.expectedRevenue)}/년</dd></div><div><dt>공기</dt><dd>${plan.expectedConstructionDays > 0 ? formatConstructionDuration(plan.expectedConstructionDays) : "미정"}</dd></div><div><dt>지형</dt><dd>${formatPlanDifficulty(plan.terrainDifficulty)}</dd></div><div><dt>환승</dt><dd>+${plan.transferEffect}</dd></div></dl>
       </button>`,
     )
@@ -7438,7 +7657,7 @@ function createPlannedStationAt(point: L.Point) {
     plannedSnap && (!actualSnap || plannedSnap.distancePx <= actualSnap.distancePx)
       ? { latLng: plannedSnap.latLng, plannedRouteIds: [plannedSnap.route.id], actualRouteIds: [] as string[], distancePx: plannedSnap.distancePx }
       : actualSnap
-        ? { latLng: actualSnap.latLng, plannedRouteIds: [] as string[], actualRouteIds: findRoutesNearLatLng(actualSnap.latLng, 55), distancePx: actualSnap.distancePx }
+        ? { latLng: actualSnap.latLng, plannedRouteIds: [] as string[], actualRouteIds: [actualSnap.route.id], distancePx: actualSnap.distancePx }
         : null;
   if (!best || best.distancePx > stationSnapPx) {
     setText(facilityReadout, "계획 또는 실제 노선 위에 역을 배치하세요.");
@@ -7912,13 +8131,20 @@ async function confirmPlanConversion() {
       const plannedStation = currentPlan.stations.find((station) => station.id === entry.assetId);
       if (!plannedStation || plannedStation.completed) continue;
       const point = L.latLng(...plannedStation.position);
-      const extensionTargetRouteIds = currentPlan.routes
-        .filter((route) => plannedStation.plannedRouteIds.includes(route.id) && route.actualExtension)
-        .map((route) => route.actualExtension!.routeId);
-      const connectedRouteIds = Array.from(new Set([
-        ...findRoutesNearLatLng(point, 70),
-        ...extensionTargetRouteIds,
-      ]));
+      const plannedTargetRouteIds = currentPlan.routes
+        .filter((route) => plannedStation.plannedRouteIds.includes(route.id))
+        .map((route) => actualRouteByBlueprint.get(route.id) ?? route.actualRouteId ?? route.actualExtension?.routeId)
+        .filter((routeId): routeId is string => Boolean(routeId));
+      const intendedRouteIds = Array.from(new Set([
+        ...(plannedStation.actualRouteIds ?? []),
+        ...plannedTargetRouteIds,
+      ])).filter((routeId) => routes.some((route) => route.id === routeId));
+      // Legacy/partial plans may not carry a blueprint-to-route reference.
+      // Fall back to one nearest route, never every nearby route, so proximity
+      // alone cannot silently create an interchange.
+      const connectedRouteIds = intendedRouteIds.length > 0
+        ? intendedRouteIds
+        : findRoutesNearLatLng(point, 70).slice(0, 1);
       const station: Station = {
         id: createId("station"),
         name: plannedStation.name.replace(/^계획 /, ""),
@@ -8034,13 +8260,15 @@ async function confirmPlanConversion() {
     redoStack = [];
     closePlanConversionDialog();
     renderPlanningDialog();
-    requestUpdate("network-structure");
+    // Converting a plan changes both the real network and the blueprint layer.
+    // Refresh them atomically so completed plan dashes cannot remain over the built line.
+    requestUpdate("plan-conversion");
     showToast(planCompleted ? "계획 전체를 실제 건설로 전환해 목록에서 정리했습니다." : "선택한 계획 항목을 실제 건설로 전환했습니다.");
     playFeedback("confirm");
   } catch (error) {
     stateRecoveryCoordinator.recover(before, {
       scope: "partial",
-      domains: ["network", "routes", "demand", "capacity", "congestion", "map-lines", "map-stations", "map-trains", "map-depots", "map-construction", "hud-finance", "hud-status", "active-panel"],
+      domains: ["network", "routes", "demand", "capacity", "congestion", "map-lines", "map-stations", "map-trains", "map-depots", "map-blueprints", "map-construction", "hud-finance", "hud-status", "active-panel"],
       rebuildRouter: true,
     });
     try {
@@ -8190,6 +8418,7 @@ async function initializeGameShell() {
   renderStartScreen();
   if (slotSummaries.length > 0 && startScreen) startScreen.hidden = false;
   if (slotSummaries.length === 0 && routes.length > 0) {
+    hasActiveGameSession = true;
     currentMeta = createDefaultMeta();
     await saveCurrentSlot("기존 저장 이전");
   }
@@ -8235,15 +8464,26 @@ function renderStartScreen() {
               <small class="slot-date">${formatDate(slot.updatedAt)} 저장</small>
             </div>
           </button>
-          <button class="slot-delete-button" data-delete-slot-id="${slot.slotId}" data-slot-name="${escapeHtml(slot.slotName)}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 삭제`)}">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
+          <div class="slot-entry-actions">
+            <button class="slot-edit-button" data-edit-slot-id="${slot.slotId}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 수정`)}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+            </button>
+            <button class="slot-delete-button" data-delete-slot-id="${slot.slotId}" data-slot-name="${escapeHtml(slot.slotName)}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 삭제`)}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
         </article>
       `;
     })
     .join("");
   slotList.querySelectorAll<HTMLButtonElement>(".slot-card").forEach((button) => {
     button.addEventListener("click", () => loadSlot(button.dataset.slotId || ""));
+  });
+  slotList.querySelectorAll<HTMLButtonElement>(".slot-edit-button").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void openSaveEditor(button.dataset.editSlotId || "");
+    });
   });
   slotList.querySelectorAll<HTMLButtonElement>(".slot-delete-button").forEach((button) => {
     button.addEventListener("click", (event) => {
@@ -8253,9 +8493,94 @@ function renderStartScreen() {
   });
 }
 
+async function openSaveEditor(slotId: string) {
+  if (!slotId || !saveEditorDialog) return;
+  try {
+    if (isActiveSaveSlot(slotId)) await flushStateSave();
+    const state = await readSaveSlot(slotId);
+    if (!state?.meta) throw new Error("Save metadata is missing");
+    editingSaveSlotId = slotId;
+    if (saveEditorNameInput) saveEditorNameInput.value = state.meta.slotName;
+    if (saveEditorModeSelect) saveEditorModeSelect.value = state.meta.mode;
+    if (saveEditorDifficultySelect) saveEditorDifficultySelect.value = state.meta.difficulty;
+    if (saveEditorNetworkTitleInput) saveEditorNetworkTitleInput.value = state.meta.networkTitle ?? "";
+    setText(saveEditorCityReadout, cityConfigs[state.meta.cityId]?.name ?? "알 수 없는 도시");
+    if (saveEditorError) saveEditorError.hidden = true;
+    saveEditorDialog.hidden = false;
+    requestAnimationFrame(() => {
+      saveEditorNameInput?.focus();
+      saveEditorNameInput?.select();
+    });
+  } catch (error) {
+    console.error(error);
+    showError("세이브 정보를 불러오지 못했습니다. 저장 공간 상태를 확인한 뒤 다시 시도해 주세요.");
+  }
+}
+
+function closeSaveEditor() {
+  if (saveEditorDialog) saveEditorDialog.hidden = true;
+  editingSaveSlotId = null;
+  if (saveEditorError) saveEditorError.hidden = true;
+}
+
+async function saveEditedSlot() {
+  const slotId = editingSaveSlotId;
+  const slotName = saveEditorNameInput?.value.trim() ?? "";
+  if (!slotId || !saveEditorForm) return;
+  if (!slotName) {
+    if (saveEditorError) {
+      setText(saveEditorError, "세이브 이름을 입력해 주세요.");
+      saveEditorError.hidden = false;
+    }
+    saveEditorNameInput?.focus();
+    return;
+  }
+
+  const mode: GameMode = saveEditorModeSelect?.value === "career" ? "career" : "sandbox";
+  const difficultyValue = saveEditorDifficultySelect?.value;
+  const difficulty: Difficulty = difficultyValue === "easy" || difficultyValue === "hard" ? difficultyValue : "normal";
+  const networkTitle = saveEditorNetworkTitleInput?.value.trim() ?? "";
+  if (submitSaveEditorButton) submitSaveEditorButton.disabled = true;
+  try {
+    if (isActiveSaveSlot(slotId)) await flushStateSave();
+    const state = await readSaveSlot(slotId);
+    if (!state?.meta) throw new Error("Save metadata is missing");
+    const updatedAt = Date.now();
+    const nextMeta: GameMeta = {
+      ...state.meta,
+      slotName,
+      mode,
+      difficulty,
+      networkTitle: networkTitle || undefined,
+      unlockedCityIds: mode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : state.meta.unlockedCityIds,
+      updatedAt,
+    };
+    await getSaveSlotService().save({ ...state, meta: nextMeta });
+    if (isActiveSaveSlot(slotId)) {
+      currentMeta = { ...currentMeta, ...nextMeta };
+      renderAll();
+    }
+    slotSummaries = await listSaveSlots();
+    renderStartScreen();
+    renderInGameSlotList();
+    setText(saveStatus, "세이브 설정 수정");
+    closeSaveEditor();
+    showToast("세이브 이름과 설정을 변경했습니다.");
+    playFeedback("confirm");
+  } catch (error) {
+    console.error(error);
+    if (saveEditorError) {
+      setText(saveEditorError, "변경사항을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      saveEditorError.hidden = false;
+    }
+  } finally {
+    if (submitSaveEditorButton) submitSaveEditorButton.disabled = false;
+  }
+}
+
 function requestSaveSlotDeletion(slotId: string, slotName: string) {
   if (!slotId) return;
-  const isActiveSlot = slotId === currentMeta.slotId;
+  const isActiveSlot = isActiveSaveSlot(slotId);
   openDecisionDialog(
     `“${slotName}” 세이브를 삭제할까요?`,
     isActiveSlot
@@ -8267,7 +8592,7 @@ function requestSaveSlotDeletion(slotId: string, slotName: string) {
 }
 
 async function deleteSaveSlot(slotId: string) {
-  const deletesActiveSlot = currentMeta.slotId === slotId;
+  const deletesActiveSlot = isActiveSaveSlot(slotId);
   try {
     await getSaveSlotService().remove(slotId);
 
@@ -8275,6 +8600,7 @@ async function deleteSaveSlot(slotId: string) {
       localRecoveryStore.clear();
       if (autoSaveTimer) window.clearInterval(autoSaveTimer);
       autoSaveTimer = 0;
+      hasActiveGameSession = false;
       resetWorld();
       currentMeta = createDefaultMeta();
       if (startScreen) startScreen.hidden = false;
@@ -8350,6 +8676,7 @@ function getUnlockedCityIds() {
 
 async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: CityId, slotName: string) {
   resetWorld();
+  hasActiveGameSession = true;
   const now = Date.now();
   currentMeta = {
     slotId: createId("slot"),
@@ -8402,6 +8729,7 @@ function resetWorld() {
   constructionProjects = [];
   newsEvents = [];
   trainFleets = [];
+  operatingServices = [];
   expressConfigs = [];
   passengerGroups = [];
   loans = [];
@@ -8429,6 +8757,7 @@ async function loadSlot(slotId: string) {
   const state = await readSaveSlot(slotId);
   if (!state) return;
   applyState(state);
+  hasActiveGameSession = true;
   currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}), slotId };
   updateEconomyHud();
   applyCityMapConstraints(currentMeta.cityId);
@@ -8478,8 +8807,12 @@ async function saveCurrentSlot(label: string, reportError = true, createOnly = f
 function startAutoSave() {
   if (autoSaveTimer) window.clearInterval(autoSaveTimer);
   autoSaveTimer = 0;
-  if (!settings.autoSaveEnabled) return;
+  if (!hasActiveGameSession || !settings.autoSaveEnabled) return;
   autoSaveTimer = window.setInterval(() => void saveCurrentSlot("자동 저장"), settings.autoSaveIntervalSeconds * 1000);
+}
+
+function isActiveSaveSlot(slotId: string) {
+  return hasActiveGameSession && slotId === currentMeta.slotId;
 }
 
 function createDefaultMeta(): GameMeta {
@@ -8668,34 +9001,113 @@ function reconcileMapTrains() {
   if (performance.now() < trainInteractionLockedUntil) return;
 
   const trainEntities: TrainRenderEntity[] = [];
+  const maxVisiblePerService = settings.performanceMode === "battery" ? 8 : 18;
+  for (const service of operatingServices) {
+    const ownerRoute = routes.find((route) => route.id === service.ownerRouteId);
+    const serviceRoutes = service.routeIds
+      .map((id) => routes.find((route) => route.id === id))
+      .filter((route): route is RouteLine => Boolean(route));
+    if (!ownerRoute || serviceRoutes.length !== service.routeIds.length) continue;
+    if (serviceRoutes.some((route) => !isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning")) continue;
+
+    const operation = getOperatingServiceOperation(service);
+    const displayedFleetSets = trainFleets
+      .filter((fleet) => fleet.serviceId === service.id)
+      .flatMap((fleet) => Array.from({ length: fleet.sets }, (_, setIndex) => ({ fleet, setNumber: setIndex + 1 })));
+    const totalSets = displayedFleetSets.length;
+    if (!operation.enabled || totalSets === 0 || service.pathCoordinates.length < 2) continue;
+
+    const displaySets = Math.min(totalSets, maxVisiblePerService);
+    const routePoints = service.pathCoordinates.map(([lat, lng]) => L.latLng(lat, lng));
+    const stopPositions = operation.stopStationIds
+      .map((stationId) => stations.find((station) => station.id === stationId))
+      .filter((station): station is Station => Boolean(station))
+      .map((station) => L.latLng(station.position[0], station.position[1]));
+    for (let index = 0; index < displaySets; index += 1) {
+      const displayedTrain = displayedFleetSets[index];
+      if (!displayedTrain) continue;
+      const progressBase = (simMinutes % Math.max(operation.roundTripMin, 12)) / Math.max(operation.roundTripMin, 12);
+      const progress = (progressBase + index / displaySets) % 1;
+      const travelProgress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
+      const position = interpolateAlongRoute(routePoints, travelProgress);
+      const nearStation = stopPositions.some((stationPosition) => map.distance(position, stationPosition) <= 35);
+      const key = `${service.id}:${displayedTrain.fleet.id}:${displayedTrain.setNumber}`;
+      trainHitTargets.set(key, {
+        key,
+        routeId: ownerRoute.id,
+        fleetId: displayedTrain.fleet.id,
+        setNumber: displayedTrain.setNumber,
+        label: `${service.name} ${displayedTrain.setNumber}편성`,
+        position: [position.lat, position.lng],
+      });
+      trainEntities.push({
+        id: key,
+        position: [position.lat, position.lng],
+        color: ownerRoute.color,
+        serviceKind: "local",
+        label: `${service.name} ${displayedTrain.setNumber}편성 열차`,
+        title: `${service.name} · ${displayedTrain.fleet.cars}량 ${displayedTrain.setNumber}편성`,
+        state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
+      });
+    }
+  }
+  const visibleKeys = new Set(trainEntities.map((entity) => entity.id));
+  trainRenderer.reconcileEntities(trainEntities);
+  for (const key of trainHitTargets.keys()) {
+    if (!visibleKeys.has(key)) trainHitTargets.delete(key);
+  }
+}
+
+function reconcileLegacyMapTrains() {
+  void reconcileLegacyMapTrains;
+  mapLayers.setVisible("trains", map.getZoom() >= 14);
+  if (performance.now() < trainInteractionLockedUntil) return;
+
+  const trainEntities: TrainRenderEntity[] = [];
   const maxVisiblePerRoute = settings.performanceMode === "battery" ? 8 : 18;
   for (const route of routes) {
     if (!isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning") continue;
     const routeFleets = trainFleets.filter((fleet) => fleet.routeId === route.id);
+    const serviceOperations = getRouteServiceOperations(route.id);
+    const hasExpressFleet = routeFleets.some((fleet) => fleet.trainType === "express");
+    let genericSetOrdinal = 0;
     const displayedFleetSets = routeFleets.flatMap((fleet) =>
-      Array.from({ length: fleet.sets }, (_, setIndex) => ({ fleet, setNumber: setIndex + 1 })),
+      Array.from({ length: fleet.sets }, (_, setIndex) => {
+        const explicitExpress = fleet.trainType === "express";
+        const fallbackExpress = !hasExpressFleet &&
+          serviceOperations.express.enabled &&
+          genericSetOrdinal < serviceOperations.express.trainSets;
+        if (!explicitExpress) genericSetOrdinal += 1;
+        return {
+          fleet,
+          setNumber: setIndex + 1,
+          serviceKind: (explicitExpress || fallbackExpress ? "express" : "local") as TransitServiceKind,
+        };
+      }),
     );
     const totalSets = displayedFleetSets.length;
     if (totalSets === 0 || route.coordinates.length < 2) continue;
 
     const displaySets = Math.min(totalSets, maxVisiblePerRoute);
     const routePaths = getTrainServicePaths(route);
-    const operation = calculateRouteOperation(route.id);
-    const cycleMinutes = Math.max(operation.headwayMin * totalSets, 12);
-    const progressBase = (simMinutes % cycleMinutes) / cycleMinutes;
-    const routeStationPositions = stations
-      .filter((station) => station.connectedRouteIds.includes(route.id))
-      .map((station) => L.latLng(station.position[0], station.position[1]));
-
     for (let index = 0; index < displaySets; index += 1) {
       const displayedTrain = displayedFleetSets[index];
       if (!displayedTrain) continue;
+      const serviceKind = displayedTrain.serviceKind;
+      const operation = serviceKind === "express" ? serviceOperations.express : serviceOperations.local;
+      if (!operation.enabled) continue;
+      const cycleMinutes = Math.max(operation.headwayMin * Math.max(1, operation.trainSets), 12);
+      const progressBase = (simMinutes % cycleMinutes) / cycleMinutes;
       const key = `${route.id}:${displayedTrain.fleet.id}:${displayedTrain.setNumber}`;
       const progress = (progressBase + index / displaySets) % 1;
       const routePoints = routePaths[index % routePaths.length];
       const travelProgress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
       const position = interpolateAlongRoute(routePoints, travelProgress);
-      const nearStation = routeStationPositions.some((stationPosition) => map.distance(position, stationPosition) <= 35);
+      const stopPositions = operation.stopStationIds
+        .map((stationId) => stations.find((station) => station.id === stationId))
+        .filter((station): station is Station => Boolean(station))
+        .map((station) => L.latLng(station.position[0], station.position[1]));
+      const nearStation = stopPositions.some((stationPosition) => map.distance(position, stationPosition) <= 35);
       trainHitTargets.set(key, {
         key,
         routeId: route.id,
@@ -8708,6 +9120,7 @@ function reconcileMapTrains() {
         id: key,
         position: [position.lat, position.lng],
         color: route.color,
+        serviceKind,
         label: `${route.name} ${displayedTrain.setNumber}편성 열차`,
         title: `${route.name} · ${displayedTrain.fleet.cars}량 ${displayedTrain.setNumber}편성`,
         state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
@@ -8739,12 +9152,119 @@ function getTrainServicePaths(route: RouteLine) {
   return paths.filter((path) => path.length > 1);
 }
 
-function getFleetCapacityPerSet(fleet: TrainFleet) {
-  return trainCatalog[fleet.trainType].capacityPerCar * fleet.cars;
+type OperatingServicePathOption = {
+  id: string;
+  label: string;
+  routeIds: string[];
+  branchIds: string[];
+  points: LatLng[];
+  stationIds: string[];
+};
+
+function serviceStationsAlongPath(points: LatLng[], routeIds: string[]) {
+  return stations
+    .filter((station) => station.connectedRouteIds.some((routeId) => routeIds.includes(routeId)))
+    .map((station) => ({ station, projection: projectLatLngToDiagramPath(L.latLng(...station.position), points) }))
+    .filter((entry) => entry.projection.distance <= 650)
+    .sort((a, b) => a.projection.progress - b.projection.progress)
+    .map((entry) => entry.station.id)
+    .filter((id, index, source) => source.indexOf(id) === index);
 }
 
-function getFleetTotalCapacity(fleet: TrainFleet) {
-  return getFleetCapacityPerSet(fleet) * fleet.sets;
+function orientPathToStation(points: LatLng[], station: Station, stationAtEnd: boolean) {
+  const stationPoint = L.latLng(...station.position);
+  const firstDistance = map.distance(points[0], stationPoint);
+  const lastDistance = map.distance(points[points.length - 1], stationPoint);
+  const currentlyAtEnd = lastDistance <= firstDistance;
+  return currentlyAtEnd === stationAtEnd ? [...points] : [...points].reverse();
+}
+
+function trimPathToConnectionStation(points: LatLng[], station: Station, stationAtEnd: boolean) {
+  const stationPoint = L.latLng(...station.position);
+  const nearestIndex = points.reduce(
+    (best, point, index) => map.distance(point, stationPoint) < best.distance ? { index, distance: map.distance(point, stationPoint) } : best,
+    { index: 0, distance: Number.POSITIVE_INFINITY },
+  ).index;
+  const left = [...points.slice(0, nearestIndex), stationPoint];
+  const right = [stationPoint, ...points.slice(nearestIndex + 1)];
+  const selected = polylineLengthMeters(left.map((point) => [point.lat, point.lng] as [number, number])) >=
+    polylineLengthMeters(right.map((point) => [point.lat, point.lng] as [number, number]))
+    ? left
+    : right;
+  return orientPathToStation(selected, station, stationAtEnd);
+}
+
+function getOperatingServicePathOptions(ownerRouteId: string): OperatingServicePathOption[] {
+  const route = routes.find((item) => item.id === ownerRouteId);
+  if (!route) return [];
+  const options: OperatingServicePathOption[] = getTrainServicePaths(route).map((points, index) => {
+    const branch = index > 0 ? route.branches?.[index - 1] : undefined;
+    return {
+      id: `${route.id}:${branch?.id ?? "trunk"}`,
+      label: branch ? `${branch.name || `분기 ${index}`} 방향` : "본선 전체",
+      routeIds: [route.id],
+      branchIds: branch ? [branch.id] : [],
+      points,
+      stationIds: serviceStationsAlongPath(points, [route.id]),
+    };
+  });
+
+  const physicalConnections = plans
+    .flatMap((plan) => plan.connections ?? [])
+    .filter((connection) =>
+      connection.status === "completed" && connection.appliedAt && connection.connectionType === "physical-track" &&
+      (connection.sourceLineId === ownerRouteId || connection.targetLineId === ownerRouteId),
+    );
+  for (const connection of physicalConnections) {
+    const ownerIsSource = connection.sourceLineId === ownerRouteId;
+    const otherRouteId = ownerIsSource ? connection.targetLineId : connection.sourceLineId;
+    const ownerStationId = ownerIsSource ? connection.sourceStationId : connection.targetStationId;
+    const otherStationId = ownerIsSource ? connection.targetStationId : connection.sourceStationId;
+    const otherRoute = routes.find((item) => item.id === otherRouteId);
+    const ownerStation = stations.find((item) => item.id === ownerStationId);
+    const otherStation = stations.find((item) => item.id === otherStationId);
+    if (!otherRoute || !ownerStation || !otherStation) continue;
+    const ownerBasePath = getTrainServicePaths(route)[0];
+    const otherBasePath = getTrainServicePaths(otherRoute)[0];
+    if (!ownerBasePath || !otherBasePath) continue;
+    const ownerPath = trimPathToConnectionStation(ownerBasePath, ownerStation, true);
+    const otherPath = trimPathToConnectionStation(otherBasePath, otherStation, false);
+    let bridge = (connection.coordinates ?? []).map((point) => L.latLng(point.lat, point.lng));
+    if (bridge.length < 2) bridge = [L.latLng(...ownerStation.position), L.latLng(...otherStation.position)];
+    bridge = orientPathToStation(bridge, ownerStation, false);
+    const points = [...ownerPath, ...bridge.slice(1), ...otherPath.slice(1)];
+    const routeIds = [route.id, otherRoute.id];
+    options.push({
+      id: `${route.id}:direct:${connection.id}`,
+      label: `${route.name} → ${otherRoute.name} 직통`,
+      routeIds,
+      branchIds: [],
+      points,
+      stationIds: serviceStationsAlongPath(points, routeIds),
+    });
+  }
+  return options.filter((option) => option.stationIds.length >= 2);
+}
+
+function servicePathLengthKm(service: OperatingService) {
+  return polylineLengthMeters(service.pathCoordinates) / 1000;
+}
+
+function getOperatingServiceOperation(service: OperatingService, fleetSource = trainFleets) {
+  return calculateOperatingServiceOperation({
+    serviceId: service.id,
+    routeLengthKm: servicePathLengthKm(service),
+    stopStationIds: service.stopStationIds,
+    fleets: fleetSource.filter((fleet) => fleet.serviceId === service.id).map((fleet) => ({
+      sets: fleet.sets,
+      capacityPerSet: getFleetCapacityPerSet(fleet),
+      speedKph: trainCatalog[fleet.trainType].speedKmh,
+    })),
+  });
+}
+
+function getFleetCapacityPerSet(fleet: TrainFleet) {
+  return trainCatalog[fleet.trainType].capacityPerCar * fleet.cars;
 }
 
 function getFleetMaintenanceCost(fleet: TrainFleet) {
@@ -8821,16 +9341,28 @@ function toggleExpressForSelectedRoute() {
   }
 
   const existing = getExpressConfig(routeId);
-  pushHistory();
+  const routeStationIds = stations
+    .filter((station) => station.connectedRouteIds.includes(routeId))
+    .map((station) => station.id);
   if (!existing.unlocked) {
+    pushHistory();
     expressConfigs = [
       ...expressConfigs.filter((config) => config.routeId !== routeId),
-      { ...existing, unlocked: true, enabled: true },
+      { ...existing, unlocked: true, enabled: true, stopStationIds: normalizeServiceStops(routeStationIds, []) },
     ];
     setTool("expressStop");
+  } else if (existing.enabled && activeTool !== "expressStop") {
+    // Keep the service running while opening the stop editor.
+    setTool("expressStop");
+    return;
+  } else if (existing.enabled) {
+    pushHistory();
+    expressConfigs = expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: false } : config));
+    setTool("pan");
   } else {
-    expressConfigs = expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: !config.enabled } : config));
-    setTool(existing.enabled ? "pan" : "expressStop");
+    pushHistory();
+    expressConfigs = expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: true } : config));
+    setTool("expressStop");
   }
   const enabled = expressConfigs.find((config) => config.routeId === routeId)?.enabled ?? !existing.enabled;
   routes = routes.map((route) =>
@@ -8845,7 +9377,7 @@ function toggleExpressForSelectedRoute() {
   redoStack = [];
   requestStateSave();
   updateExpressButton();
-  requestUpdate("fleet-service", routeId);
+  requestUpdate("express-stops", routeId);
 }
 
 function toggleExpressStopAt(point: L.Point) {
@@ -8860,6 +9392,15 @@ function toggleExpressStopAt(point: L.Point) {
     setText(facilityReadout, "해당 노선 역을 선택");
     return;
   }
+  const routeStationIds = stations
+    .filter((item) => item.connectedRouteIds.includes(routeId))
+    .map((item) => item.id);
+  const routeStationIndex = routeStationIds.indexOf(station.id);
+  if (config.stopStationIds.includes(station.id) && (routeStationIndex === 0 || routeStationIndex === routeStationIds.length - 1)) {
+    setText(facilityReadout, "급행은 양 끝 종착역에 정차해야 합니다.");
+    showToast("급행은 양 끝 종착역에 정차해야 합니다.");
+    return;
+  }
   pushHistory();
   const hasStop = config.stopStationIds.includes(station.id);
   expressConfigs = expressConfigs.map((item) =>
@@ -8869,7 +9410,7 @@ function toggleExpressStopAt(point: L.Point) {
   );
   redoStack = [];
   requestStateSave();
-  requestUpdate("fleet-service", station.id);
+  requestUpdate("express-stops", station.id);
 }
 
 /**
@@ -8879,73 +9420,47 @@ function toggleExpressStopAt(point: L.Point) {
 function calculateLegacyRouteOperation(routeId: string, fleetSource = trainFleets): RouteOperation {
   const route = routes.find((item) => item.id === routeId);
   const routeStations = stations.filter((station) => station.connectedRouteIds.includes(routeId));
-  const routeFleets = fleetSource.filter((fleet) => fleet.routeId === routeId);
-  const sets = routeFleets.reduce((sum, fleet) => sum + fleet.sets, 0);
-  const averageSpeed = routeFleets.length > 0 ? weightedAverageSpeed(routeFleets) : 32;
+  const routeFleets = getFleetsServingRoute(routeId, fleetSource);
   const dailyDemand = routeStations.reduce((sum, station) => sum + station.demand, 0);
   if (route && !isRouteOperational(route.id)) {
     const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
     return { routeId, headwayMin: 0, crowding: 0, waitMin: 0, dailyDemand: 0, hourlyCapacity: 0, operatingCost: fleetMaintenance };
   }
-  if (route && (hasRouteGaps(route) || route.operationPaused || route.visibility === "planning" || (route.localServiceEnabled === false && !route.expressServiceEnabled))) {
+  if (route && (hasRouteGaps(route) || route.operationPaused || route.visibility === "planning")) {
     const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
     return { routeId, headwayMin: 0, crowding: 2.4, waitMin: 30, dailyDemand, hourlyCapacity: 0, operatingCost: fleetMaintenance };
   }
-  const express = expressConfigs.find((config) => config.routeId === routeId && config.enabled);
-  const stopCount = express ? Math.max(express.stopStationIds.length, 2) : routeStations.length;
-  const servicePathCount = route ? Math.max(1, getTrainServicePaths(route).length) : 1;
+  const customOperations = getCustomServiceOperations(routeId, fleetSource).map(({ operation }) => operation);
+  const hourlyCapacity = customOperations.reduce((sum, operation) => sum + operation.hourlyCapacity, 0);
+  const frequencyPerHour = customOperations.reduce((sum, operation) => sum + (operation.enabled && operation.headwayMin > 0 ? 60 / operation.headwayMin : 0), 0);
+  const headwayMin = frequencyPerHour > 0 ? Math.round((60 / frequencyPerHour) * 10) / 10 : 0;
   // 분기마다 모든 열차가 완전히 분리된다고 보던 기존 방식은 혼잡을 지나치게 키웠다.
   // 본선 공용 운행을 고려해 추가 분기 하나당 배차 손실을 55%만 반영한다.
-  const averageTrainCapacity = sets > 0
-    ? routeFleets.reduce((sum, fleet) => sum + getFleetTotalCapacity(fleet), 0) / sets
-    : 0;
-  const { headwayMin, hourlyCapacity } = calculateServiceCapacity({
-    trainSets: sets,
-    averageTrainCapacity,
-    routeLengthKm: route?.lengthKm ?? 0,
-    averageSpeedKph: averageSpeed,
-    stopCount,
-    servicePathCount,
-  });
   // 일 수요의 10.5%가 첨두 한 시간에 발생하고 그중 58%가 혼잡 방향에 몰린다고 본다.
   const hourlyDemand = dailyDemand * 0.105 * 0.58;
   const crowding = hourlyCapacity > 0 ? Math.round((hourlyDemand / hourlyCapacity) * 100) / 100 : 0;
   const waitMin = headwayMin > 0 ? Math.round((headwayMin / 2) * Math.max(1, crowding * 0.75) * 10) / 10 : 0;
   const fleetMaintenance = routeFleets.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0);
-  const operatingCost = fleetMaintenance + (express ? express.extraOperatingCost : 0);
+  const operatingCost = fleetMaintenance;
   return { routeId, headwayMin, crowding, waitMin, dailyDemand, hourlyCapacity, operatingCost };
 }
 
 function getRoutingServiceCapacities(routeId?: string, fleetSource = trainFleets): ServiceCapacity[] {
-  const targetRoutes = routeId ? routes.filter((route) => route.id === routeId) : routes;
-  return targetRoutes.flatMap((route) => {
-    const operation = calculateLegacyRouteOperation(route.id, fleetSource);
-    if (!isRouteOperational(route.id) || route.operationPaused || route.visibility === "planning" || operation.hourlyCapacity <= 0) return [];
-    const express = expressConfigs.find((config) => config.routeId === route.id && config.enabled);
-    const expressEnabled = Boolean(
-      route.expressServiceEnabled !== false &&
-      express &&
-      express.stopStationIds.filter((id) => isStationOperational(id)).length >= 2
-    );
-    const localEnabled = route.localServiceEnabled !== false;
-    const expressShare = expressEnabled && localEnabled ? 0.3 : expressEnabled ? 1 : 0;
-    const localShare = localEnabled ? 1 - expressShare : 0;
-    const capacities: ServiceCapacity[] = [];
-    if (localShare > 0) capacities.push({
-      serviceId: `${route.id}:local`,
-      routeId: route.id,
-      serviceKind: "local",
-      hourlyCapacity: Math.round(operation.hourlyCapacity * localShare),
-      headwayMin: operation.headwayMin / Math.max(0.1, localShare),
-    });
-    if (expressShare > 0) capacities.push({
-      serviceId: `${route.id}:express`,
-      routeId: route.id,
-      serviceKind: "express",
-      hourlyCapacity: Math.round(operation.hourlyCapacity * expressShare),
-      headwayMin: operation.headwayMin / Math.max(0.1, expressShare),
-    });
-    return capacities;
+  return operatingServices.flatMap((service) => {
+    if (routeId && !service.routeIds.includes(routeId)) return [];
+    const ownerRoute = routes.find((route) => route.id === service.ownerRouteId);
+    if (!ownerRoute || service.routeIds.some((id) => {
+      const route = routes.find((item) => item.id === id);
+      return !route || !isRouteOperational(id) || route.operationPaused || route.visibility === "planning";
+    })) return [];
+    const operation = getOperatingServiceOperation(service, fleetSource);
+    return operation.enabled && operation.hourlyCapacity > 0 ? [{
+      serviceId: service.id,
+      routeId: service.ownerRouteId,
+      serviceKind: "local" as const,
+      hourlyCapacity: operation.hourlyCapacity,
+      headwayMin: operation.headwayMin,
+    }] : [];
   });
 }
 
@@ -8982,7 +9497,8 @@ function buildAnalysisFingerprint() {
     satisfaction: economy.satisfaction,
     routes: routes.map((route) => [route.id, route.lengthKm, route.operationPaused, route.visibility]),
     stations: stations.map((station) => [station.id, station.demand, station.connectedRouteIds]),
-    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.sets, fleet.cars, fleet.trainType]),
+    services: operatingServices.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathOptionId, service.stopStationIds]),
+    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
     depots: depots.map((depot) => [depot.id, depot.capacity, depot.connectedRouteIds]),
     transfers: transfers.map((transfer) => [transfer.id, transfer.resistance]),
     plans: plans.map((plan) => [plan.id, plan.status, plan.remainingCost, plan.expectedDemand]),
@@ -9058,7 +9574,7 @@ function refreshOperationSuggestions(force = false) {
   const totalRouteDemand = routes.reduce((sum, route) => sum + calculateRouteOperation(route.id).dailyDemand, 0);
   for (const route of routes.filter((item) => item.visibility !== "planning" && !item.operationPaused && isRouteOperational(item.id))) {
     const operation = calculateRouteOperation(route.id);
-    const routeFleets = trainFleets.filter((fleet) => fleet.routeId === route.id);
+    const routeFleets = getFleetsServingRoute(route.id);
     const sets = routeFleets.reduce((sum, fleet) => sum + fleet.sets, 0);
     const connectedCapacity = depots
       .filter((depot) => depot.connectedRouteIds.includes(route.id))
@@ -10519,7 +11035,10 @@ function weightedAverageSpeed(fleets: TrainFleet[]) {
 function getExpressConfig(routeId: string): ExpressConfig {
   const existing = expressConfigs.find((config) => config.routeId === routeId);
   if (existing) return existing;
-  const stopStationIds = stations.filter((station) => station.connectedRouteIds.includes(routeId)).map((station) => station.id);
+  const routeStationIds = stations
+    .filter((station) => station.connectedRouteIds.includes(routeId))
+    .map((station) => station.id);
+  const stopStationIds = normalizeServiceStops(routeStationIds, []);
   return {
     routeId,
     unlocked: false,
@@ -10555,13 +11074,77 @@ function updateOperationHud() {
  */
 function buildPassengerRoutingNetwork(): RoutingNetwork {
   const operationalStations = stations.filter((station) => isStationOperational(station.id));
-  const capacities = getRoutingServiceCapacities();
-  const capacityByService = new Map(capacities.map((capacity) => [capacity.serviceId, capacity]));
+  const services: RoutingNetwork["services"] = operatingServices.flatMap((service) => {
+    const ownerRoute = routes.find((route) => route.id === service.ownerRouteId);
+    if (!ownerRoute || service.pathCoordinates.length < 2) return [];
+    if (service.routeIds.some((id) => {
+      const route = routes.find((item) => item.id === id);
+      return !route || !isRouteOperational(id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning";
+    })) return [];
+    const operation = getOperatingServiceOperation(service);
+    const stopStationIds = service.stopStationIds.filter((id) => operationalStations.some((station) => station.id === id));
+    if (!operation.enabled || operation.hourlyCapacity <= 0 || stopStationIds.length < 2) return [];
+    return [{
+      id: service.id,
+      routeId: service.ownerRouteId,
+      kind: "local" as const,
+      paths: [{ id: service.pathOptionId || `${service.id}:path`, coordinates: service.pathCoordinates }],
+      stopStationIds,
+      speedKph: operation.averageSpeedKph,
+      headwayMin: operation.headwayMin,
+      crowding: routeCongestionSummaries.find((summary) => summary.routeId === service.ownerRouteId)?.representativeCrowding ?? 0,
+    }];
+  });
+  return {
+    stations: operationalStations.map((station) => ({
+      id: station.id,
+      position: station.position,
+      routeIds: station.connectedRouteIds,
+    })),
+    services,
+    transfers: transfers
+      .map((transfer) => ({
+        id: transfer.id,
+        stationIds: transfer.stationIds.filter((id) => operationalStations.some((station) => station.id === id)),
+        walkMin: transfer.transferTimeMin,
+        resistance: transfer.resistance,
+      }))
+      .filter((transfer) => transfer.stationIds.length >= 2),
+    physicalLinks: getCompletedPhysicalRoutingLinks(),
+  };
+}
+
+function getCompletedPhysicalRoutingLinks() {
+  return plans
+    .flatMap((plan) => plan.connections ?? [])
+    .filter((connection) =>
+      connection.status === "completed" &&
+      Boolean(connection.appliedAt) &&
+      connection.connectionType === "physical-track" &&
+      Boolean(connection.sourceStationId && connection.targetStationId && connection.sourceLineId && connection.targetLineId),
+    )
+    .map((connection) => {
+      const coordinates = connection.coordinates ?? [];
+      const distanceKm = coordinates.length >= 2
+        ? calculateLengthKmPrecise(coordinates.map((point) => L.latLng(point.lat, point.lng)))
+        : 0.2;
+      return {
+        id: connection.id,
+        sourceStationId: connection.sourceStationId!,
+        targetStationId: connection.targetStationId!,
+        sourceRouteId: connection.sourceLineId!,
+        targetRouteId: connection.targetLineId!,
+        travelMin: Math.max(0.5, (distanceKm / 35) * 60),
+      };
+    });
+}
+
+function buildLegacyPassengerRoutingNetwork(): RoutingNetwork {
+  void buildLegacyPassengerRoutingNetwork;
+  const operationalStations = stations.filter((station) => isStationOperational(station.id));
   const services = routes.flatMap((route) => {
     if (!isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning") return [];
-    const baseOperation = calculateLegacyRouteOperation(route.id);
-    const routeFleets = trainFleets.filter((fleet) => fleet.routeId === route.id);
-    const speedKph = routeFleets.length > 0 ? weightedAverageSpeed(routeFleets) : 32;
+    const serviceOperations = getRouteServiceOperations(route.id);
     const routeStationIds = operationalStations.filter((station) => station.connectedRouteIds.includes(route.id)).map((station) => station.id);
     const paths = getRoutePaths(route).map((path, index) => ({
       id: `${route.id}:path:${index}`,
@@ -10570,22 +11153,18 @@ function buildPassengerRoutingNetwork(): RoutingNetwork {
     const result: RoutingNetwork["services"] = [];
     for (const kind of ["local", "express"] as TransitServiceKind[]) {
       const serviceId = `${route.id}:${kind}`;
-      const capacity = capacityByService.get(serviceId);
-      if (!capacity || capacity.hourlyCapacity <= 0) continue;
-      const express = expressConfigs.find((config) => config.routeId === route.id && config.enabled);
-      const stopStationIds = kind === "express"
-        ? (express?.stopStationIds ?? []).filter((id) => routeStationIds.includes(id))
-        : routeStationIds;
+      const operation = kind === "local" ? serviceOperations.local : serviceOperations.express;
+      if (!operation.enabled || operation.hourlyCapacity <= 0) continue;
+      const stopStationIds = normalizeServiceStops(routeStationIds, operation.stopStationIds);
       if (stopStationIds.length < 2) continue;
-      const capacityShare = capacity.hourlyCapacity / Math.max(1, baseOperation.hourlyCapacity);
       result.push({
         id: serviceId,
         routeId: route.id,
         kind,
         paths,
         stopStationIds,
-        speedKph: kind === "express" ? speedKph * 1.28 : speedKph,
-        headwayMin: baseOperation.headwayMin > 0 ? baseOperation.headwayMin / Math.max(0.1, capacityShare) : 30,
+        speedKph: operation.averageSpeedKph,
+        headwayMin: operation.headwayMin,
         crowding: routeCongestionSummaries.find((summary) => summary.routeId === route.id)?.representativeCrowding ?? 0,
       });
     }
@@ -10630,6 +11209,10 @@ function buildPassengerRoutingNetwork(): RoutingNetwork {
       }),
   };
 }
+
+// Kept only to read pre-v5 saves while the new service model is active.
+const legacyServiceCompatibility = { reconcileLegacyMapTrains, buildLegacyPassengerRoutingNetwork };
+void legacyServiceCompatibility;
 
 function getPassengerRouter() {
   const network = buildPassengerRoutingNetwork();
@@ -10772,13 +11355,13 @@ function buildDemandStructureFingerprint() {
       route.expressServiceEnabled,
     ]),
     transfers: transfers.map((transfer) => [transfer.id, transfer.stationIds, transfer.resistance]),
-    expressPaths: expressConfigs.map((config) => [config.routeId, config.enabled, config.stopStationIds]),
+    operatingServices: operatingServices.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathCoordinates, service.stopStationIds]),
   });
 }
 
 function buildDemandServiceFingerprint() {
   return JSON.stringify({
-    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.sets, fleet.cars, fleet.trainType]),
+    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
     fare: economy.fare,
     events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
     period: getDemandPeriod(simMinutes),
@@ -11220,7 +11803,7 @@ function renderInGameSlotList() {
     return;
   }
   slotSummaries.forEach((slot) => {
-    const isCurrent = slot.slotId === currentMeta.slotId;
+    const isCurrent = isActiveSaveSlot(slot.slotId);
     const item = document.createElement("div");
     item.className = `menu-slot-item ${isCurrent ? "active-slot" : ""}`;
     const dateStr = new Date(slot.updatedAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -11244,7 +11827,7 @@ function openInGameMenu() {
   if (!inGameMenuDialog) return;
   inGameMenuDialog.hidden = false;
   switchInGameMenuTab("save");
-  const currentSlot = slotSummaries.find((s) => s.slotId === currentMeta.slotId);
+  const currentSlot = slotSummaries.find((slot) => isActiveSaveSlot(slot.slotId));
   if (menuSaveStatusReadout) {
     const slotName = currentSlot ? currentSlot.slotName : currentMeta.slotId;
     menuSaveStatusReadout.textContent = `현재 슬롯: ${slotName}`;
@@ -11470,10 +12053,14 @@ function updateOperationRouteOptions() {
 
 function updateExpressButton() {
   if (!expressButton) return;
-  const config = expressConfigs.find((item) => item.routeId === selectedOperationRouteId);
+  const routeId = selectedOperationRouteId || selectedRouteId || routes[0]?.id || "";
+  const config = expressConfigs.find((item) => item.routeId === routeId);
   expressButton.classList.toggle("active", Boolean(config?.enabled));
   expressButton.setAttribute("aria-pressed", String(Boolean(config?.enabled)));
-  expressButton.textContent = config?.unlocked ? (config.enabled ? "급행중" : "급행") : "급행 해금";
+  expressButton.disabled = !routeId;
+  const label = config?.unlocked ? (config.enabled ? "급행중" : "급행") : "급행 해금";
+  if (expressButtonLabel) expressButtonLabel.textContent = label;
+  else expressButton.textContent = label;
 }
 
 function expandDepot(id: string) {
@@ -11534,7 +12121,7 @@ function updateHud(selectedId?: string) {
 
 function setTool(tool: ToolMode) {
   const allowedTools: Record<WorkspaceMode, ToolMode[]> = {
-    management: ["pan"],
+    management: ["pan", "expressStop"],
     planning: ["pan", "route", "extend", "station", "transfer", "depot", "eraser", "branch", "merge"],
     construction: ["pan", "transfer", "eraser", "branch", "merge"],
   };
@@ -11596,6 +12183,7 @@ function setTool(tool: ToolMode) {
     button.setAttribute("aria-pressed", String(isActive));
   });
   document.body.dataset.tool = tool;
+  updateExpressButton();
   if (tool === "pan") {
     map.dragging.enable();
     map.doubleClickZoom.enable();
@@ -11652,6 +12240,7 @@ function setTool(tool: ToolMode) {
 function cancelActiveDrawing() {
   mapSelectionPointers.clear();
   mapSelectionGesture = null;
+  releaseDrawingPointer(activePointerId);
   activePointerId = null;
   activeExtension = null;
   activeRepair = null;
@@ -11673,8 +12262,9 @@ function selectRoute(routeId: string | null, shouldRender = true) {
   } else {
     linePanel.close();
   }
-    deleteAnchor = null;
-    plannedDeleteAnchor = null;
+  updateExpressButton();
+  deleteAnchor = null;
+  plannedDeleteAnchor = null;
   if (shouldRender) requestUpdate("route-style", selectedRouteId ?? undefined);
 }
 
@@ -11752,7 +12342,7 @@ function renderLeftRouteWindow() {
     id: route.id,
     name: escapeHtml(route.name),
     color: escapeHtml(route.color),
-    meta: `${route.lengthKm.toFixed(1)}km · ${stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 역 · ${route.operationPaused ? "운행 중지" : route.visibility === "planning" ? "계획" : "운행 중"}`,
+    meta: `${route.lengthKm.toFixed(1)}km · 역 ${stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 운행 계통 ${operatingServices.filter((service) => service.ownerRouteId === route.id).length}개`,
     selected: route.id === selectedRouteId,
   })), (routeId) => {
     selectedRouteId = routeId;
@@ -11782,6 +12372,202 @@ function updateSelectedLinePanel() {
   if (selectedLineColor) selectedLineColor.style.background = route.color;
 }
 
+function renderOperatingServiceMapOverlay(service?: OperatingService) {
+  mapLayers.clear("operating-service");
+  if (!service || service.pathCoordinates.length < 2) return;
+  const layer = mapLayers.get("operating-service");
+  L.polyline(service.pathCoordinates, {
+    color: "#ffffff",
+    weight: 12,
+    opacity: 0.72,
+    lineCap: "round",
+    lineJoin: "round",
+    interactive: false,
+  }).addTo(layer);
+  L.polyline(service.pathCoordinates, {
+    color: routes.find((route) => route.id === service.ownerRouteId)?.color ?? "#4ce0c3",
+    weight: 7,
+    opacity: 1,
+    lineCap: "round",
+    lineJoin: "round",
+    interactive: false,
+  }).addTo(layer);
+  for (const stationId of service.stopStationIds) {
+    const station = stations.find((item) => item.id === stationId);
+    if (!station) continue;
+    L.circleMarker(station.position, {
+      radius: 7,
+      color: "#ffffff",
+      weight: 3,
+      fillColor: routes.find((route) => route.id === service.ownerRouteId)?.color ?? "#4ce0c3",
+      fillOpacity: 1,
+      interactive: false,
+    }).addTo(layer);
+  }
+}
+
+function renderOperatingServiceList(routeId: string) {
+  const services = operatingServices.filter((service) => service.ownerRouteId === routeId);
+  setText(operatingServiceCount, `${services.length}개`);
+  if (!operatingServiceList) return;
+  operatingServiceList.innerHTML = services.length === 0
+    ? `<div class="operating-service-empty"><strong>등록된 운행 계통이 없습니다</strong><span>경로와 정차역을 선택해 첫 계통을 추가하세요.</span></div>`
+    : services.map((service) => {
+      const operation = getOperatingServiceOperation(service);
+      const routeNames = service.routeIds.map((id) => routes.find((route) => route.id === id)?.name).filter(Boolean).join(" → ");
+      return `<button type="button" class="operating-service-card${service.id === selectedOperatingServiceId ? " selected" : ""}" data-operating-service-id="${service.id}">
+        <span><strong>${escapeHtml(service.name)}</strong><small>${escapeHtml(routeNames)}</small></span>
+        <span><b>${operation.trainSets}편성</b><small>${service.stopStationIds.length}개 정차 · ${operation.enabled ? `${operation.headwayMin.toFixed(1)}분` : "열차 없음"}</small></span>
+      </button>`;
+    }).join("");
+  if (operatingServiceTrainAction) operatingServiceTrainAction.hidden = !selectedOperatingServiceId;
+}
+
+function closeOperatingServiceEditor() {
+  editingOperatingServiceId = null;
+  if (operatingServiceEditor) operatingServiceEditor.hidden = true;
+  rightLineControlCard?.classList.remove("service-mode");
+  setText(lineManagerTitle, "노선 관리");
+  updateSelectedLinePanel();
+}
+
+function openOperatingServiceEditor(serviceId?: string) {
+  const route = routes.find((item) => item.id === selectedRouteId);
+  if (!route || !operatingServiceEditor || !operatingServicePathSelect) return;
+  operatingServiceSection?.setAttribute("open", "");
+  editingOperatingServiceId = serviceId ?? null;
+  const service = serviceId ? operatingServices.find((item) => item.id === serviceId) : undefined;
+  const options = getOperatingServicePathOptions(route.id);
+  operatingServicePathSelect.innerHTML = options.map((option) =>
+    `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)} · ${option.stationIds.length}개 역</option>`
+  ).join("");
+  const selectedOptionId = service?.pathOptionId && options.some((option) => option.id === service.pathOptionId)
+    ? service.pathOptionId
+    : options[0]?.id ?? "";
+  operatingServicePathSelect.value = selectedOptionId;
+  if (operatingServiceNameInput) operatingServiceNameInput.value = service?.name ?? `${route.name} 계통 ${operatingServices.filter((item) => item.ownerRouteId === route.id).length + 1}`;
+  operatingServiceDraftPreset = service?.preset ?? "all";
+  rightLineControlCard?.classList.add("service-mode");
+  setText(lineManagerTitle, service ? "운행 계통 관리" : "운행 계통 추가");
+  if (selectedLineTitle) selectedLineTitle.textContent = service?.name ?? "새 운행 계통";
+  if (selectedLineMeta) selectedLineMeta.textContent = service ? `${service.stopStationIds.length}개 역 정차 · ${service.routeIds.length}개 노선 경유` : "경로와 정차역을 설정하세요";
+  operatingServiceEditor.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => button.classList.toggle("active", button.dataset.servicePreset === operatingServiceDraftPreset));
+  setText(operatingServiceEditorTitle, service ? `${service.name} 관리` : "새 운행 계통");
+  if (deleteOperatingServiceButton) deleteOperatingServiceButton.hidden = !service;
+  operatingServiceEditor.hidden = false;
+  renderOperatingServiceStopChoices(service?.stopStationIds);
+}
+
+function currentOperatingServicePathOption() {
+  const routeId = selectedRouteId;
+  if (!routeId) return undefined;
+  return getOperatingServicePathOptions(routeId).find((option) => option.id === operatingServicePathSelect?.value);
+}
+
+function renderOperatingServiceStopChoices(selectedStopIds?: string[]) {
+  const option = currentOperatingServicePathOption();
+  if (!operatingServiceStopList || !option) {
+    if (operatingServiceStopList) operatingServiceStopList.innerHTML = `<span>선택 가능한 경로가 없습니다.</span>`;
+    return;
+  }
+  const transferIds = new Set(transfers.flatMap((transfer) => transfer.stationIds));
+  const stops = selectedStopIds ?? applyStopPreset(operatingServiceDraftPreset, option.stationIds, transferIds);
+  operatingServiceStopList.innerHTML = option.stationIds.map((stationId, index) => {
+    const station = stations.find((item) => item.id === stationId);
+    const terminal = index === 0 || index === option.stationIds.length - 1;
+    return `<label><input type="checkbox" value="${stationId}" ${stops.includes(stationId) || terminal ? "checked" : ""} ${terminal ? "disabled" : ""}/><i></i><span>${escapeHtml(station?.name ?? stationId)}</span><small>${terminal ? "기점·종점" : transferIds.has(stationId) ? "환승역" : "통과 가능"}</small></label>`;
+  }).join("");
+  const preview: OperatingService = {
+    id: editingOperatingServiceId ?? "preview",
+    name: operatingServiceNameInput?.value ?? "preview",
+    ownerRouteId: selectedRouteId ?? "",
+    routeIds: option.routeIds,
+    branchIds: option.branchIds,
+    pathOptionId: option.id,
+    pathCoordinates: option.points.map((point) => [point.lat, point.lng]),
+    stationIds: option.stationIds,
+    stopStationIds: stops,
+    preset: operatingServiceDraftPreset,
+    createdAt: Date.now(),
+  };
+  renderOperatingServiceMapOverlay(preview);
+}
+
+function applyOperatingServicePreset(preset: StopPreset) {
+  operatingServiceDraftPreset = preset;
+  operatingServiceEditor?.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => button.classList.toggle("active", button.dataset.servicePreset === preset));
+  renderOperatingServiceStopChoices();
+}
+
+function saveOperatingServiceEditor() {
+  const route = routes.find((item) => item.id === selectedRouteId);
+  const option = currentOperatingServicePathOption();
+  if (!route || !option || option.stationIds.length < 2) {
+    showToast("운행 가능한 역이 두 개 이상인 경로를 선택하세요.");
+    return;
+  }
+  const checkedStops = Array.from(operatingServiceStopList?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? [])
+    .filter((input) => input.checked)
+    .map((input) => input.value);
+  const stopStationIds = option.stationIds.filter((id, index) => checkedStops.includes(id) || index === 0 || index === option.stationIds.length - 1);
+  const existing = editingOperatingServiceId ? operatingServices.find((item) => item.id === editingOperatingServiceId) : undefined;
+  const service: OperatingService = {
+    id: existing?.id ?? createId("service"),
+    name: operatingServiceNameInput?.value.trim() || `${route.name} 운행계통`,
+    ownerRouteId: route.id,
+    routeIds: option.routeIds,
+    branchIds: option.branchIds,
+    pathOptionId: option.id,
+    pathCoordinates: option.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
+    stationIds: option.stationIds,
+    stopStationIds,
+    preset: operatingServiceDraftPreset,
+    createdAt: existing?.createdAt ?? Date.now(),
+  };
+  pushHistory();
+  operatingServices = existing
+    ? operatingServices.map((item) => item.id === existing.id ? service : item)
+    : [...operatingServices, service];
+  selectedOperatingServiceId = service.id;
+  editingOperatingServiceId = service.id;
+  redoStack = [];
+  requestStateSave("immediate");
+  renderOperatingServiceList(route.id);
+  openOperatingServiceEditor(service.id);
+  renderOperatingServiceMapOverlay(service);
+  requestUpdate("fleet-service", route.id);
+  showToast(`${service.name} 운행계통을 저장했습니다.`);
+}
+
+function handleOperatingServiceListClick(event: Event) {
+  const card = (event.target as HTMLElement).closest<HTMLElement>("[data-operating-service-id]");
+  const serviceId = card?.dataset.operatingServiceId;
+  if (!serviceId) return;
+  selectedOperatingServiceId = serviceId;
+  const service = operatingServices.find((item) => item.id === serviceId);
+  renderOperatingServiceList(service?.ownerRouteId ?? selectedRouteId ?? "");
+  openOperatingServiceEditor(serviceId);
+  renderOperatingServiceMapOverlay(service);
+  if (operatingServiceTrainAction) operatingServiceTrainAction.hidden = false;
+  playFeedback("select");
+}
+
+function deleteSelectedOperatingService() {
+  const serviceId = editingOperatingServiceId;
+  const service = operatingServices.find((item) => item.id === serviceId);
+  if (!service) return;
+  pushHistory();
+  operatingServices = operatingServices.filter((item) => item.id !== service.id);
+  trainFleets = trainFleets.filter((fleet) => fleet.serviceId !== service.id);
+  selectedOperatingServiceId = null;
+  closeOperatingServiceEditor();
+  renderOperatingServiceMapOverlay();
+  renderOperatingServiceList(service.ownerRouteId);
+  requestStateSave("immediate");
+  requestUpdate("fleet-service", service.ownerRouteId);
+  showToast(`${service.name} 운행계통을 삭제했습니다.`);
+}
+
 function openLineManager() {
   const route = routes.find((item) => item.id === selectedRouteId) || routes[0];
   if (!route) {
@@ -11789,6 +12575,13 @@ function openLineManager() {
     return;
   }
   selectedRouteId = route.id;
+  selectedOperationRouteId = route.id;
+  if (!operatingServices.some((service) => service.id === selectedOperatingServiceId && service.ownerRouteId === route.id)) {
+    selectedOperatingServiceId = null;
+    closeOperatingServiceEditor();
+    renderOperatingServiceMapOverlay();
+  }
+  updateExpressButton();
   const status = route.operationPaused ? "운행 중지" : route.visibility === "planning" ? "계획 공개" : "운행 중";
   const branchLabel = (route.branches?.length ?? 0) > 0 ? ` · 분기 ${route.branches!.length}` : "";
   linePanel.render({
@@ -11805,14 +12598,21 @@ function openLineManager() {
     autoFare: economy.autoFare,
   });
   syncColorPicker(lineColorInput);
+  renderOperatingServiceList(route.id);
   playFeedback("select");
 }
 
 function closeLineManager() {
+  closeOperatingServiceEditor();
+  renderOperatingServiceMapOverlay();
   linePanel.close();
 }
 
 function openTrainManagerModal() {
+  if (!selectedOperatingServiceId || !operatingServices.some((service) => service.id === selectedOperatingServiceId)) {
+    showToast("먼저 관리할 운행 계통을 선택하세요.");
+    return;
+  }
   selectedTrainFleetId = null;
   selectedTrainSetNumber = null;
   showTrainManagerModal();
@@ -11895,20 +12695,33 @@ function updateOperatingForecastComparison(forecast: DemandResponsiveForecast) {
   }
 }
 
+function renderServiceOperationSummary(service: OperatingService) {
+  const operation = getOperatingServiceOperation(service);
+  return `<section class="service-operation-summary" aria-label="운행계통 현황">
+    <header><span>OPERATING SERVICE</span><strong>${escapeHtml(service.name)}</strong></header>
+    <div class="service-operation-row">
+      <span>${operation.enabled ? "운행 중" : "열차 미배정"}</span>
+      <strong>${operation.trainSets}편성 · ${operation.headwayMin > 0 ? `${operation.headwayMin.toFixed(1)}분` : "-"}</strong>
+      <small>시간당 ${operation.hourlyCapacity.toLocaleString("ko-KR")}명 · ${service.stopStationIds.length}개 정차</small>
+    </div>
+  </section>`;
+}
+
 function renderTrainManager() {
   if (!trainPanel) return;
-  const route = routes.find((item) => item.id === selectedRouteId) || routes[0];
-  if (!route) {
-    trainPanel.render("none", `<div class="left-route-empty"><span>선택된 노선이 없습니다</span></div>`, handleTrainPanelClick, handleTrainPanelChange);
+  const service = operatingServices.find((item) => item.id === selectedOperatingServiceId);
+  const route = routes.find((item) => item.id === service?.ownerRouteId);
+  if (!route || !service) {
+    trainPanel.render("none", `<div class="left-route-empty"><span>선택된 운행 계통이 없습니다</span></div>`, handleTrainPanelClick, handleTrainPanelChange);
     return;
   }
 
-  const routeFleets = trainFleets.filter((f) => f.routeId === route.id);
+  const routeFleets = trainFleets.filter((fleet) => fleet.serviceId === service.id);
   const totalSets = routeFleets.reduce((sum, f) => sum + f.sets, 0);
   const connectedDepotCapacity = depots
-    .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.includes(route.id))
+    .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.some((routeId) => service.routeIds.includes(routeId)))
     .reduce((sum, depot) => sum + depot.capacity, 0);
-  const operation = calculateRouteOperation(route.id);
+  const operation = getOperatingServiceOperation(service);
   const selectedFleet = routeFleets.find((fleet) => fleet.id === selectedTrainFleetId);
   const operatingForecast = calculateDemandResponsiveForecast();
   const selectedTrainSummary = selectedFleet
@@ -11923,8 +12736,9 @@ function renderTrainManager() {
     : routeFleets.map((fleet) => {
       const spec = trainCatalog[fleet.trainType];
       return `
-            <div class="fleet-card-item">
+            <div class="fleet-card-item fleet-service-fleet" data-service-kind="fleet">
               <div class="fleet-card-info">
+                <span class="fleet-service-badge">FLEET</span>
                 <strong>${escapeHtml(spec.label)} (${fleet.cars}량)</strong>
                 <span>수송력: ${(spec.capacityPerCar * fleet.cars).toLocaleString()}명 · 최고속도: ${spec.speedKmh}km/h</span>
               </div>
@@ -11937,14 +12751,14 @@ function renderTrainManager() {
           `;
     }).join("");
   trainPanel.renderView({
-    entityId: route.id,
+    entityId: service.id,
     selectedSummary: selectedTrainSummary,
     color: route.color,
-    escapedRouteName: escapeHtml(route.name),
+    escapedRouteName: escapeHtml(service.name),
     totalSets,
     headway: operation.headwayMin.toFixed(1),
     depotCapacity: connectedDepotCapacity,
-    forecastHtml: renderOperatingForecastComparison(operatingForecast),
+    forecastHtml: renderServiceOperationSummary(service) + renderOperatingForecastComparison(operatingForecast),
     fleetsHtml,
   }, handleTrainPanelClick, handleTrainPanelChange);
 }
@@ -11952,14 +12766,16 @@ function renderTrainManager() {
 function handleTrainPanelChange(event: Event) {
   const target = event.target as HTMLSelectElement;
   if (target.id !== "modalTrainTypeSelect" && target.id !== "modalCarCountSelect") return;
-  const route = routes.find((item) => item.id === selectedRouteId) || routes[0];
-  if (!route) return;
+  const service = operatingServices.find((item) => item.id === selectedOperatingServiceId);
+  const route = routes.find((item) => item.id === service?.ownerRouteId);
+  if (!route || !service) return;
   const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
   const cars = Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? 6);
   const spec = trainCatalog[trainType];
   const previewFleet: TrainFleet = {
     id: "forecast-preview",
     routeId: route.id,
+    serviceId: service.id,
     trainType,
     cars,
     sets: 1,
@@ -11973,15 +12789,16 @@ function handleTrainPanelChange(event: Event) {
 function handleTrainPanelClick(event: Event) {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
   if (!button) return;
-  const route = routes.find((item) => item.id === selectedRouteId) || routes[0];
-  if (!route) return;
+  const service = operatingServices.find((item) => item.id === selectedOperatingServiceId);
+  const route = routes.find((item) => item.id === service?.ownerRouteId);
+  if (!route || !service) return;
   const connectedDepotCapacity = depots
-    .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.includes(route.id))
+    .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.some((routeId) => service.routeIds.includes(routeId)))
     .reduce((sum, depot) => sum + depot.capacity, 0);
   if (button.classList.contains("increase")) {
     const fleet = trainFleets.find((item) => item.id === button.dataset.fleetId);
     if (!fleet) return;
-    const currentRouteSets = trainFleets.filter((item) => item.routeId === route.id).reduce((sum, item) => sum + item.sets, 0);
+    const currentRouteSets = trainFleets.filter((item) => item.serviceId === service.id).reduce((sum, item) => sum + item.sets, 0);
     if (currentRouteSets >= connectedDepotCapacity) {
       showToast("차량기지 수용량이 부족합니다. 기지를 확장하거나 연결 상태를 확인하세요.");
       return;
@@ -11998,7 +12815,7 @@ function handleTrainPanelClick(event: Event) {
     requestStateSave();
     renderTrainManager();
     requestUpdate("fleet-service", route.id);
-    showToast(`${route.name} 열차 1편성을 구입·추가 배치했습니다.`);
+    showToast(`${service.name}에 열차 1편성을 추가했습니다.`);
     return;
   }
   if (button.classList.contains("decrease")) {
@@ -12012,14 +12829,14 @@ function handleTrainPanelClick(event: Event) {
     requestStateSave();
     renderTrainManager();
     requestUpdate("fleet-service", route.id);
-    showToast(`${route.name} 열차 편성을 감축했습니다.`);
+    showToast(`${service.name}의 열차 편성을 감축했습니다.`);
     return;
   }
   if (button.dataset.trainAction !== "add") return;
   const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
   const cars = Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? 6);
   const spec = trainCatalog[trainType];
-  const currentRouteSets = trainFleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const currentRouteSets = trainFleets.filter((fleet) => fleet.serviceId === service.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   if (currentRouteSets >= connectedDepotCapacity) {
     showToast("차량기지 수용량이 부족합니다. 기지를 확장하거나 연결 상태를 확인하세요.");
     return;
@@ -12033,6 +12850,7 @@ function handleTrainPanelClick(event: Event) {
   trainFleets.push({
     id: createId("fleet"),
     routeId: route.id,
+    serviceId: service.id,
     trainType,
     cars,
     sets: 1,
@@ -12046,7 +12864,7 @@ function handleTrainPanelClick(event: Event) {
   renderTrainManager();
   requestUpdate("fleet-service", route.id);
   playFeedback("confirm");
-  showToast(`${route.name}에 신규 ${cars}량 ${spec.label} 1편성을 도입했습니다.`);
+  showToast(`${service.name}에 신규 ${cars}량 ${spec.label} 1편성을 배정했습니다.`);
 }
 
 function saveLineManager() {
@@ -12059,8 +12877,6 @@ function saveLineManager() {
     : clampInteger(parseInt(lineFareInput?.value || "", 10), 900, 4200);
   const serviceChanged =
     route.visibility !== (lineVisibilitySelect?.value === "planning" ? "planning" : "public") ||
-    route.localServiceEnabled !== (localServiceToggle?.checked ?? true) ||
-    route.expressServiceEnabled !== (expressServiceToggle?.checked ?? false) ||
     route.operationPaused !== (operationPausedToggle?.checked ?? false);
   const styleChanged = route.name !== nextName || route.color !== nextColor;
   const fareChanged = economy.fare !== nextFare;
@@ -12076,22 +12892,10 @@ function saveLineManager() {
           name: nextName,
           color: nextColor,
           visibility: lineVisibilitySelect?.value === "planning" ? "planning" : "public",
-          localServiceEnabled: localServiceToggle?.checked ?? true,
-          expressServiceEnabled: expressServiceToggle?.checked ?? false,
           operationPaused: operationPausedToggle?.checked ?? false,
-          servicePatterns: (item.servicePatterns ?? []).map((pattern) =>
-            pattern.kind === "local"
-              ? { ...pattern, enabled: localServiceToggle?.checked ?? true }
-              : { ...pattern, enabled: expressServiceToggle?.checked ?? false },
-          ),
         }
       : item,
   );
-  const expressEnabled = expressServiceToggle?.checked ?? false;
-  expressConfigs = [
-    ...expressConfigs.filter((config) => config.routeId !== route.id),
-    { ...getExpressConfig(route.id), unlocked: expressEnabled || getExpressConfig(route.id).unlocked, enabled: expressEnabled },
-  ];
   redoStack = [];
   requestStateSave("immediate");
   closeLineManager();
@@ -12108,7 +12912,7 @@ function requestWholeLineDemolition() {
   if (!route) return;
   const exclusiveStations = stations.filter((station) => station.connectedRouteIds.length === 1 && station.connectedRouteIds.includes(route.id));
   const sharedStations = stations.filter((station) => station.connectedRouteIds.length > 1 && station.connectedRouteIds.includes(route.id));
-  const fleetCount = trainFleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const fleetCount = getFleetsServingRoute(route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   openDecisionDialog(
     `“${route.name}” 노선 전체를 철거할까요?`,
     `노선과 전용 역 ${exclusiveStations.length}개를 함께 삭제합니다.${sharedStations.length > 0 ? ` 환승역 ${sharedStations.length}개는 다른 노선에 남기고 이 노선 연결만 해제합니다.` : ""}${fleetCount > 0 ? ` 배정 차량 ${fleetCount}편성도 운행에서 해제됩니다.` : ""}`,
@@ -12255,7 +13059,7 @@ function selectDeletePoint(point: L.Point) {
   const affectedStations = stations.filter(
     (station) => station.connectedRouteIds.includes(route.id) && distanceToCoordinatesMeters(L.latLng(station.position[0], station.position[1]), removed) < 75,
   );
-  const fleetCount = trainFleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const fleetCount = getFleetsServingRoute(route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   const transferCount = new Set(affectedStations.map((station) => station.transferGroupId).filter(Boolean)).size;
   const keepsFirstSide = startIndex > 0;
   const keepsSecondSide = endIndex < route.coordinates.length - 1;
@@ -12659,7 +13463,7 @@ function beginConnectionDrawing(event: PointerEvent, point: L.Point) {
   activeConnectionSource = source;
   activePointerId = event.pointerId;
   rawDrawPoints = [source.endpoint];
-  mapContainer.setPointerCapture(event.pointerId);
+  captureDrawingPointer(event.pointerId);
   map.dragging.disable();
   mapLayers.clear("construction-preview");
   const route = planningMode
@@ -12698,6 +13502,14 @@ function finishConnectionDrawing(
   }
   const firstPoint = map.containerPointToLatLng(source.endpoint);
   const secondPoint = map.containerPointToLatLng(target.endpoint);
+  const snappedConnectionCoordinates = [
+    { lat: firstPoint.lat, lng: firstPoint.lng },
+    ...points.slice(1, -1).map((screenPoint) => {
+      const coordinate = map.containerPointToLatLng(screenPoint);
+      return { lat: coordinate.lat, lng: coordinate.lng };
+    }),
+    { lat: secondPoint.lat, lng: secondPoint.lng },
+  ];
   if (routePlanningSession?.tool === "connect" && routePlanningSession.stage === "drawing") {
     routePlanningSession = transitionRoutePlanning(routePlanningSession, "selecting-target");
   }
@@ -12705,10 +13517,7 @@ function finishConnectionDrawing(
     routePlanningSession = transitionRoutePlanning(routePlanningSession, "reviewing", {
       targetEntityId: target.routeId,
       targetLineId: planningMode ? undefined : target.routeId,
-      draftCoordinates: points.map((screenPoint) => {
-        const coordinate = map.containerPointToLatLng(screenPoint);
-        return { lat: coordinate.lat, lng: coordinate.lng };
-      }),
+      draftCoordinates: snappedConnectionCoordinates,
     });
   }
   if (planningMode) {
@@ -12725,10 +13534,7 @@ function finishConnectionDrawing(
       source: { id: source.routeId, type: "blueprint-endpoint", lineId: first.rootLineId ?? first.id, endpoint: source.atStart ? "start" : "end" },
       target: { id: target.routeId, type: "blueprint-endpoint", lineId: second.rootLineId ?? second.id, endpoint: target.atStart ? "start" : "end" },
       connectionType: "physical-track",
-      coordinates: points.map((screenPoint) => {
-        const coordinate = map.containerPointToLatLng(screenPoint);
-        return { lat: coordinate.lat, lng: coordinate.lng };
-      }),
+      coordinates: snappedConnectionCoordinates,
       estimatedCost: Math.round(bridgeLength * baseCostPerKm),
       estimatedDuration: Math.max(1, Math.round(bridgeLength * baseConstructionDaysPerKm)),
       existing: plan.connections ?? [],
@@ -13310,6 +14116,18 @@ function synchronizeGraphReferences() {
       routeNodeIds: connectedRouteIds.map((routeId) => findNearestGraphNodeId(routes.find((route) => route.id === routeId), point)).filter((id): id is string => Boolean(id)),
     };
   });
+  const validRouteIds = new Set(routes.map((route) => route.id));
+  const validStationIds = new Set(stations.map((station) => station.id));
+  operatingServices = operatingServices
+    .filter((service) => validRouteIds.has(service.ownerRouteId) && service.routeIds.length > 0 && service.routeIds.every((id) => validRouteIds.has(id)))
+    .map((service) => normalizeOperatingService({
+      ...service,
+      stationIds: service.stationIds.filter((id) => validStationIds.has(id)),
+      stopStationIds: service.stopStationIds.filter((id) => validStationIds.has(id)),
+    }, validRouteIds))
+    .filter((service) => service.stationIds.length >= 2 && service.pathCoordinates.length >= 2);
+  const validServiceIds = new Set(operatingServices.map((service) => service.id));
+  trainFleets = trainFleets.filter((fleet) => !fleet.serviceId || validServiceIds.has(fleet.serviceId));
   reportIntegrityIssues();
 }
 
@@ -13791,7 +14609,7 @@ function countOrphanedStations(points: LatLng[], routeId?: string) {
 
 function calculateDepotCapacityShortage(routeId?: string) {
   if (!routeId) return 0;
-  const fleetSets = trainFleets.filter((fleet) => fleet.routeId === routeId).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const fleetSets = getFleetsServingRoute(routeId).reduce((sum, fleet) => sum + fleet.sets, 0);
   const capacity = depots.filter((depot) => depot.connectedRouteIds.includes(routeId)).reduce((sum, depot) => sum + depot.capacity, 0);
   return Math.max(0, fleetSets - capacity);
 }
@@ -13824,7 +14642,12 @@ function renderConstructionDraftMap() {
     constructionRenderer.reconcileDrafts([entity]);
     return;
   }
-  const color = constructionDraft.routeId ? getRouteColor(constructionDraft.routeId) : selectedColor;
+  const color = resolveReferencedLineColor(
+    constructionDraft.routeId,
+    routes,
+    getActivePlan(false)?.routes ?? [],
+    selectedColor,
+  );
   const points = constructionDraft.points.map((point) => [point.lat, point.lng] as [number, number]);
   entity.lines.push(
     { points, color: "#ffffff", weight: 12, opacity: 0.76, dashArray: "12 9" },
@@ -14019,6 +14842,7 @@ function cloneState(): SaveState {
     constructionProjects,
     newsEvents,
     trainFleets,
+    operatingServices,
     expressConfigs,
     passengerGroups,
     loans,
@@ -14026,6 +14850,35 @@ function cloneState(): SaveState {
     demandZones,
     stationDemandStates,
   );
+}
+
+function migrateLegacyFleetsToOperatingServices() {
+  for (const route of routes) {
+    const legacyFleets = trainFleets.filter((fleet) => fleet.routeId === route.id && !fleet.serviceId);
+    if (legacyFleets.length === 0) continue;
+    let service = operatingServices.find((item) => item.ownerRouteId === route.id);
+    if (!service) {
+      const option = getOperatingServicePathOptions(route.id)[0];
+      const routeStationIds = option?.stationIds ?? stations.filter((station) => station.connectedRouteIds.includes(route.id)).map((station) => station.id);
+      service = {
+        id: stableEntityId("service", `${route.id}:legacy-default`),
+        name: `${route.name} 기본 계통`,
+        ownerRouteId: route.id,
+        routeIds: [route.id],
+        branchIds: option?.branchIds ?? [],
+        pathOptionId: option?.id ?? `${route.id}:trunk`,
+        pathCoordinates: option?.points.map((point) => [point.lat, point.lng]) ?? route.coordinates,
+        stationIds: routeStationIds,
+        stopStationIds: routeStationIds,
+        preset: "all",
+        createdAt: currentMeta.createdAt,
+      };
+      operatingServices.push(service);
+    }
+    trainFleets = trainFleets.map((fleet) =>
+      fleet.routeId === route.id && !fleet.serviceId ? { ...fleet, serviceId: service!.id } : fleet
+    );
+  }
 }
 
 function applyState(state: SaveState) {
@@ -14051,6 +14904,10 @@ function applyState(state: SaveState) {
   constructionProjects = normalizeConstructionProjects(state.constructionProjects);
   newsEvents = normalizeNewsEvents(state.newsEvents);
   trainFleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
+  operatingServices = (state.operatingServices ?? []).map((service) =>
+    normalizeOperatingService(service, new Set(routes.map((route) => route.id)))
+  );
+  migrateLegacyFleetsToOperatingServices();
   expressConfigs = state.expressConfigs ?? [];
   passengerGroups = state.passengerGroups ?? [];
   loans = state.loans ?? [];
@@ -14071,6 +14928,7 @@ const stateSaveRepository = new SaveRepository({
 });
 
 function requestStateSave(kind: "normal" | "immediate" = "normal") {
+  if (!hasActiveGameSession) return;
   synchronizeGraphReferences();
   if (kind === "immediate") stateSaveRepository.requestImmediate();
   else stateSaveRepository.request();
@@ -14093,6 +14951,7 @@ if (import.meta.env.DEV) {
     apply: (state: ManualVerificationState) => {
       resetWorld();
       applyState(state);
+      hasActiveGameSession = true;
       currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}) };
       setWorkspaceMode("management");
       setTool("pan");
@@ -14113,6 +14972,7 @@ if (import.meta.env.DEV) {
 }
 
 async function flushStateSave() {
+  if (!hasActiveGameSession) return;
   synchronizeGraphReferences();
   await stateSaveRepository.flush();
 }
@@ -14146,6 +15006,7 @@ function loadSavedState() {
     constructionProjects = [];
     newsEvents = [];
     trainFleets = [];
+    operatingServices = [];
     expressConfigs = [];
     passengerGroups = [];
     loans = [];
@@ -14730,7 +15591,7 @@ function showRouteSettingsTarget(
   );
   routeSettingsTarget.style.setProperty("--target-route-color", route.color);
   routeSettingsTargetSwatch?.style.setProperty("--target-route-color", route.color);
-  if ((activeTool === "extend" || activeTool === "route") && !hasDraftRouteSettings) {
+  if (activeTool === "extend" || activeTool === "route") {
     draftRouteName = route.name;
     selectedColor = route.color;
     if (draftRouteNameInput) draftRouteNameInput.value = route.name;
@@ -14747,7 +15608,6 @@ function saveRouteSettings() {
   }
   draftRouteName = nextName;
   selectedColor = nextColor;
-  hasDraftRouteSettings = true;
   recordTutorialSignal("colorSelected");
   showToast(nextName ? `“${nextName}” 노선 설정을 적용했습니다.` : "노선 색상을 적용했습니다.");
   playFeedback("confirm");

@@ -24,6 +24,8 @@ export type ConnectionBlueprint = {
   connectionType: ConnectionType;
   sourceLineId?: string;
   targetLineId?: string;
+  sourceEndpoint?: "start" | "end";
+  targetEndpoint?: "start" | "end";
   coordinates?: PlanningCoordinate[];
   status: BlueprintStatus;
   estimatedCost: number;
@@ -164,6 +166,8 @@ export function createConnectionBlueprint(input: {
     connectionType: input.connectionType,
     sourceLineId: input.source.lineId,
     targetLineId: input.target.lineId,
+    sourceEndpoint: input.source.endpoint,
+    targetEndpoint: input.target.endpoint,
     coordinates: input.coordinates,
     estimatedCost: input.estimatedCost ?? 0,
     estimatedDuration: input.estimatedDuration ?? 0,

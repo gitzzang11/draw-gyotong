@@ -9,6 +9,7 @@ export type MapLayerName =
   | "construction"
   | "demolition"
   | "route-selection"
+  | "operating-service"
   | "selection"
   | "construction-preview"
   | "draft-renderer"
@@ -25,6 +26,7 @@ const DEFAULT_LAYER_ORDER: readonly MapLayerName[] = [
   "stations",
   "trains",
   "route-selection",
+  "operating-service",
   "selection",
   "construction-preview",
   "draft-renderer",

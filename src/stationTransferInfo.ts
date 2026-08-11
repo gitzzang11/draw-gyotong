@@ -124,7 +124,10 @@ export function getStationTransferInfo(input: {
   return {
     stationId: station.id,
     stationName: Array.from(new Set(members.map((member) => member.name))).join(" · "),
-    isTransfer: connectedLines.length > 1 && (transferLinks.length > 0 || station.connectedRouteIds.length > 1),
+    // A station touching multiple routes is not automatically a passenger
+    // transfer. Only a transfer link explicitly created by the player should
+    // promote it to the white transfer-station marker and transfer UI.
+    isTransfer: connectedLines.length > 1 && transferLinks.length > 0,
     members,
     connectedLines,
     transferLinks,

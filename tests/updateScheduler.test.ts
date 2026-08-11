@@ -17,6 +17,13 @@ describe("partial update dependencies", () => {
     expect(domains).not.toContain("routes");
   });
 
+  it("refreshes station markers when express stops change", () => {
+    const domains = domainsForUpdate("express-stops");
+    expect(domains).toContain("map-stations");
+    expect(domains).toContain("map-trains");
+    expect(domains).toContain("capacity");
+  });
+
   it("does not run simulation calculations for viewport changes", () => {
     expect(domainsForUpdate("viewport")).toEqual(["map-stations", "map-trains", "map-lod"]);
   });
@@ -75,6 +82,14 @@ describe("partial update dependencies", () => {
     expect(domainsForUpdate("mode")).toEqual(["map-selection", "hud-status", "active-panel", "workflow"]);
     expect(domainsForUpdate("construction-progress")).not.toContain("network");
     expect(domainsForUpdate("construction-progress")).not.toContain("routes");
+  });
+
+  it("refreshes real lines and removes completed plan dashes after conversion", () => {
+    const domains = domainsForUpdate("plan-conversion");
+    expect(domains).toContain("map-lines");
+    expect(domains).toContain("map-blueprints");
+    expect(domains).toContain("map-construction");
+    expect(domains).toContain("hud-finance");
   });
 
   it.each([10, 50, 100])("merges 1,000 train ticks for %i trains into one execution cycle", () => {

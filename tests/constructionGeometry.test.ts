@@ -10,6 +10,7 @@ import {
   normalizeConnectionPolyline,
   polylineLengthMeters,
   replaceSegmentId,
+  resolveRouteEndpoint,
   splitRouteSegment,
 } from "../src/geometry/constructionGeometry.ts";
 
@@ -41,6 +42,21 @@ describe("construction geometry", () => {
     expect(segment).toEqual(createConnectionSegment({ id: "s", fromNodeId: "a", toNodeId: "b", coordinates: normalized.coordinates }));
     expect(segment.lengthKm).toBeGreaterThan(100);
     expect(drawn).toHaveLength(4);
+  });
+
+  it("keeps the explicitly selected endpoint even when the release hint is closer to the opposite end", () => {
+    const routeEndpoints: Array<[number, number]> = [[37.5, 127], [37.5, 127.001]];
+    const impreciseRelease: [number, number] = [37.5, 127.0002];
+    expect(resolveRouteEndpoint(routeEndpoints, undefined, impreciseRelease)).toEqual(routeEndpoints[0]);
+    expect(resolveRouteEndpoint(routeEndpoints, "end", impreciseRelease)).toEqual(routeEndpoints[1]);
+
+    const normalized = normalizeConnectionPolyline({
+      sourceEndpoints: [[37.49, 127]],
+      targetEndpoints: routeEndpoints,
+      drawnCoordinates: [[37.49, 127], impreciseRelease],
+      targetEndpoint: "end",
+    });
+    expect(normalized.coordinates.at(-1)).toEqual(routeEndpoints[1]);
   });
 
   it.each([

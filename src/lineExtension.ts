@@ -19,6 +19,18 @@ export type LineExtensionPayload = {
   mountainSegments: number;
 };
 
+export function resolveReferencedLineColor(
+  lineId: string | undefined,
+  actualLines: readonly Pick<ExtendableLine, "id" | "color">[],
+  plannedLines: readonly Pick<ExtendableLine, "id" | "color">[],
+  fallbackColor: string,
+) {
+  if (!lineId) return fallbackColor;
+  return actualLines.find((line) => line.id === lineId)?.color
+    ?? plannedLines.find((line) => line.id === lineId)?.color
+    ?? fallbackColor;
+}
+
 export function mergeLineExtension<T extends ExtendableLine>(line: T, extension: LineExtensionPayload): T {
   if (line.id !== extension.targetLineId) throw new Error("Extension target line does not match.");
   if (extension.coordinates.length < 2) throw new Error("Extension requires an anchor and at least one new coordinate.");

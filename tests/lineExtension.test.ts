@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeLineExtension } from "../src/lineExtension";
+import { mergeLineExtension, resolveReferencedLineColor } from "../src/lineExtension";
 
 function line() {
   return {
@@ -72,5 +72,20 @@ describe("mergeLineExtension", () => {
       mountainSegments: 0,
     })).toThrow("does not match");
     expect(source.coordinates).toEqual([[37.5, 127], [37.51, 127.01]]);
+  });
+});
+
+describe("resolveReferencedLineColor", () => {
+  it("uses the color of an existing planned extension instead of a stale draft color", () => {
+    expect(resolveReferencedLineColor(
+      "planned-extension-1",
+      [{ id: "line-1", color: "#0055ff" }],
+      [{ id: "planned-extension-1", color: "#0055ff" }],
+      "#4ce0c3",
+    )).toBe("#0055ff");
+  });
+
+  it("falls back to the selected color for a new line", () => {
+    expect(resolveReferencedLineColor(undefined, [], [], "#ff3366")).toBe("#ff3366");
   });
 });

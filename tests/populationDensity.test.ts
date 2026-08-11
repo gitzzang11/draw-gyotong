@@ -13,6 +13,25 @@ const boundsFor = (city: keyof typeof worldPopKorea2020) => {
 };
 
 describe("real population-density demand adjustment", () => {
+  it("covers each city's full playable map", () => {
+    const playableBounds = {
+      seoul: { north: 37.76, south: 37.38, west: 126.65, east: 127.3 },
+      busan: { north: 35.42, south: 34.98, west: 128.72, east: 129.35 },
+      daejeon: { north: 36.55, south: 36.17, west: 127.2, east: 127.62 },
+      gwangju: { north: 35.32, south: 35.02, west: 126.62, east: 127.1 },
+    } as const;
+
+    for (const city of Object.keys(playableBounds) as Array<keyof typeof playableBounds>) {
+      const gridBounds = boundsFor(city);
+      const mapBounds = playableBounds[city];
+      const cellRoundingTolerance = 1e-9;
+      expect(gridBounds.north + cellRoundingTolerance).toBeGreaterThanOrEqual(mapBounds.north);
+      expect(gridBounds.south - cellRoundingTolerance).toBeLessThanOrEqual(mapBounds.south);
+      expect(gridBounds.west - cellRoundingTolerance).toBeLessThanOrEqual(mapBounds.west);
+      expect(gridBounds.east + cellRoundingTolerance).toBeGreaterThanOrEqual(mapBounds.east);
+    }
+  });
+
   it("uses bundled WorldPop grid counts for a city location", () => {
     const sample = getRealPopulationCells("seoul", boundsFor("seoul"))[0];
     expect(getRealPopulationCount("seoul", [sample.latitude, sample.longitude])).toBe(sample.population);

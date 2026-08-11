@@ -834,6 +834,120 @@ tr:hover td {
   color: var(--c-primary);
 }
 
+/* Custom operating services replace the legacy route-wide local/express
+   switches. Preset labels remain available inside the service editor. */
+html body[data-workspace-mode] #expressButton,
+.manager-toggles label:has(#localServiceToggle),
+.manager-toggles label:has(#expressServiceToggle) {
+  display: none !important;
+}
+
+.operating-service-section {
+  border: 1px solid rgba(107, 222, 202, 0.2);
+  border-radius: 14px;
+  background: rgba(5, 18, 28, 0.62);
+  overflow: hidden;
+}
+
+.operating-service-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 13px;
+  color: #dffbf6;
+  cursor: pointer;
+  list-style: none;
+}
+
+.operating-service-section > summary::-webkit-details-marker { display: none; }
+.operating-service-section > summary strong { color: #55e3ca; font-size: 0.78rem; }
+.operating-service-list { display: grid; gap: 7px; padding: 0 9px 9px; }
+
+.operating-service-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid rgba(139, 168, 188, 0.2);
+  border-radius: 11px;
+  color: #dce9f1;
+  background: rgba(18, 32, 44, 0.78);
+  text-align: left;
+}
+
+.operating-service-card.selected {
+  border-color: #55e3ca;
+  background: linear-gradient(120deg, rgba(47, 204, 178, 0.2), rgba(17, 37, 48, 0.88));
+  box-shadow: inset 3px 0 #55e3ca;
+}
+
+.operating-service-card > span { display: grid; gap: 3px; min-width: 0; }
+.operating-service-card > span:last-child { text-align: right; }
+.operating-service-card strong,
+.operating-service-card b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.operating-service-card small { color: #91a7b5; font-size: 0.68rem; }
+.operating-service-empty { display: grid; gap: 4px; padding: 14px 10px; color: #9db0bc; text-align: center; }
+.operating-service-empty strong { color: #d9e7ec; font-size: 0.82rem; }
+.operating-service-empty span { font-size: 0.7rem; }
+
+.add-operating-service-button {
+  width: calc(100% - 18px);
+  min-height: 40px;
+  margin: 0 9px 9px;
+  border: 1px dashed rgba(85, 227, 202, 0.5);
+  border-radius: 10px;
+  color: #65ead2;
+  background: rgba(30, 173, 151, 0.09);
+}
+
+.operating-service-editor { display: grid; gap: 10px; padding: 11px; border-top: 1px solid rgba(107, 222, 202, 0.17); }
+.operating-service-editor[hidden] { display: none; }
+.operating-service-editor-head,
+.operating-service-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.operating-service-editor-head button { width: 30px; height: 30px; border-radius: 9px; }
+.operating-service-editor > label { display: grid; gap: 5px; color: #a9bac4; font-size: 0.72rem; }
+.operating-service-editor input,
+.operating-service-editor select { width: 100%; min-width: 0; min-height: 38px; box-sizing: border-box; }
+.operating-service-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.operating-service-presets button { min-width: 0; min-height: 36px; padding: 5px; font-size: 0.68rem; border-radius: 9px; }
+.operating-service-presets button.active { color: #052820; border-color: #55e3ca; background: #55e3ca; }
+.operating-service-field-label { display: block; margin-bottom: 6px; color: #a9bac4; font-size: 0.72rem; }
+.operating-service-stop-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; max-height: 180px; overflow-y: auto; }
+.operating-service-stop-list label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 7px; align-items: center; padding: 7px; border-radius: 8px; background: rgba(20, 35, 46, 0.84); }
+.operating-service-stop-list label input { grid-row: 1 / span 2; width: 16px; min-height: 16px; }
+.operating-service-stop-list label i { display: none; }
+.operating-service-stop-list label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; }
+.operating-service-stop-list label small { color: #8297a5; font-size: 0.62rem; }
+.operating-service-editor-actions button { min-height: 38px; padding: 0 13px; border-radius: 9px; }
+.operating-service-editor-actions .primary { margin-left: auto; color: #052820; background: #55e3ca; }
+.operating-service-editor-actions .danger { color: #ff8f9b; border-color: rgba(255, 96, 112, 0.42); background: rgba(126, 25, 39, 0.24); }
+
+.right-line-control-card.service-mode .right-line-body > .line-metrics-grid,
+.right-line-control-card.service-mode .right-line-body > .manager-field,
+.right-line-control-card.service-mode .right-line-body > .manager-toggles,
+.right-line-control-card.service-mode .right-line-body > .manager-summary,
+.right-line-control-card.service-mode > .right-line-footer {
+  display: none !important;
+}
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .operating-service-section > summary { min-height: 36px; padding-inline: 10px; }
+  .operating-service-card { min-height: 44px; padding: 6px 8px; }
+  .operating-service-editor { gap: 7px; padding: 8px; }
+  .operating-service-editor input,
+  .operating-service-editor select { min-height: 34px; }
+  .operating-service-presets button { min-height: 32px; font-size: 0.62rem; }
+  .operating-service-stop-list { max-height: 118px; }
+  .operating-service-stop-list label { padding: 5px 6px; }
+  .add-operating-service-button { min-height: 34px; }
+}
+
 .layer-dot.population {
   background: #fb7185;
   box-shadow: 0 0 8px rgba(251, 113, 133, 0.65);
@@ -876,6 +990,7 @@ body[data-workspace-mode="management"] .hud.build-panel .tool-divider {
 
 body[data-workspace-mode="management"] #selectTool,
 body[data-workspace-mode="management"] #manageLineTool,
+body[data-workspace-mode="management"] #expressButton,
 body[data-workspace-mode="management"] #manageOperationsTool,
 body[data-workspace-mode="management"] #analysisButton,
 body[data-workspace-mode="management"] #manageMapTool {
@@ -890,6 +1005,7 @@ body[data-workspace-mode="management"] #manageMapTool {
 /* PLANNING MODE (기획 모드): 기획용 노선, 역, 환승, 기지, 수정, 선택, 계획목록 표시 */
 body[data-workspace-mode="planning"] #manageOperationsTool,
 body[data-workspace-mode="planning"] #analysisButton,
+body[data-workspace-mode="planning"] #expressButton,
 body[data-workspace-mode="planning"] #constructionOverviewButton,
 body[data-workspace-mode="planning"] #manageLineTool,
 body[data-workspace-mode="planning"] #manageMapTool,
@@ -921,6 +1037,7 @@ body[data-workspace-mode="construction"] #depotTool,
 body[data-workspace-mode="construction"] #manageLineTool,
 body[data-workspace-mode="construction"] #manageOperationsTool,
 body[data-workspace-mode="construction"] #analysisButton,
+body[data-workspace-mode="construction"] #expressButton,
 body[data-workspace-mode="construction"] #manageMapTool,
 body[data-workspace-mode="construction"] #diagramToolButton {
   display: none !important;
@@ -5192,6 +5309,16 @@ font-size: 12px;
 .train-icon .train-body i:first-child { left: 2px; }
 .train-icon .train-body i:last-child { right: 2px; }
 
+.train-icon.train-service-express .train-body {
+  border-color: #ffe3a3;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.52), 0 0 0 2px rgba(255, 193, 7, 0.34), inset 0 -4px 0 rgba(0, 0, 0, 0.16);
+}
+
+.train-icon.train-service-express .train-body::after {
+  background: #fff3a3;
+  box-shadow: -10px 0 #fff3a3;
+}
+
 /* ----------------------------------------------------
    DEPOT MANAGER DIALOG (.depot-manager-dialog)
 ---------------------------------------------------- */
@@ -7525,6 +7652,27 @@ font-size: 12px;
   display: block;
 }
 
+.fleet-card-info .fleet-service-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  color: #cbd5e1;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.fleet-card-item.fleet-service-express .fleet-service-badge {
+  background: rgba(250, 204, 21, 0.14);
+  border-color: rgba(250, 204, 21, 0.36);
+  color: #fde68a;
+}
+
 .fleet-card-controls {
   display: flex;
   align-items: center;
@@ -9376,6 +9524,69 @@ font-size: 12px;
   .analysis-card footer > div { justify-content: stretch; }
   .analysis-card footer button { flex: 1 1 auto; }
 }
+.service-operation-summary {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  background: rgba(13, 20, 29, 0.78);
+}
+
+.service-operation-summary > header {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.service-operation-summary > header span {
+  color: #94a3b8;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.service-operation-summary > header strong {
+  color: #e2e8f0;
+  font-size: 13px;
+}
+
+.service-operation-row {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.service-operation-row > span {
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.service-operation-row > strong {
+  color: #f1f5f9;
+  font-size: 12px;
+}
+
+.service-operation-row > small {
+  color: #94a3b8;
+  text-align: right;
+}
+
+.service-operation-express > span {
+  color: #fde68a;
+}
+
+.service-operation-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
 .operating-forecast-card {
   margin: 12px 0;
   padding: 12px;
@@ -14270,4 +14481,1745 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     width: 12px;
     height: 12px;
   }
+}
+
+/* -------------------------------------------------------------------------
+   FINAL MOBILE SAFETY OVERRIDES
+   These rules intentionally come last. Several legacy desktop polish rules
+   are declared after the first mobile blocks, so this section keeps the
+   mobile interaction contract intact at the final cascade position.
+------------------------------------------------------------------------- */
+
+/* Keep mobile controls independently tappable instead of expanding their
+   pseudo-elements into the neighbouring button's hit area. */
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .workspace-mode-tab::after,
+  .primary-tool::after,
+  .top-action-btn::after,
+  .history-action::after {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    pointer-events: none;
+  }
+
+  .top-status-pills {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+
+  .top-status-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Keep the important live state available in a compact, horizontally
+     scrollable strip instead of removing it on narrow screens. */
+  .top-status-pills .cash-pill,
+  .top-status-pills .satisfaction-pill,
+  .top-status-pills .history-pill,
+  .top-status-pills .clock-pill {
+    display: inline-flex !important;
+    min-height: 28px;
+    flex: 0 0 auto;
+  }
+
+  .top-status-pills .cash-pill {
+    max-width: 118px;
+    padding: 0 6px;
+  }
+
+  .top-status-pills .cash-pill .pill-icon,
+  .top-status-pills .cash-pill .net-readout {
+    display: none;
+  }
+
+  .top-status-pills .cash-pill #cashReadout,
+  .top-status-pills .satisfaction-pill #satisfactionReadout {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+  }
+
+  .top-status-pills .satisfaction-pill {
+    max-width: 126px;
+    padding: 0 6px;
+  }
+
+  .top-status-pills .satisfaction-pill .pill-icon {
+    flex: 0 0 auto;
+    font-size: 12px;
+  }
+
+  .top-status-pills .history-pill {
+    gap: 1px;
+    padding: 0 3px;
+  }
+
+  .top-status-pills .history-pill .history-action {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  .top-status-pills .clock-pill {
+    gap: 3px;
+    padding: 0 4px;
+  }
+
+  .top-status-pills .clock-pill .time-readout-wrap span {
+    display: none;
+  }
+
+  .top-status-pills .clock-pill .time-readout-wrap strong {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .top-status-pills .clock-pill .time-row {
+    gap: 1px;
+    padding: 2px;
+  }
+
+  .top-status-pills .clock-pill .time-button {
+    min-width: 30px;
+    min-height: 28px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  /* Dialog close controls retain a real touch target even though the shared
+     desktop shape rule sets their visual size to 26px. */
+  .dialog-backdrop .dialog-close,
+  .dialog-backdrop .compact-close,
+  .diagram-screen .diagram-close,
+  .analysis-screen .analysis-close,
+  .statistics-screen .statistics-close,
+  .news-screen .news-close,
+  .tutorial-panel #tutorialSkipButton {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
+    flex: 0 0 44px !important;
+  }
+
+  /* Floating-window controls use a slightly shorter target so the compact
+     minimized bar remains usable without becoming taller than the panel. */
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  #modifyToolsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  .left-route-window .floating-minimize-button,
+  .right-line-control-card .floating-minimize-button,
+  #routeSettingsCard .floating-minimize-button,
+  #modifyToolsCard .floating-minimize-button,
+  .construction-preview-panel .floating-minimize-button {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    flex: 0 0 36px !important;
+  }
+
+  .left-route-window.is-minimized,
+  .right-line-control-card.is-minimized,
+  #routeSettingsCard.is-minimized,
+  #modifyToolsCard.is-minimized,
+  .construction-preview-panel.is-minimized {
+    height: 60px !important;
+    max-height: 60px !important;
+  }
+
+  /* Restore a single intentional scroll owner for long floating panels. */
+  .left-route-window,
+  .right-line-control-card,
+  #routeSettingsCard,
+  #modifyToolsCard,
+  .construction-preview-panel {
+    min-height: 0 !important;
+  }
+
+  .left-route-window,
+  .right-line-control-card,
+  .construction-preview-panel {
+    overflow: hidden !important;
+  }
+
+  .left-route-list,
+  .right-line-body,
+  .construction-preview-details {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .left-route-list,
+  .right-line-body,
+  .construction-preview-details {
+    flex: 1 1 auto !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   SAVE SLOT EDITOR
+------------------------------------------------------------------------- */
+.slot-entry-actions {
+  width: 44px;
+  align-self: stretch;
+  flex: 0 0 44px;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.slot-entry-actions .slot-edit-button,
+.slot-entry-actions .slot-delete-button {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.slot-edit-button {
+  color: var(--c-primary);
+  border: 1px solid rgba(0, 242, 254, 0.32);
+  background: rgba(0, 242, 254, 0.1);
+}
+
+.slot-edit-button:hover {
+  color: #06141a;
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+.save-editor-dialog {
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(88dvh, 680px);
+  overflow-y: auto;
+  color: var(--c-text-main);
+  border: 1px solid rgba(0, 242, 254, 0.28);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(0, 242, 254, 0.11), transparent 34%),
+    rgba(10, 16, 27, 0.98);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.76);
+}
+
+.save-editor-header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(9, 15, 25, 0.92);
+  backdrop-filter: blur(16px);
+}
+
+.save-editor-header span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--c-primary);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.save-editor-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.save-editor-form {
+  display: grid;
+  gap: 15px;
+  padding: 20px 22px 22px;
+}
+
+.save-editor-form label {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.save-editor-form label > span,
+.save-editor-city-lock > span {
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.save-editor-form input,
+.save-editor-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  color: var(--c-text-main);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 11px;
+  outline: none;
+  background: rgba(2, 8, 16, 0.72);
+}
+
+.save-editor-form input:focus,
+.save-editor-form select:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.12);
+}
+
+.save-editor-setting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.save-editor-city-lock {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 5px 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.save-editor-city-lock strong {
+  justify-self: end;
+  color: var(--c-primary);
+}
+
+.save-editor-city-lock small {
+  grid-column: 1 / -1;
+  color: var(--c-text-dim);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.save-editor-error {
+  margin: 0;
+  padding: 9px 11px;
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  font-size: 11px;
+}
+
+.save-editor-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 9px;
+}
+
+.save-editor-actions button {
+  min-height: 44px;
+  color: var(--c-text-main);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.055);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.save-editor-actions button.primary {
+  color: #05231f;
+  border-color: rgba(85, 217, 192, 0.8);
+  background: linear-gradient(135deg, #55d9c0, #22c7a9);
+}
+
+.save-editor-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .slot-entry-actions {
+    width: 40px;
+    flex-basis: 40px;
+    gap: 4px;
+  }
+
+  .save-editor-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 12px);
+    border-radius: 16px;
+  }
+
+  .save-editor-header {
+    padding: 12px 14px 10px;
+  }
+
+  .save-editor-header h2 {
+    font-size: 18px;
+  }
+
+  .save-editor-form {
+    gap: 10px;
+    padding: 12px 14px 14px;
+  }
+
+  .save-editor-form input,
+  .save-editor-form select,
+  .save-editor-actions button {
+    min-height: 40px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   EVENT CARD LIST
+   Every city event is a self-contained card with scannable status, impact
+   tiles, and its existing functional actions kept together at the bottom.
+------------------------------------------------------------------------- */
+.news-feed {
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  grid-auto-rows: max-content;
+}
+
+.news-card {
+  isolation: isolate;
+  min-width: 0;
+  height: max-content;
+  padding: 16px;
+  gap: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(11, 16, 26, 0.96);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.news-card.opportunity {
+  border-top-color: var(--c-mint);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3), inset 3px 0 0 rgba(52, 211, 153, 0.42);
+}
+
+.news-card.change {
+  border-top-color: var(--c-amber);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3), inset 3px 0 0 rgba(245, 158, 11, 0.42);
+}
+
+.news-card header strong,
+.news-card dd {
+  overflow-wrap: anywhere;
+}
+
+.news-card dl {
+  min-width: 0;
+  padding: 0;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+}
+
+.news-card dl > div {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.news-card footer {
+  padding-top: 1px;
+}
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .news-feed {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .news-card {
+    width: 100%;
+    padding: 12px;
+    gap: 9px;
+    border-radius: 15px;
+  }
+
+  .news-card header strong {
+    font-size: 15px;
+  }
+
+  .news-card p {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .news-card dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .news-card dl > div {
+    padding: 7px 8px;
+  }
+
+  .news-card footer button {
+    min-height: 40px;
+  }
+}
+
+/* A phone in landscape can be 844px or wider in CSS pixels, so width-only
+   breakpoints miss it. Height plus orientation identifies the compact phone
+   viewport without shrinking ordinary desktop windows. */
+@media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .game-shell {
+    --mobile-dock-height: 38px;
+  }
+
+  .hud.top-header-bar {
+    top: max(2px, env(safe-area-inset-top));
+    left: max(4px, env(safe-area-inset-left));
+    right: max(4px, env(safe-area-inset-right));
+    gap: 3px;
+  }
+
+  .top-status-pills {
+    min-width: 0;
+    max-width: 100%;
+    padding: 1px 3px;
+  }
+
+  .workspace-mode-tab {
+    min-height: 28px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .top-actions-row {
+    gap: 3px;
+    padding: 2px;
+  }
+
+  .layer-menu summary,
+  .top-action-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .hud.build-panel {
+    left: 50%;
+    right: auto;
+    bottom: max(3px, env(safe-area-inset-bottom));
+    width: max-content;
+    max-width: calc(100vw - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right)));
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    padding: 2px;
+    gap: 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .hud.build-panel .tool-group {
+    flex: 0 0 auto;
+    gap: 2px;
+  }
+
+  .hud.build-panel .tool-divider {
+    height: 18px;
+    margin: 0 1px;
+  }
+
+  .hud.build-panel .primary-tool {
+    min-width: 48px;
+    min-height: 36px;
+    padding: 0 5px;
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .hud.build-panel .primary-tool svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  /* Floating tools stay above the dock and each list owns its own scroll. */
+  .left-route-window,
+  .right-line-control-card,
+  #routeSettingsCard,
+  #modifyToolsCard,
+  .construction-preview-panel {
+    position: fixed !important;
+    top: auto !important;
+    bottom: max(calc(var(--mobile-dock-height) + 6px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height) + 6px)) !important;
+    max-width: calc(100vw - 8px) !important;
+    border-radius: 14px !important;
+  }
+
+  .left-route-window,
+  #routeSettingsCard {
+    left: max(4px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: min(260px, calc(100vw - 8px)) !important;
+    max-height: min(56dvh, 300px) !important;
+  }
+
+  .right-line-control-card,
+  #modifyToolsCard,
+  .construction-preview-panel {
+    left: auto !important;
+    right: max(4px, env(safe-area-inset-right)) !important;
+  }
+
+  .right-line-control-card {
+    width: min(280px, calc(100vw - 8px)) !important;
+    max-height: min(58dvh, 310px) !important;
+  }
+
+  #modifyToolsCard {
+    width: min(232px, calc(100vw - 8px)) !important;
+    max-height: min(46dvh, 230px) !important;
+  }
+
+  .construction-preview-panel {
+    width: min(310px, calc(100vw - 8px)) !important;
+    max-height: min(60dvh, 330px) !important;
+  }
+
+  .left-route-header,
+  .right-line-header,
+  .route-settings-card-heading,
+  .construction-preview-panel > header {
+    flex: 0 0 auto;
+  }
+
+  #modifyToolsCard .modify-tools-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  #modifyToolsCard .modify-tools-grid .primary-tool.compact {
+    min-height: 36px !important;
+    font-size: 9px;
+  }
+
+  /* Full-screen report headers collapse before their actions run out of
+     horizontal space. Their content areas already have independent scroll. */
+  .statistics-header,
+  .news-header,
+  .analysis-screen .analysis-header,
+  .diagram-header {
+    min-width: 0;
+    min-height: 56px;
+    gap: 8px;
+    padding: 8px 60px 8px 10px !important;
+  }
+
+  .statistics-title,
+  .news-header > div:first-child,
+  .analysis-heading,
+  .diagram-brand {
+    min-width: 0;
+  }
+
+  .statistics-title h2,
+  .news-header h2 {
+    overflow: hidden;
+    font-size: 16px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .statistics-title p,
+  .news-header p,
+  .analysis-heading p {
+    display: none;
+  }
+
+  .statistics-title-editor {
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .statistics-title-editor label {
+    min-width: 0;
+  }
+
+  .statistics-title-editor input {
+    width: clamp(110px, 20vw, 180px);
+    min-width: 0 !important;
+    min-height: 36px !important;
+  }
+
+  #saveNetworkTitleButton {
+    min-height: 36px;
+    padding: 0 9px;
+    white-space: nowrap;
+  }
+
+  .statistics-tabs {
+    gap: 3px;
+    padding: 6px 10px;
+  }
+
+  .statistics-tabs button {
+    min-height: 36px;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  .news-header-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  .news-header-actions label {
+    gap: 3px;
+  }
+
+  .news-header-actions select {
+    max-width: 112px;
+    min-height: 36px !important;
+    padding: 0 7px !important;
+  }
+
+  .news-summary {
+    gap: 6px;
+    padding: 7px 10px;
+  }
+
+  .news-summary > div {
+    padding: 5px 8px;
+  }
+
+  .news-summary p {
+    display: none;
+  }
+
+  .news-feed {
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+    gap: 10px;
+    padding: 12px 10px;
+  }
+
+  .analysis-screen .analysis-header {
+    min-height: 64px;
+  }
+
+  .analysis-heading h2 {
+    font-size: 20px !important;
+  }
+
+  .analysis-header-actions {
+    gap: 4px;
+  }
+
+  #refreshAnalysisButton {
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+  }
+
+  #refreshAnalysisButton span {
+    font-size: 18px;
+  }
+
+  .analysis-body {
+    grid-template-columns: minmax(190px, 0.34fr) minmax(0, 0.66fr);
+  }
+
+  .analysis-summary {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .analysis-report {
+    padding: 14px 12px 24px;
+  }
+
+  .diagram-header {
+    grid-template-columns: minmax(140px, 0.3fr) minmax(0, 0.7fr) !important;
+    min-height: 56px;
+  }
+
+  .diagram-controls {
+    gap: 4px;
+  }
+
+  .diagram-controls select,
+  .diagram-controls button {
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .diagram-controls select {
+    min-width: 90px;
+  }
+
+  .diagram-controls .diagram-check {
+    height: 34px;
+    padding: 0 7px;
+  }
+
+  .diagram-legend {
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 9px;
+  }
+
+  .diagram-route-legend {
+    padding-left: 7px;
+  }
+
+  .diagram-header .diagram-close,
+  .analysis-header .analysis-close,
+  .statistics-header .statistics-close,
+  .news-header .news-close {
+    top: 50%;
+    right: 8px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   UNIFIED CLOSE BUTTONS
+   Every dismiss action uses one size and one visual X glyph. Minimize and
+   delete controls intentionally keep their own semantics and appearance.
+------------------------------------------------------------------------- */
+:root {
+  --close-button-size: 40px;
+  --close-icon-size: 22px;
+  --floating-close-button-size: 32px;
+  --floating-close-glyph-size: 14px;
+  --floating-minimized-close-size: 28px;
+  --floating-minimized-close-glyph-size: 12px;
+}
+
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton
+) {
+  position: relative !important;
+  width: var(--close-button-size) !important;
+  height: var(--close-button-size) !important;
+  min-width: var(--close-button-size) !important;
+  min-height: var(--close-button-size) !important;
+  max-width: var(--close-button-size) !important;
+  max-height: var(--close-button-size) !important;
+  flex: 0 0 var(--close-button-size) !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  line-height: 1 !important;
+  font-size: 0 !important;
+  font-family: system-ui, sans-serif !important;
+  font-weight: 400 !important;
+  text-indent: 0 !important;
+}
+
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton
+)::before {
+  content: "\00D7";
+  display: block;
+  color: currentColor;
+  font: 400 var(--close-icon-size)/1 system-ui, sans-serif;
+  line-height: 1;
+  transform: translateY(-0.02em);
+}
+
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton
+) > svg {
+  display: none !important;
+}
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  :root {
+    --close-button-size: 44px;
+    --close-icon-size: 22px;
+    --floating-close-button-size: 36px;
+    --floating-close-glyph-size: 15px;
+    --floating-minimized-close-size: 30px;
+    --floating-minimized-close-glyph-size: 13px;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .save-editor-dialog {
+    width: min(620px, calc(100vw - 12px));
+  }
+}
+
+/* -------------------------------------------------------------------------
+   FLOATING WINDOW CLOSE CONTROL
+   Map-overlaid windows use a clearer dismiss affordance than report dialogs:
+   a rose accent, a rounded-square surface, and a crisp CSS-drawn X.
+------------------------------------------------------------------------- */
+body .game-shell :is(
+  .floating-close-button,
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+) {
+  --close-glyph-size: var(--floating-close-glyph-size);
+  --close-glyph-stroke: 2px;
+  width: var(--floating-close-button-size) !important;
+  height: var(--floating-close-button-size) !important;
+  min-width: var(--floating-close-button-size) !important;
+  min-height: var(--floating-close-button-size) !important;
+  max-width: var(--floating-close-button-size) !important;
+  max-height: var(--floating-close-button-size) !important;
+  flex: 0 0 var(--floating-close-button-size) !important;
+  position: relative !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(251, 113, 133, 0.58) !important;
+  border-radius: 12px !important;
+  background:
+    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.14), transparent 38%),
+    linear-gradient(145deg, rgba(190, 24, 93, 0.3), rgba(69, 10, 35, 0.82)) !important;
+  box-shadow:
+    0 0 0 1px rgba(251, 113, 133, 0.1) inset,
+    0 6px 16px rgba(76, 5, 25, 0.35),
+    0 0 16px rgba(244, 63, 94, 0.12) !important;
+  color: #fecdd3 !important;
+  cursor: pointer !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 140ms ease !important;
+}
+
+body .game-shell :is(
+  .floating-close-button,
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+)::before {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  width: var(--close-glyph-size, 16px) !important;
+  height: var(--close-glyph-stroke, 2px) !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: currentColor !important;
+  box-shadow: none !important;
+  content: "" !important;
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+body .game-shell :is(
+  .floating-close-button,
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+)::after {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  width: var(--close-glyph-size, 16px) !important;
+  height: var(--close-glyph-stroke, 2px) !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: currentColor !important;
+  box-shadow: none !important;
+  content: "";
+  pointer-events: none !important;
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+
+/* Larger floating panels get a little more breathing room in the header. */
+body .game-shell :is(
+  #routeSettingsCard .dialog-close,
+  #closeRouteSettingsButton,
+  .construction-preview-panel .dialog-close,
+  #closeConstructionPreviewButton
+) {
+  --floating-close-button-size: 36px;
+  --floating-close-glyph-size: 15px;
+}
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  body .game-shell :is(
+    #routeSettingsCard .dialog-close,
+    #closeRouteSettingsButton,
+    .construction-preview-panel .dialog-close,
+    #closeConstructionPreviewButton
+  ) {
+    --floating-close-button-size: 40px;
+    --floating-close-glyph-size: 16px;
+  }
+}
+
+/* Minimized bars are intentionally more compact than their open windows. */
+body .game-shell :is(
+  .left-route-window.is-minimized .floating-window-actions > .dialog-close,
+  .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
+  #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
+  .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close
+) {
+  --close-glyph-size: var(--floating-minimized-close-glyph-size);
+  width: var(--floating-minimized-close-size) !important;
+  height: var(--floating-minimized-close-size) !important;
+  min-width: var(--floating-minimized-close-size) !important;
+  min-height: var(--floating-minimized-close-size) !important;
+  max-width: var(--floating-minimized-close-size) !important;
+  max-height: var(--floating-minimized-close-size) !important;
+  flex: 0 0 var(--floating-minimized-close-size) !important;
+}
+
+body .game-shell :is(
+  .floating-close-button,
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+):hover {
+  border-color: #fb7185 !important;
+  background:
+    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.2), transparent 38%),
+    linear-gradient(145deg, rgba(225, 29, 72, 0.52), rgba(127, 29, 59, 0.92)) !important;
+  color: #fff1f2 !important;
+  box-shadow:
+    0 0 0 1px rgba(251, 113, 133, 0.24) inset,
+    0 8px 20px rgba(76, 5, 25, 0.44),
+    0 0 20px rgba(244, 63, 94, 0.28) !important;
+  transform: translateY(-1px) scale(1.03) !important;
+}
+
+body .game-shell :is(
+  .floating-close-button,
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+):active {
+  transform: scale(0.94) !important;
+  box-shadow: 0 2px 8px rgba(76, 5, 25, 0.42) !important;
+}
+
+body .game-shell :is(
+  .left-route-window .dialog-close,
+  .right-line-control-card .dialog-close,
+  #routeSettingsCard .dialog-close,
+  .construction-preview-panel .dialog-close,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+):focus-visible {
+  outline: 0 !important;
+  box-shadow:
+    0 0 0 3px rgba(7, 13, 20, 0.96),
+    0 0 0 6px rgba(251, 113, 133, 0.7),
+    0 0 18px rgba(244, 63, 94, 0.3) !important;
+}
+
+/* Keep the close glyph itself simple and identical everywhere. The previous
+   decorative ring made the X look doubled inside floating controls. */
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+)::before,
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+)::after {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  width: var(--close-glyph-size, 16px) !important;
+  height: var(--close-glyph-stroke, 2px) !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: currentColor !important;
+  box-shadow: none !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+)::before {
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+body .game-shell button:is(
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+)::after {
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+
+/* Express service control: visible in management mode and clearly distinct
+   from the map-navigation tools. */
+.express-service-tool {
+  color: #fcd34d !important;
+  border-color: rgba(245, 158, 11, 0.48) !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+}
+
+.express-service-tool:hover {
+  color: #fffbeb !important;
+  border-color: rgba(251, 191, 36, 0.86) !important;
+  background: rgba(245, 158, 11, 0.22) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2) !important;
+}
+
+.express-service-tool.active {
+  color: #221200 !important;
+  border-color: #fbbf24 !important;
+  background: linear-gradient(135deg, #fbbf24, #f97316) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.34) !important;
+}
+
+.express-service-tool.active svg {
+  stroke: currentColor !important;
+}
+
+/* Mobile route drawing must own the complete pointer stream. Leaflet removes
+   its drag class while a build tool is active, which otherwise changes the
+   container to pan-x/pan-y and lets the browser cancel a stroke mid-drag. */
+@media (pointer: coarse),
+  (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  body[data-active-tool]:not([data-active-tool="pan"]) #map {
+    touch-action: none !important;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   MOBILE SINGLE SCROLL OWNER
+   Each floating window or dialog owns vertical scrolling. Nested lists are
+   allowed to grow with their content so one finger gesture never switches
+   between two stacked scroll containers. Desktop keeps its existing layout.
+------------------------------------------------------------------------- */
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .left-route-window:not(.is-minimized),
+  .right-line-control-card:not(.is-minimized),
+  #routeSettingsCard:not(.is-minimized),
+  #modifyToolsCard:not(.is-minimized),
+  .construction-preview-panel:not(.is-minimized),
+  .dialog-backdrop > section,
+  .dialog-backdrop > div > section {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .left-route-list,
+  .right-line-body,
+  .construction-preview-details,
+  .route-settings-edit-fields,
+  .modify-tools-grid,
+  .satisfaction-dialog-content,
+  .construction-project-list,
+  .plan-conversion-layout,
+  .plan-asset-list,
+  #planComparisonList,
+  .plan-conversion-items,
+  .route-choice-list,
+  .connection-dialog-body,
+  .menu-slot-list {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+    -webkit-overflow-scrolling: auto;
+    touch-action: auto;
+  }
+
+  /* Full-screen reports keep their header in place and use one content
+     scroller instead of separate left/right panel scrollbars. */
+  .analysis-body,
+  .statistics-content,
+  .news-feed {
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  /* A flex child defaults to min-height:auto. With several notifications that
+     made the feed grow below the clipped full-screen panel instead of becoming
+     the panel's scrollable remainder. */
+  .news-feed {
+    min-height: 0 !important;
+    height: auto !important;
+    grid-auto-rows: max-content;
+  }
+
+  .news-card {
+    height: max-content;
+  }
+
+  .analysis-summary,
+  .analysis-report,
+  .statistics-entity-list,
+  .statistics-detail {
+    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overscroll-behavior: auto !important;
+    -webkit-overflow-scrolling: auto;
+    touch-action: auto;
+  }
+}
+
+/* Finance and satisfaction reports use the entire mobile safe viewport. The
+   generic bottom-sheet cap (620px) left unused space on tall phones and made
+   the lower edge look cropped. Keep one scroll owner on the dialog itself. */
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .dialog-backdrop:has(> .finance-dialog),
+  .dialog-backdrop:has(> .satisfaction-dialog) {
+    align-items: center;
+    padding: max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+
+  .dialog-backdrop > .finance-dialog,
+  .dialog-backdrop > .satisfaction-dialog {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    border-radius: 16px !important;
+  }
+
+  .finance-dialog > *,
+  .satisfaction-dialog-header,
+  .satisfaction-dialog-content,
+  .satisfaction-dialog-content > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* The plan conversion flow must use the complete mobile safe viewport. The
+   generic 620px bottom-sheet cap left the dialog anchored to the lower edge
+   on tall phones and made its summary/actions appear cropped. */
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .dialog-backdrop:has(> .plan-conversion-dialog) {
+    align-items: center;
+    padding: max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+
+  .dialog-backdrop > .plan-conversion-dialog {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    border-radius: 16px !important;
+  }
+
+  .plan-conversion-heading,
+  .plan-conversion-intro,
+  .plan-conversion-layout,
+  .plan-conversion-selection,
+  .plan-conversion-summary,
+  .plan-conversion-dialog .conversion-actions {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Planning portfolio: clearer hierarchy on desktop and one scroll owner on
+   phones. All visible controls below are backed by existing plan actions. */
+.planning-dialog {
+  width: min(1080px, 96vw);
+  border-color: rgba(72, 214, 191, 0.28);
+  background:
+    radial-gradient(circle at 12% -8%, rgba(57, 222, 194, 0.13), transparent 32%),
+    linear-gradient(155deg, rgba(11, 22, 31, 0.98), rgba(7, 14, 23, 0.98));
+}
+
+.planning-dialog .planning-dialog-heading {
+  min-height: 82px;
+  box-sizing: border-box;
+  border-bottom-color: rgba(91, 228, 205, 0.15);
+}
+
+.planning-dialog .planning-heading-copy > span {
+  color: #57e3ca;
+  letter-spacing: 0.16em;
+}
+
+.planning-dialog .planning-heading-copy h2 {
+  margin-top: 3px;
+  font-size: clamp(20px, 2.2vw, 28px);
+}
+
+.planning-dialog .planning-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  gap: 10px;
+  padding: 9px;
+  border-color: rgba(130, 163, 180, 0.2);
+  background: rgba(5, 13, 21, 0.62);
+}
+
+.planning-dialog .planning-selector {
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.planning-dialog .planning-selector select {
+  min-height: 40px;
+  border-color: rgba(87, 227, 202, 0.28);
+}
+
+.planning-dialog .planning-toolbar-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 40px;
+  border-radius: 10px;
+}
+
+.planning-dialog #newPlanButton {
+  box-shadow: 0 6px 18px rgba(0, 210, 184, 0.18);
+}
+
+.planning-dialog .planning-layout {
+  grid-template-columns: minmax(0, 1.5fr) minmax(285px, 0.85fr);
+  align-items: stretch;
+}
+
+.planning-dialog .planning-editor,
+.planning-dialog .plan-comparison {
+  min-width: 0;
+}
+
+.planning-dialog .planning-form-card {
+  border-color: rgba(130, 163, 180, 0.18);
+  background: linear-gradient(135deg, rgba(20, 37, 49, 0.68), rgba(11, 23, 33, 0.72));
+}
+
+.planning-dialog .planning-form-card input,
+.planning-dialog .planning-form-card select,
+.planning-dialog .planning-form-card textarea {
+  border-color: rgba(130, 163, 180, 0.22);
+  background: rgba(5, 14, 23, 0.78);
+  color: #e8f2f5;
+}
+
+.planning-dialog .planning-form-card input::placeholder,
+.planning-dialog .planning-form-card textarea::placeholder { color: #708793; }
+
+.planning-dialog .plan-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border-color: rgba(87, 227, 202, 0.2);
+  background: rgba(22, 105, 92, 0.08);
+}
+
+.planning-dialog .plan-summary > div {
+  min-width: 0;
+  min-height: 54px;
+  justify-content: center;
+  padding: 7px 9px;
+  border: 1px solid rgba(130, 163, 180, 0.13);
+  border-radius: 9px;
+  background: rgba(7, 18, 27, 0.62);
+}
+
+.planning-dialog .plan-summary > .plan-summary-primary {
+  border-color: rgba(87, 227, 202, 0.32);
+  background: linear-gradient(135deg, rgba(46, 190, 165, 0.18), rgba(9, 30, 36, 0.75));
+}
+
+.planning-dialog .plan-summary strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #61e7cf;
+}
+
+.planning-dialog .plan-asset-list {
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.planning-dialog .plan-asset-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  min-height: 58px;
+  padding: 8px 9px;
+  overflow: hidden;
+  border-color: rgba(130, 163, 180, 0.16);
+  background: rgba(14, 29, 40, 0.72);
+}
+
+.planning-dialog .plan-asset-card:hover {
+  border-color: rgba(87, 227, 202, 0.32);
+  background: rgba(20, 42, 53, 0.82);
+}
+
+.planning-dialog .plan-asset-card > i {
+  width: 6px;
+  height: 34px;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--asset-color) 55%, transparent);
+}
+
+.planning-dialog .plan-asset-card.facility::before {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #70dfcb;
+  background: rgba(69, 205, 181, 0.12);
+  font-size: 13px;
+  content: "•";
+}
+
+.planning-dialog .plan-asset-card[data-asset-kind="station"]::before { content: "역"; font-size: 10px; font-weight: 900; }
+.planning-dialog .plan-asset-card[data-asset-kind="depot"]::before { content: "기"; font-size: 10px; font-weight: 900; }
+.planning-dialog .plan-asset-card[data-asset-kind="transfer"]::before { content: "⇄"; }
+
+.planning-dialog .plan-asset-copy {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  align-content: center;
+  gap: 2px 7px !important;
+  min-width: 0;
+}
+
+.planning-dialog .plan-asset-copy small {
+  padding: 2px 5px;
+  border-radius: 5px;
+  color: #60e3cb;
+  background: rgba(62, 207, 182, 0.1);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.planning-dialog .plan-asset-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planning-dialog .plan-asset-copy > span {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planning-dialog .asset-actions,
+.planning-dialog .plan-asset-card > button {
+  align-self: center;
+}
+
+.planning-dialog .asset-actions button,
+.planning-dialog .plan-asset-card > button {
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.planning-dialog .asset-actions button:last-child,
+.planning-dialog .plan-asset-card > button {
+  color: #ff9ba5;
+  border-color: rgba(255, 104, 119, 0.24);
+}
+
+.planning-dialog .planning-actions {
+  padding: 8px;
+  border: 1px solid rgba(130, 163, 180, 0.16);
+  border-radius: 12px;
+  background: rgba(6, 15, 24, 0.72);
+}
+
+.planning-dialog .planning-save-button,
+.planning-dialog #convertPlanButton {
+  min-height: 42px;
+  border-radius: 10px;
+}
+
+.planning-dialog .plan-comparison {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  border-color: rgba(130, 163, 180, 0.16);
+  background: rgba(5, 14, 22, 0.55);
+}
+
+.planning-dialog #planComparisonList {
+  gap: 7px;
+}
+
+.planning-dialog .comparison-card {
+  position: relative;
+  gap: 5px;
+  padding: 11px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(14, 29, 40, 0.74);
+}
+
+.planning-dialog .comparison-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #7290a0;
+  content: "";
+}
+
+.planning-dialog .comparison-card.status-ready::before,
+.planning-dialog .comparison-card.status-completed::before { background: #4de0bd; }
+.planning-dialog .comparison-card.status-insufficient::before { background: #ff697b; }
+.planning-dialog .comparison-card.status-review::before,
+.planning-dialog .comparison-card.status-partial::before { background: #ffc95c; }
+
+.planning-dialog .comparison-card.active {
+  border-color: rgba(87, 227, 202, 0.7);
+  background: linear-gradient(135deg, rgba(37, 173, 150, 0.2), rgba(13, 33, 43, 0.86));
+  box-shadow: inset 0 0 0 1px rgba(87, 227, 202, 0.08), 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.planning-dialog .comparison-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.planning-dialog .comparison-card-top em,
+.planning-dialog .comparison-card-top b {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.planning-dialog .comparison-card-top em { color: #61e7cf; background: rgba(65, 215, 189, 0.12); }
+.planning-dialog .comparison-card-top b { color: #b5c5ce; background: rgba(142, 166, 180, 0.1); }
+.planning-dialog .comparison-card > small { color: #8298a5; font-size: 9px; }
+.planning-dialog .comparison-card dl { padding-top: 6px; border-top: 1px solid rgba(130, 163, 180, 0.12); }
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .dialog-backdrop:has(> .planning-dialog) {
+    align-items: center;
+    padding: max(5px, env(safe-area-inset-top))
+      max(5px, env(safe-area-inset-right))
+      max(5px, env(safe-area-inset-bottom))
+      max(5px, env(safe-area-inset-left));
+  }
+
+  .dialog-backdrop > .planning-dialog {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    box-sizing: border-box;
+    border-radius: 14px !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .planning-dialog .planning-dialog-heading {
+    min-height: 60px;
+    padding: 9px 54px 8px 12px !important;
+  }
+
+  .planning-dialog .planning-heading-copy p { display: none; }
+  .planning-dialog .planning-heading-copy h2 { font-size: 18px; }
+  .planning-dialog .planning-dialog-heading .dialog-close { top: 9px; right: 10px; }
+
+  .planning-dialog .planning-toolbar {
+    grid-template-columns: minmax(220px, 1fr) auto;
+    margin: 0 10px;
+    padding: 6px;
+  }
+
+  .planning-dialog .planning-selector > span { display: none; }
+  .planning-dialog .planning-selector select,
+  .planning-dialog .planning-toolbar-actions button { min-height: 34px; }
+  .planning-dialog .planning-toolbar-actions button { padding: 4px 8px; font-size: 10px; }
+
+  .planning-dialog .planning-layout {
+    grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.75fr);
+    gap: 10px;
+    padding: 0 10px 10px;
+  }
+
+  .planning-dialog .planning-editor { gap: 8px; }
+  .planning-dialog .planning-form-card { gap: 7px; padding: 9px; }
+  .planning-dialog .planning-form-card input,
+  .planning-dialog .planning-form-card select { min-height: 34px; }
+  .planning-dialog .planning-form-card textarea { min-height: 54px; }
+  .planning-dialog .planning-section-heading { gap: 7px; }
+  .planning-dialog .planning-section-heading > span { width: 24px; height: 24px; }
+  .planning-dialog .planning-section-heading small,
+  .planning-dialog .plan-comparison .section-title small { display: none; }
+
+  .planning-dialog .plan-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .planning-dialog .plan-summary > div { min-height: 46px; padding: 5px 6px; }
+  .planning-dialog .plan-summary span { font-size: 8px; }
+  .planning-dialog .plan-summary strong { font-size: 11px; }
+
+  .planning-dialog .plan-asset-list,
+  .planning-dialog #planComparisonList {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .planning-dialog .plan-asset-card { min-height: 50px; padding: 6px 7px; }
+  .planning-dialog .asset-actions { flex-wrap: wrap; justify-content: flex-end; max-width: 112px; }
+  .planning-dialog .asset-actions button,
+  .planning-dialog .plan-asset-card > button { min-height: 30px; font-size: 9px; }
+  .planning-dialog .planning-actions { position: sticky; bottom: 0; z-index: 2; padding: 6px; backdrop-filter: blur(14px); }
+  .planning-dialog .planning-save-button,
+  .planning-dialog #convertPlanButton { min-height: 36px; }
+  .planning-dialog .plan-comparison { padding: 9px; gap: 8px; }
+  .planning-dialog .comparison-card { padding: 9px; }
+  .planning-dialog .comparison-card dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .planning-dialog .planning-toolbar,
+  .planning-dialog .planning-layout { grid-template-columns: 1fr; }
+  .planning-dialog .planning-toolbar-actions { width: 100%; }
+  .planning-dialog .planning-toolbar-actions button { flex: 1; }
+  .planning-dialog .plan-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

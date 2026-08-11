@@ -110,6 +110,19 @@ export class LineRenderer {
       path.emphasis?.setLatLngs(latLngs);
       this.applyStyle(path, entity);
     });
+    this.normalizePathOrder(rendered);
+  }
+
+  /**
+   * Keep every dark outline below every colored rail stroke. Without this,
+   * a branch added after the trunk places its outline over the trunk color and
+   * leaves a black notch at the junction instead of a continuous Y-shaped split.
+   */
+  private normalizePathOrder(rendered: RenderedLine) {
+    for (const path of rendered.paths) path.outline.bringToBack();
+    for (const path of rendered.paths) path.line.bringToFront();
+    for (const path of rendered.paths) path.halo?.bringToBack();
+    for (const path of rendered.paths) path.emphasis?.bringToFront();
   }
 
   private applyStyle(path: RenderedPath, entity: LineRenderEntity) {
@@ -133,7 +146,13 @@ export class LineRenderer {
       lineCap: "round",
       lineJoin: "round",
     });
-    path.outline.setStyle({ color: "rgba(4, 10, 14, 0.9)", weight: outlineWeight, opacity: 0.95 });
+    path.outline.setStyle({
+      color: "rgba(4, 10, 14, 0.9)",
+      weight: outlineWeight,
+      opacity: 0.95,
+      lineCap: "round",
+      lineJoin: "round",
+    });
     path.line.setStyle({
       color: entity.color,
       weight: routeWeight,

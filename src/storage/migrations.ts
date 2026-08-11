@@ -5,7 +5,7 @@ import {
   type DemandZone,
 } from "../demandModel";
 
-export const CURRENT_SAVE_SCHEMA_VERSION = 4;
+export const CURRENT_SAVE_SCHEMA_VERSION = 5;
 
 type AnyRecord = Record<string, any>;
 
@@ -186,6 +186,18 @@ export function migrateSaveStateRecord<T>(input: unknown, options: SaveMigration
       };
     }).slice(-80),
     trainFleets: withStableIds(source.trainFleets, "fleet", slotId),
+    operatingServices: arrayValue(source.operatingServices).map((value, index) => {
+      const service = asRecord(value);
+      return {
+        ...service,
+        id: ensureStableId(service.id, "service", `${slotId}:${index}:${String(service.name ?? "")}`),
+        routeIds: arrayValue(service.routeIds),
+        branchIds: arrayValue(service.branchIds),
+        pathCoordinates: arrayValue(service.pathCoordinates),
+        stationIds: arrayValue(service.stationIds),
+        stopStationIds: arrayValue(service.stopStationIds),
+      };
+    }),
     expressConfigs: arrayValue(source.expressConfigs),
     passengerGroups: arrayValue(source.passengerGroups),
     loans: withStableIds(source.loans, "loan", slotId),
@@ -210,7 +222,8 @@ function upgradeVersionedSource(input: AnyRecord): AnyRecord {
   const version = Math.max(1, Math.round(finiteNumber(input.schemaVersion, 1)));
   const version2 = version < 2 ? migrateVersion1To2(input) : { ...input };
   const version3 = version < 3 ? migrateVersion2To3(version2) : version2;
-  return version < 4 ? migrateVersion3To4(version3) : version3;
+  const version4 = version < 4 ? migrateVersion3To4(version3) : version3;
+  return version < 5 ? { ...version4, schemaVersion: 5 } : version4;
 }
 
 function migrateVersion1To2(source: AnyRecord): AnyRecord {

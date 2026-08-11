@@ -51,14 +51,27 @@ function closestEndpoint(endpoints: readonly GeoCoordinate[], hint?: GeoCoordina
   return [...endpoints].sort((a, b) => hint ? distanceMeters(a, hint) - distanceMeters(b, hint) : 0)[0];
 }
 
+export function resolveRouteEndpoint(
+  endpoints: readonly GeoCoordinate[],
+  selectedEndpoint?: "start" | "end",
+  hint?: GeoCoordinate,
+): GeoCoordinate {
+  if (!endpoints.length) throw new Error("Route endpoint is missing.");
+  if (selectedEndpoint === "start") return endpoints[0];
+  if (selectedEndpoint === "end") return endpoints.at(-1)!;
+  return closestEndpoint(endpoints, hint);
+}
+
 export function normalizeConnectionPolyline(input: {
   sourceEndpoints: readonly GeoCoordinate[];
   targetEndpoints: readonly GeoCoordinate[];
   drawnCoordinates?: readonly GeoCoordinate[];
+  sourceEndpoint?: "start" | "end";
+  targetEndpoint?: "start" | "end";
 }): { coordinates: GeoCoordinate[]; lengthMeters: number } {
   const drawn = (input.drawnCoordinates ?? []).map((point) => [point[0], point[1]] as GeoCoordinate);
-  const source = closestEndpoint(input.sourceEndpoints, drawn[0]);
-  const target = closestEndpoint(input.targetEndpoints, drawn.at(-1));
+  const source = resolveRouteEndpoint(input.sourceEndpoints, input.sourceEndpoint, drawn[0]);
+  const target = resolveRouteEndpoint(input.targetEndpoints, input.targetEndpoint, drawn.at(-1));
   const coordinates = dedupeCoordinates([
     source,
     ...(drawn.length >= 2 ? drawn : []),

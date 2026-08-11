@@ -33,11 +33,13 @@ export type UpdateReason =
   | "mode"
   | "clock"
   | "construction-progress"
+  | "plan-conversion"
   | "blueprint-preview"
   | "panel"
   | "notifications"
   | "finance-only"
-  | "daily-settlement";
+  | "daily-settlement"
+  | "express-stops";
 
 const orderedDomains: UpdateDomain[] = [
   "network", "routes", "demand", "capacity", "congestion", "finance",
@@ -63,11 +65,18 @@ const dependencies: Record<UpdateReason, readonly UpdateDomain[]> = {
   mode: ["map-selection", "hud-status", "workflow", "active-panel"],
   clock: ["hud-clock", "map-trains"],
   "construction-progress": ["map-construction", "workflow", "notifications", "active-panel", "storage"],
+  "plan-conversion": [
+    "network", "routes", "demand", "capacity", "congestion", "finance",
+    "map-lines", "map-stations", "map-trains", "map-depots", "map-blueprints",
+    "map-construction", "map-selection", "hud-finance", "hud-status",
+    "active-panel", "workflow", "storage",
+  ],
   "blueprint-preview": ["map-blueprints", "workflow"],
   panel: ["active-panel"],
   notifications: ["notifications"],
   "finance-only": ["finance", "hud-finance", "active-panel", "storage"],
   "daily-settlement": ["finance", "hud-finance", "hud-status", "active-panel", "notifications", "storage"],
+  "express-stops": ["capacity", "congestion", "finance", "map-stations", "map-trains", "hud-status", "active-panel", "storage"],
 };
 
 export interface UpdateTrace {

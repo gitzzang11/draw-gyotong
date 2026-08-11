@@ -31,4 +31,3 @@ export interface Depot {
   maintenanceCost: number; connectedRouteIds: string[]; level: number;
   constructionCost?: number; constructionDays?: number;
 }
-
