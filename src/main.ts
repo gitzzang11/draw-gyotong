@@ -1117,7 +1117,7 @@ app.innerHTML = `
           <h3 class="left-route-title">노선 목록</h3>
         </div>
         <div id="leftRouteMinimizedSummary" class="left-route-minimized-summary" aria-label="최소화된 노선 목록"></div>
-        <button id="closeLeftRouteWindowButton" class="dialog-close compact-close" type="button" aria-label="닫기">×</button>
+        <button id="closeLeftRouteWindowButton" class="dialog-close compact-close floating-close-button" type="button" aria-label="닫기">×</button>
       </div>
 
       <div class="left-route-summary">
@@ -1148,7 +1148,7 @@ app.innerHTML = `
     <section id="tutorialPanel" class="tutorial-panel" hidden aria-live="polite">
       <div class="tutorial-step" id="tutorialStep">01 / 10</div>
       <div class="tutorial-copy"><strong id="tutorialTitle">지도를 움직여 보세요</strong><p id="tutorialText">한 손가락으로 이동하고 두 손가락으로 확대하세요.</p><small id="tutorialFeedback">직접 조작하면 자동으로 다음 단계로 이동합니다.</small></div>
-      <div class="tutorial-actions"><button id="tutorialNextButton" type="button">확인</button><button id="tutorialSkipButton" type="button" aria-label="튜토리얼 건너뛰기">×</button></div>
+      <div class="tutorial-actions"><button id="tutorialNextButton" type="button">확인</button><button id="tutorialSkipButton" class="floating-close-button" type="button" aria-label="튜토리얼 건너뛰기">×</button></div>
     </section>
 
     <div id="settingsDialog" class="dialog-backdrop" hidden>

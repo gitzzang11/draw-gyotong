@@ -15409,7 +15409,9 @@ body .game-shell :is(
   #routeSettingsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
+  #closeConstructionPreviewButton,
+  button#closeLeftRouteWindowButton,
+  button#tutorialSkipButton
 ) {
   --close-glyph-size: var(--floating-close-glyph-size);
   --close-glyph-stroke: 2px;
@@ -15447,7 +15449,9 @@ body .game-shell :is(
   #routeSettingsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
+  #closeConstructionPreviewButton,
+  button#closeLeftRouteWindowButton,
+  button#tutorialSkipButton
 )::before {
   position: absolute !important;
   top: 50% !important;
@@ -15472,7 +15476,9 @@ body .game-shell :is(
   #routeSettingsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
+  #closeConstructionPreviewButton,
+  button#closeLeftRouteWindowButton,
+  button#tutorialSkipButton
 )::after {
   position: absolute !important;
   top: 50% !important;
@@ -15538,7 +15544,9 @@ body .game-shell :is(
   #routeSettingsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
+  #closeConstructionPreviewButton,
+  button#closeLeftRouteWindowButton,
+  button#tutorialSkipButton
 ):hover {
   border-color: #fb7185 !important;
   background:
@@ -15559,7 +15567,9 @@ body .game-shell :is(
   #routeSettingsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
+  #closeConstructionPreviewButton,
+  button#closeLeftRouteWindowButton,
+  button#tutorialSkipButton
 ):active {
   transform: scale(0.94) !important;
   box-shadow: 0 2px 8px rgba(76, 5, 25, 0.42) !important;
@@ -15571,7 +15581,9 @@ body .game-shell :is(
   #routeSettingsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
+  #closeConstructionPreviewButton,
+  button#closeLeftRouteWindowButton,
+  button#tutorialSkipButton
 ):focus-visible {
   outline: 0 !important;
   box-shadow:
