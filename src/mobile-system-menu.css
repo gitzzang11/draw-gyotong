@@ -42,7 +42,7 @@
     gap: 0 !important;
     overflow: hidden !important;
     border: 1px solid var(--mobile-menu-border-strong) !important;
-    border-radius: 6px !important;
+    border-radius: 10px !important;
     background: var(--mobile-menu-bg) !important;
     color: var(--mobile-menu-text) !important;
     box-shadow: 0 8px 24px rgb(0 0 0 / 38%) !important;
@@ -101,7 +101,7 @@
     display: grid !important;
     place-items: center !important;
     border: 1px solid transparent !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     background: transparent !important;
     color: var(--mobile-menu-text-secondary) !important;
     box-shadow: none !important;
@@ -156,7 +156,7 @@
     gap: 0 !important;
     overflow: hidden;
     border: 1px solid transparent !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     background: transparent !important;
     color: var(--mobile-menu-text-secondary) !important;
     box-shadow: none !important;
@@ -234,7 +234,7 @@
     margin-top: auto !important;
     padding: 0 14px !important;
     border: 1px solid var(--mobile-menu-accent) !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     background: var(--mobile-menu-surface-active) !important;
     color: var(--mobile-menu-accent-strong) !important;
     box-shadow: none !important;
@@ -352,7 +352,7 @@
     justify-content: flex-start !important;
     gap: 0 !important;
     border: 1px solid transparent !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     background: transparent !important;
     color: var(--mobile-menu-text-secondary) !important;
     box-shadow: none !important;

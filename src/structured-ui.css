@@ -1,0 +1,1311 @@
+/*
+ * Shared visual layer.
+ *
+ * Existing DOM structure, positioning, responsive layout, and interaction
+ * contracts remain authoritative. This file only unifies their visual
+ * language with the mobile system menu.
+ */
+
+:root {
+  --color-map-void: #071017;
+  --color-surface-0: #0a141d;
+  --color-surface-1: #101c26;
+  --color-surface-2: #172630;
+  --color-border-subtle: #243641;
+  --color-border-strong: #3b5360;
+  --color-text-primary: #e8f1f4;
+  --color-text-secondary: #9fb1b9;
+  --color-text-muted: #687c85;
+  --color-accent: #25d0d6;
+  --color-accent-strong: #58f0e8;
+  --color-accent-dim: #123f45;
+  --color-info: #4da3ff;
+  --color-success: #49c987;
+  --color-warning: #f2b84b;
+  --color-danger: #ff6577;
+
+  /* Bridge the legacy token names to the current design-system palette. */
+  --c-bg: var(--color-map-void);
+  --c-bg-glass: rgb(10 20 29 / 97%);
+  --c-panel: var(--color-surface-0);
+  --c-panel-solid: var(--color-surface-0);
+  --c-panel-hover: var(--color-surface-2);
+  --c-border: var(--color-border-subtle);
+  --c-border-light: var(--color-border-strong);
+  --c-border-glow: var(--color-accent);
+  --c-cyan: var(--color-accent);
+  --c-primary: var(--color-accent);
+  --c-primary-glow: transparent;
+  --c-secondary: var(--color-info);
+  --c-emerald: var(--color-success);
+  --c-mint: var(--color-success);
+  --c-success: var(--color-success);
+  --c-success-glow: transparent;
+  --c-amber: var(--color-warning);
+  --c-gold: var(--color-warning);
+  --c-warning: var(--color-warning);
+  --c-warning-glow: transparent;
+  --c-ruby: var(--color-danger);
+  --c-crimson: var(--color-danger);
+  --c-danger: var(--color-danger);
+  --c-danger-glow: transparent;
+  --c-blue: var(--color-info);
+  --c-azure: var(--color-accent);
+  --c-text-main: var(--color-text-primary);
+  --c-text-muted: var(--color-text-secondary);
+  --c-text-dim: var(--color-text-muted);
+  --glass-blur: none;
+  --glass-blur-dense: none;
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 34%);
+  --shadow-glow: none;
+  --shadow-card: 0 5px 16px rgb(0 0 0 / 24%);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-full: 8px;
+  --font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) var(--color-surface-0);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-family);
+}
+
+button,
+.ops-button,
+.action-button {
+  border-color: var(--color-border-subtle);
+  border-radius: 6px;
+  background: var(--color-surface-1);
+  color: var(--color-text-primary);
+  box-shadow: none;
+  text-shadow: none;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 100ms ease;
+}
+
+button:hover,
+.ops-button:hover,
+.action-button:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+button:active,
+.ops-button:active,
+.action-button:active {
+  transform: scale(0.98);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent-strong) !important;
+  outline-offset: 2px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select,
+textarea {
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 6px !important;
+  background: var(--color-surface-1) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
+/* Map treatment keeps the original map layout and controls. */
+.map,
+.leaflet-container {
+  background: var(--color-map-void) !important;
+}
+
+.leaflet-tile-pane {
+  filter: none;
+}
+
+.leaflet-control-zoom,
+.leaflet-control-layers,
+.leaflet-control-attribution,
+.leaflet-bar {
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface-0) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: var(--color-surface-0) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: 0 !important;
+}
+
+.station-map-label {
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: 2px !important;
+  background: rgb(10 20 29 / 94%) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Start and save selection screen — layout unchanged
+   -------------------------------------------------------------------------- */
+
+.start-screen {
+  background: var(--color-map-void) !important;
+}
+
+.start-panel {
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: 12px !important;
+  background: var(--color-surface-0) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.start-head,
+.section-card-header,
+.start-section-card {
+  background: transparent !important;
+}
+
+.start-head {
+  border-bottom-color: var(--color-border-strong) !important;
+}
+
+.brand-title-group svg {
+  stroke: var(--color-accent) !important;
+}
+
+.hero-title,
+.section-card-header h2,
+.slot-title-row strong,
+.city-option-main strong,
+.setup-choice-card strong {
+  color: var(--color-text-primary) !important;
+  text-shadow: none !important;
+}
+
+.hero-subtitle,
+.hero-btn-text small,
+.setup-field-label small,
+.city-option-main small,
+.slot-meta-row,
+.slot-date {
+  color: var(--color-text-secondary) !important;
+}
+
+.start-primary-actions {
+  gap: 0 !important;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hero-action-btn {
+  border: 0 !important;
+  border-right: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.hero-action-btn:last-child {
+  border-right: 0 !important;
+}
+
+.hero-action-btn:hover {
+  background: var(--color-surface-1) !important;
+}
+
+.hero-action-btn.continue-btn {
+  box-shadow: inset 3px 0 0 var(--color-accent) !important;
+}
+
+.hero-btn-icon {
+  filter: grayscale(1);
+}
+
+.start-section-card {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+.section-card-header {
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+}
+
+.section-card-header > span,
+.left-route-sub,
+.right-line-sub,
+.dialog-heading > div > span,
+.station-manager-header span,
+.depot-manager-header span,
+.section-title > span {
+  color: var(--color-accent) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  letter-spacing: 0.12em !important;
+}
+
+.city-option-card,
+.setup-choice-card {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.city-option-card:hover,
+.setup-choice-card:hover {
+  border-color: var(--color-border-strong) !important;
+  background: var(--color-surface-1) !important;
+}
+
+.city-option-card.selected,
+.city-option-card[aria-checked="true"],
+.setup-choice-card.selected,
+.setup-choice-card[aria-checked="true"] {
+  border-color: var(--color-accent) !important;
+  background: var(--color-accent-dim) !important;
+  box-shadow: inset 3px 0 0 var(--color-accent) !important;
+}
+
+.city-option-check {
+  border-radius: 2px !important;
+  background: var(--color-accent) !important;
+  color: var(--color-map-void) !important;
+  box-shadow: none !important;
+}
+
+.city-note {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: none !important;
+}
+
+.slot-entry,
+.slot-card,
+.slot-card-main {
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.slot-entry {
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+}
+
+.slot-card:hover {
+  background: var(--color-surface-1) !important;
+}
+
+.slot-tag {
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+
+.slot-cash {
+  color: var(--color-accent-strong) !important;
+}
+
+.slot-entry-actions button {
+  border-radius: 4px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Persistent HUD and tools — positions and sizing stay in styles.css
+   -------------------------------------------------------------------------- */
+
+.hud,
+.hud.top-header-bar,
+.hud.build-panel,
+.hud.bottom-right,
+.hud.layer-panel,
+.eraser-size-control {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  background: rgb(10 20 29 / 97%) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: var(--shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.status-pill,
+.hud-brand-pill,
+.workspace-mode-pill,
+.cash-pill,
+.satisfaction-pill,
+.history-pill,
+.clock-pill {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.status-pill:hover,
+.satisfaction-pill:hover,
+.cash-pill:hover {
+  border-color: var(--color-border-strong) !important;
+  background: var(--color-surface-1) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.workspace-mode-tabs,
+.time-row {
+  gap: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  background: var(--color-surface-0) !important;
+}
+
+.workspace-mode-tab,
+.time-button {
+  border: 0 !important;
+  border-right: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.workspace-mode-tab:last-child,
+.time-button:last-child {
+  border-right: 0 !important;
+}
+
+.workspace-mode-tab.active,
+.workspace-mode-tab[aria-selected="true"],
+.time-button.active {
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: inset 0 -3px 0 var(--color-accent) !important;
+}
+
+.workspace-mode-tab[data-workspace-mode="planning"].active {
+  background: color-mix(in srgb, var(--color-info) 14%, var(--color-surface-0)) !important;
+  color: #a8ceff !important;
+  box-shadow: inset 0 -3px 0 var(--color-info) !important;
+}
+
+.workspace-mode-tab[data-workspace-mode="construction"].active {
+  background: color-mix(in srgb, var(--color-warning) 13%, var(--color-surface-0)) !important;
+  color: #ffdc96 !important;
+  box-shadow: inset 0 -3px 0 var(--color-warning) !important;
+}
+
+.top-action-btn,
+.history-action,
+.layer-menu > summary {
+  border-color: transparent !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.top-action-btn:hover,
+.history-action:hover:not(:disabled),
+.layer-menu > summary:hover {
+  border-color: var(--color-border-strong) !important;
+  background: var(--color-surface-2) !important;
+  color: var(--color-text-primary) !important;
+  transform: none !important;
+}
+
+/* Match the four desktop utility controls to the 32px top-bar control scale. */
+@media (hover: hover) and (pointer: fine) {
+  .top-actions-row .layer-menu > summary,
+  .top-actions-row .top-action-btn {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    flex: 0 0 32px !important;
+    padding: 0 !important;
+  }
+
+  .top-actions-row .layer-menu > summary svg,
+  .top-actions-row .top-action-btn svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+.layer-options {
+  border-color: var(--color-border-strong) !important;
+  border-radius: 4px !important;
+  background: var(--color-surface-0) !important;
+  box-shadow: var(--shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.layer-toggle {
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.layer-toggle.active,
+.layer-toggle[aria-pressed="true"] {
+  border-color: var(--color-accent) !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+}
+
+.tool-divider {
+  background: var(--color-border-subtle) !important;
+}
+
+.primary-tool {
+  overflow: hidden !important;
+  border-color: transparent !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.primary-tool::before {
+  display: none !important;
+  content: none !important;
+}
+
+.primary-tool:hover {
+  border-color: var(--color-border-subtle) !important;
+  background: var(--color-surface-1) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.hud.build-panel :is(#routeTool, #stationTool, #transferTool, #depotTool, #modifyToolsButton, #planningModeButton, #editTool, #selectTool, #manageLineTool, #expressButton, #manageOperationsTool, #analysisButton, #planOverviewButton, #constructionOverviewButton, #manageMapTool, #diagramToolButton).primary-tool.active,
+.hud.build-panel :is(#routeTool, #stationTool, #transferTool, #depotTool, #modifyToolsButton, #planningModeButton, #editTool, #selectTool, #manageLineTool, #expressButton, #manageOperationsTool, #analysisButton, #planOverviewButton, #constructionOverviewButton, #manageMapTool, #diagramToolButton).primary-tool[aria-pressed="true"] {
+  border-color: var(--color-accent) !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: inset 3px 0 0 var(--color-accent) !important;
+  transform: none !important;
+}
+
+.hud.build-panel :is(#routeTool, #stationTool, #transferTool, #depotTool, #modifyToolsButton, #planningModeButton, #editTool, #selectTool, #manageLineTool, #expressButton, #manageOperationsTool, #analysisButton, #planOverviewButton, #constructionOverviewButton, #manageMapTool, #diagramToolButton).primary-tool.active :is(svg, path, circle, line, rect),
+.hud.build-panel :is(#routeTool, #stationTool, #transferTool, #depotTool, #modifyToolsButton, #planningModeButton, #editTool, #selectTool, #manageLineTool, #expressButton, #manageOperationsTool, #analysisButton, #planOverviewButton, #constructionOverviewButton, #manageMapTool, #diagramToolButton).primary-tool[aria-pressed="true"] :is(svg, path, circle, line, rect) {
+  stroke: currentColor !important;
+}
+
+.hud.build-panel #eraserTool.primary-tool.active,
+.hud.build-panel #eraserTool.primary-tool[aria-pressed="true"] {
+  border-color: var(--color-danger) !important;
+  background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface-0)) !important;
+  color: var(--color-danger) !important;
+  box-shadow: inset 3px 0 0 var(--color-danger) !important;
+}
+
+.express-service-tool,
+.express-service-tool:hover {
+  border-color: color-mix(in srgb, var(--color-warning) 42%, var(--color-border-subtle)) !important;
+  background: color-mix(in srgb, var(--color-warning) 8%, transparent) !important;
+  color: var(--color-warning) !important;
+  box-shadow: none !important;
+}
+
+.express-service-tool.active {
+  border-color: var(--color-warning) !important;
+  background: color-mix(in srgb, var(--color-warning) 18%, var(--color-surface-0)) !important;
+  color: #ffdc96 !important;
+  box-shadow: inset 3px 0 0 var(--color-warning) !important;
+}
+
+.mode-pill {
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: none !important;
+}
+
+.hint-row,
+.net-readout,
+.time-readout-wrap span {
+  color: var(--color-text-secondary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Floating inspectors and contextual surfaces — geometry unchanged
+   -------------------------------------------------------------------------- */
+
+.left-route-window,
+.right-line-control-card,
+.route-settings-card,
+.modify-tools-card,
+.construction-preview-panel,
+.tutorial-panel {
+  border-color: var(--color-border-strong) !important;
+  border-radius: 10px !important;
+  background: rgb(10 20 29 / 98%) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.left-route-header,
+.right-line-header,
+.route-settings-card-heading,
+.modify-tools-card-heading,
+.construction-preview-header,
+.station-manager-header,
+.depot-manager-header,
+.satisfaction-dialog-header,
+.save-editor-header,
+.connection-dialog-header,
+.color-picker-header,
+.dialog-heading {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: var(--color-surface-0) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+.left-route-title,
+.right-line-title,
+.route-settings-card-heading strong,
+.modify-tools-card-heading strong,
+.construction-preview-header strong,
+.dialog-heading h2,
+.station-manager-header h2,
+.depot-manager-header h2 {
+  color: var(--color-text-primary) !important;
+  text-shadow: none !important;
+}
+
+.left-route-summary,
+.line-metrics-grid,
+.station-manager-metrics,
+.depot-manager-metrics,
+.finance-stats-grid,
+.analysis-summary-grid,
+.news-summary {
+  gap: 0 !important;
+  border-top: 1px solid var(--color-border-subtle);
+  border-left: 1px solid var(--color-border-subtle);
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.left-route-summary > *,
+.line-metrics-grid > *,
+.station-manager-metrics > *,
+.depot-manager-metrics > *,
+.finance-stats-grid > *,
+.analysis-summary-grid > *,
+.news-summary > * {
+  border: 0 !important;
+  border-right: 1px solid var(--color-border-subtle) !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.left-route-item,
+.operating-service-card,
+.plan-asset-card,
+.construction-project-card,
+.analysis-card,
+.news-card,
+.news-item {
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.left-route-item:hover,
+.operating-service-card:hover,
+.analysis-card:hover,
+.news-card:hover,
+.news-item:hover {
+  background: var(--color-surface-1) !important;
+}
+
+.left-route-item.selected-route-item,
+.operating-service-card.selected,
+.operating-service-card.active {
+  border-color: var(--color-accent) !important;
+  background: var(--color-accent-dim) !important;
+  box-shadow: inset 3px 0 0 var(--color-accent) !important;
+}
+
+.line-identity-card,
+.right-line-action-box,
+.manager-summary,
+.route-settings-target,
+.station-manager-identity,
+.depot-manager-hero,
+.connection-section,
+.connection-target-card,
+.connection-choice,
+.construction-summary,
+.plan-conversion-intro,
+.plan-conversion-summary,
+.planning-form-card,
+.save-editor-city-lock,
+.menu-save-info {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface-1) !important;
+  box-shadow: none !important;
+}
+
+.right-line-body,
+.left-route-list,
+.station-manager-content,
+.depot-manager-content,
+.train-manager-content,
+.satisfaction-dialog-content {
+  background: var(--color-surface-0) !important;
+}
+
+.right-line-footer,
+.left-route-footer,
+.planning-actions,
+.conversion-actions,
+.dialog-actions,
+.color-picker-actions {
+  border-color: var(--color-border-strong) !important;
+  background: var(--color-surface-0) !important;
+  box-shadow: none !important;
+}
+
+/* Unified square window controls. */
+body .game-shell :is(
+  .floating-close-button,
+  .floating-minimize-button,
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+) {
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+body .game-shell :is(
+  .floating-close-button,
+  .floating-minimize-button,
+  .dialog-close,
+  .compact-close,
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close,
+  #tutorialSkipButton,
+  #errorDismissButton,
+  #closeRouteSettingsButton,
+  #closeConstructionPreviewButton
+):hover {
+  border-color: var(--color-border-strong) !important;
+  background: var(--color-surface-2) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.tutorial-step {
+  border-radius: 2px !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: none !important;
+}
+
+.tutorial-copy strong {
+  color: var(--color-text-primary) !important;
+}
+
+.tutorial-copy p,
+.tutorial-copy small {
+  color: var(--color-text-secondary) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Dialogs and decisions — placement and responsive sheets unchanged
+   -------------------------------------------------------------------------- */
+
+.dialog-backdrop {
+  background: rgb(3 8 12 / 78%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dialog-backdrop > section,
+.dialog-backdrop > div > section,
+.settings-dialog,
+.finance-dialog,
+.planning-dialog,
+.decision-dialog,
+.route-choice-dialog,
+.save-editor-dialog,
+.merge-dialog,
+.plan-conversion-dialog,
+.station-manager-dialog,
+.depot-manager-dialog,
+.satisfaction-dialog,
+.train-manager-dialog,
+.construction-manager-dialog,
+.color-picker-dialog,
+.ingame-menu-dialog {
+  border-color: var(--color-border-strong) !important;
+  border-radius: 10px !important;
+  background: var(--color-surface-0) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.settings-tabs,
+.statistics-tabs,
+.save-load-horizontal-box,
+.operating-service-presets {
+  gap: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface-0) !important;
+}
+
+.settings-tabs button,
+.statistics-tabs button,
+.save-load-tab-btn,
+.operating-service-presets button {
+  border: 0 !important;
+  border-right: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.settings-tabs button:last-child,
+.statistics-tabs button:last-child,
+.save-load-tab-btn:last-child,
+.operating-service-presets button:last-child {
+  border-right: 0 !important;
+}
+
+.settings-tabs button.active,
+.statistics-tabs button.active,
+.statistics-tabs button[aria-pressed="true"],
+.save-load-tab-btn.active,
+.operating-service-presets button.active {
+  border-color: var(--color-accent) !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: inset 0 -3px 0 var(--color-accent) !important;
+}
+
+.save-tab-pane,
+.finance-section,
+.finance-card,
+.setting-row,
+.decision-warning,
+.connection-safety-note,
+.planning-editor,
+.plan-comparison,
+.plan-conversion-group,
+.color-preview {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 8px !important;
+  background: var(--color-surface-1) !important;
+  box-shadow: none !important;
+}
+
+.save-tab-pane[hidden] {
+  display: none !important;
+}
+
+.menu-primary-save-btn,
+.menu-footer-btn.resume-btn,
+.right-line-save-btn,
+.planning-save-button,
+.action-button--build,
+.dialog-actions .primary,
+.color-picker-actions .primary,
+.modal-add-fleet-btn {
+  border: 1px solid var(--color-accent) !important;
+  border-radius: 6px !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+/* Legacy route-panel selectors carry stronger blue-gradient declarations. */
+body .game-shell .left-route-window .left-route-action-btn,
+body .game-shell .left-route-window .left-route-action-btn:hover,
+body .game-shell .left-route-window .left-route-action-btn:active {
+  border: 1px solid var(--color-accent) !important;
+  border-radius: 6px !important;
+  background: var(--color-accent-dim) !important;
+  color: var(--color-accent-strong) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+body .game-shell #leftRouteWindow .floating-close-button,
+body .game-shell #leftRouteWindow .floating-close-button:hover,
+body .game-shell #leftRouteWindow .floating-close-button:active {
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 6px !important;
+  background: var(--color-surface-1) !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.menu-footer-btn.title-btn,
+.right-line-delete-btn,
+.manager-delete-button,
+.planning-delete-button,
+.danger {
+  border-color: color-mix(in srgb, var(--color-danger) 48%, var(--color-border-subtle)) !important;
+  border-radius: 4px !important;
+  background: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface-0)) !important;
+  color: var(--color-danger) !important;
+  box-shadow: none !important;
+}
+
+.menu-slot-item,
+.route-choice-item,
+.construction-project-item,
+.plan-conversion-route,
+.plan-conversion-segment,
+.plan-conversion-facility {
+  border: 0 !important;
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.menu-slot-item.active-slot,
+.route-choice-item.selected,
+.plan-conversion-route.selected,
+.plan-conversion-segment.selected,
+.plan-conversion-facility.selected {
+  background: var(--color-accent-dim) !important;
+  box-shadow: inset 3px 0 0 var(--color-accent) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Analysis, statistics, news and diagram workspaces
+   -------------------------------------------------------------------------- */
+
+.diagram-screen,
+.analysis-screen,
+.statistics-screen,
+.news-screen {
+  background: var(--color-map-void) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.diagram-header,
+.analysis-header,
+.statistics-header,
+.news-header {
+  border-color: var(--color-border-strong) !important;
+  border-radius: 0 !important;
+  background: var(--color-surface-0) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.analysis-score-card,
+.analysis-section,
+.analysis-card,
+.statistics-hero,
+.statistics-page > section,
+.statistics-metric-card,
+.news-card,
+.news-item,
+.diagram-help,
+.diagram-legend,
+.save-information,
+.statistics-detail-panel {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  background: var(--color-surface-0) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.analysis-summary {
+  border-color: var(--color-border-strong) !important;
+}
+
+.analysis-score-ring {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Header geometry repair
+
+   The legacy unified-close rule forces every close button back into normal
+   flow. Restore the intended anchored geometry after that rule so large
+   workspaces and dialog headers cannot push, overlap, or clip their actions.
+   -------------------------------------------------------------------------- */
+
+body .game-shell :is(
+  .diagram-header,
+  .analysis-header,
+  .statistics-header,
+  .news-header
+) {
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding-right: max(76px, calc(env(safe-area-inset-right) + 64px)) !important;
+  box-sizing: border-box !important;
+}
+
+body .game-shell :is(
+  .diagram-header,
+  .analysis-header,
+  .statistics-header,
+  .news-header
+) :is(
+  .diagram-close,
+  .analysis-close,
+  .statistics-close,
+  .news-close
+) {
+  position: absolute !important;
+  top: max(14px, env(safe-area-inset-top)) !important;
+  right: max(16px, env(safe-area-inset-right)) !important;
+  z-index: 5 !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.analysis-heading,
+.statistics-title,
+.diagram-brand,
+.analysis-header-actions,
+.statistics-title-editor,
+.news-header > div:first-child,
+.news-header-actions,
+.diagram-controls {
+  min-width: 0 !important;
+}
+
+.analysis-header-actions,
+.statistics-title-editor,
+.news-header-actions {
+  position: static !important;
+  max-width: 100% !important;
+}
+
+.diagram-controls {
+  position: static !important;
+  overscroll-behavior-inline: contain;
+  scroll-padding-right: 12px;
+}
+
+body .game-shell .analysis-screen > .analysis-header > .analysis-header-actions,
+body .game-shell .statistics-screen > .statistics-header > .statistics-title-editor,
+body .game-shell .news-screen > .news-header > .news-header-actions,
+body .game-shell .diagram-screen > .diagram-header > .diagram-controls {
+  position: static !important;
+}
+
+body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
+body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton,
+body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton,
+body .game-shell .news-screen > .news-header #closeNewsButton {
+  position: absolute !important;
+  top: max(14px, env(safe-area-inset-top)) !important;
+  right: max(16px, env(safe-area-inset-right)) !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+body .game-shell :is(
+  .dialog-heading,
+  .left-route-header,
+  .right-line-header,
+  .station-manager-header,
+  .depot-manager-header,
+  .satisfaction-dialog-header,
+  .save-editor-header,
+  .color-picker-header,
+  .train-manager-header,
+  .ingame-menu-header,
+  .plan-conversion-heading,
+  .connection-dialog-header,
+  .decision-dialog-header,
+  .route-settings-card-heading
+) {
+  position: relative !important;
+  box-sizing: border-box !important;
+}
+
+body .game-shell :is(
+  .dialog-heading,
+  .left-route-header,
+  .right-line-header,
+  .station-manager-header,
+  .depot-manager-header,
+  .satisfaction-dialog-header,
+  .save-editor-header,
+  .color-picker-header,
+  .train-manager-header,
+  .ingame-menu-header,
+  .plan-conversion-heading,
+  .connection-dialog-header,
+  .decision-dialog-header,
+  .route-settings-card-heading
+) > .dialog-close {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0 !important;
+  z-index: 4 !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+}
+
+body .game-shell .dialog-backdrop :is(
+  .dialog-heading,
+  .planning-dialog-heading,
+  .station-manager-header,
+  .depot-manager-header,
+  .satisfaction-dialog-header,
+  .save-editor-header,
+  .color-picker-header,
+  .train-manager-header,
+  .ingame-menu-header,
+  .plan-conversion-heading,
+  .connection-dialog-header,
+  .decision-dialog-header
+) {
+  position: relative !important;
+  padding-right: max(64px, calc(env(safe-area-inset-right) + 56px)) !important;
+  box-sizing: border-box !important;
+}
+
+body .game-shell .dialog-backdrop .dialog-close {
+  position: absolute !important;
+  top: 50% !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  z-index: 6 !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Legacy button bundles include ID selectors, so dialog anchors need matching
+   specificity to keep their close actions pinned to the heading. */
+body .game-shell .dialog-backdrop :is(
+  #closeColorPickerButton,
+  #closeSettingsButton,
+  #closeFinanceButton,
+  #closeSatisfactionButton,
+  #closeStationManagerButton,
+  #closeDepotManagerButton,
+  #closeConstructionManagerButton,
+  #closePlanningButton,
+  #closePlanConversionButton,
+  #closeRouteChoiceButton,
+  #closeTrainManagerButton,
+  #closeDecisionButton,
+  #closeSaveEditorButton,
+  #closeMergeButton,
+  #closeInGameMenuButton
+) {
+  position: absolute !important;
+  top: 50% !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  z-index: 6 !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+}
+
+@media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  body .game-shell :is(
+    .diagram-header,
+    .analysis-header,
+    .statistics-header,
+    .news-header
+  ) {
+    padding-right: max(60px, calc(env(safe-area-inset-right) + 52px)) !important;
+  }
+
+  body .game-shell :is(
+    .diagram-header,
+    .analysis-header,
+    .statistics-header,
+    .news-header
+  ) :is(
+    .diagram-close,
+    .analysis-close,
+    .statistics-close,
+    .news-close
+  ) {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+  }
+
+  .diagram-header {
+    grid-template-columns: minmax(112px, 0.25fr) minmax(0, 0.75fr) !important;
+  }
+
+  .diagram-controls {
+    justify-content: flex-start !important;
+  }
+
+  .planning-dialog .planning-toolbar-actions button {
+    white-space: nowrap !important;
+  }
+
+  body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
+  body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton,
+  body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton,
+  body .game-shell .news-screen > .news-header #closeNewsButton {
+    top: max(8px, env(safe-area-inset-top)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+  }
+}
+
+.analysis-principle,
+.analysis-empty,
+.statistics-empty,
+.news-empty,
+.diagram-empty {
+  border-color: var(--color-border-subtle) !important;
+  border-radius: 4px !important;
+  background: var(--color-surface-1) !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+/* Feedback surfaces */
+.toast,
+.error-banner {
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: 4px !important;
+  background: var(--color-surface-0) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: var(--shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.toast {
+  border-left: 3px solid var(--color-accent) !important;
+}
+
+.error-banner {
+  border-left: 3px solid var(--color-danger) !important;
+}
+
+.construction-progress,
+.analysis-progress,
+.statistics-progress {
+  border-radius: 2px !important;
+  background: var(--color-surface-2) !important;
+  box-shadow: none !important;
+}
+
+.construction-progress > i,
+.analysis-progress > i,
+.statistics-progress > i {
+  border-radius: 2px !important;
+  background: var(--color-accent) !important;
+  box-shadow: none !important;
+}
+
+@media (hover: none) {
+  button:hover,
+  .ops-button:hover,
+  .action-button:hover,
+  .primary-tool:hover {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
