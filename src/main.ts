@@ -1,7 +1,6 @@
 import L, { type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
-import "./command-console.css";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
 import {
   buildNetworkSignature,
