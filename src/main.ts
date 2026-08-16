@@ -8335,6 +8335,7 @@ async function confirmPlanConversion() {
         ...constructionProjects,
         ...createPlanConstructionProjects(plan, createdRouteIds, createdStationIds, createdDepotIds),
       ];
+      applyTutorialPlanConversionBoost(createdRouteIds, createdStationIds, createdDepotIds);
     }
     plans = plans.map((item) => item.id === plan.id ? recalculatePlan(item) : item);
     const convertedPlan = plans.find((item) => item.id === plan.id);
@@ -15726,6 +15727,24 @@ function applyTutorialConstructionBoost(kind: ConstructionDraftKind | "station",
       return { ...project, status: "operating", elapsedDays: project.durationDays, expectedCompletionDay: analysisState.dayIndex, openedAtDay: analysisState.dayIndex };
     }
     return project;
+  });
+}
+
+function applyTutorialPlanConversionBoost(routeIds: string[], stationIds: string[], depotIds: string[]) {
+  if (!isTutorialGuidedBuild()) return;
+
+  // The regular construction flow captures and fast-forwards tutorial assets as
+  // each one is built. Plan conversion creates them in a batch, so it must mirror
+  // that flow after the corresponding construction projects have been registered.
+  const tutorialRouteId = routeIds[0];
+  if (tutorialRouteId) {
+    captureTutorialConstruction("route", tutorialRouteId);
+    applyTutorialConstructionBoost("route", tutorialRouteId);
+  }
+  stationIds.forEach((stationId) => applyTutorialConstructionBoost("station", stationId));
+  depotIds.forEach((depotId) => {
+    captureTutorialConstruction("depot", depotId);
+    applyTutorialConstructionBoost("depot", depotId);
   });
 }
 
