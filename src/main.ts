@@ -1820,7 +1820,7 @@ const railLayer = L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}
   subdomains: ["a", "b", "c"],
   maxZoom: 19,
   noWrap: true,
-  opacity: 0.35,
+  opacity: 0.5,
   crossOrigin: true,
   updateWhenIdle: true,
   keepBuffer: 2,
