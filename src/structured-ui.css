@@ -178,20 +178,35 @@ textarea::placeholder {
 }
 
 /* 선택한 운행계통: 정차/통과/시종착을 색상 외 형태와 문구로 함께 구분한다. */
-.operating-service-stop-icon {
+.operating-service-station-target {
   border: 0;
   background: transparent;
   pointer-events: none;
 }
 
+.operating-service-station-target.editable {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.operating-service-station-target.editable:focus-visible {
+  border-radius: 50%;
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: -5px;
+}
+
 .operating-service-stop-glyph {
   position: absolute;
-  inset: 2px;
+  top: 50%;
+  left: 50%;
   box-sizing: border-box;
+  width: 18px;
+  height: 18px;
   border: 3px solid #f4fbff;
   border-radius: 50%;
   background: var(--service-color, var(--color-accent));
   box-shadow: 0 0 0 3px #07131d;
+  transform: translate(-50%, -50%);
 }
 
 .operating-service-stop-glyph::after {
@@ -207,13 +222,36 @@ textarea::placeholder {
 }
 
 .operating-service-stop-glyph.terminal {
-  inset: 4px;
+  width: 19px;
+  height: 19px;
   border-radius: 4px;
-  transform: rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .operating-service-stop-glyph.terminal::after {
   border-radius: 1px;
+}
+
+.operating-service-stop-glyph.pass {
+  width: 10px;
+  height: 10px;
+  border: 2px dashed #d5e3e9;
+  background: #07131d;
+  box-shadow: 0 0 0 2px #07131d;
+}
+
+.operating-service-stop-glyph.pass::after {
+  display: none;
+}
+
+.operating-service-stop-glyph.changed {
+  animation: operating-service-stop-changed 240ms ease-out;
+}
+
+@keyframes operating-service-stop-changed {
+  0% { scale: 0.68; }
+  65% { scale: 1.22; }
+  100% { scale: 1; }
 }
 
 .leaflet-tooltip.operating-service-stop-label {
@@ -252,6 +290,107 @@ textarea::placeholder {
 
 .leaflet-tooltip-bottom.operating-service-stop-label::before {
   border-bottom-color: rgb(7 19 29 / 96%);
+}
+
+.operating-service-map-edit-bar {
+  position: fixed;
+  right: min(390px, 38vw);
+  bottom: max(72px, calc(env(safe-area-inset-bottom) + 66px));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 1090;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - min(390px, 38vw) - max(24px, env(safe-area-inset-left)));
+  min-height: 48px;
+  margin-inline: auto;
+  padding: 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: var(--color-surface-0);
+  box-shadow: var(--shadow-md);
+}
+
+.operating-service-map-edit-bar[hidden] {
+  display: none !important;
+}
+
+.operating-service-map-edit-summary {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+}
+
+.operating-service-map-edit-summary strong {
+  color: var(--color-accent-strong);
+  font-size: 12px;
+}
+
+.operating-service-map-edit-summary span {
+  color: var(--color-text-secondary);
+  font-size: 10px;
+}
+
+.operating-service-map-edit-bar button {
+  min-width: 58px;
+  min-height: 44px;
+  padding-inline: 12px;
+  border-radius: 5px;
+}
+
+.operating-service-map-edit-bar button.primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #06171c;
+  font-weight: 800;
+}
+
+.operating-service-map-edit-button {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 5px;
+  background: var(--color-surface-1);
+  color: var(--color-text-primary);
+}
+
+.operating-service-map-edit-button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-dim);
+  color: var(--color-accent-strong);
+}
+
+@media (max-width: 700px),
+  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .operating-service-map-edit-bar {
+    right: min(320px, 38vw);
+    bottom: max(54px, calc(env(safe-area-inset-bottom) + 48px));
+    max-width: calc(100vw - min(320px, 38vw) - max(16px, env(safe-area-inset-left)));
+    min-height: 44px;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .operating-service-map-edit-summary {
+    min-width: 96px;
+  }
+
+  .operating-service-map-edit-summary span {
+    display: none;
+  }
+
+  .operating-service-map-edit-bar button {
+    min-width: 52px;
+    padding-inline: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operating-service-stop-glyph.changed {
+    animation: none;
+  }
 }
 
 /* --------------------------------------------------------------------------

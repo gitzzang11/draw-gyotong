@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyStopPreset, calculateOperatingServiceOperation } from "../src/operatingService";
+import { applyStopPreset, calculateOperatingServiceOperation, toggleOperatingServiceStop } from "../src/operatingService";
 
 describe("custom operating services", () => {
   const stations = ["a", "b", "c", "d"];
@@ -8,6 +8,24 @@ describe("custom operating services", () => {
     expect(applyStopPreset("all", stations)).toEqual(stations);
     expect(applyStopPreset("transfer", stations, new Set(["c"]))).toEqual(["a", "c", "d"]);
     expect(applyStopPreset("terminal", stations)).toEqual(["a", "d"]);
+  });
+
+  it("toggles map-selected stops while keeping both terminals locked", () => {
+    expect(toggleOperatingServiceStop(stations, ["a", "b", "d"], "b")).toEqual({
+      stopStationIds: ["a", "d"],
+      changed: true,
+      locked: false,
+    });
+    expect(toggleOperatingServiceStop(stations, ["a", "d"], "c")).toEqual({
+      stopStationIds: ["a", "c", "d"],
+      changed: true,
+      locked: false,
+    });
+    expect(toggleOperatingServiceStop(stations, ["a", "b", "d"], "a")).toEqual({
+      stopStationIds: ["a", "b", "d"],
+      changed: false,
+      locked: true,
+    });
   });
 
   it("calculates capacity from trains assigned to the service", () => {

@@ -71,6 +71,7 @@ import {
   applyStopPreset,
   calculateOperatingServiceOperation,
   normalizeOperatingService,
+  toggleOperatingServiceStop,
   type OperatingService,
   type StopPreset,
 } from "./operatingService.ts";
@@ -1111,6 +1112,15 @@ app.innerHTML = `
 
 
 
+    <section id="operatingServiceMapEditBar" class="hud operating-service-map-edit-bar" aria-label="지도 정차역 편집" hidden>
+      <div class="operating-service-map-edit-summary">
+        <strong id="operatingServiceMapEditCount">정차 0 · 통과 0</strong>
+        <span>역을 터치해 정차 여부를 전환</span>
+      </div>
+      <button id="cancelOperatingServiceMapEditButton" type="button">취소</button>
+      <button id="applyOperatingServiceMapEditButton" class="primary" type="button">적용</button>
+    </section>
+
     <section id="leftRouteWindow" class="left-route-window" hidden aria-label="노선 목록 창">
       <div class="left-route-header">
         <div class="left-route-title-group">
@@ -1584,6 +1594,7 @@ app.innerHTML = `
               <button type="button" data-service-preset="transfer">급행 · 환승역</button>
               <button type="button" data-service-preset="terminal">직행 · 양 끝역</button>
             </div>
+            <button id="editOperatingServiceStopsOnMapButton" class="operating-service-map-edit-button" type="button" aria-pressed="false">⌖ 지도에서 정차역 설정</button>
             <div><span class="operating-service-field-label">정차역</span><div id="operatingServiceStopList" class="operating-service-stop-list"></div></div>
             <div class="operating-service-editor-actions"><button id="deleteOperatingServiceButton" type="button" class="danger" hidden>계통 삭제</button><button type="submit" class="primary">계통 저장</button></div>
           </form>
@@ -2378,6 +2389,11 @@ const operatingServiceEditorTitle = byId("operatingServiceEditorTitle");
 const operatingServiceNameInput = document.querySelector<HTMLInputElement>("#operatingServiceNameInput");
 const operatingServicePathSelect = document.querySelector<HTMLSelectElement>("#operatingServicePathSelect");
 const operatingServiceStopList = byId("operatingServiceStopList");
+const editOperatingServiceStopsOnMapButton = document.querySelector<HTMLButtonElement>("#editOperatingServiceStopsOnMapButton");
+const operatingServiceMapEditBar = byId("operatingServiceMapEditBar");
+const operatingServiceMapEditCount = byId("operatingServiceMapEditCount");
+const cancelOperatingServiceMapEditButton = document.querySelector<HTMLButtonElement>("#cancelOperatingServiceMapEditButton");
+const applyOperatingServiceMapEditButton = document.querySelector<HTMLButtonElement>("#applyOperatingServiceMapEditButton");
 const cancelOperatingServiceButton = document.querySelector<HTMLButtonElement>("#cancelOperatingServiceButton");
 const deleteOperatingServiceButton = document.querySelector<HTMLButtonElement>("#deleteOperatingServiceButton");
 const operatingServiceTrainAction = byId("operatingServiceTrainAction");
@@ -2495,6 +2511,8 @@ let selectedTrainSetNumber: number | null = null;
 let selectedOperatingServiceId: string | null = null;
 let editingOperatingServiceId: string | null = null;
 let operatingServiceDraftPreset: StopPreset = "all";
+let operatingServiceMapEditActive = false;
+let operatingServiceMapEditInitialStops: string[] = [];
 let selectedColor = routeColors[0];
 let draftRouteName = "";
 let eraserRadiusPx = 20;
@@ -2815,6 +2833,9 @@ openTrainManagerFromLineCardButton?.addEventListener("click", openTrainManagerMo
 addOperatingServiceButton?.addEventListener("click", () => openOperatingServiceEditor());
 cancelOperatingServiceButton?.addEventListener("click", closeOperatingServiceEditor);
 operatingServicePathSelect?.addEventListener("change", () => renderOperatingServiceStopChoices());
+editOperatingServiceStopsOnMapButton?.addEventListener("click", beginOperatingServiceMapEdit);
+cancelOperatingServiceMapEditButton?.addEventListener("click", cancelOperatingServiceMapEdit);
+applyOperatingServiceMapEditButton?.addEventListener("click", applyOperatingServiceMapEdit);
 operatingServiceStopList?.addEventListener("change", () => {
   operatingServiceDraftPreset = "custom";
   operatingServiceEditor?.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => button.classList.remove("active"));
@@ -2838,6 +2859,11 @@ if (trainManagerDialog) bindBackdropDismiss(trainManagerDialog, closeTrainManage
 saveLineManagerButton?.addEventListener("click", saveLineManager);
 deleteLineManagerButton?.addEventListener("click", requestWholeLineDemolition);
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && operatingServiceMapEditActive) {
+    event.preventDefault();
+    cancelOperatingServiceMapEdit();
+    return;
+  }
   if (event.key === "Escape" && mergeDialog && !mergeDialog.hidden) closeMergeDialog();
   if (event.key === "Escape" && decisionDialog && !decisionDialog.hidden) closeDecisionDialog();
 });
@@ -3356,6 +3382,7 @@ function updateRouteDrawingHudProximity(clientY: number) {
 function onPointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   const pointerTarget = event.target as HTMLElement;
+  if (operatingServiceMapEditActive && pointerTarget.closest(".operating-service-station-target")) return;
   if (pointerTarget.closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .construction-preview-panel, .dialog-backdrop")) return;
   if (demolitionReview) return;
   if (event.pointerType === "touch" && activePointerId !== null && event.pointerId !== activePointerId) {
@@ -12584,7 +12611,7 @@ function updateSelectedLinePanel() {
   if (selectedLineColor) selectedLineColor.style.background = route.color;
 }
 
-function renderOperatingServiceMapOverlay(service?: OperatingService) {
+function renderOperatingServiceMapOverlay(service?: OperatingService, changedStationId?: string) {
   mapLayers.clear("operating-service");
   if (!service || service.pathCoordinates.length < 2) return;
   const layer = mapLayers.get("operating-service");
@@ -12610,34 +12637,29 @@ function renderOperatingServiceMapOverlay(service?: OperatingService) {
   for (const stationId of service.stationIds) {
     const station = stations.find((item) => item.id === stationId);
     if (!station) continue;
-    if (!stopIds.has(stationId)) {
-      L.circleMarker(station.position, {
-        radius: 4,
-        color: "#d5e3e9",
-        weight: 2,
-        opacity: 0.78,
-        fillColor: "#07131d",
-        fillOpacity: 0.9,
-        dashArray: "2 2",
-        interactive: false,
-      }).addTo(layer);
-      continue;
-    }
-
+    const stop = stopIds.has(stationId);
     const terminal = terminalIds.has(stationId);
     const glyph = document.createElement("span");
-    glyph.className = `operating-service-stop-glyph${terminal ? " terminal" : ""}`;
+    glyph.className = `operating-service-stop-glyph${stop ? " stop" : " pass"}${terminal ? " terminal" : ""}${stationId === changedStationId ? " changed" : ""}`;
     glyph.style.setProperty("--service-color", routeColor);
     const marker = L.marker(station.position, {
-      interactive: false,
-      keyboard: false,
+      interactive: operatingServiceMapEditActive,
+      keyboard: operatingServiceMapEditActive,
+      bubblingMouseEvents: false,
+      title: terminal
+        ? `${station.name}, 시·종착역. 필수 정차역`
+        : `${station.name}, ${stop ? "정차역" : "통과역"}. 선택하여 ${stop ? "통과역" : "정차역"}으로 변경`,
       icon: L.divIcon({
-        className: "operating-service-stop-icon",
+        className: `operating-service-station-target${operatingServiceMapEditActive ? " editable" : ""}`,
         html: glyph,
-        iconSize: terminal ? [26, 26] : [22, 22],
-        iconAnchor: terminal ? [13, 13] : [11, 11],
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
       }),
     }).addTo(layer);
+    if (operatingServiceMapEditActive) {
+      marker.on("click", () => toggleOperatingServiceMapStation(stationId));
+    }
+    if (!stop) continue;
     const stationIndex = service.stationIds.indexOf(stationId);
     const direction = stationIndex % 2 === 0 ? "top" : "bottom";
     marker.bindTooltip(
@@ -12671,7 +12693,97 @@ function renderOperatingServiceList(routeId: string) {
   if (operatingServiceTrainAction) operatingServiceTrainAction.hidden = !selectedOperatingServiceId;
 }
 
+function getOperatingServiceDraftStopIds() {
+  return Array.from(operatingServiceStopList?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? [])
+    .filter((input) => input.checked)
+    .map((input) => input.value);
+}
+
+function updateOperatingServiceMapEditChrome(stopIds = getOperatingServiceDraftStopIds()) {
+  const option = currentOperatingServicePathOption();
+  const stopCount = option ? option.stationIds.filter((id) => stopIds.includes(id)).length : 0;
+  setText(operatingServiceMapEditCount, `정차 ${stopCount} · 통과 ${Math.max(0, (option?.stationIds.length ?? 0) - stopCount)}`);
+  if (editOperatingServiceStopsOnMapButton) {
+    editOperatingServiceStopsOnMapButton.setAttribute("aria-pressed", String(operatingServiceMapEditActive));
+    editOperatingServiceStopsOnMapButton.textContent = operatingServiceMapEditActive ? "⌖ 지도 편집 중" : "⌖ 지도에서 정차역 설정";
+  }
+}
+
+function finishOperatingServiceMapEdit() {
+  operatingServiceMapEditActive = false;
+  operatingServiceMapEditInitialStops = [];
+  document.body.classList.remove("operating-service-map-editing");
+  if (operatingServiceMapEditBar) operatingServiceMapEditBar.hidden = true;
+  if (operatingServicePathSelect) operatingServicePathSelect.disabled = false;
+  updateOperatingServiceMapEditChrome();
+  hudRenderer.update("tool", "지도 탐색");
+  setHint(["한 손가락 이동", "핀치 줌"]);
+  map.dragging.enable();
+  map.doubleClickZoom.enable();
+}
+
+function beginOperatingServiceMapEdit() {
+  if (operatingServiceMapEditActive) {
+    applyOperatingServiceMapEdit();
+    return;
+  }
+  const option = currentOperatingServicePathOption();
+  if (!option || option.stationIds.length < 2) {
+    showToast("지도에서 편집할 수 있는 운행 경로가 없습니다.");
+    return;
+  }
+  setTool("pan");
+  operatingServiceMapEditActive = true;
+  operatingServiceMapEditInitialStops = getOperatingServiceDraftStopIds();
+  document.body.classList.add("operating-service-map-editing");
+  if (operatingServiceMapEditBar) operatingServiceMapEditBar.hidden = false;
+  if (operatingServicePathSelect) operatingServicePathSelect.disabled = true;
+  updateOperatingServiceMapEditChrome(operatingServiceMapEditInitialStops);
+  hudRenderer.update("tool", `${operatingServiceNameInput?.value.trim() || "운행 계통"} · 정차역 편집`);
+  setHint(["역을 터치해 정차·통과 전환", "빈 지도를 드래그해 이동"]);
+  renderOperatingServiceStopChoices(operatingServiceMapEditInitialStops);
+  playFeedback("select");
+}
+
+function cancelOperatingServiceMapEdit() {
+  if (!operatingServiceMapEditActive) return;
+  const initialStops = [...operatingServiceMapEditInitialStops];
+  finishOperatingServiceMapEdit();
+  renderOperatingServiceStopChoices(initialStops);
+  showToast("지도 정차역 변경을 취소했습니다.");
+}
+
+function applyOperatingServiceMapEdit() {
+  if (!operatingServiceMapEditActive) return;
+  const stops = getOperatingServiceDraftStopIds();
+  finishOperatingServiceMapEdit();
+  renderOperatingServiceStopChoices(stops);
+  showToast(`정차 ${stops.length}개를 계통 초안에 적용했습니다.`);
+  playFeedback("confirm");
+}
+
+function toggleOperatingServiceMapStation(stationId: string) {
+  if (!operatingServiceMapEditActive) return;
+  const option = currentOperatingServicePathOption();
+  if (!option) return;
+  const station = stations.find((item) => item.id === stationId);
+  const result = toggleOperatingServiceStop(option.stationIds, getOperatingServiceDraftStopIds(), stationId);
+  if (result.locked) {
+    showToast(`${station?.name ?? "기점·종점"}은 필수 정차역입니다.`);
+    playFeedback("select");
+    return;
+  }
+  if (!result.changed) return;
+  operatingServiceDraftPreset = "custom";
+  operatingServiceEditor?.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => button.classList.remove("active"));
+  renderOperatingServiceStopChoices(result.stopStationIds, stationId);
+  const isStop = result.stopStationIds.includes(stationId);
+  showToast(`${station?.name ?? stationId} · ${isStop ? "정차" : "통과"}`);
+  playFeedback("select");
+}
+
 function closeOperatingServiceEditor() {
+  if (operatingServiceMapEditActive) finishOperatingServiceMapEdit();
   editingOperatingServiceId = null;
   if (operatingServiceEditor) operatingServiceEditor.hidden = true;
   rightLineControlCard?.classList.remove("service-mode");
@@ -12682,6 +12794,7 @@ function closeOperatingServiceEditor() {
 function openOperatingServiceEditor(serviceId?: string) {
   const route = routes.find((item) => item.id === selectedRouteId);
   if (!route || !operatingServiceEditor || !operatingServicePathSelect) return;
+  if (operatingServiceMapEditActive) finishOperatingServiceMapEdit();
   operatingServiceSection?.setAttribute("open", "");
   editingOperatingServiceId = serviceId ?? null;
   const service = serviceId ? operatingServices.find((item) => item.id === serviceId) : undefined;
@@ -12712,19 +12825,21 @@ function currentOperatingServicePathOption() {
   return getOperatingServicePathOptions(routeId).find((option) => option.id === operatingServicePathSelect?.value);
 }
 
-function renderOperatingServiceStopChoices(selectedStopIds?: string[]) {
+function renderOperatingServiceStopChoices(selectedStopIds?: string[], changedStationId?: string) {
   const option = currentOperatingServicePathOption();
   if (!operatingServiceStopList || !option) {
     if (operatingServiceStopList) operatingServiceStopList.innerHTML = `<span>선택 가능한 경로가 없습니다.</span>`;
     return;
   }
   const transferIds = new Set(transfers.flatMap((transfer) => transfer.stationIds));
-  const stops = selectedStopIds ?? applyStopPreset(operatingServiceDraftPreset, option.stationIds, transferIds);
+  const selectedStops = selectedStopIds ?? applyStopPreset(operatingServiceDraftPreset, option.stationIds, transferIds);
+  const stops = option.stationIds.filter((id, index) => selectedStops.includes(id) || index === 0 || index === option.stationIds.length - 1);
   operatingServiceStopList.innerHTML = option.stationIds.map((stationId, index) => {
     const station = stations.find((item) => item.id === stationId);
     const terminal = index === 0 || index === option.stationIds.length - 1;
     return `<label><input type="checkbox" value="${stationId}" ${stops.includes(stationId) || terminal ? "checked" : ""} ${terminal ? "disabled" : ""}/><i></i><span>${escapeHtml(station?.name ?? stationId)}</span><small>${terminal ? "기점·종점" : transferIds.has(stationId) ? "환승역" : "통과 가능"}</small></label>`;
   }).join("");
+  updateOperatingServiceMapEditChrome(stops);
   const preview: OperatingService = {
     id: editingOperatingServiceId ?? "preview",
     name: operatingServiceNameInput?.value ?? "preview",
@@ -12738,7 +12853,7 @@ function renderOperatingServiceStopChoices(selectedStopIds?: string[]) {
     preset: operatingServiceDraftPreset,
     createdAt: Date.now(),
   };
-  renderOperatingServiceMapOverlay(preview);
+  renderOperatingServiceMapOverlay(preview, changedStationId);
 }
 
 function applyOperatingServicePreset(preset: StopPreset) {

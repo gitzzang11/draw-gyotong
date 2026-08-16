@@ -45,6 +45,28 @@ export function applyStopPreset(
   return ordered.filter((id) => terminals.has(id) || transferStationIds.has(id));
 }
 
+export function toggleOperatingServiceStop(
+  stationIds: readonly string[],
+  stopStationIds: readonly string[],
+  targetStationId: string,
+) {
+  const orderedStationIds = [...new Set(stationIds)];
+  const currentStops = new Set(stopStationIds.filter((id) => orderedStationIds.includes(id)));
+  const firstStationId = orderedStationIds[0];
+  const lastStationId = orderedStationIds[orderedStationIds.length - 1];
+  if (firstStationId) currentStops.add(firstStationId);
+  if (lastStationId) currentStops.add(lastStationId);
+
+  const locked = targetStationId === firstStationId || targetStationId === lastStationId;
+  if (!orderedStationIds.includes(targetStationId) || locked) {
+    return { stopStationIds: orderedStationIds.filter((id) => currentStops.has(id)), changed: false, locked };
+  }
+
+  if (currentStops.has(targetStationId)) currentStops.delete(targetStationId);
+  else currentStops.add(targetStationId);
+  return { stopStationIds: orderedStationIds.filter((id) => currentStops.has(id)), changed: true, locked: false };
+}
+
 export function normalizeOperatingService(service: OperatingService, validRouteIds: ReadonlySet<string>) {
   const stationIds = [...new Set(service.stationIds)];
   const stationSet = new Set(stationIds);
