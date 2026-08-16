@@ -12786,6 +12786,7 @@ function closeOperatingServiceEditor() {
   if (operatingServiceMapEditActive) finishOperatingServiceMapEdit();
   editingOperatingServiceId = null;
   if (operatingServiceEditor) operatingServiceEditor.hidden = true;
+  renderOperatingServiceMapOverlay();
   rightLineControlCard?.classList.remove("service-mode");
   setText(lineManagerTitle, "노선 관리");
   updateSelectedLinePanel();
