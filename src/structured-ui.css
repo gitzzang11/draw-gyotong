@@ -177,6 +177,83 @@ textarea::placeholder {
   box-shadow: none !important;
 }
 
+/* 선택한 운행계통: 정차/통과/시종착을 색상 외 형태와 문구로 함께 구분한다. */
+.operating-service-stop-icon {
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.operating-service-stop-glyph {
+  position: absolute;
+  inset: 2px;
+  box-sizing: border-box;
+  border: 3px solid #f4fbff;
+  border-radius: 50%;
+  background: var(--service-color, var(--color-accent));
+  box-shadow: 0 0 0 3px #07131d;
+}
+
+.operating-service-stop-glyph::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #07131d;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.operating-service-stop-glyph.terminal {
+  inset: 4px;
+  border-radius: 4px;
+  transform: rotate(45deg);
+}
+
+.operating-service-stop-glyph.terminal::after {
+  border-radius: 1px;
+}
+
+.leaflet-tooltip.operating-service-stop-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border: 1px solid rgb(142 177 191 / 78%);
+  border-radius: 5px;
+  background: rgb(7 19 29 / 96%);
+  color: #f2f8fa;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 32%);
+  font-size: 11px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.leaflet-tooltip.operating-service-stop-label strong {
+  font-weight: 700;
+}
+
+.operating-service-stop-label-kind {
+  color: #82f0dc;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.leaflet-tooltip.operating-service-stop-label.terminal {
+  border-color: #d8f7f0;
+}
+
+.leaflet-tooltip-top.operating-service-stop-label::before {
+  border-top-color: rgb(7 19 29 / 96%);
+}
+
+.leaflet-tooltip-bottom.operating-service-stop-label::before {
+  border-bottom-color: rgb(7 19 29 / 96%);
+}
+
 /* --------------------------------------------------------------------------
    Start and save selection screen — layout unchanged
    -------------------------------------------------------------------------- */
@@ -369,6 +446,25 @@ textarea::placeholder {
   box-shadow: var(--shadow-card) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* Route strokes can continue beneath the edge HUD. Proximity variables are
+   updated only while a route pointer is captured, then cleared on release. */
+body .game-shell .hud.top-header-bar,
+body .game-shell .hud.build-panel {
+  transition: opacity 120ms linear, transform 160ms ease-out !important;
+}
+
+body.route-drawing-hud-proximity .game-shell .hud.top-header-bar {
+  opacity: var(--route-drawing-top-opacity, 1) !important;
+  transform: translateY(var(--route-drawing-top-shift, 0px)) !important;
+  will-change: opacity, transform;
+}
+
+body.route-drawing-hud-proximity .game-shell .hud.build-panel {
+  opacity: var(--route-drawing-bottom-opacity, 1) !important;
+  transform: translateX(-50%) translateY(var(--route-drawing-bottom-shift, 0px)) !important;
+  will-change: opacity, transform;
 }
 
 .status-pill,

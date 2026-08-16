@@ -159,13 +159,17 @@ describe("IndexedDbRepository fallback", () => {
     await service.create({ meta: { slotId: "a", updatedAt: 1, slotName: "Original" }, value: 1 });
     expect(await service.list()).toHaveLength(1);
     expect(await service.load("a")).toMatchObject({ value: 1 });
+    await service.update({ meta: { slotId: "a", updatedAt: 2, slotName: "Updated" }, value: 2 });
+    expect(await service.load("a")).toMatchObject({ value: 2 });
+    await expect(service.update({ meta: { slotId: "missing", updatedAt: 1 }, value: 9 })).rejects.toThrow("does not exist");
+    expect(await service.list()).toHaveLength(1);
     const copy = await service.duplicate("a", (source) => ({
       ...source,
       meta: { slotId: "copy", updatedAt: 2, slotName: source.meta.slotName },
       value: 2,
     }));
     expect(copy.meta.slotId).toBe("copy");
-    expect(copy.meta.slotName).toBe("Original 복사본");
+    expect(copy.meta.slotName).toBe("Updated 복사본");
     expect(await service.list()).toHaveLength(2);
     await expect(service.create({ meta: { slotId: "a", updatedAt: 3 }, value: 3 })).rejects.toThrow("already exists");
     await service.remove("a");

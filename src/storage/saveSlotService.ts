@@ -11,14 +11,21 @@ import { deserializeState, serializeFiniteState, toSaveData } from "./serializat
 export class SaveSlotService<T extends SaveSlotRecord> {
   constructor(private readonly repository: SaveSlotRepository<T>) {}
 
-  save(value: T) {
+  private write(value: T) {
     return this.repository.put(toSaveData(value));
+  }
+
+  async update(value: T) {
+    const slotId = requireSlotId(value);
+    if (!await this.load(slotId)) throw new Error(`Save slot '${slotId}' does not exist`);
+    await this.write(value);
+    return value;
   }
 
   async create(value: T) {
     const slotId = requireSlotId(value);
     if (await this.load(slotId)) throw new Error(`Save slot '${slotId}' already exists`);
-    await this.save(value);
+    await this.write(value);
     return value;
   }
 

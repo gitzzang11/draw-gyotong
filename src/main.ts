@@ -27,6 +27,7 @@ import {
   resolveMapTarget,
   type MapHitCandidate,
 } from "./mapHitTest.ts";
+import { calculateEdgeHudProximity } from "./hudProximity.ts";
 import {
   isValidConstructionStatusTransition,
   normalizeTransferLinks,
@@ -2483,6 +2484,7 @@ let currentMeta: GameMeta = createDefaultMeta();
 let slotSummaries: SaveSlotSummary[] = [];
 let editingSaveSlotId: string | null = null;
 let hasActiveGameSession = false;
+let slotLoadRequestId = 0;
 let undoStack: SaveState[] = [];
 let redoStack: SaveState[] = [];
 let overpassAbort: AbortController | null = null;
@@ -2497,6 +2499,7 @@ let selectedColor = routeColors[0];
 let draftRouteName = "";
 let eraserRadiusPx = 20;
 let activeTool: ToolMode = "pan";
+const routeStrokeHudTools = new Set<ToolMode>(["route", "extend", "reconnect", "branch", "merge"]);
 let workspaceMode: WorkspaceMode = "management";
 document.body.dataset.workspaceMode = workspaceMode;
 let activePointerId: number | null = null;
@@ -3108,7 +3111,7 @@ document.addEventListener("visibilitychange", () => {
     void requestLandscapeOrientation();
     if (simSpeed > 0) gameLoopController.resume();
   }
-  if (document.visibilityState === "hidden") void saveCurrentSlot("백그라운드 저장");
+  if (document.visibilityState === "hidden" && hasActiveGameSession) void saveCurrentSlot("백그라운드 저장");
 });
 
 function findPlanningRouteContinuation(point: L.Point, thresholdPx = 56): PlanningRouteContinuation | null {
@@ -3311,6 +3314,29 @@ function handleUnifiedMapSelection(point: L.Point, pointerType: string) {
   if (result.selected.data) activateMapSelection(result.selected.data as MapSelectionData);
 }
 
+function resetRouteDrawingHudProximity() {
+  document.body.classList.remove("route-drawing-hud-proximity");
+  document.body.style.removeProperty("--route-drawing-top-opacity");
+  document.body.style.removeProperty("--route-drawing-top-shift");
+  document.body.style.removeProperty("--route-drawing-bottom-opacity");
+  document.body.style.removeProperty("--route-drawing-bottom-shift");
+}
+
+function updateRouteDrawingHudProximity(clientY: number) {
+  if (activePointerId === null || !routeStrokeHudTools.has(activeTool)) {
+    resetRouteDrawingHudProximity();
+    return;
+  }
+
+  const proximity = calculateEdgeHudProximity(clientY, window.innerHeight);
+
+  document.body.classList.add("route-drawing-hud-proximity");
+  document.body.style.setProperty("--route-drawing-top-opacity", proximity.topOpacity.toFixed(3));
+  document.body.style.setProperty("--route-drawing-top-shift", `${proximity.topShiftPx}px`);
+  document.body.style.setProperty("--route-drawing-bottom-opacity", proximity.bottomOpacity.toFixed(3));
+  document.body.style.setProperty("--route-drawing-bottom-shift", `${proximity.bottomShiftPx}px`);
+}
+
 function onPointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   const pointerTarget = event.target as HTMLElement;
@@ -3384,6 +3410,7 @@ function onPointerDown(event: PointerEvent) {
   if (activeTool === "merge") {
     event.preventDefault();
     beginConnectionDrawing(event, point);
+    updateRouteDrawingHudProximity(event.clientY);
     return;
   }
   if (activeTool !== "route" && activeTool !== "extend" && activeTool !== "reconnect" && activeTool !== "branch" && activeTool !== "depot" && !(planningMode && activeTool === "eraser")) return;
@@ -3515,6 +3542,7 @@ function onPointerDown(event: PointerEvent) {
     });
   }
   activePointerId = event.pointerId;
+  updateRouteDrawingHudProximity(event.clientY);
   rawDrawPoints = activeExtension
     ? [activeExtension.endpoint]
     : activeRepair
@@ -3647,6 +3675,7 @@ function onPointerCancel(event: PointerEvent) {
     return;
   }
   if (event.pointerId !== activePointerId) return;
+  updateRouteDrawingHudProximity(event.clientY);
   event.preventDefault();
   cancelActiveDrawing();
 }
@@ -3665,6 +3694,7 @@ function onPointerUp(event: PointerEvent) {
   }
   if (event.pointerId !== activePointerId) return;
   event.preventDefault();
+  resetRouteDrawingHudProximity();
   if (activeTool === "edit" && activeHandleMove) {
     const handle = activeHandleMove;
     const preview = handlePreviewCoordinates;
@@ -8555,7 +8585,7 @@ async function saveEditedSlot() {
       unlockedCityIds: mode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : state.meta.unlockedCityIds,
       updatedAt,
     };
-    await getSaveSlotService().save({ ...state, meta: nextMeta });
+    await getSaveSlotService().update({ ...state, meta: nextMeta });
     if (isActiveSaveSlot(slotId)) {
       currentMeta = { ...currentMeta, ...nextMeta };
       renderAll();
@@ -8713,6 +8743,21 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
 }
 
 function resetWorld() {
+  cancelActiveDrawing();
+  constructionDraft = null;
+  demolitionReview = null;
+  routePlanningSession = null;
+  pendingPlanningToolChange = null;
+  pendingBranchJunction = null;
+  activeConnectionSource = null;
+  pendingMerge = null;
+  pendingDecision = null;
+  replacingPlannedRouteId = null;
+  bypassPlanningToolChangeGuard = false;
+  selectedConnectionChoice = "merge";
+  selectedColor = routeColors[0];
+  draftRouteName = "";
+  operatingServiceDraftPreset = "all";
   routes = [];
   stations = [];
   demandZones = [];
@@ -8740,12 +8785,17 @@ function resetWorld() {
   activePlanId = null;
   planningMode = false;
   selectedDepotId = null;
+  selectedDepotManagerId = null;
+  selectedStationManagerId = null;
+  selectedOperatingServiceId = null;
+  editingOperatingServiceId = null;
+  selectedTrainFleetId = null;
+  selectedTrainSetNumber = null;
   selectedTransferStationIds = [];
   selectedPlannedStationIds = [];
   selectedManualTransferEndpoints = [];
   deleteAnchor = null;
   plannedDeleteAnchor = null;
-  pendingMerge = null;
   simSpeed = 0;
   gameLoopController.setSpeed(0);
   gameLoopController.pause();
@@ -8753,22 +8803,74 @@ function resetWorld() {
   simulationRuntimeMinutes = simMinutes;
 }
 
+function closeSlotScopedSurfaces() {
+  closeInGameMenu();
+  closePlanningDialog();
+  closePlanConversionDialog();
+  closeConstructionManager();
+  closeDecisionDialog();
+  closeMergeDialog();
+  closeLineManager();
+  closeTrainManagerModal();
+  closeStationManager();
+  closeDepotManager();
+  if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
+  if (routeSettingsCard) routeSettingsCard.hidden = true;
+  document.body.classList.remove("construction-reviewing");
+  mapLayers.clear("construction-preview");
+  mapLayers.clear("edit-guide");
+}
+
 async function loadSlot(slotId: string) {
-  const state = await readSaveSlot(slotId);
-  if (!state) return;
-  applyState(state);
-  hasActiveGameSession = true;
-  currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}), slotId };
-  updateEconomyHud();
-  applyCityMapConstraints(currentMeta.cityId);
-  if (startScreen) startScreen.hidden = true;
-  startAutoSave();
-  requestStateSave();
-  requestUpdates(["network-structure", "blueprint-preview", "finance-only"]);
-  setText(saveStatus, "불러옴");
+  if (!slotId) return;
+  const requestId = ++slotLoadRequestId;
+  const previousState = hasActiveGameSession ? cloneState() : null;
+  const previousWorkspaceMode = workspaceMode;
+  let replacedCurrentSession = false;
+  try {
+    if (hasActiveGameSession) await flushStateSave();
+    if (requestId !== slotLoadRequestId) return;
+    const state = await readSaveSlot(slotId);
+    if (requestId !== slotLoadRequestId || !state) return;
+
+    stateSaveRepository.cancel();
+    closeSlotScopedSurfaces();
+    resetWorld();
+    replacedCurrentSession = true;
+    applyState(state);
+    hasActiveGameSession = true;
+    currentMeta = { ...createDefaultMeta(), ...(state.meta ?? {}), slotId };
+    setWorkspaceMode("management");
+    updateEconomyHud();
+    applyCityMapConstraints(currentMeta.cityId);
+    if (startScreen) startScreen.hidden = true;
+    if (tutorialPanel) tutorialPanel.hidden = Boolean(currentMeta.tutorialCompleted);
+    if (!currentMeta.tutorialCompleted) updateTutorialProgress();
+    startAutoSave();
+    renderAll();
+    requestStateSave();
+    setText(saveStatus, "불러옴");
+  } catch (error) {
+    if (replacedCurrentSession && previousState) {
+      try {
+        resetWorld();
+        applyState(previousState);
+        hasActiveGameSession = true;
+        setWorkspaceMode(previousWorkspaceMode);
+        applyCityMapConstraints(currentMeta.cityId);
+        startAutoSave();
+        renderAll();
+      } catch (recoveryError) {
+        console.error("[save] 이전 슬롯 복구 실패", recoveryError);
+      }
+    }
+    console.error("[save] 슬롯 불러오기 실패", error);
+    showError("세이브를 불러오지 못했습니다. 현재 게임은 변경되지 않았습니다.");
+  }
 }
 
 async function saveCurrentSlot(label: string, reportError = true, createOnly = false): Promise<boolean> {
+  if (!hasActiveGameSession) return false;
   currentMeta = {
     ...currentMeta,
     updatedAt: Date.now(),
@@ -12238,6 +12340,7 @@ function setTool(tool: ToolMode) {
 }
 
 function cancelActiveDrawing() {
+  resetRouteDrawingHudProximity();
   mapSelectionPointers.clear();
   mapSelectionGesture = null;
   releaseDrawingPointer(activePointerId);
@@ -12376,33 +12479,69 @@ function renderOperatingServiceMapOverlay(service?: OperatingService) {
   mapLayers.clear("operating-service");
   if (!service || service.pathCoordinates.length < 2) return;
   const layer = mapLayers.get("operating-service");
+  const routeColor = routes.find((route) => route.id === service.ownerRouteId)?.color ?? "#4ce0c3";
+  const stopIds = new Set(service.stopStationIds);
+  const terminalIds = new Set([service.stationIds[0], service.stationIds[service.stationIds.length - 1]]);
   L.polyline(service.pathCoordinates, {
-    color: "#ffffff",
-    weight: 12,
-    opacity: 0.72,
+    color: "#07131d",
+    weight: 13,
+    opacity: 0.9,
     lineCap: "round",
     lineJoin: "round",
     interactive: false,
   }).addTo(layer);
   L.polyline(service.pathCoordinates, {
-    color: routes.find((route) => route.id === service.ownerRouteId)?.color ?? "#4ce0c3",
+    color: routeColor,
     weight: 7,
-    opacity: 1,
+    opacity: 0.94,
     lineCap: "round",
     lineJoin: "round",
     interactive: false,
   }).addTo(layer);
-  for (const stationId of service.stopStationIds) {
+  for (const stationId of service.stationIds) {
     const station = stations.find((item) => item.id === stationId);
     if (!station) continue;
-    L.circleMarker(station.position, {
-      radius: 7,
-      color: "#ffffff",
-      weight: 3,
-      fillColor: routes.find((route) => route.id === service.ownerRouteId)?.color ?? "#4ce0c3",
-      fillOpacity: 1,
+    if (!stopIds.has(stationId)) {
+      L.circleMarker(station.position, {
+        radius: 4,
+        color: "#d5e3e9",
+        weight: 2,
+        opacity: 0.78,
+        fillColor: "#07131d",
+        fillOpacity: 0.9,
+        dashArray: "2 2",
+        interactive: false,
+      }).addTo(layer);
+      continue;
+    }
+
+    const terminal = terminalIds.has(stationId);
+    const glyph = document.createElement("span");
+    glyph.className = `operating-service-stop-glyph${terminal ? " terminal" : ""}`;
+    glyph.style.setProperty("--service-color", routeColor);
+    const marker = L.marker(station.position, {
       interactive: false,
+      keyboard: false,
+      icon: L.divIcon({
+        className: "operating-service-stop-icon",
+        html: glyph,
+        iconSize: terminal ? [26, 26] : [22, 22],
+        iconAnchor: terminal ? [13, 13] : [11, 11],
+      }),
     }).addTo(layer);
+    const stationIndex = service.stationIds.indexOf(stationId);
+    const direction = stationIndex % 2 === 0 ? "top" : "bottom";
+    marker.bindTooltip(
+      `<span class="operating-service-stop-label-kind">${terminal ? "시·종착" : "정차"}</span><strong>${escapeHtml(station.name)}</strong>`,
+      {
+        permanent: true,
+        direction,
+        offset: direction === "top" ? [0, -12] : [0, 12],
+        className: `operating-service-stop-label${terminal ? " terminal" : ""}`,
+        interactive: false,
+        opacity: 1,
+      },
+    ).openTooltip();
   }
 }
 
@@ -14921,7 +15060,7 @@ function applyState(state: SaveState) {
 const stateSaveRepository = new SaveRepository({
   capture: () => measureTask("save-serialization", cloneState),
   write: async (state) => {
-    await getSaveSlotService().save(state);
+    await getSaveSlotService().update(state);
   },
   delayMs: 240,
   onError: (error) => console.warn("[save] 상태 저장 실패", error),
@@ -14959,7 +15098,10 @@ if (import.meta.env.DEV) {
     },
     save: async () => {
       currentMeta = { ...currentMeta, updatedAt: Date.now() };
-      await getSaveSlotService().save(cloneState());
+      const state = cloneState();
+      const service = getSaveSlotService();
+      if (await service.load(currentMeta.slotId)) await service.update(state);
+      else await service.create(state);
       slotSummaries = await listSaveSlots();
       if (startScreen) startScreen.hidden = true;
       applyCityMapConstraints(currentMeta.cityId);
