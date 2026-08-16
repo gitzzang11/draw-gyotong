@@ -4234,7 +4234,6 @@ function stageDepotDraft(polygon: LatLng[], connectedRouteIds: string[], connect
   const areaHa = calculatePolygonAreaHa(polygon);
   const totalCost = Math.round(areaHa * 680 * cityConfigs[currentMeta.cityId].constructionMultiplier * difficultyConfigs[currentMeta.difficulty].costMultiplier);
   const warnings: ConstructionWarning[] = [];
-  if (connectedRouteIds.length === 0) warnings.push({ code: "depot-unconnected", severity: "error", message: "차량기지는 노선과 30m 이내로 연결해야 합니다." });
   if (currentMeta.mode === "career" && totalCost > economy.cash)
     warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(totalCost - economy.cash)} 부족합니다.` });
   const analysis: ConstructionAnalysis = {
@@ -4372,7 +4371,7 @@ function renderConstructionPanel() {
     analysis.riverCrossings.length > 0 ? `${analysis.riverCrossings.length}회 · ${formatCost(analysis.riverCost)}` : "없음",
   );
   setText(previewStationCount, `${analysis.stationInstallCount}개`);
-  setText(previewDepotConnection, analysis.depotConnected ? "연결됨" : "미연결");
+  setText(previewDepotConnection, analysis.depotConnected ? "연결됨" : constructionDraft.kind === "depot" ? "단독 건설" : "미연결");
   renderRiverChoices();
   if (constructionWarnings) {
     constructionWarnings.innerHTML =
@@ -7752,7 +7751,7 @@ function reconcileBlueprints() {
         color: "#77848b",
         selected: isActive,
         canDelete,
-        valid: depot.connectedPlannedRouteIds.length + depot.connectedActualRouteIds.length > 0,
+        valid: true,
         name: depot.name,
       });
     }
@@ -12216,7 +12215,7 @@ function setTool(tool: ToolMode) {
     transfer: planningMode
       ? ["수동 환승 계획", ["첫 번째 기존역 또는 계획역 선택", "두 번째 역 선택", "계획에 환승 연결 저장"]]
       : ["환승 해제", ["해제할 기존 환승역을 선택", "그룹의 모든 역이 개별 일반역으로 전환", "실행 취소로 복원 가능"]],
-    depot: ["차량기지", ["노선과 겹치거나 30m 안", "확정 후 계속 다른 기지 계획 가능"]],
+    depot: ["차량기지", ["부지 영역을 드래그", "노선 연결 없이도 단독 건설 가능"]],
     expressStop: ["급행 정차역", ["정차역 터치 토글", "급행 운영비 추가"]],
   };
   hudRenderer.update("tool", labels[tool][0]);
@@ -14326,7 +14325,7 @@ function renderDepotConnectionGuide() {
   mapLayers.clear("depot-guide");
   if (activeTool !== "depot") return;
   if (routes.length === 0) {
-    setText(facilityReadout, "먼저 노선을 건설하세요");
+    setText(facilityReadout, "노선 없이도 차량기지를 단독 건설할 수 있습니다");
     return;
   }
   for (const route of routes) {
@@ -14345,8 +14344,8 @@ function updateDepotPreviewConnection(points: L.Point[]) {
   if (!previewPolygon) return;
   const polygon = closeLatLngRing(points.map((point) => map.containerPointToLatLng(point)));
   const connected = findRoutesNearPolygon(polygon, 30).length > 0;
-  previewPolygon.setStyle({ color: connected ? "#4ce0c3" : "#ff5d5d", fillColor: connected ? "#4ce0c3" : "#ff5d5d" });
-  setText(facilityReadout, connected ? "노선 연결 가능" : "밝은 노선 구간에 닿게 그리세요");
+  previewPolygon.setStyle({ color: connected ? "#4ce0c3" : "#25d0d6", fillColor: connected ? "#4ce0c3" : "#25d0d6" });
+  setText(facilityReadout, connected ? "노선 연결 가능" : "단독 차량기지로 건설 가능");
 }
 
 function findNearestStation(point: L.Point, thresholdPx: number) {
@@ -15298,8 +15297,8 @@ const tutorialSteps = [
   { title: "노선 색상을 고르세요", text: "상단 색상표에서 첫 노선에 사용할 색을 하나 선택하세요.", target: "color" },
   { title: "짧은 노선을 그리세요", text: "노선 버튼을 누르고 지도 위를 50m 이상 드래그한 뒤 건설을 확정하세요.", target: "route" },
   { title: "역을 두 개 배치하세요", text: "역 버튼을 누르고 방금 만든 노선 위의 서로 다른 지점을 두 번 누르세요.", target: "station" },
-  { title: "차량기지 범위를 지정하세요", text: "기지 버튼을 누르고 노선 옆에 차량기지 경계를 그리세요.", target: "depot" },
-  { title: "노선 연결을 확인하세요", text: "차량기지 경계가 첫 노선 가까이에 닿아 연결된 상태인지 확인하세요.", target: "depot" },
+  { title: "차량기지 범위를 지정하세요", text: "기지 버튼을 누르고 차량기지 경계를 그리세요. 노선 옆에 두면 연결되고, 떨어진 곳에도 단독 건설할 수 있습니다.", target: "depot" },
+  { title: "노선 연결 여부를 확인하세요", text: "노선 가까이는 연결된 상태로, 떨어진 곳은 단독 건설로 표시됩니다. 두 경우 모두 건설할 수 있습니다.", target: "depot" },
   { title: "열차를 구매하고 배정하세요", text: "첫 노선을 선택한 상태에서 편성 수와 차량 수를 확인하고 구매하세요.", target: "train" },
   { title: "첫 노선을 개통하세요", text: "공사 현황에서 네 가지 개통 조건을 확인하고 노선 개통을 누르세요.", target: "opening" },
   { title: "시간을 흐르게 하세요", text: "하단의 x2, x5, x10 또는 x100을 눌러 운행을 시작하세요.", target: "speed" },

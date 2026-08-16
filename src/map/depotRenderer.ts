@@ -44,9 +44,11 @@ export class DepotRenderer {
   }
 
   private updateDepot(polygon: L.Polygon, entity: DepotRenderEntity) {
+    const borderColor = entity.connected ? "#f3ca52" : "#9fb1b9";
+    const fillColor = entity.connected ? "#f3ca52" : "#687c85";
     polygon.setStyle({
-      color: entity.selected ? "#ffffff" : entity.connected ? "#f3ca52" : "#ff8b8b",
-      fillColor: entity.connected ? "#f3ca52" : "#ff5d5d",
+      color: entity.selected ? "#ffffff" : borderColor,
+      fillColor,
       fillOpacity: entity.operational ? 0.18 : 0.07,
       weight: entity.selected ? 3 : 2,
       dashArray: entity.operational ? undefined : "6 7",
