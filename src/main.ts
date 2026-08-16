@@ -2538,6 +2538,7 @@ let knownObstacles: Obstacle[] = [];
 let selectedTransferStationIds: string[] = [];
 let selectedDepotId: string | null = null;
 let selectedDepotManagerId: string | null = null;
+let selectedPlannedStationManager: { planId: string; stationId: string } | null = null;
 
 let selectedStationManagerId: string | null = null;
 let selectedOperationRouteId = "";
@@ -3247,6 +3248,17 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
           data: { kind: "blueprint", planId: plan.id, assetId: route.id, assetKind: "route" } satisfies MapSelectionData,
         });
       }
+      for (const station of plan.stations.filter((item) => !item.completed)) {
+        const distancePx = point.distanceTo(map.latLngToContainerPoint(L.latLng(station.position[0], station.position[1])));
+        candidates.push({
+          id: `planned-station:${plan.id}:${station.id}`,
+          kind: "blueprint",
+          label: station.name,
+          distancePx,
+          hit: distancePx <= getTargetHitRadius("station", pointerType),
+          data: { kind: "blueprint", planId: plan.id, assetId: station.id, assetKind: "station" } satisfies MapSelectionData,
+        });
+      }
     }
   }
   const routeRadius = getTargetHitRadius("route", pointerType);
@@ -3281,8 +3293,12 @@ function activateMapSelection(data: MapSelectionData) {
   } else if (data.kind === "construction") {
     openConstructionManager();
   } else {
-    activePlanId = data.planId;
-    openPlanningDialog();
+    if (data.assetKind === "station") {
+      openPlannedStationManager(data.planId, data.assetId);
+    } else {
+      activePlanId = data.planId;
+      openPlanningDialog();
+    }
   }
 }
 
@@ -7591,6 +7607,25 @@ function renderPlanAssets(plan: ConstructionPlan) {
   });
 }
 
+function deletePlannedStation(planId: string, stationId: string) {
+  const plan = plans.find((item) => item.id === planId);
+  const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
+  if (!plan || !station) return;
+  pushHistory();
+  updatePlan(plan.id, (item) => ({
+    ...item,
+    stations: item.stations.filter((asset) => asset.id !== stationId),
+    transfers: item.transfers.filter((transfer) => !transfer.stationIds.includes(stationId)),
+  }));
+  selectedPlannedStationIds = selectedPlannedStationIds.filter((id) => id !== stationId);
+  selectedManualTransferEndpoints = selectedManualTransferEndpoints.filter((endpoint) => endpoint.kind !== "planned" || endpoint.id !== stationId);
+  redoStack = [];
+  requestStateSave();
+  renderPlanningDialog();
+  requestUpdate("blueprint-preview");
+  showToast("계획역을 삭제했습니다.");
+}
+
 function handlePlanAssetAction(action: string, assetId: string) {
   const plan = getActivePlan(false);
   if (!plan) return;
@@ -7600,6 +7635,10 @@ function handlePlanAssetAction(action: string, assetId: string) {
     if (!planningMode) togglePlanningMode();
     setTool("route");
     showToast("지도에서 새 경로를 그리면 기존 계획 노선을 교체합니다.");
+    return;
+  }
+  if (action === "delete-station") {
+    deletePlannedStation(plan.id, assetId);
     return;
   }
   pushHistory();
@@ -7619,14 +7658,8 @@ function handlePlanAssetAction(action: string, assetId: string) {
     updatePlan(plan.id, (item) => ({
       ...item,
       routes: action === "delete-route" ? item.routes.filter((asset) => asset.id !== assetId) : item.routes,
-      stations: action === "delete-station" ? item.stations.filter((asset) => asset.id !== assetId) : item.stations,
       depots: action === "delete-depot" ? item.depots.filter((asset) => asset.id !== assetId) : item.depots,
-      transfers:
-        action === "delete-transfer"
-          ? item.transfers.filter((asset) => asset.id !== assetId)
-          : action === "delete-station"
-            ? item.transfers.filter((asset) => !asset.stationIds.includes(assetId))
-            : item.transfers,
+      transfers: action === "delete-transfer" ? item.transfers.filter((asset) => asset.id !== assetId) : item.transfers,
     }));
   }
   redoStack = [];
@@ -10593,16 +10626,31 @@ function calculateStationStatistics(station: Station) {
 function openStationManager(stationId: string) {
   const station = stations.find((item) => item.id === stationId);
   if (!station || !stationPanel) return;
+  selectedPlannedStationManager = null;
   selectedStationManagerId = station.id;
   renderStationManager();
 }
 
+function openPlannedStationManager(planId: string, stationId: string) {
+  const plan = plans.find((item) => item.id === planId && item.cityId === currentMeta.cityId);
+  const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
+  if (!plan || !station || !stationPanel) return;
+  activePlanId = plan.id;
+  selectedStationManagerId = null;
+  selectedPlannedStationManager = { planId: plan.id, stationId: station.id };
+  renderPlannedStationManager();
+}
+
 function closeStationManager() {
   stationPanel?.close();
+  selectedStationManagerId = null;
+  selectedPlannedStationManager = null;
 }
 
 function renderStationManagerIfOpen() {
-  if (selectedStationManagerId && stationManagerDialog && !stationManagerDialog.hidden) renderStationManager();
+  if (!stationManagerDialog || stationManagerDialog.hidden) return;
+  if (selectedPlannedStationManager) renderPlannedStationManager();
+  else if (selectedStationManagerId) renderStationManager();
 }
 
 function getStationManagerMembers(station: Station) {
@@ -10681,6 +10729,49 @@ function renderStationManager() {
   }, handleStationManagerClick);
 }
 
+function renderPlannedStationManager() {
+  const selection = selectedPlannedStationManager;
+  const plan = selection ? plans.find((item) => item.id === selection.planId && item.cityId === currentMeta.cityId) : undefined;
+  const station = plan?.stations.find((item) => item.id === selection?.stationId && !item.completed);
+  if (!plan || !station || !stationPanel) {
+    closeStationManager();
+    return;
+  }
+  const plannedRoutes = station.plannedRouteIds
+    .map((routeId) => plan.routes.find((route) => route.id === routeId))
+    .filter(Boolean) as PlannedRoute[];
+  const actualRoutes = station.actualRouteIds
+    .map((routeId) => routes.find((route) => route.id === routeId))
+    .filter(Boolean) as RouteLine[];
+  const transferCount = plan.transfers.filter((transfer) => !transfer.completed && transfer.stationIds.includes(station.id)).length;
+  const routeEntries = [
+    ...plannedRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}"><b>${escapeHtml(route.name)}</b><small>계획 노선</small></span>`),
+    ...actualRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}"><b>${escapeHtml(route.name)}</b><small>기존 노선</small></span>`),
+  ];
+  stationPanel.renderView({
+    entityId: `planned-station:${plan.id}:${station.id}`,
+    title: station.name,
+    escapedName: escapeHtml(station.name),
+    editableName: false,
+    operational: false,
+    statusLabel: "계획 중",
+    metricsHtml: `
+      <div><span>역 상태</span><strong>계획 중</strong></div>
+      <div><span>예상 수요</span><strong>${station.expectedDemand.toLocaleString("ko-KR")}명</strong></div>
+      <div><span>계획 노선</span><strong>${plannedRoutes.length}개</strong></div>
+      <div><span>기존 연결 노선</span><strong>${actualRoutes.length}개</strong></div>`,
+    reasonsHtml: `<span>계획안 · ${escapeHtml(plan.name)}</span><em>운영 통계는 건설 후 생성됩니다.</em>`,
+    routeCount: plannedRoutes.length + actualRoutes.length,
+    routesHtml: routeEntries.join("") || "<em>연결된 노선이 없습니다.</em>",
+    transferKind: transferCount > 0 ? "예정 환승" : "없음",
+    transferHtml: transferCount > 0 ? `<p>이 역을 포함한 환승 계획 ${transferCount}건</p>` : "<p>현재 연결된 환승 계획이 없습니다.</p>",
+    dangerTitle: "계획역 삭제",
+    dangerDescription: "이 계획역만 삭제하며 연결된 계획 노선과 다른 시설은 유지합니다.",
+    dangerAction: "계획역 삭제",
+    dangerActionId: "delete-planned",
+  }, handleStationManagerClick);
+}
+
 function selectStationTransferInfo(stationId: string) {
   return getStationTransferInfo({
     stationId,
@@ -10721,7 +10812,25 @@ function formatTransferOperationalStatus(status: "operational" | "partial" | "cl
 function handleStationManagerClick(event: Event) {
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-station-manager-action]");
   const action = target?.dataset.stationManagerAction;
-  if (!action || !selectedStationManagerId) return;
+  if (!action) return;
+  if (selectedPlannedStationManager) {
+    if (action !== "delete-planned") return;
+    const { planId, stationId } = selectedPlannedStationManager;
+    const plan = plans.find((item) => item.id === planId && item.cityId === currentMeta.cityId);
+    const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
+    if (!plan || !station) return;
+    openDecisionDialog(
+      `“${station.name}” 계획역을 삭제할까요?`,
+      "이 계획역만 삭제하며 연결된 계획 노선과 다른 시설은 유지합니다. 계획 환승 연결이 있으면 함께 정리됩니다.",
+      "계획역 삭제",
+      () => {
+        closeStationManager();
+        deletePlannedStation(plan.id, station.id);
+      },
+    );
+    return;
+  }
+  if (!selectedStationManagerId) return;
   const selectedStation = stations.find((station) => station.id === selectedStationManagerId);
   if (!selectedStation) return;
   if (action === "delete") {

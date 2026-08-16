@@ -4,7 +4,9 @@ export interface StationPanelView {
   entityId: string;
   title: string;
   escapedName: string;
+  editableName?: boolean;
   operational: boolean;
+  statusLabel?: string;
   metricsHtml: string;
   reasonsHtml: string;
   routeCount: number;
@@ -14,6 +16,7 @@ export interface StationPanelView {
   dangerTitle: string;
   dangerDescription: string;
   dangerAction: string;
+  dangerActionId?: "delete" | "delete-planned";
 }
 
 export class StationPanel {
@@ -31,11 +34,12 @@ export class StationPanel {
   }
 
   renderView(view: StationPanelView, onAction: (event: Event) => void) {
+    const editableName = view.editableName !== false;
     this.render(view.entityId, view.title, `
       <section class="station-manager-identity">
-        <label><span>역 이름</span><input id="stationManagerName" value="${view.escapedName}" maxlength="32" /></label>
-        <button type="button" data-station-manager-action="save-name">이름 저장</button>
-        <span class="station-status ${view.operational ? "operational" : "building"}">${view.operational ? "운영 중" : "공사·설치 중"}</span>
+        <label><span>역 이름</span><input id="stationManagerName" value="${view.escapedName}" maxlength="32" ${editableName ? "" : "readonly aria-readonly=\"true\""} /></label>
+        ${editableName ? `<button type="button" data-station-manager-action="save-name">이름 저장</button>` : ""}
+        <span class="station-status ${view.operational ? "operational" : "building"}">${view.statusLabel ?? (view.operational ? "운영 중" : "공사·설치 중")}</span>
       </section>
       <section class="station-manager-metrics" aria-label="승객 통계">${view.metricsHtml}</section>
       <section class="station-manager-section">
@@ -52,7 +56,7 @@ export class StationPanel {
       </section>
       <section class="manager-danger-zone">
         <div><strong>${view.dangerTitle}</strong><span>${view.dangerDescription}</span></div>
-        <button type="button" data-station-manager-action="delete">${view.dangerAction}</button>
+        <button type="button" data-station-manager-action="${view.dangerActionId ?? "delete"}">${view.dangerAction}</button>
       </section>`, onAction);
   }
 
