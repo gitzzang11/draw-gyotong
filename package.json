@@ -1,6 +1,6 @@
 {
   "name": "draw-gyotong",
-  "version": "0.2.13",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
