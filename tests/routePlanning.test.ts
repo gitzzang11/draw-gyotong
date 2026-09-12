@@ -3,6 +3,7 @@ import {
   cancelRoutePlanning,
   createRoutePlanningSession,
   findSnapTargets,
+  restartRoutePlanning,
   RoutePlanningHistory,
   transitionRoutePlanning,
   type SnapTarget,
@@ -49,5 +50,18 @@ describe("shared route planning input", () => {
     history.replace(transitionRoutePlanning(start, "drawing", { draftCoordinates: [{ lat: 1, lng: 1 }] }));
     expect(history.undo().draftCoordinates).toEqual([]);
     expect(history.redo().draftCoordinates).toHaveLength(1);
+  });
+
+  it("returns a cancelled draft to idle before another tool lifecycle begins", () => {
+    let session = createRoutePlanningSession("connect", "draft-1");
+    session = transitionRoutePlanning(session, "drawing", { draftCoordinates: [{ lat: 37.5, lng: 127 }] });
+    const restarted = restartRoutePlanning(session);
+    expect(restarted).toMatchObject({ id: "draft-1", tool: "connect", stage: "idle", draftCoordinates: [] });
+  });
+
+  it("rejects an invalid tool lifecycle jump without changing the draft", () => {
+    const session = createRoutePlanningSession("extend", "draft-2");
+    expect(() => transitionRoutePlanning(session, "committing")).toThrow("Invalid route planning transition");
+    expect(session).toMatchObject({ stage: "selecting-source", draftCoordinates: [] });
   });
 });

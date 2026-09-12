@@ -56,7 +56,6 @@ import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, Co
 import type { EconomyState, Loan, StatisticsState } from "./domain/financeStateTypes.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
-import { SaveRepository } from "./storage/saveRepository.ts";
 import { captureGameState } from "./storage/serialization.ts";
 import {
   CURRENT_SAVE_SCHEMA_VERSION,
@@ -90,6 +89,13 @@ import { LinePanel } from "./ui/linePanel.ts";
 import { TrainPanel } from "./ui/trainPanel.ts";
 import { DepotPanel } from "./ui/depotPanel.ts";
 import { OperationsPanel } from "./ui/operationsPanel.ts";
+import { hexToHsl, hslToHex } from "./ui/colorPickerModel.ts";
+import { formatCost, formatDate, formatPlayTime, formatSignedCost } from "./ui/displayFormatters.ts";
+import {
+  MetroDiagramStateOwner,
+  type DiagramPoint,
+  type MetroDiagramState,
+} from "./ui/metroDiagramStateOwner.ts";
 import {
   DialogManager,
   renderConnectionChoice,
@@ -100,10 +106,12 @@ import {
   LocalRecoveryStore,
   type SaveSlotService,
 } from "./storage/saveSlotService.ts";
+import { SaveFacade } from "./storage/saveFacade.ts";
 import {
   calculateDailySettlement,
   DailySettlementService,
 } from "./simulation/finance/dailySettlement.ts";
+import { LoanStateOwner } from "./simulation/finance/loanStateOwner.ts";
 import { LayerManager } from "./map/layerManager.ts";
 import { LineRenderer, type LineRenderEntity } from "./map/lineRenderer.ts";
 import {
@@ -112,22 +120,23 @@ import {
   type TransferConnectionEntity,
 } from "./map/stationRenderer.ts";
 import { TrainRenderer, type TrainRenderEntity } from "./map/trainRenderer.ts";
-import { DepotRenderer, type DepotRenderEntity } from "./map/depotRenderer.ts";
+import { DepotRenderer } from "./map/depotRenderer.ts";
+import {
+  buildConstructionRenderEntities,
+  buildDepotRenderEntities,
+} from "./map/renderEntityBuilders.ts";
+import { getRoutePathCoordinates } from "./map/routePathBuilder.ts";
+import { getLodMode } from "./map/lod.ts";
+import { MapSelectionGestureController } from "./map/mapSelectionGestureController.ts";
 import { BlueprintRenderer, type BlueprintRenderEntity } from "./map/blueprintRenderer.ts";
 import {
   ConstructionRenderer,
   type ConstructionDraftRenderEntity,
-  type ConstructionRenderEntity,
 } from "./map/constructionRenderer.ts";
 import { getStationTransferInfo } from "./stationTransferInfo.ts";
 import { mergeLineExtension, resolveReferencedLineColor, type LineExtensionPayload } from "./lineExtension.ts";
-import {
-  cancelRoutePlanning,
-  createRoutePlanningSession,
-  transitionRoutePlanning,
-  type RoutePlanningSession,
-  type RoutePlanningTool,
-} from "./routePlanning.ts";
+import { type RoutePlanningTool } from "./routePlanning.ts";
+import { RoutePlanningController } from "./tools/routePlanningController.ts";
 import {
   createJunctionBlueprint,
   createConnectionBlueprint,
@@ -151,7 +160,7 @@ import { StateRecoveryCoordinator } from "./runtime/stateRecoveryCoordinator.ts"
 import { BootstrapController } from "./runtime/bootstrap.ts";
 import { ConstructionCoordinator } from "./construction/constructionCoordinator.ts";
 import { EventCoordinator } from "./events/eventCoordinator.ts";
-import { NewsService } from "./events/newsService.ts";
+import { NewsEventStateOwner } from "./events/newsEventStateOwner.ts";
 import { EventRuntimeAdapter } from "./events/eventRuntimeAdapter.ts";
 import { RuntimeResultDispatcher } from "./runtime/runtimeResultDispatcher.ts";
 import { DailySettlementRuntime, type DailySettlementRuntimeContext } from "./runtime/dailySettlementRuntime.ts";
@@ -177,7 +186,6 @@ const dailySettlementRuntime = new DailySettlementRuntime<OperationAnalysisState
 // =============================================================================
 
 type OverlayKey = "administrative" | "landuse" | "rail" | "population";
-type LodMode = "overview" | "district" | "build";
 type WorkspaceMode = "management" | "planning" | "construction";
 type ToolMode =
   | "pan"
@@ -192,22 +200,6 @@ type ToolMode =
   | "transfer"
   | "depot"
   | "expressStop";
-type DiagramPoint = {
-  x: number;
-  y: number;
-};
-
-type MetroDiagramState = {
-  autoPositions: Record<string, DiagramPoint>;
-  manualPositions: Record<string, DiagramPoint>;
-  background: "dark" | "light" | "blueprint";
-  showStationNames: boolean;
-  showCompanyInfo: boolean;
-  selectedRouteId: string;
-  layoutVersion: number;
-  networkSignature: string;
-};
-
 type DiagramShareStation = {
   id: string;
   name: string;
@@ -665,16 +657,6 @@ const cityDataVersion = "korea-cities-1";
 const diagramWidth = 1800;
 const diagramHeight = 1000;
 const diagramGrid = 72;
-const defaultDiagramState: MetroDiagramState = {
-  autoPositions: {},
-  manualPositions: {},
-  background: "light",
-  showStationNames: true,
-  showCompanyInfo: true,
-  selectedRouteId: "all",
-  layoutVersion: 3,
-  networkSignature: "",
-};
 const defaultAnalysisState: OperationAnalysisState = {
   dayIndex: 0,
   demandHistory: [],
@@ -2283,34 +2265,6 @@ function setColorPickerValue(input: HTMLInputElement | null, color: string) {
   syncColorPicker(input);
 }
 
-function hexToHsl(hex: string) {
-  const normalized = hex.replace("#", "");
-  const red = parseInt(normalized.slice(0, 2), 16) / 255;
-  const green = parseInt(normalized.slice(2, 4), 16) / 255;
-  const blue = parseInt(normalized.slice(4, 6), 16) / 255;
-  const max = Math.max(red, green, blue);
-  const min = Math.min(red, green, blue);
-  const lightness = (max + min) / 2;
-  const delta = max - min;
-  if (delta === 0) return { hue: 0, saturation: 0, lightness: Math.round(lightness * 100) };
-  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
-  let hue = max === red ? ((green - blue) / delta) % 6 : max === green ? (blue - red) / delta + 2 : (red - green) / delta + 4;
-  hue = Math.round(hue * 60);
-  if (hue < 0) hue += 360;
-  return { hue, saturation: Math.round(saturation * 100), lightness: Math.round(lightness * 100) };
-}
-
-function hslToHex({ hue, saturation, lightness }: typeof colorPickerHsl) {
-  const s = saturation / 100;
-  const l = lightness / 100;
-  const chroma = (1 - Math.abs(2 * l - 1)) * s;
-  const segment = hue / 60;
-  const x = chroma * (1 - Math.abs((segment % 2) - 1));
-  const [red, green, blue] = segment < 1 ? [chroma, x, 0] : segment < 2 ? [x, chroma, 0] : segment < 3 ? [0, chroma, x] : segment < 4 ? [0, x, chroma] : segment < 5 ? [x, 0, chroma] : [chroma, 0, x];
-  const match = l - chroma / 2;
-  return `#${[red, green, blue].map((channel) => Math.round((channel + match) * 255).toString(16).padStart(2, "0")).join("")}`.toUpperCase();
-}
-
 function renderColorPicker() {
   const hex = hslToHex(colorPickerHsl);
   colorPreview?.style.setProperty("--picker-color", hex);
@@ -2476,11 +2430,11 @@ let stations: Station[] = [];
 let transfers: TransferGroup[] = [];
 let depots: Depot[] = [];
 let plans: ConstructionPlan[] = [];
-let diagramState: MetroDiagramState = { ...defaultDiagramState, autoPositions: {}, manualPositions: {} };
+const diagramStateOwner = new MetroDiagramStateOwner();
 let analysisState: OperationAnalysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
 let statisticsState: StatisticsState = { ...defaultStatisticsState, dailyRecords: [] };
 let constructionProjects: ConstructionProject[] = [];
-let newsEvents: NewsEvent[] = [];
+const newsEventState = new NewsEventStateOwner(80);
 let trainFleets: TrainFleet[] = [];
 let operatingServices: OperatingService[] = [];
 let expressConfigs: ExpressConfig[] = [];
@@ -2494,7 +2448,7 @@ let stationDemandStates: StationDemandState[] = [];
 let demandStructureSignature = "";
 let demandServiceSignature = "";
 let demandContextSignature = "";
-let loans: Loan[] = [];
+const loanState = new LoanStateOwner();
 let economy: EconomyState = { ...defaultEconomy };
 let currentMeta: GameMeta = createDefaultMeta();
 let slotSummaries: SaveSlotSummary[] = [];
@@ -2536,9 +2490,7 @@ let plannedDeleteAnchor: PlannedRouteDeleteAnchor | null = null;
 let activePlanningBranch: PlanningBranchDraft | null = null;
 let pendingMerge: PendingMerge | null = null;
 let activeConnectionSource: PlannedRouteMergeEndpoint | RouteMergeEndpoint | null = null;
-let routePlanningSession: RoutePlanningSession | null = null;
-let pendingPlanningToolChange: ToolMode | null = null;
-let bypassPlanningToolChangeGuard = false;
+const routePlanningController = new RoutePlanningController<ToolMode>();
 let selectedRouteId: string | null = null;
 let planningMode = false;
 let activePlanId: string | null = null;
@@ -2589,16 +2541,8 @@ type MapSelectionData =
   | { kind: "route"; routeId: string }
   | { kind: "construction"; projectId: string }
   | { kind: "blueprint"; planId: string; assetId: string; assetKind: "route" | "station" | "depot" };
-type MapSelectionGesture = {
-  pointerId: number;
-  pointerType: string;
-  start: L.Point;
-  moved: boolean;
-  cancelled: boolean;
-};
 const trainHitTargets = new Map<string, TrainHitTarget>();
-const mapSelectionPointers = new Set<number>();
-let mapSelectionGesture: MapSelectionGesture | null = null;
+const mapSelectionGestureController = new MapSelectionGestureController();
 
 const simulationCoordinator = new SimulationCoordinator({
   getTime: () => simulationRuntimeMinutes,
@@ -2628,17 +2572,12 @@ const gameLoopController = new GameLoopController({
 });
 
 const constructionCoordinator = new ConstructionCoordinator<ConstructionProject>();
-const newsService = new NewsService<NewsEvent>(80);
 const eventRuntimeAdapter = new EventRuntimeAdapter<NewsEvent, NewsEvent[], NewsEvent>();
 const networkInvalidation = new NetworkInvalidation();
 const runtimeResultDispatcher = new RuntimeResultDispatcher<NewsEvent>({
   requestUpdates: (domains) => requestUpdateDomains(domains),
   requestSave: (mode) => requestStateSave(mode === "immediate" ? "immediate" : "normal"),
-  appendNews: (events) => {
-    const previousLength = newsEvents.length;
-    for (const event of events) newsEvents = newsService.append(newsEvents, event);
-    return newsEvents.length !== previousLength;
-  },
+  appendNews: (events) => newsEventState.appendMany(events),
   invalidateNetwork: () => {
     networkInvalidation.evaluate(["segment-add"]);
     transitRouter = null;
@@ -2653,6 +2592,13 @@ const eventCoordinator = new EventCoordinator<NewsEvent>({
   minimumGapDays: 4,
   maximumActive: 3,
   maximumHistory: 80,
+});
+const saveFacade = new SaveFacade<SaveState>({
+  capture: () => measureTask("save-serialization", cloneState),
+  service: getSaveSlotService,
+  prepareForScheduledSave: synchronizeGraphReferences,
+  delayMs: 240,
+  onError: (error) => console.warn("[save] 상태 저장 실패", error),
 });
 const bootstrapController = new BootstrapController({
   createShell: initializeGameShell,
@@ -3027,20 +2973,20 @@ openDiagramButton?.addEventListener("click", openDiagramScreen);
 diagramToolButton?.addEventListener("click", openDiagramScreen);
 closeDiagramButton?.addEventListener("click", closeDiagramScreen);
 diagramRouteFilter?.addEventListener("change", () => {
-  diagramState = { ...diagramState, selectedRouteId: diagramRouteFilter.value || "all" };
+  diagramStateOwner.selectRoute(diagramRouteFilter.value || "all");
   renderMetroDiagram();
 });
 diagramBackgroundSelect?.addEventListener("change", () => {
   const background = ["light", "blueprint"].includes(diagramBackgroundSelect.value) ? (diagramBackgroundSelect.value as "light" | "blueprint") : "dark";
-  diagramState = { ...diagramState, background };
+  diagramStateOwner.setBackground(background);
   renderMetroDiagram();
 });
 diagramLabelsToggle?.addEventListener("change", () => {
-  diagramState = { ...diagramState, showStationNames: diagramLabelsToggle.checked };
+  diagramStateOwner.setStationNamesVisible(diagramLabelsToggle.checked);
   renderMetroDiagram();
 });
 diagramCompanyToggle?.addEventListener("change", () => {
-  diagramState = { ...diagramState, showCompanyInfo: diagramCompanyToggle.checked };
+  diagramStateOwner.setCompanyInfoVisible(diagramCompanyToggle.checked);
   renderMetroDiagram();
 });
 resetDiagramLayoutButton?.addEventListener("click", resetDiagramLayout);
@@ -3392,11 +3338,7 @@ function onPointerDown(event: PointerEvent) {
   }
   const point = containerPointFromEvent(event);
   if (activeTool === "pan") {
-    mapSelectionPointers.add(event.pointerId);
-    if (mapSelectionPointers.size > 1 && mapSelectionGesture) mapSelectionGesture.cancelled = true;
-    if (!mapSelectionGesture) {
-      mapSelectionGesture = { pointerId: event.pointerId, pointerType: event.pointerType, start: point, moved: false, cancelled: false };
-    }
+    mapSelectionGestureController.begin(event.pointerId, event.pointerType, point);
     return;
   }
   const planningContinuation = findPlanningRouteContinuation(point);
@@ -3571,19 +3513,17 @@ function onPointerDown(event: PointerEvent) {
     }
     activeRepair = repair;
   }
-  if (routePlanningSession?.stage === "selecting-source") {
-    const sourceLineId =
-      activeExtension?.routeId ??
-      activePlanningContinuation?.actualRouteId ??
-      activePlanningContinuation?.plannedRouteId ??
-      activeBranch?.routeId ??
-      activePlanningBranch?.routeId;
-    routePlanningSession = transitionRoutePlanning(routePlanningSession, "drawing", {
-      sourceEntityId: sourceLineId,
-      sourceLineId: activePlanningContinuation?.actualRouteId ?? activeExtension?.routeId ?? activeBranch?.routeId,
-      sourceBlueprintId: activePlanningContinuation?.plannedRouteId ?? activePlanningBranch?.routeId,
-    });
-  }
+  const sourceLineId =
+    activeExtension?.routeId ??
+    activePlanningContinuation?.actualRouteId ??
+    activePlanningContinuation?.plannedRouteId ??
+    activeBranch?.routeId ??
+    activePlanningBranch?.routeId;
+  routePlanningController.beginDrawing({
+    sourceEntityId: sourceLineId,
+    sourceLineId: activePlanningContinuation?.actualRouteId ?? activeExtension?.routeId ?? activeBranch?.routeId,
+    sourceBlueprintId: activePlanningContinuation?.plannedRouteId ?? activePlanningBranch?.routeId,
+  });
   activePointerId = event.pointerId;
   updateRouteDrawingHudProximity(event.clientY);
   rawDrawPoints = activeExtension
@@ -3623,9 +3563,8 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onPointerMove(event: PointerEvent) {
-  if (activeTool === "pan" && mapSelectionGesture?.pointerId === event.pointerId) {
-    const threshold = event.pointerType === "touch" ? 12 : 5;
-    if (containerPointFromEvent(event).distanceTo(mapSelectionGesture.start) > threshold) mapSelectionGesture.moved = true;
+  if (activeTool === "pan") {
+    mapSelectionGestureController.move(event.pointerId, event.pointerType, containerPointFromEvent(event));
     return;
   }
   if (event.pointerId !== activePointerId) return;
@@ -3648,15 +3587,10 @@ function onPointerMove(event: PointerEvent) {
   const lastPoint = rawDrawPoints[rawDrawPoints.length - 1];
   if (point.distanceTo(lastPoint) < 5) return;
   rawDrawPoints.push(point);
-  if (routePlanningSession?.stage === "drawing") {
-    routePlanningSession = {
-      ...routePlanningSession,
-      draftCoordinates: rawDrawPoints.map((screenPoint) => {
-        const coordinate = map.containerPointToLatLng(screenPoint);
-        return { lat: coordinate.lat, lng: coordinate.lng };
-      }),
-    };
-  }
+  routePlanningController.updateDraftCoordinates(() => rawDrawPoints.map((screenPoint) => {
+    const coordinate = map.containerPointToLatLng(screenPoint);
+    return { lat: coordinate.lat, lng: coordinate.lng };
+  }));
 
   if ((activeTool === "route" || activeTool === "extend" || activeTool === "reconnect" || activeTool === "branch" || activeTool === "merge") && previewPolyline) {
     const smoothed = smoothScreenPoints(rawDrawPoints);
@@ -3713,8 +3647,7 @@ function onWindowPointerCancel(event: PointerEvent) {
 
 function onPointerCancel(event: PointerEvent) {
   if (activeTool === "pan") {
-    mapSelectionPointers.delete(event.pointerId);
-    if (mapSelectionGesture?.pointerId === event.pointerId) mapSelectionGesture = null;
+    mapSelectionGestureController.cancel(event.pointerId);
     return;
   }
   if (event.pointerId !== activePointerId) return;
@@ -3725,13 +3658,9 @@ function onPointerCancel(event: PointerEvent) {
 
 function onPointerUp(event: PointerEvent) {
   if (activeTool === "pan") {
-    mapSelectionPointers.delete(event.pointerId);
-    const gesture = mapSelectionGesture;
-    if (gesture?.pointerId === event.pointerId) {
-      mapSelectionGesture = null;
-      if (!gesture.moved && !gesture.cancelled && mapSelectionPointers.size === 0) {
-        handleUnifiedMapSelection(containerPointFromEvent(event), gesture.pointerType);
-      }
+    const result = mapSelectionGestureController.end(event.pointerId);
+    if (result?.shouldSelect) {
+      handleUnifiedMapSelection(containerPointFromEvent(event), result.pointerType);
     }
     return;
   }
@@ -3773,13 +3702,11 @@ function onPointerUp(event: PointerEvent) {
   activeConnectionSource = null;
   rawDrawPoints = [];
   mapLayers.clear("construction-preview");
-  if (routePlanningSession?.stage === "drawing" && activeTool !== "merge") {
-    routePlanningSession = transitionRoutePlanning(routePlanningSession, "reviewing", {
-      draftCoordinates: finishedPoints.map((screenPoint) => {
-        const coordinate = map.containerPointToLatLng(screenPoint);
-        return { lat: coordinate.lat, lng: coordinate.lng };
-      }),
-    });
+  if (activeTool !== "merge") {
+    routePlanningController.finishDrawing(() => finishedPoints.map((screenPoint) => {
+      const coordinate = map.containerPointToLatLng(screenPoint);
+      return { lat: coordinate.lat, lng: coordinate.lng };
+    }));
   }
 
   if (activeTool === "eraser") finishEraserStroke(finishedPoints);
@@ -4585,8 +4512,8 @@ function cancelConstructionDraft() {
   constructionDraft = null;
   document.body.classList.remove("construction-reviewing");
   mapLayers.clear("construction-preview");
-  if (routePlanningSession && routePlanningSession.stage !== "completed") {
-    routePlanningSession = cancelRoutePlanning(routePlanningSession);
+  if (routePlanningController.session && routePlanningController.session.stage !== "completed") {
+    routePlanningController.cancel();
   }
   if (constructionPreviewPanel) constructionPreviewPanel.hidden = true;
   if (activeTool !== "pan") map.dragging.disable();
@@ -4600,13 +4527,13 @@ function cancelConstructionDraft() {
 async function confirmConstructionDraft() {
   const draft = constructionDraft;
   if (!draft || draft.analysis.warnings.some((warning) => warning.severity === "error")) return;
-  if (routePlanningSession?.stage === "reviewing") {
-    routePlanningSession = transitionRoutePlanning(routePlanningSession, "committing");
+  if (routePlanningController.session?.stage === "reviewing") {
+    routePlanningController.transition("committing");
   }
   if (planningMode) {
     await confirmPlanningDraft(draft);
-    if (routePlanningSession?.stage === "committing") {
-      routePlanningSession = transitionRoutePlanning(routePlanningSession, "completed");
+    if (routePlanningController.session?.stage === "committing") {
+      routePlanningController.transition("completed");
     }
     return;
   }
@@ -4643,8 +4570,8 @@ async function confirmConstructionDraft() {
     selectRoute(selectedId, false);
     requestUpdate("network-structure", selectedId);
     setText(facilityReadout, usesConstructionTimeline() ? "공사 예정으로 등록했습니다" : "건설을 확정하고 저장했습니다");
-    if (routePlanningSession?.stage === "committing") {
-      routePlanningSession = transitionRoutePlanning(routePlanningSession, "completed");
+    if (routePlanningController.session?.stage === "committing") {
+      routePlanningController.transition("completed");
     }
     playFeedback("confirm");
   } catch (error) {
@@ -5100,8 +5027,8 @@ async function openConstructionProject(projectId: string) {
     showToast(`${project.name} 운행을 시작했습니다.`);
     playFeedback("confirm");
   } catch (error) {
-    if (routePlanningSession?.stage === "committing") {
-      routePlanningSession = transitionRoutePlanning(routePlanningSession, "reviewing", {
+    if (routePlanningController.session?.stage === "committing") {
+      routePlanningController.transition("reviewing", {
         validationErrors: [{ code: "atomic-commit-failed", message: "확정에 실패해 이전 상태로 복구했습니다.", severity: "error" }],
       });
     }
@@ -6052,16 +5979,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
     if (staleMemberIds.size > 0) {
       pushHistory();
       separateTransferStations(staleMemberIds);
-      diagramState = {
-        ...diagramState,
-        autoPositions: Object.fromEntries(
-          Object.entries(diagramState.autoPositions).filter(([id]) => id !== `transfer:${transferGroupId}`),
-        ),
-        manualPositions: Object.fromEntries(
-          Object.entries(diagramState.manualPositions).filter(([id]) => id !== `transfer:${transferGroupId}`),
-        ),
-        networkSignature: "",
-      };
+      diagramStateOwner.removeNodes(new Set([`transfer:${transferGroupId}`]));
       redoStack = [];
     }
     cleanupTransferData();
@@ -6091,12 +6009,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
   separateTransferStations(memberIds);
   cleanupTransferData();
   const removedDiagramNodeIds = new Set(Array.from(removedTransferIds, (id) => `transfer:${id}`));
-  diagramState = {
-    ...diagramState,
-    autoPositions: Object.fromEntries(Object.entries(diagramState.autoPositions).filter(([id]) => !removedDiagramNodeIds.has(id))),
-    manualPositions: Object.fromEntries(Object.entries(diagramState.manualPositions).filter(([id]) => !removedDiagramNodeIds.has(id))),
-    networkSignature: "",
-  };
+  diagramStateOwner.removeNodes(removedDiagramNodeIds);
   selectedManualTransferEndpoints = [];
   selectedTransferStationIds = [];
   selectedPlannedStationIds = [];
@@ -6113,7 +6026,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
 function removeStandaloneMultiRouteStation(station: Station) {
   pushHistory();
   separateTransferStations(new Set([station.id]));
-  diagramState = { ...diagramState, networkSignature: "" };
+  diagramStateOwner.invalidateNetwork();
   selectedManualTransferEndpoints = [];
   selectedTransferStationIds = [];
   selectedPlannedStationIds = [];
@@ -6301,23 +6214,6 @@ type DiagramGraphInternal = {
   adjacency: Map<string, Set<string>>;
 };
 
-function normalizeDiagramState(state?: MetroDiagramState): MetroDiagramState {
-  const usingPublicMapLayout = (state?.layoutVersion ?? 0) < defaultDiagramState.layoutVersion;
-  const background: MetroDiagramState["background"] = usingPublicMapLayout
-    ? "light"
-    : state?.background === "dark" || state?.background === "blueprint"
-      ? state.background
-      : "light";
-  return {
-    ...defaultDiagramState,
-    ...(state ?? {}),
-    background,
-    layoutVersion: defaultDiagramState.layoutVersion,
-    autoPositions: usingPublicMapLayout ? {} : state?.autoPositions ?? {},
-    manualPositions: usingPublicMapLayout ? {} : state?.manualPositions ?? {},
-  };
-}
-
 function openDiagramScreen() {
   if (!diagramScreen) return;
   setTool("pan");
@@ -6336,18 +6232,18 @@ function closeDiagramScreen() {
 
 function renderDiagramControls() {
   const actualRoutes = routes.filter((route) => route.coordinates.length >= 2);
-  if (diagramState.selectedRouteId !== "all" && !actualRoutes.some((route) => route.id === diagramState.selectedRouteId)) {
-    diagramState = { ...diagramState, selectedRouteId: "all" };
+  if (diagramStateOwner.current.selectedRouteId !== "all" && !actualRoutes.some((route) => route.id === diagramStateOwner.current.selectedRouteId)) {
+    diagramStateOwner.selectRoute("all");
   }
   if (diagramRouteFilter) {
     diagramRouteFilter.innerHTML =
       `<option value="all">전체 노선</option>` +
       actualRoutes.map((route) => `<option value="${route.id}">${escapeHtml(route.name)}</option>`).join("");
-    diagramRouteFilter.value = diagramState.selectedRouteId;
+    diagramRouteFilter.value = diagramStateOwner.current.selectedRouteId;
   }
-  if (diagramBackgroundSelect) diagramBackgroundSelect.value = diagramState.background;
-  if (diagramLabelsToggle) diagramLabelsToggle.checked = diagramState.showStationNames;
-  if (diagramCompanyToggle) diagramCompanyToggle.checked = diagramState.showCompanyInfo;
+  if (diagramBackgroundSelect) diagramBackgroundSelect.value = diagramStateOwner.current.background;
+  if (diagramLabelsToggle) diagramLabelsToggle.checked = diagramStateOwner.current.showStationNames;
+  if (diagramCompanyToggle) diagramCompanyToggle.checked = diagramStateOwner.current.showCompanyInfo;
   setText(diagramCompanyName, getNetworkTitle());
   renderDiagramRouteLegend();
 }
@@ -6356,7 +6252,7 @@ function renderDiagramRouteLegend() {
   if (!diagramRouteLegend) return;
   const visibleRoutes = routes
     .filter((route) => route.coordinates.length >= 2)
-    .filter((route) => diagramState.selectedRouteId === "all" || route.id === diagramState.selectedRouteId);
+    .filter((route) => diagramStateOwner.current.selectedRouteId === "all" || route.id === diagramStateOwner.current.selectedRouteId);
   diagramRouteLegend.innerHTML = visibleRoutes
     .map((route) => `<span><i style="--diagram-route-color:${escapeHtml(route.color)}"></i>${escapeHtml(route.name)}</span>`)
     .join("");
@@ -6365,7 +6261,7 @@ function renderDiagramRouteLegend() {
 function buildDiagramGraph(): DiagramGraphInternal {
   const visibleRoutes = routes
     .filter((route) => route.coordinates.length >= 2)
-    .filter((route) => diagramState.selectedRouteId === "all" || route.id === diagramState.selectedRouteId)
+    .filter((route) => diagramStateOwner.current.selectedRouteId === "all" || route.id === diagramStateOwner.current.selectedRouteId)
     .sort((a, b) => a.id.localeCompare(b.id));
   const visibleRouteIds = new Set(visibleRoutes.map((route) => route.id));
   const nodes = new Map<string, DiagramNodeInternal>();
@@ -6504,7 +6400,7 @@ function buildDiagramPositions(graph: DiagramGraphInternal) {
   const positions = new Map<string, DiagramPoint>();
   const occupied: DiagramPoint[] = [];
   for (const node of stationNodes) {
-    const saved = diagramState.manualPositions[node.id] ?? diagramState.autoPositions[node.id];
+    const saved = diagramStateOwner.current.manualPositions[node.id] ?? diagramStateOwner.current.autoPositions[node.id];
     if (!saved) continue;
     const point = { x: clampNumber(saved.x, 120, diagramWidth - 120), y: clampNumber(saved.y, 100, diagramHeight - 100) };
     positions.set(node.id, point);
@@ -6544,12 +6440,11 @@ function buildDiagramPositions(graph: DiagramGraphInternal) {
 
   const nextAuto: Record<string, DiagramPoint> = {};
   for (const [stationId, point] of positions) if (validStationIds.has(stationId)) nextAuto[stationId] = point;
-  diagramState = {
-    ...diagramState,
-    autoPositions: nextAuto,
-    manualPositions: Object.fromEntries(Object.entries(diagramState.manualPositions).filter(([stationId]) => validStationIds.has(stationId))),
-    networkSignature: buildDiagramNetworkSignature(graph),
-  };
+  diagramStateOwner.updateLayout(
+    nextAuto,
+    Object.fromEntries(Object.entries(diagramStateOwner.current.manualPositions).filter(([stationId]) => validStationIds.has(stationId))),
+    buildDiagramNetworkSignature(graph),
+  );
 
   const allPositions = new Map(positions);
   for (const path of graph.paths) {
@@ -6638,7 +6533,7 @@ function renderMetroDiagram() {
   const hasRoutes = graph.paths.length > 0;
   if (diagramEmptyState) diagramEmptyState.hidden = hasRoutes;
   metroDiagramSvg.toggleAttribute("hidden", !hasRoutes);
-  if (diagramScreen) diagramScreen.dataset.background = diagramState.background;
+  if (diagramScreen) diagramScreen.dataset.background = diagramStateOwner.current.background;
   renderDiagramRouteLegend();
   renderDiagramBackground();
   if (!hasRoutes) {
@@ -6677,14 +6572,14 @@ function renderMetroDiagram() {
       .join("") +
     visibleStationNodes.map((node) => renderDiagramStation(node, positions.get(node.id)!)).join("");
 
-  diagramLabelLayer.innerHTML = diagramState.showStationNames ? renderDiagramLabels(visibleStationNodes, positions) : "";
+  diagramLabelLayer.innerHTML = diagramStateOwner.current.showStationNames ? renderDiagramLabels(visibleStationNodes, positions) : "";
   renderDiagramCompany();
   const transferCount = visibleStationNodes.filter(
     (node) => node.sourceStationIds.length > 1 || node.routeIds.length > 1,
   ).length;
   setText(
     diagramStatus,
-    `${graph.paths.length}개 경로 · ${visibleStationNodes.length}개 논리역 · 환승 ${transferCount}개 · 수동 조정 ${Object.keys(diagramState.manualPositions).length}개`,
+    `${graph.paths.length}개 경로 · ${visibleStationNodes.length}개 논리역 · 환승 ${transferCount}개 · 수동 조정 ${Object.keys(diagramStateOwner.current.manualPositions).length}개`,
   );
 }
 
@@ -6692,20 +6587,20 @@ function renderDiagramBackground() {
   if (!diagramBackgroundLayer) return;
   const theme = diagramTheme();
   const gridLines: string[] = [];
-  if (diagramState.background === "blueprint") {
+  if (diagramStateOwner.current.background === "blueprint") {
     for (let x = 0; x <= diagramWidth; x += 40) gridLines.push(`<path d="M ${x} 0 V ${diagramHeight}" stroke="${theme.grid}" stroke-width="1"/>`);
     for (let y = 0; y <= diagramHeight; y += 40) gridLines.push(`<path d="M 0 ${y} H ${diagramWidth}" stroke="${theme.grid}" stroke-width="1"/>`);
   }
-  const river = diagramState.background === "light"
+  const river = diagramStateOwner.current.background === "light"
     ? `<path d="M -60 690 C 230 590 405 755 690 677 S 1160 580 1425 655 S 1660 770 1870 650" fill="none" stroke="#d6edf8" stroke-width="34" stroke-linecap="round" opacity=".78"/>`
     : "";
   diagramBackgroundLayer.innerHTML = `<rect width="${diagramWidth}" height="${diagramHeight}" fill="${theme.background}"/>${river}${gridLines.join("")}`;
 }
 
 function diagramTheme() {
-  if (diagramState.background === "light")
+  if (diagramStateOwner.current.background === "light")
     return { background: "#ffffff", surface: "#ffffff", text: "#161616", muted: "#67727a", label: "rgba(255,255,255,.92)", grid: "rgba(28,51,65,.08)" };
-  if (diagramState.background === "blueprint")
+  if (diagramStateOwner.current.background === "blueprint")
     return { background: "#092d48", surface: "#e6f4ff", text: "#eef8ff", muted: "#9fc6dd", label: "rgba(9,45,72,.9)", grid: "rgba(158,208,235,.09)" };
   return { background: "#071116", surface: "#f7fbfc", text: "#edf5f7", muted: "#8fa4ad", label: "rgba(7,17,22,.9)", grid: "rgba(255,255,255,.05)" };
 }
@@ -6773,7 +6668,7 @@ function diagramOverlapArea(a: { x: number; y: number; width: number; height: nu
 
 function renderDiagramCompany() {
   if (!diagramCompanyLayer) return;
-  if (!diagramState.showCompanyInfo) {
+  if (!diagramStateOwner.current.showCompanyInfo) {
     diagramCompanyLayer.innerHTML = "";
     return;
   }
@@ -6822,16 +6717,10 @@ function moveDiagramStationDrag(event: PointerEvent) {
   if (!diagramDrag || diagramDrag.pointerId !== event.pointerId) return;
   event.preventDefault();
   const point = diagramClientPoint(event.clientX, event.clientY);
-  diagramState = {
-    ...diagramState,
-    manualPositions: {
-      ...diagramState.manualPositions,
-      [diagramDrag.stationId]: {
-        x: Math.round(clampNumber(point.x, 80, diagramWidth - 80) / 8) * 8,
-        y: Math.round(clampNumber(point.y, 70, diagramHeight - 70) / 8) * 8,
-      },
-    },
-  };
+  diagramStateOwner.setManualPosition(diagramDrag.stationId, {
+    x: Math.round(clampNumber(point.x, 80, diagramWidth - 80) / 8) * 8,
+    y: Math.round(clampNumber(point.y, 70, diagramHeight - 70) / 8) * 8,
+  });
   renderMetroDiagram();
 }
 
@@ -6855,7 +6744,7 @@ function diagramClientPoint(clientX: number, clientY: number) {
 
 function calculateDiagramViewBox(positions: Map<string, DiagramPoint>) {
   const points = Array.from(positions.values());
-  if (diagramState.showCompanyInfo) points.push({ x: 80, y: 70 }, { x: 550, y: 174 });
+  if (diagramStateOwner.current.showCompanyInfo) points.push({ x: 80, y: 70 }, { x: 550, y: 174 });
   const minX = Math.min(...points.map((point) => point.x)) - 110;
   const maxX = Math.max(...points.map((point) => point.x)) + 110;
   const minY = Math.min(...points.map((point) => point.y)) - 90;
@@ -6878,7 +6767,7 @@ function calculateDiagramViewBox(positions: Map<string, DiagramPoint>) {
 }
 
 function resetDiagramLayout() {
-  diagramState = { ...diagramState, autoPositions: {}, manualPositions: {}, networkSignature: "" };
+  diagramStateOwner.resetLayout();
   requestStateSave();
   renderMetroDiagram();
   void saveCurrentSlot("노선도 자동 배치");
@@ -6975,10 +6864,7 @@ async function importShareBundle() {
     const before = cloneState();
     const knownStationIds = new Set(stations.map((station) => station.id));
     const importedPositions = Object.fromEntries(bundle.diagram.stations.filter((station) => knownStationIds.has(station.id)).map((station) => [station.id, station.position]));
-    diagramState = {
-      ...diagramState,
-      manualPositions: { ...diagramState.manualPositions, ...importedPositions },
-    };
+    diagramStateOwner.mergeManualPositions(importedPositions);
     const importedPlans = bundle.routeDesign.plans.map((plan) => cloneImportedPlan(plan));
     plans = [...plans, ...importedPlans];
     activePlanId = importedPlans[0]?.id ?? activePlanId;
@@ -8646,7 +8532,7 @@ async function saveEditedSlot() {
       unlockedCityIds: mode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : state.meta.unlockedCityIds,
       updatedAt,
     };
-    await getSaveSlotService().update({ ...state, meta: nextMeta });
+    await saveFacade.update({ ...state, meta: nextMeta });
     if (isActiveSaveSlot(slotId)) {
       currentMeta = { ...currentMeta, ...nextMeta };
       renderAll();
@@ -8685,7 +8571,7 @@ function requestSaveSlotDeletion(slotId: string, slotName: string) {
 async function deleteSaveSlot(slotId: string) {
   const deletesActiveSlot = isActiveSaveSlot(slotId);
   try {
-    await getSaveSlotService().remove(slotId);
+    await saveFacade.remove(slotId);
 
     if (deletesActiveSlot) {
       localRecoveryStore.clear();
@@ -8789,7 +8675,7 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
     cash: mode === "sandbox" ? 999999999 : difficultyConfigs[difficulty].startCash,
   };
   updateEconomyHud();
-  newsEvents = [createNewsEvent(0)];
+  newsEventState.replace([createNewsEvent(0)]);
   applyCityMapConstraints(cityId);
   if (newGameButton) newGameButton.disabled = true;
   const saved = await saveCurrentSlot("새 세이브", false, true);
@@ -8807,14 +8693,12 @@ function resetWorld() {
   cancelActiveDrawing();
   constructionDraft = null;
   demolitionReview = null;
-  routePlanningSession = null;
-  pendingPlanningToolChange = null;
+  routePlanningController.reset();
   pendingBranchJunction = null;
   activeConnectionSource = null;
   pendingMerge = null;
   pendingDecision = null;
   replacingPlannedRouteId = null;
-  bypassPlanningToolChangeGuard = false;
   selectedConnectionChoice = "merge";
   selectedColor = routeColors[0];
   draftRouteName = "";
@@ -8829,16 +8713,16 @@ function resetWorld() {
   transfers = [];
   depots = [];
   plans = [];
-  diagramState = { ...defaultDiagramState, autoPositions: {}, manualPositions: {} };
+  diagramStateOwner.reset();
   analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
   statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
   constructionProjects = [];
-  newsEvents = [];
+  newsEventState.reset();
   trainFleets = [];
   operatingServices = [];
   expressConfigs = [];
   passengerGroups = [];
-  loans = [];
+  loanState.reset();
   undoStack = [];
   redoStack = [];
   selectedOperationRouteId = "";
@@ -8894,7 +8778,7 @@ async function loadSlot(slotId: string) {
     const state = await readSaveSlot(slotId);
     if (requestId !== slotLoadRequestId || !state) return;
 
-    stateSaveRepository.cancel();
+    saveFacade.cancel();
     closeSlotScopedSurfaces();
     resetWorld();
     replacedCurrentSession = true;
@@ -8940,9 +8824,9 @@ async function saveCurrentSlot(label: string, reportError = true, createOnly = f
   try {
     if (createOnly) {
       const state = cloneState();
-      await getSaveSlotService().create(state);
+      await saveFacade.create(state);
     } else {
-      await stateSaveRepository.flush();
+      await saveFacade.flush();
     }
     slotSummaries = await listSaveSlots();
     setText(saveStatus, label);
@@ -9021,11 +8905,11 @@ function getSaveSlotService() {
 }
 
 async function readSaveSlot(slotId: string): Promise<SaveState | null> {
-  return getSaveSlotService().load(slotId);
+  return saveFacade.load(slotId);
 }
 
 async function listSaveSlots(): Promise<SaveSlotSummary[]> {
-  return (await getSaveSlotService().list())
+  return (await saveFacade.list())
     .filter((state) => state.meta)
     .map((state) => ({
       slotId: state.meta!.slotId,
@@ -9050,40 +8934,15 @@ function hasRouteGaps(route: RouteLine) {
   return (route.disabledSegments?.length ?? 0) > 0;
 }
 
-/**
- * 철거 등으로 비활성화된 구간을 경계로 노선을 연속된 운행 구간(run)들로 나눈다.
- * 지도 렌더링과 열차 이동은 끊어진 선을 하나의 경로로 취급하면 안 되므로 이 결과를 쓴다.
- */
-function getRouteRuns(route: RouteLine) {
-  const points = route.coordinates.map(([lat, lng]) => L.latLng(lat, lng));
-  const gaps = new Set(route.disabledSegments ?? []);
-  const runs: LatLng[][] = [];
-  let currentRun: LatLng[] = points.length > 0 ? [points[0]] : [];
-  for (let index = 0; index < points.length - 1; index += 1) {
-    if (gaps.has(index)) {
-      if (currentRun.length > 1) runs.push(currentRun);
-      currentRun = [points[index + 1]];
-      continue;
-    }
-    currentRun.push(points[index + 1]);
-  }
-  if (currentRun.length > 1) runs.push(currentRun);
-  return runs;
-}
-
 function getRoutePaths(route: RouteLine) {
-  const branchSegmentIds = new Set((route.branches ?? []).flatMap((branch) => branch.segmentIds));
-  const branchPaths = (route.segments ?? [])
-    .filter((segment) => segment.enabled && branchSegmentIds.has(segment.id))
-    .map((segment) => segment.coordinates.map(([lat, lng]) => L.latLng(lat, lng)));
-  return [...getRouteRuns(route), ...branchPaths];
+  return getRoutePathCoordinates(route).map((path) => path.map(([lat, lng]) => L.latLng(lat, lng)));
 }
 
 function reconcileMapLines(selectedId?: string) {
   const lod = getLodMode(map.getZoom());
   const entities: LineRenderEntity[] = routes.map((route) => ({
     id: route.id,
-    paths: getRoutePaths(route).map((path) => path.map((point) => [point.lat, point.lng])),
+    paths: getRoutePathCoordinates(route),
     color: route.color,
     selected: route.id === selectedId,
     underConstruction: !isRouteOperational(route.id),
@@ -9095,22 +8954,7 @@ function reconcileMapLines(selectedId?: string) {
 }
 
 function reconcileConstructionProjects() {
-  const entities: ConstructionRenderEntity[] = constructionProjects
-    .filter((project) => project.status !== "operating" && project.coordinates.length >= 2)
-    .map((project) => {
-      const progress =
-      project.status === "opening-ready"
-        ? 1
-        : clampNumber(project.elapsedDays / Math.max(1, project.durationDays + project.delayDays), 0, 1);
-      return {
-        id: project.id,
-        points: project.coordinates,
-        progress,
-        ready: project.status === "opening-ready",
-        affected: project.kind === "repair" || project.kind === "edit",
-      };
-    });
-  constructionRenderer.reconcileEntities(entities);
+  constructionRenderer.reconcileEntities(buildConstructionRenderEntities(constructionProjects));
 }
 
 function reconcileMapStations(selectedId?: string) {
@@ -9149,14 +8993,11 @@ function reconcileMapStations(selectedId?: string) {
 }
 
 function reconcileMapDepots(selectedId?: string) {
-  const entities: DepotRenderEntity[] = depots.map((depot) => ({
-    id: depot.id,
-    polygon: depot.polygon,
-    selected: depot.id === selectedId || depot.id === selectedDepotId,
-    operational: isDepotOperational(depot.id),
-    connected: depot.connectedRouteIds.length > 0,
+  depotRenderer.reconcileEntities(buildDepotRenderEntities(depots, {
+    selectedId,
+    selectedDepotId,
+    isOperational: isDepotOperational,
   }));
-  depotRenderer.reconcileEntities(entities);
 }
 
 function reconcileMapTrains() {
@@ -10328,14 +10169,14 @@ function hashNewsSeed(day: number, salt: string) {
 
 function updateNewsEventsForDay(dispatch = true) {
   const day = analysisState.dayIndex;
-  const result = eventCoordinator.advanceDay(newsEvents, day, hashNewsSeed(day, currentMeta.slotId));
-  newsEvents = result.events;
+  const result = eventCoordinator.advanceDay(newsEventState.current, day, hashNewsSeed(day, currentMeta.slotId));
+  newsEventState.replace(result.events);
   const runtimeResult = eventRuntimeAdapter.process({
     started: result.started,
     expiredIds: result.expiredIds,
     domains: result.updateDomains,
-    capture: () => newsEvents.map((event) => ({ ...event })),
-    restore: (snapshot) => { newsEvents = snapshot; },
+    capture: () => newsEventState.capture(),
+    restore: (snapshot) => { newsEventState.restore(snapshot); },
     applyStarted: (event) => {
       if (event.kind === "construction-delay") attachConstructionDelayFromNews(event);
       showToast(`새 뉴스: ${event.title}`);
@@ -10354,7 +10195,7 @@ function createNewsEvent(day: number): NewsEvent {
   // limited to temporary trip-generating occasions.
   const opportunityKinds: NewsEventKind[] = ["festival", "concert", "sports", "tourism", "university"];
   const changeKinds: NewsEventKind[] = ["heavy-rain", "heavy-snow", "roadworks", "demand-decline", "operating-cost", "construction-delay", "recession"];
-  const seed = hashNewsSeed(day, `${currentMeta.slotId}:${currentMeta.cityId}:${newsEvents.length}`);
+  const seed = hashNewsSeed(day, `${currentMeta.slotId}:${currentMeta.cityId}:${newsEventState.length}`);
   const pool = seed % 100 < 62 ? opportunityKinds : changeKinds;
   const kind = pool[seed % pool.length];
   const template = newsEventCatalog[kind];
@@ -10408,7 +10249,7 @@ function attachConstructionDelayFromNews(event: NewsEvent) {
 }
 
 function getActiveNewsEvents() {
-  return newsEvents.filter(isNewsEventActive);
+  return newsEventState.current.filter(isNewsEventActive);
 }
 
 function getNewsOperatingCostMultiplier() {
@@ -10416,7 +10257,7 @@ function getNewsOperatingCostMultiplier() {
 }
 
 function openNewsScreen() {
-  newsEvents = newsEvents.map((event) => (isNewsEventActive(event) ? { ...event, read: true } : event));
+  newsEventState.markReadWhere(isNewsEventActive);
   renderNewsFeed();
   updateNewsBadge();
   requestStateSave();
@@ -10435,7 +10276,7 @@ function renderNewsFeed() {
   setText(activeNewsCount, String(active.length));
   setText(opportunityNewsCount, String(active.filter((event) => event.tone === "opportunity").length));
   setText(changeNewsCount, String(active.filter((event) => event.tone === "change").length));
-  const visible = (newsFilter?.value ?? "active") === "all" ? [...newsEvents] : active;
+  const visible = (newsFilter?.value ?? "active") === "all" ? [...newsEventState.current] : active;
   if (visible.length === 0) {
     newsFeed.innerHTML = `<div class="news-empty"><strong>현재 전해진 도시 뉴스가 없습니다</strong><span>게임 시간이 흐르면 지역 행사와 도시 변화가 이곳에 정리됩니다.</span></div>`;
     return;
@@ -10476,7 +10317,7 @@ function renderNewsCard(event: NewsEvent) {
 function handleNewsFeedClick(event: Event) {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-news-command]");
   const card = button?.closest<HTMLElement>("[data-news-id]");
-  const newsEvent = newsEvents.find((item) => item.id === card?.dataset.newsId);
+  const newsEvent = newsEventState.findById(card?.dataset.newsId);
   if (!button || !newsEvent) return;
   if (button.dataset.newsCommand === "focus") {
     focusNewsEvent(newsEvent);
@@ -10497,7 +10338,7 @@ function focusNewsEvent(event: NewsEvent) {
 
 function prepareNewsResponse(event: NewsEvent) {
   pushHistory();
-  newsEvents = newsEvents.map((item) => (item.id === event.id ? { ...item, responsePrepared: true, read: true } : item));
+  newsEventState.prepareResponse(event.id);
   redoStack = [];
   requestStateSave();
   closeNewsScreen();
@@ -10524,7 +10365,7 @@ function prepareNewsResponse(event: NewsEvent) {
 }
 
 function updateNewsBadge() {
-  const unread = newsEvents.filter((event) => isNewsEventActive(event) && !event.read).length;
+  const unread = newsEventState.current.filter((event) => isNewsEventActive(event) && !event.read).length;
   if (newsBadge) {
     newsBadge.hidden = unread === 0;
     newsBadge.textContent = String(unread);
@@ -10565,10 +10406,10 @@ function calculateNetworkFinancials() {
     routes.reduce((sum, route) => sum + route.constructionCost, 0) +
     depots.reduce((sum, depot) => sum + (depot.constructionCost ?? depot.areaHa * 900), 0) +
     trainFleets.reduce((sum, fleet) => sum + Math.round(fleet.purchaseCost * 0.8), 0);
-  const liabilities = loans.reduce((sum, loan) => sum + loan.balance, 0);
+  const liabilities = loanState.current.reduce((sum, loan) => sum + loan.balance, 0);
   const dailyRevenue = economy.revenue || Math.round((economy.demand * economy.fare) / 100000000);
-  const loanInterest = loans.reduce((sum, loan) => sum + loan.balance * (loan.interestRate / 365), 0);
-  const loanPayment = loans.reduce((sum, loan) => sum + loan.monthlyPayment / 30, 0);
+  const loanInterest = loanState.current.reduce((sum, loan) => sum + loan.balance * (loan.interestRate / 365), 0);
+  const loanPayment = loanState.current.reduce((sum, loan) => sum + loan.monthlyPayment / 30, 0);
   const dailyExpenses = Math.round(calculateDailyMaintenance() + loanInterest + loanPayment);
   const recent = statisticsState.dailyRecords.slice(-30);
   const monthlyRevenue = recent.length > 0 ? recent.reduce((sum, item) => sum + item.revenue, 0) : dailyRevenue * 30;
@@ -11232,18 +11073,6 @@ function renderStatisticsEmpty(title: string, message: string) {
   return `<div class="statistics-empty"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div>`;
 }
 
-function formatPlayTime(seconds: number) {
-  const minutes = Math.floor(Math.max(0, seconds) / 60);
-  if (minutes < 60) return `${minutes}분`;
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return remainder > 0 ? `${hours}시간 ${remainder}분` : `${hours}시간`;
-}
-
-function formatDate(timestamp: number, includeTime = false) {
-  return new Intl.DateTimeFormat("ko-KR", includeTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" }).format(timestamp);
-}
-
 function interpolateAlongRoute(points: LatLng[], progress: number) {
   if (points.length === 0) return L.latLng(SEOUL);
   if (points.length === 1) return points[0];
@@ -11475,7 +11304,7 @@ function getDemandStationInputs() {
 }
 
 function getDemandEvents(): DemandEvent[] {
-  return newsEvents
+  return newsEventState.current
     .filter((event) => event.demandMultiplier !== 1)
     .map((event) => {
       const periods =
@@ -11743,7 +11572,7 @@ function calculateOperatingForecastForGroups(
     constructionCostDue: 0,
     demolitionCostDue: 0,
     reconstructionCostDue: 0,
-    loans,
+    loans: loanState.current,
     eventEffects: [],
     bankruptcyRules: { limit: difficultyConfigs[currentMeta.difficulty].bankruptcyLimit },
   }, { preview: true });
@@ -11874,7 +11703,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   getGameMode: () => currentMeta.mode,
   getBankruptcyLimit: () => difficultyConfigs[currentMeta.difficulty].bankruptcyLimit,
   getEconomy: () => economy,
-  getLoans: () => loans,
+  getLoans: () => loanState.current,
   getStatistics: () => statisticsState,
   getPassengerGroups: () => passengerGroups,
   captureAuxiliary: () => ({
@@ -11885,7 +11714,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   }),
   restoreState: (snapshot) => {
     economy = snapshot.economy;
-    loans = snapshot.loans;
+    loanState.restore(snapshot.loans);
     statisticsState = snapshot.statistics;
     passengerGroups = snapshot.passengerGroups;
     analysisState = snapshot.auxiliary.analysis;
@@ -11916,7 +11745,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   },
   applyCommittedState: (state) => {
     economy = state.economy;
-    loans = state.loans;
+    loanState.replace(state.loans);
     statisticsState = state.statistics;
   },
   commitDay: (gameDay, bankrupt) => {
@@ -11995,16 +11824,13 @@ function takeLoan() {
   }
   pushHistory();
   const principal = 30000;
-  loans = [
-    ...loans,
-    {
-      id: createId("loan"),
-      principal,
-      balance: principal,
-      interestRate: 0.055 * difficultyConfigs[currentMeta.difficulty].loanInterestMultiplier,
-      monthlyPayment: 720,
-    },
-  ];
+  loanState.add({
+    id: createId("loan"),
+    principal,
+    balance: principal,
+    interestRate: 0.055 * difficultyConfigs[currentMeta.difficulty].loanInterestMultiplier,
+    monthlyPayment: 720,
+  });
   economy = { ...economy, cash: economy.cash + principal, loanBalance: economy.loanBalance + principal };
   redoStack = [];
   requestStateSave("immediate");
@@ -12013,13 +11839,15 @@ function takeLoan() {
 
 function repayLoan() {
   if (currentMeta.mode === "sandbox") return;
-  const firstLoan = loans.find((loan) => loan.balance > 0);
+  const firstLoan = loanState.firstOutstanding();
   if (!firstLoan || economy.cash <= 0) return;
   pushHistory();
   const payment = Math.min(firstLoan.balance, Math.max(1000, Math.floor(economy.cash * 0.25)));
-  loans = loans
-    .map((loan) => (loan.id === firstLoan.id ? { ...loan, balance: loan.balance - payment } : loan))
-    .filter((loan) => loan.balance > 0);
+  loanState.replace(
+    loanState.current
+      .map((loan) => (loan.id === firstLoan.id ? { ...loan, balance: loan.balance - payment } : loan))
+      .filter((loan) => loan.balance > 0),
+  );
   economy = { ...economy, cash: economy.cash - payment, loanBalance: Math.max(0, economy.loanBalance - payment) };
   redoStack = [];
   requestStateSave("immediate");
@@ -12377,20 +12205,17 @@ function setTool(tool: ToolMode) {
     showToast("이 도구는 실제 건설 모드에서 사용할 수 있습니다.");
     return;
   }
-  const hasActiveRoutePlanning =
-    routePlanningSession &&
-    routePlanningSession.tool !== (tool === "extend" ? "extend" : tool === "merge" ? "connect" : tool === "branch" ? "branch" : null) &&
-    !["idle", "selecting-source", "completed", "cancelled"].includes(routePlanningSession.stage);
-  if (!bypassPlanningToolChangeGuard && hasActiveRoutePlanning) {
+  const planningTool: RoutePlanningTool | null =
+    tool === "extend" ? "extend" : tool === "merge" ? "connect" : tool === "branch" ? "branch" : null;
+  if (routePlanningController.shouldConfirmToolChange(planningTool)) {
     openPlanningToolChangeDialog(tool);
     return;
   }
   if (constructionDraft) cancelConstructionDraft();
   if (demolitionReview) cancelDemolitionReview();
   activeTool = tool;
-  const planningTool: RoutePlanningTool | null =
-    tool === "extend" ? "extend" : tool === "merge" ? "connect" : tool === "branch" ? "branch" : null;
-  routePlanningSession = planningTool ? createRoutePlanningSession(planningTool, createId("route-planning")) : null;
+  if (planningTool) routePlanningController.start(planningTool, createId("route-planning"));
+  else routePlanningController.replace(null);
   document.body.dataset.activeTool = tool;
   const modifyToolActive = ["eraser", "extend", "branch", "merge"].includes(tool);
   if (modifyToolsButton) modifyToolsButton.classList.toggle("active", modifyToolActive);
@@ -12478,8 +12303,7 @@ function setTool(tool: ToolMode) {
 
 function cancelActiveDrawing() {
   resetRouteDrawingHudProximity();
-  mapSelectionPointers.clear();
-  mapSelectionGesture = null;
+  mapSelectionGestureController.reset();
   releaseDrawingPointer(activePointerId);
   activePointerId = null;
   activeExtension = null;
@@ -13644,7 +13468,7 @@ function openDecisionDialog(message: string, warning: string, confirmLabel: stri
 
 function closeDecisionDialog() {
   pendingDecision = null;
-  pendingPlanningToolChange = null;
+  routePlanningController.clearPendingToolChange();
   if (decisionSaveDraftButton) decisionSaveDraftButton.hidden = true;
   dialogManager.close("decision");
 }
@@ -13666,8 +13490,8 @@ function bindDecisionDialogListeners() {
 }
 
 function openPlanningToolChangeDialog(tool: ToolMode) {
-  if (!decisionDialog || !routePlanningSession) return;
-  pendingPlanningToolChange = tool;
+  if (!decisionDialog || !routePlanningController.session) return;
+  routePlanningController.requestToolChange(tool);
   const requestedTool = tool;
   setText(decisionMessage, "진행 중인 설계가 있습니다.");
   setText(decisionWarning, "임시 저장하거나 현재 작업을 취소한 뒤 도구를 변경할 수 있습니다. 창을 닫으면 계속 편집합니다.");
@@ -13675,18 +13499,16 @@ function openPlanningToolChangeDialog(tool: ToolMode) {
   if (decisionSaveDraftButton) decisionSaveDraftButton.hidden = false;
   if (decisionConfirmButton) decisionConfirmButton.textContent = "현재 작업 취소 후 변경";
   pendingDecision = () => {
-    routePlanningSession = cancelRoutePlanning(routePlanningSession!);
-    bypassPlanningToolChangeGuard = true;
-    setTool(requestedTool);
-    bypassPlanningToolChangeGuard = false;
+    routePlanningController.cancel();
+    routePlanningController.runBypassingToolChangeGuard(() => setTool(requestedTool));
   };
   dialogManager.open("decision");
   bindDecisionDialogListeners();
 }
 
 function saveRoutePlanningDraftAndChangeTool() {
-  const session = routePlanningSession;
-  const nextTool = pendingPlanningToolChange;
+  const session = routePlanningController.session;
+  const nextTool = routePlanningController.pendingToolChange;
   if (!session || !nextTool) return;
   const plan = getActivePlan(true);
   if (plan) {
@@ -13697,9 +13519,7 @@ function saveRoutePlanningDraftAndChangeTool() {
     requestStateSave();
   }
   closeDecisionDialog();
-  bypassPlanningToolChangeGuard = true;
-  setTool(nextTool);
-  bypassPlanningToolChangeGuard = false;
+  routePlanningController.runBypassingToolChangeGuard(() => setTool(nextTool));
   showToast("진행 중인 설계를 임시 저장했습니다.");
 }
 
@@ -13835,13 +13655,11 @@ function beginConnectionDrawing(event: PointerEvent, point: L.Point) {
     ? getActivePlan(false)?.routes.find((item) => item.id === source.routeId)
     : routes.find((item) => item.id === source.routeId);
   if (route) showRouteSettingsTarget(route, planningMode ? "planned" : "actual");
-  if (routePlanningSession?.tool === "connect" && routePlanningSession.stage === "selecting-source") {
-    routePlanningSession = transitionRoutePlanning(routePlanningSession, "drawing", {
-      sourceEntityId: source.routeId,
-      sourceLineId: planningMode ? undefined : source.routeId,
-      sourceBlueprintId: planningMode ? source.routeId : undefined,
-    });
-  }
+  routePlanningController.beginDrawing({
+    sourceEntityId: source.routeId,
+    sourceLineId: planningMode ? undefined : source.routeId,
+    sourceBlueprintId: planningMode ? source.routeId : undefined,
+  });
   previewPolyline = L.polyline(
     [map.containerPointToLatLng(source.endpoint)],
     { ...routeStyle(route?.color ?? selectedColor, 7, 0.72), dashArray: "8 10", interactive: false },
@@ -13859,9 +13677,7 @@ function finishConnectionDrawing(
     ? findNearestPlannedRouteEndpoint(releasePoint, 56, source.routeId)
     : findNearestRouteEndpoint(releasePoint, 56, undefined, source.routeId);
   if (!target || target.routeId === source.routeId) {
-    routePlanningSession = routePlanningSession?.stage === "drawing"
-      ? transitionRoutePlanning(routePlanningSession, "selecting-target")
-      : routePlanningSession;
+    routePlanningController.connectionTargetMissed();
     setText(facilityReadout, "다른 노선의 연결 가능한 끝점에 놓으세요");
     return;
   }
@@ -13875,16 +13691,11 @@ function finishConnectionDrawing(
     }),
     { lat: secondPoint.lat, lng: secondPoint.lng },
   ];
-  if (routePlanningSession?.tool === "connect" && routePlanningSession.stage === "drawing") {
-    routePlanningSession = transitionRoutePlanning(routePlanningSession, "selecting-target");
-  }
-  if (routePlanningSession?.tool === "connect" && routePlanningSession.stage === "selecting-target") {
-    routePlanningSession = transitionRoutePlanning(routePlanningSession, "reviewing", {
-      targetEntityId: target.routeId,
-      targetLineId: planningMode ? undefined : target.routeId,
-      draftCoordinates: snappedConnectionCoordinates,
-    });
-  }
+  routePlanningController.reviewConnection({
+    targetEntityId: target.routeId,
+    targetLineId: planningMode ? undefined : target.routeId,
+    draftCoordinates: snappedConnectionCoordinates,
+  });
   if (planningMode) {
     const plan = getActivePlan(false);
     const first = plan?.routes.find((route) => route.id === source.routeId);
@@ -15201,16 +15012,16 @@ function cloneState(): SaveState {
     transfers,
     depots,
     plans,
-    diagramState,
+    diagramStateOwner.current,
     analysisState,
     statisticsState,
     constructionProjects,
-    newsEvents,
+    newsEventState.current,
     trainFleets,
     operatingServices,
     expressConfigs,
     passengerGroups,
-    loans,
+    loanState.current,
     economy,
     demandZones,
     stationDemandStates,
@@ -15263,11 +15074,11 @@ function applyState(state: SaveState) {
   if (failedRestoredConnections.length > 0) {
     console.error("[integrity] connection blueprints were preserved but not replayed because their completed runtime result was missing.", failedRestoredConnections);
   }
-  diagramState = normalizeDiagramState(state.diagramState);
+  diagramStateOwner.replace(state.diagramState);
   analysisState = normalizeAnalysisState(state.analysisState);
   statisticsState = normalizeStatisticsState(state.statisticsState);
   constructionProjects = normalizeConstructionProjects(state.constructionProjects);
-  newsEvents = normalizeNewsEvents(state.newsEvents);
+  newsEventState.replace(normalizeNewsEvents(state.newsEvents));
   trainFleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
   operatingServices = (state.operatingServices ?? []).map((service) =>
     normalizeOperatingService(service, new Set(routes.map((route) => route.id)))
@@ -15275,7 +15086,7 @@ function applyState(state: SaveState) {
   migrateLegacyFleetsToOperatingServices();
   expressConfigs = state.expressConfigs ?? [];
   passengerGroups = state.passengerGroups ?? [];
-  loans = state.loans ?? [];
+  loanState.replace(state.loans ?? []);
   economy = { ...defaultEconomy, ...(state.economy ?? {}) };
   transitRouter = null;
   transitRouterSignature = "";
@@ -15283,20 +15094,10 @@ function applyState(state: SaveState) {
   if (!state.statisticsState && economy.demand > 0) statisticsState = { ...statisticsState, totalPassengers: economy.demand };
 }
 
-const stateSaveRepository = new SaveRepository({
-  capture: () => measureTask("save-serialization", cloneState),
-  write: async (state) => {
-    await getSaveSlotService().update(state);
-  },
-  delayMs: 240,
-  onError: (error) => console.warn("[save] 상태 저장 실패", error),
-});
-
 function requestStateSave(kind: "normal" | "immediate" = "normal") {
   if (!hasActiveGameSession) return;
-  synchronizeGraphReferences();
-  if (kind === "immediate") stateSaveRepository.requestImmediate();
-  else stateSaveRepository.request();
+  if (kind === "immediate") saveFacade.requestImmediate();
+  else saveFacade.request();
 }
 
 const stateRecoveryCoordinator = new StateRecoveryCoordinator<SaveState>({
@@ -15325,9 +15126,8 @@ if (import.meta.env.DEV) {
     save: async () => {
       currentMeta = { ...currentMeta, updatedAt: Date.now() };
       const state = cloneState();
-      const service = getSaveSlotService();
-      if (await service.load(currentMeta.slotId)) await service.update(state);
-      else await service.create(state);
+      if (await saveFacade.load(currentMeta.slotId)) await saveFacade.update(state);
+      else await saveFacade.create(state);
       slotSummaries = await listSaveSlots();
       if (startScreen) startScreen.hidden = true;
       applyCityMapConstraints(currentMeta.cityId);
@@ -15342,7 +15142,7 @@ if (import.meta.env.DEV) {
 async function flushStateSave() {
   if (!hasActiveGameSession) return;
   synchronizeGraphReferences();
-  await stateSaveRepository.flush();
+  await saveFacade.flush();
 }
 
 /**
@@ -15368,16 +15168,16 @@ function loadSavedState() {
     transfers = [];
     depots = [];
     plans = [];
-    diagramState = { ...defaultDiagramState, autoPositions: {}, manualPositions: {} };
+    diagramStateOwner.reset();
     analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
     statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
     constructionProjects = [];
-    newsEvents = [];
+    newsEventState.reset();
     trainFleets = [];
     operatingServices = [];
     expressConfigs = [];
     passengerGroups = [];
-    loans = [];
+    loanState.reset();
     economy = { ...defaultEconomy };
   }
 }
@@ -15399,12 +15199,6 @@ function updateLod() {
   if (mode === "overview" && !map.hasLayer(terrainLayer)) terrainLayer.addTo(map);
   if (mode !== "overview" && map.hasLayer(terrainLayer)) terrainLayer.removeFrom(map);
   document.body.dataset.lod = mode;
-}
-
-function getLodMode(zoom: number): LodMode {
-  if (zoom < 11) return "overview";
-  if (zoom < 15) return "district";
-  return "build";
 }
 
 function updateDynamicLayers() {
@@ -16126,17 +15920,6 @@ function containerPointFromEvent(event: PointerEvent) {
 
 function getRouteColor(routeId?: string) {
   return routes.find((route) => route.id === routeId)?.color ?? "#4ce0c3";
-}
-
-function formatCost(cost: number) {
-  if (cost <= 0) return "0억";
-  return `${Math.round(cost).toLocaleString("ko-KR")}억`;
-}
-
-function formatSignedCost(cost: number) {
-  const rounded = Math.round(cost);
-  if (rounded < 0) return `-${Math.abs(rounded).toLocaleString("ko-KR")}억`;
-  return formatCost(rounded);
 }
 
 function createId(prefix: string) {
