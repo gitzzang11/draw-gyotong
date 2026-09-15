@@ -61,6 +61,7 @@ import { buildTransferGroupMutation } from "./domain/transferMutations.ts";
 import { calculateNetworkFinancials as calculateNetworkFinancialsModel } from "./analysis/networkFinancials.ts";
 import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus, ManualTransferEndpoint, PlanPriority, PlanStatus, PlannedDepot, PlannedRoute, PlannedStation } from "./domain/constructionTypes.ts";
 import type { EconomyState, Loan, StatisticsState } from "./domain/financeStateTypes.ts";
+import { FinanceState } from "./domain/financeState.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
 import { captureGameState } from "./storage/serialization.ts";
@@ -2415,7 +2416,6 @@ const constructionState = new ConstructionState();
 const operationsState = new OperationsState();
 const diagramStateOwner = new MetroDiagramStateOwner();
 let analysisState: OperationAnalysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
-let statisticsState: StatisticsState = { ...defaultStatisticsState, dailyRecords: [] };
 
 const newsEventState = new NewsEventStateOwner(80);
 let passengerGroups: PassengerGroup[] = [];
@@ -2429,7 +2429,7 @@ let demandStructureSignature = "";
 let demandServiceSignature = "";
 let demandContextSignature = "";
 const loanState = new LoanStateOwner();
-let economy: EconomyState = { ...defaultEconomy };
+const financeState = new FinanceState({ ...defaultEconomy }, { ...defaultStatisticsState, dailyRecords: [] });
 let currentMeta: GameMeta = createDefaultMeta();
 let slotSummaries: SaveSlotSummary[] = [];
 let editingSaveSlotId: string | null = null;
@@ -2734,12 +2734,12 @@ headerConfirmConstructionButton?.addEventListener("click", () => void confirmAct
 manageLineButton?.addEventListener("click", openLineManager);
 selectedLineColor?.addEventListener("click", openLineManager);
 lineAutoFareButton?.addEventListener("click", () => {
-  economy = { ...economy, autoFare: !economy.autoFare };
-  if (economy.autoFare) economy.fare = calculateAutoFare();
-  if (lineFareInput) lineFareInput.value = String(economy.fare);
+  financeState.economy = { ...financeState.economy, autoFare: !financeState.economy.autoFare };
+  if (financeState.economy.autoFare) financeState.economy.fare = calculateAutoFare();
+  if (lineFareInput) lineFareInput.value = String(financeState.economy.fare);
   if (lineAutoFareButton) {
-    lineAutoFareButton.classList.toggle("active", economy.autoFare);
-    lineAutoFareButton.textContent = economy.autoFare ? "자동 요금 적용 중" : "수동 요금";
+    lineAutoFareButton.classList.toggle("active", financeState.economy.autoFare);
+    lineAutoFareButton.textContent = financeState.economy.autoFare ? "자동 요금 적용 중" : "수동 요금";
   }
   requestStateSave();
   updateEconomyHud();
@@ -2809,8 +2809,8 @@ openStatisticsFromFinanceButton?.addEventListener("click", () => {
   openStatisticsScreen();
 });
 dialogAutoFareButton?.addEventListener("click", () => {
-  economy = { ...economy, autoFare: !economy.autoFare };
-  if (economy.autoFare) economy.fare = calculateAutoFare();
+  financeState.economy = { ...financeState.economy, autoFare: !financeState.economy.autoFare };
+  if (financeState.economy.autoFare) financeState.economy.fare = calculateAutoFare();
   requestStateSave();
   updateEconomyHud();
 });
@@ -2842,7 +2842,7 @@ dialogFareInput?.addEventListener("change", (e) => {
   const target = e.target as HTMLInputElement;
   const val = parseInt(target.value, 10);
   if (!isNaN(val)) {
-    economy = { ...economy, fare: clampInteger(val, 900, 4200), autoFare: false };
+    financeState.economy = { ...financeState.economy, fare: clampInteger(val, 900, 4200), autoFare: false };
     requestStateSave();
     updateEconomyHud();
   }
@@ -2879,14 +2879,14 @@ statisticsTabs.forEach((button) => {
   });
 });
 fareInput?.addEventListener("change", () => {
-  economy = { ...economy, fare: clampInteger(Number(fareInput.value), 900, 4200), autoFare: false };
+  financeState.economy = { ...financeState.economy, fare: clampInteger(Number(fareInput.value), 900, 4200), autoFare: false };
   updateAutoFareButton();
   requestStateSave();
   requestUpdate("fare", selectedOperationRouteId);
 });
 autoFareButton?.addEventListener("click", () => {
-  economy = { ...economy, autoFare: !economy.autoFare };
-  if (economy.autoFare) economy.fare = calculateAutoFare();
+  financeState.economy = { ...financeState.economy, autoFare: !financeState.economy.autoFare };
+  if (financeState.economy.autoFare) financeState.economy.fare = calculateAutoFare();
   updateAutoFareButton();
   requestStateSave();
   requestUpdate("fare", selectedOperationRouteId);
@@ -4047,7 +4047,7 @@ function demolishBuiltAssets(selection: { routeHits: Map<string, Set<number>>; s
   cleanupTransferData();
   synchronizeGraphReferences();
   const refund = Math.round(removedLength * baseCostPerKm * 0.35);
-  economy = { ...economy, cash: economy.cash + refund, constructionSpent: Math.max(0, economy.constructionSpent - refund) };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash + refund, constructionSpent: Math.max(0, financeState.economy.constructionSpent - refund) };
   if (selectedStationManagerId && !stationIds.has(selectedStationManagerId)) closeStationManager();
   if (selectedDepotManagerId && !depotIds.has(selectedDepotManagerId)) closeDepotManager();
   if (selectedRouteId && !networkState.routes.some((route) => route.id === selectedRouteId)) selectedRouteId = networkState.routes[0]?.id ?? null;
@@ -4169,7 +4169,7 @@ function prepareDraftAnalysis(analysis: ConstructionAnalysis) {
   if (!planningMode) return analysis;
   return {
     ...analysis,
-    balanceAfter: economy.cash,
+    balanceAfter: financeState.economy.cash,
     warnings: analysis.warnings.filter((warning) => warning.code !== "insufficient-funds"),
   };
 }
@@ -4214,8 +4214,8 @@ function stageDepotDraft(polygon: LatLng[], connectedRouteIds: string[], connect
   const areaHa = calculatePolygonAreaHa(polygon);
   const totalCost = Math.round(areaHa * 680 * cityConfigs[currentMeta.cityId].constructionMultiplier * difficultyConfigs[currentMeta.difficulty].costMultiplier);
   const warnings: ConstructionWarning[] = [];
-  if (currentMeta.mode === "career" && totalCost > economy.cash)
-    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(totalCost - economy.cash)} 부족합니다.` });
+  if (currentMeta.mode === "career" && totalCost > financeState.economy.cash)
+    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(totalCost - financeState.economy.cash)} 부족합니다.` });
   const analysis: ConstructionAnalysis = {
     segments: [],
     lengthKm: 0,
@@ -4227,7 +4227,7 @@ function stageDepotDraft(polygon: LatLng[], connectedRouteIds: string[], connect
     stationInstallCount: 0,
     depotConnected: connectedRouteIds.length > 0 || connectedPlannedRouteIds.length > 0,
     totalCost,
-    balanceAfter: planningMode ? economy.cash : economy.cash - totalCost,
+    balanceAfter: planningMode ? financeState.economy.cash : financeState.economy.cash - totalCost,
     durationDays: Math.max(45, Math.round(areaHa * 32)),
     warnings: planningMode
       ? warnings.filter((warning) => warning.code !== "insufficient-funds" && !(warning.code === "depot-unconnected" && connectedPlannedRouteIds.length > 0))
@@ -4281,10 +4281,10 @@ function stageLiveEditDraft(handle: RouteHandleMove, coordinates: Array<[number,
   const analysis = analyzeConstruction("edit", points, route.id, existingChoices);
   analysis.baseCost = deltaCost;
   analysis.totalCost = deltaCost + analysis.mountainCost + analysis.riverCost;
-  analysis.balanceAfter = economy.cash - analysis.totalCost;
+  analysis.balanceAfter = financeState.economy.cash - analysis.totalCost;
   analysis.durationDays = Math.max(7, Math.round(Math.abs(newLength - route.lengthKm) * baseConstructionDaysPerKm));
-  if (currentMeta.mode === "career" && deltaCost > economy.cash)
-    analysis.warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(deltaCost - economy.cash)} 부족합니다.` });
+  if (currentMeta.mode === "career" && deltaCost > financeState.economy.cash)
+    analysis.warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(deltaCost - financeState.economy.cash)} 부족합니다.` });
   constructionDraft = {
     id: constructionDraft?.kind === "edit" ? constructionDraft.id : createId("draft"),
     kind: "edit",
@@ -4531,10 +4531,10 @@ async function confirmConstructionDraft() {
       constructionState.replaceProjects([...constructionState.projects, createConstructionProjectFromDraft(draft, selectedId)]);
       applyTutorialConstructionBoost(draft.kind, selectedId);
     }
-    economy = {
-      ...economy,
-      cash: economy.cash - draft.analysis.totalCost,
-      constructionSpent: Math.max(0, economy.constructionSpent + draft.analysis.totalCost),
+    financeState.economy = {
+      ...financeState.economy,
+      cash: financeState.economy.cash - draft.analysis.totalCost,
+      constructionSpent: Math.max(0, financeState.economy.constructionSpent + draft.analysis.totalCost),
     };
     synchronizeGraphReferences();
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
@@ -4797,7 +4797,7 @@ function updateConstructionProjectsForDay() {
       } else {
         const extraCost = Math.max(0, event.extraCost ?? 0);
         next = { ...next, additionalCost: next.additionalCost + extraCost };
-        economy = { ...economy, constructionSpent: economy.constructionSpent + extraCost };
+        financeState.economy = { ...financeState.economy, constructionSpent: financeState.economy.constructionSpent + extraCost };
       }
       return { ...event, applied: true };
       });
@@ -7123,7 +7123,7 @@ function recalculatePlan(plan: ConstructionPlan): ConstructionPlan {
   let status = plan.status;
   if (totalAssets > 0 && completedAssets === totalAssets) status = "completed";
   else if (completedAssets > 0) status = "partial";
-  else if (status !== "on-hold" && status !== "review") status = remainingCost > economy.cash && currentMeta.mode === "career" ? "insufficient" : totalAssets > 0 ? "ready" : "draft";
+  else if (status !== "on-hold" && status !== "review") status = remainingCost > financeState.economy.cash && currentMeta.mode === "career" ? "insufficient" : totalAssets > 0 ? "ready" : "draft";
   return { ...plan, expectedTotalCost, remainingCost, expectedConstructionDays, expectedDemand, expectedRevenue, terrainDifficulty, transferEffect, status };
 }
 
@@ -7189,7 +7189,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
                 expectedCost: route.expectedCost + draft.analysis.totalCost,
                 constructionDays: Math.max(route.constructionDays, draft.analysis.durationDays),
                 expectedDemand: route.expectedDemand + Math.round(branchDemand * 0.65),
-                expectedRevenue: route.expectedRevenue + Math.round((branchDemand * economy.fare * 365 * 0.65) / 100000000),
+                expectedRevenue: route.expectedRevenue + Math.round((branchDemand * financeState.economy.fare * 365 * 0.65) / 100000000),
                 transferEffect: route.transferEffect + estimatePlannedTransferEffect(draft.points),
                 branches: [
                   ...(route.branches ?? []),
@@ -7203,7 +7203,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
       const firstNodeId = createId("node");
       const graph = createGraphForDraftPath(draft, firstNodeId);
       const expectedDemand = estimatePlannedRouteDemand(draft.points);
-      const expectedRevenue = Math.round((expectedDemand * economy.fare * 365) / 100000000);
+      const expectedRevenue = Math.round((expectedDemand * financeState.economy.fare * 365) / 100000000);
       const extensionTarget = draft.plannedExtension ? networkState.routes.find((item) => item.id === draft.plannedExtension?.routeId) : undefined;
       const plannedReplacementId = draft.kind === "extension"
         ? null
@@ -7808,7 +7808,7 @@ function openPlanConversionDialog() {
   ].filter(Boolean);
   planConversionItems.innerHTML = sections.join("") || `<div class="planning-empty">건설할 미완료 항목이 없습니다.</div>`;
   setText(planConversionPlanName, `${plan.name} · 남은 계획비 ${formatCost(plan.remainingCost)}`);
-  setText(planConversionCurrentCash, formatCost(economy.cash));
+  setText(planConversionCurrentCash, formatCost(financeState.economy.cash));
   if (selectAllPlanConversionButton) selectAllPlanConversionButton.disabled = sections.length === 0;
   if (clearPlanConversionButton) clearPlanConversionButton.disabled = sections.length === 0;
   planConversionDialog.hidden = false;
@@ -7880,7 +7880,7 @@ function renderPlanConversionSummary() {
   const connectionCount = selection.filter((item) => item.kind === "connection").length;
   const routeCount = new Set(selection.filter((item) => item.kind === "segment").map((item) => item.routeId)).size;
   const cost = calculatePlanConversionCost(plan, selection);
-  const shortfall = Math.max(0, cost - economy.cash);
+  const shortfall = Math.max(0, cost - financeState.economy.cash);
   const invalidFacilities = selection.filter((entry) => {
     if (entry.kind === "station") {
       const station = plan.stations.find((item) => item.id === entry.assetId);
@@ -7907,7 +7907,7 @@ function renderPlanConversionSummary() {
     .sort((a, b) => a.constructionCost - b.constructionCost)
     .reduce(
       (state, segment) =>
-        state.cost + segment.constructionCost <= economy.cash ? { count: state.count + 1, cost: state.cost + segment.constructionCost } : state,
+        state.cost + segment.constructionCost <= financeState.economy.cash ? { count: state.count + 1, cost: state.cost + segment.constructionCost } : state,
       { count: 0, cost: 0 },
     );
   const state = selection.length === 0 ? "empty" : invalidFacilities > 0 ? "invalid" : currentMeta.mode === "career" && shortfall > 0 ? "shortfall" : "ready";
@@ -7925,7 +7925,7 @@ function renderPlanConversionSummary() {
     <div class="conversion-summary-cost">
       <span>선택 공사비</span>
       <strong>${formatCost(cost)}</strong>
-      <small>건설 후 ${formatSignedCost(economy.cash - cost)}</small>
+      <small>건설 후 ${formatSignedCost(financeState.economy.cash - cost)}</small>
     </div>
     <div class="conversion-summary-progress">
       <div><span>선택 항목</span><strong>${selection.length}<small> / ${availableCount}</small></strong></div>
@@ -7977,7 +7977,7 @@ async function confirmPlanConversion() {
   if (!plan) return;
   const selection = getPlanConversionSelection();
   const cost = calculatePlanConversionCost(plan, selection);
-  if (selection.length === 0 || (currentMeta.mode === "career" && cost > economy.cash)) return;
+  if (selection.length === 0 || (currentMeta.mode === "career" && cost > financeState.economy.cash)) return;
   const before = cloneState();
   const createdRouteIds: string[] = [];
   const createdStationIds: string[] = [];
@@ -8200,7 +8200,7 @@ async function confirmPlanConversion() {
         constructionState.replaceProjects(constructionState.projects.map((item) => item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex } : item));
       }
     }
-    economy = { ...economy, cash: economy.cash - cost, constructionSpent: economy.constructionSpent + cost };
+    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - cost, constructionSpent: financeState.economy.constructionSpent + cost };
     if (usesConstructionTimeline()) {
       constructionState.replaceProjects([
         ...constructionState.projects,
@@ -8630,9 +8630,9 @@ function updateCityNote() {
 function getUnlockedCityIds() {
   const unlocked = new Set<CityId>(["seoul"]);
   for (const slot of slotSummaries) slot.unlockedCityIds.forEach((cityId) => unlocked.add(cityId));
-  if (economy.cash >= 85000) unlocked.add("daejeon");
-  if (economy.cash >= 130000) unlocked.add("gwangju");
-  if (economy.cash >= 180000) unlocked.add("busan");
+  if (financeState.economy.cash >= 85000) unlocked.add("daejeon");
+  if (financeState.economy.cash >= 130000) unlocked.add("gwangju");
+  if (financeState.economy.cash >= 180000) unlocked.add("busan");
   return Array.from(unlocked);
 }
 
@@ -8655,7 +8655,7 @@ async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: Cit
     tutorialCompleted: false,
     tutorialProgress: createTutorialProgress(),
   };
-  economy = {
+  financeState.economy = {
     ...defaultEconomy,
     cash: mode === "sandbox" ? 999999999 : difficultyConfigs[difficulty].startCash,
   };
@@ -8697,7 +8697,7 @@ function resetWorld() {
   constructionState.reset();
   diagramStateOwner.reset();
   analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
-  statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
+  financeState.reset({ ...defaultEconomy }, { ...defaultStatisticsState, dailyRecords: [] });
   newsEventState.reset();
   operationsState.reset();
   passengerGroups = [];
@@ -9309,7 +9309,7 @@ function buyTrainsForSelectedRoute() {
     },
   ];
   const latestFleet = operationsState.fleets[operationsState.fleets.length - 1];
-  economy = { ...economy, cash: economy.cash - latestFleet.purchaseCost, trainSpent: economy.trainSpent + latestFleet.purchaseCost };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - latestFleet.purchaseCost, trainSpent: financeState.economy.trainSpent + latestFleet.purchaseCost };
   playFeedback("confirm");
   redoStack = [];
   requestStateSave();
@@ -9478,8 +9478,8 @@ function normalizeAnalysisState(state?: OperationAnalysisState): OperationAnalys
 
 function buildAnalysisFingerprint() {
   return JSON.stringify({
-    fare: economy.fare,
-    satisfaction: economy.satisfaction,
+    fare: financeState.economy.fare,
+    satisfaction: financeState.economy.satisfaction,
     routes: networkState.routes.map((route) => [route.id, route.lengthKm, route.operationPaused, route.visibility]),
     stations: networkState.stations.map((station) => [station.id, station.demand, station.connectedRouteIds]),
     services: operationsState.services.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathOptionId, service.stopStationIds]),
@@ -9678,7 +9678,7 @@ function refreshOperationSuggestions(force = false) {
       );
     }
 
-    const estimatedRevenue = Math.round((operation.dailyDemand * economy.fare) / 100000000);
+    const estimatedRevenue = Math.round((operation.dailyDemand * financeState.economy.fare) / 100000000);
     if (sets > 0 && operation.operatingCost > estimatedRevenue * 1.12) {
       add(
         "route-deficit",
@@ -9718,18 +9718,18 @@ function refreshOperationSuggestions(force = false) {
     }
   }
 
-  if (economy.fare >= (economy.autoFare ? 2300 : 1900)) {
-    const farePenalty = Math.round((economy.fare - 1450) / 55);
+  if (financeState.economy.fare >= (financeState.economy.autoFare ? 2300 : 1900)) {
+    const farePenalty = Math.round((financeState.economy.fare - 1450) / 55);
     add(
       "high-fare",
-      economy.fare >= 2500 ? "warning" : "info",
+      financeState.economy.fare >= 2500 ? "warning" : "info",
       "passenger",
       "network",
       "network",
       "전체 네트워크",
-      `현재 요금이 ${economy.fare.toLocaleString("ko-KR")}원입니다`,
+      `현재 요금이 ${financeState.economy.fare.toLocaleString("ko-KR")}원입니다`,
       `기준 요금 대비 만족도 계산에서 약 ${farePenalty}점의 부담이 반영됩니다.`,
-      economy.autoFare ? `운영비와 혼잡 원인을 낮춘 뒤 자동 요금 추정치를 다시 확인하세요.` : `자동 요금 또는 단계적 인하 효과를 비교하세요.`,
+      financeState.economy.autoFare ? `운영비와 혼잡 원인을 낮춘 뒤 자동 요금 추정치를 다시 확인하세요.` : `자동 요금 또는 단계적 인하 효과를 비교하세요.`,
       `요금을 1,450원으로 조정하면 만족도가 최대 ${farePenalty}점 개선될 수 있습니다.`,
       0,
       "review-fare",
@@ -9738,16 +9738,16 @@ function refreshOperationSuggestions(force = false) {
   }
 
   const oldSnapshot = [...analysisState.demandHistory].reverse().find((snapshot) => snapshot.day <= day - 7);
-  if (oldSnapshot && oldSnapshot.satisfaction - economy.satisfaction >= 8) {
+  if (oldSnapshot && oldSnapshot.satisfaction - financeState.economy.satisfaction >= 8) {
     add(
       "satisfaction-drop",
-      oldSnapshot.satisfaction - economy.satisfaction >= 15 ? "critical" : "warning",
+      oldSnapshot.satisfaction - financeState.economy.satisfaction >= 15 ? "critical" : "warning",
       "passenger",
       "network",
       "network",
       "전체 네트워크",
-      `시민 만족도가 ${oldSnapshot.satisfaction - economy.satisfaction}점 하락했습니다`,
-      `최근 기준 ${oldSnapshot.satisfaction}점에서 현재 ${economy.satisfaction}점으로 낮아졌습니다.`,
+      `시민 만족도가 ${oldSnapshot.satisfaction - financeState.economy.satisfaction}점 하락했습니다`,
+      `최근 기준 ${oldSnapshot.satisfaction}점에서 현재 ${financeState.economy.satisfaction}점으로 낮아졌습니다.`,
       `혼잡, 대기시간, 요금 관련 우선 제안을 먼저 확인하세요.`,
       `원인 지표를 개선하면 수요 회복 가능성이 있습니다.`,
       0,
@@ -9853,7 +9853,7 @@ function refreshOperationSuggestions(force = false) {
   }
 
   for (const plan of constructionState.plans.filter((item) => item.status !== "completed" && item.status !== "on-hold")) {
-    const canAfford = currentMeta.mode === "sandbox" || plan.remainingCost <= economy.cash;
+    const canAfford = currentMeta.mode === "sandbox" || plan.remainingCost <= financeState.economy.cash;
     if (plan.remainingCost > 0 && canAfford && plan.expectedDemand >= 12000) {
       add(
         "plan-ready",
@@ -9880,8 +9880,8 @@ function refreshOperationSuggestions(force = false) {
 function recordDemandSnapshot() {
   const snapshot: DemandSnapshot = {
     day: analysisState.dayIndex,
-    totalDemand: economy.demand,
-    satisfaction: economy.satisfaction,
+    totalDemand: financeState.economy.demand,
+    satisfaction: financeState.economy.satisfaction,
     stationDemand: Object.fromEntries(networkState.stations.map((station) => [station.id, station.demand])),
   };
   analysisState = {
@@ -10383,12 +10383,12 @@ function saveNetworkTitle() {
 
 function calculateNetworkFinancials() {
   return calculateNetworkFinancialsModel({
-    economy,
+    economy: financeState.economy,
     routes: networkState.routes,
     depots: networkState.depots,
     fleets: operationsState.fleets,
     loans: loanState.current,
-    statistics: statisticsState,
+    statistics: financeState.statistics,
     stationPotentialDemand: stationDemandStates.map((state) => state.potentialDemand),
     dailyMaintenance: calculateDailyMaintenance(),
   });
@@ -10411,7 +10411,7 @@ function calculateRouteStatistics(route: RouteLine) {
       : route.lengthKm > 0
         ? (route.lengthKm / 32) * 30 + operation.waitMin
         : 0;
-  const satisfaction = groups.length > 0 ? groups.reduce((sum, group) => sum + group.satisfaction, 0) / groups.length : economy.satisfaction;
+  const satisfaction = groups.length > 0 ? groups.reduce((sum, group) => sum + group.satisfaction, 0) / groups.length : financeState.economy.satisfaction;
   const sets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   const depotCapacity = networkState.depots.filter((depot) => depot.connectedRouteIds.includes(route.id)).reduce((sum, depot) => sum + depot.capacity, 0);
   const express = operationsState.expressConfigs.find((config) => config.routeId === route.id && config.enabled);
@@ -10816,28 +10816,28 @@ function renderOverviewStatistics() {
   const totalSets = operationsState.fleets.reduce((sum, fleet) => sum + fleet.sets, 0);
   const totalLength = networkState.routes.reduce((sum, route) => sum + route.lengthKm, 0);
   const transferStationIds = new Set(networkState.transfers.flatMap((transfer) => transfer.stationIds));
-  const previous = statisticsState.dailyRecords.at(-2);
-  const latest = statisticsState.dailyRecords.at(-1);
+  const previous = financeState.statistics.dailyRecords.at(-2);
+  const latest = financeState.statistics.dailyRecords.at(-1);
   const passengerChange = latest && previous && previous.passengers > 0 ? (latest.passengers / previous.passengers - 1) * 100 : null;
   const profitChange = latest && previous && Math.abs(previous.revenue - previous.expenses) > 0 ? ((latest.revenue - latest.expenses) / Math.abs(previous.revenue - previous.expenses) - 1) * 100 : null;
   const cards = [
-    ["현재 자금", formatSignedCost(economy.cash), null],
+    ["현재 자금", formatSignedCost(financeState.economy.cash), null],
     ["총자산", formatCost(finances.assets), null],
     ["총부채", formatCost(finances.liabilities), null],
-    ["대출 상환액", `${formatCost(statisticsState.totalLoanRepaid)} 누적`, null],
+    ["대출 상환액", `${formatCost(financeState.statistics.totalLoanRepaid)} 누적`, null],
     ["일간 수익", formatCost(finances.dailyRevenue), null],
     ["일간 지출", formatCost(finances.dailyExpenses), null],
     ["월간 수익", formatCost(finances.monthlyRevenue), null],
     ["월간 지출", formatCost(finances.monthlyExpenses), null],
     ["순이익", formatSignedCost(finances.dailyRevenue - finances.dailyExpenses), profitChange],
-    ["누적 승객", `${statisticsState.totalPassengers.toLocaleString("ko-KR")}명`, passengerChange],
-    ["시민 만족도", `${economy.satisfaction}점`, null],
+    ["누적 승객", `${financeState.statistics.totalPassengers.toLocaleString("ko-KR")}명`, passengerChange],
+    ["시민 만족도", `${financeState.economy.satisfaction}점`, null],
     ["대중교통 이용률", `${Math.round(finances.transitShare * 100)}%`, null],
   ] as Array<[string, string, number | null]>;
   return `<div class="statistics-page">
     <section class="statistics-hero">
       <div><span>오늘의 순이익</span><strong class="${finances.dailyRevenue - finances.dailyExpenses >= 0 ? "positive" : "negative"}">${formatSignedCost(finances.dailyRevenue - finances.dailyExpenses)}</strong><em>수익 ${formatCost(finances.dailyRevenue)} · 지출 ${formatCost(finances.dailyExpenses)}</em></div>
-      ${renderMiniTrend(statisticsState.dailyRecords.slice(-14).map((item) => item.revenue - item.expenses), "최근 순이익")}
+      ${renderMiniTrend(financeState.statistics.dailyRecords.slice(-14).map((item) => item.revenue - item.expenses), "최근 순이익")}
     </section>
     <section><div class="statistics-section-heading"><div><span>FINANCE & RIDERSHIP</span><h3>운영 핵심 지표</h3></div><em>최근 변화가 있는 값만 증감률을 표시합니다</em></div>
       <div class="statistics-metric-grid">${cards.map(([label, value, change]) => renderMetricCard(label, value, change)).join("")}</div>
@@ -10973,7 +10973,7 @@ function renderCityStatistics() {
       <div><span>${escapeHtml(city.name)} 실제 철도 이용객</span><strong>${networkRealized.toLocaleString("ko-KR")}</strong><em>고정 지역 잠재 수요 ${networkPotential.toLocaleString("ko-KR")}명</em></div>
       <div class="statistics-metric-grid compact">
         ${renderMetricCard("대중교통 이용률", `${Math.round(finances.transitShare * 100)}%`, null)}
-        ${renderMetricCard("시민 만족도", `${economy.satisfaction}점`, null)}
+        ${renderMetricCard("시민 만족도", `${financeState.economy.satisfaction}점`, null)}
         ${renderMetricCard("철도 이용 전환율", `${Math.round(captureRate * 100)}%`, null, true)}
         ${renderMetricCard("해금 진행도", `${unlocked}/${Object.keys(cityConfigs).length}`, null)}
       </div>
@@ -11405,7 +11405,7 @@ function buildDemandStructureFingerprint() {
 function buildDemandServiceFingerprint() {
   return JSON.stringify({
     fleets: operationsState.fleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
-    fare: economy.fare,
+    fare: financeState.economy.fare,
     events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
     period: getDemandPeriod(simMinutes),
   });
@@ -11436,7 +11436,7 @@ function regeneratePassengerGroups() {
     passengerGroups = [];
     segmentCongestion = [];
     routeCongestionSummaries = [];
-    economy = { ...economy, demand: 0 };
+    financeState.economy = { ...financeState.economy, demand: 0 };
     return;
   }
   const router = getPassengerRouter();
@@ -11473,7 +11473,7 @@ function regeneratePassengerGroups() {
         ? journey.legs.reduce((sum, leg) => sum + (routeCongestionSummaries.find((item) => item.routeId === leg.routeId)?.representativeCrowding ?? 0), 0) / journey.legs.length
         : 0;
       const basePeople = Math.max(1, Math.round((stateByStation.get(origin.id)?.realizedDemand ?? origin.demand) * choice.share));
-      const satisfaction = calculatePassengerSatisfaction(journey.waitTimeMin, operationCrowding, transferResistance, economy.fare);
+      const satisfaction = calculatePassengerSatisfaction(journey.waitTimeMin, operationCrowding, transferResistance, financeState.economy.fare);
       const activeDemand = Math.max(
         0,
         Math.round(basePeople * getPassengerDemandEventMultiplier(origin, destination, journey.routeIds)),
@@ -11504,12 +11504,12 @@ function regeneratePassengerGroups() {
     waitMin: forecast.groupMetrics[index]?.waitMin ?? group.waitMin,
     satisfaction: forecast.groupMetrics[index]?.satisfaction ?? group.satisfaction,
   }));
-  economy = { ...economy, demand: forecast.demand, satisfaction: forecast.satisfaction };
+  financeState.economy = { ...financeState.economy, demand: forecast.demand, satisfaction: forecast.satisfaction };
 }
 
 function calculateCurrentOperatingForecast(
   fleetSource = operationsState.fleets,
-  fare = economy.fare,
+  fare = financeState.economy.fare,
 ): OperatingForecast {
   return calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
 }
@@ -11517,7 +11517,7 @@ function calculateCurrentOperatingForecast(
 function calculateOperatingForecastForGroups(
   groups: PassengerGroup[],
   fleetSource = operationsState.fleets,
-  fare = economy.fare,
+  fare = financeState.economy.fare,
 ): OperatingForecast {
   const hour = Math.floor(simMinutes / 60) % 24;
   const hourlyDemandShare = hour >= 7 && hour <= 9 ? 0.105 : hour >= 17 && hour <= 19 ? 0.095 : 0.045;
@@ -11530,13 +11530,13 @@ function calculateOperatingForecastForGroups(
     loanPayment: 0,
     timeBand: `${String(hour).padStart(2, "0")}:00`,
     hourlyDemandShare,
-    fallbackSatisfaction: economy.satisfaction,
+    fallbackSatisfaction: financeState.economy.satisfaction,
   });
   const maintenance = calculateDailyMaintenanceBreakdown(fleetSource);
   const preview = calculateDailySettlement({
     gameDay: analysisState.dayIndex + 1,
     gameMode: currentMeta.mode,
-    currentMoney: economy.cash,
+    currentMoney: financeState.economy.cash,
     fareRevenue: forecast.revenue,
     otherRevenue: 0,
     lineMaintenanceCost: 0,
@@ -11556,7 +11556,7 @@ function calculateOperatingForecastForGroups(
 
 function calculateStationServiceDemand(
   station: Station,
-  fare = economy.fare,
+  fare = financeState.economy.fare,
   groupsSource = passengerGroups,
   fleetSource = operationsState.fleets,
 ): { captureRate: number; attractiveness: DemandAttractiveness } {
@@ -11584,7 +11584,7 @@ function calculateStationServiceDemand(
     crowding: weighted((group) => group.crowding, serviceAvailable ? 1.2 : 2.4),
     fare,
     reliability: serviceAvailable ? Math.min(1, operationalShare * 0.9 + 0.1) : 0,
-    satisfaction: weighted((group) => group.satisfaction, serviceAvailable ? economy.satisfaction : 10),
+    satisfaction: weighted((group) => group.satisfaction, serviceAvailable ? financeState.economy.satisfaction : 10),
     expressTimeSaving: expressUsed ? 0.12 : 0,
     serviceAvailable,
   });
@@ -11596,7 +11596,7 @@ type DemandResponsiveForecast = OperatingForecast & {
 
 function calculateDemandResponsiveForecast(
   fleetSource = operationsState.fleets,
-  fare = economy.fare,
+  fare = financeState.economy.fare,
 ): DemandResponsiveForecast {
   const capacityForecast = calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
   const measuredGroups = passengerGroups.map((group, index) => ({
@@ -11629,7 +11629,7 @@ function calculateDemandResponsiveForecast(
   };
 }
 
-function advanceDemandForGameDay(gameDay: number, fare = economy.fare) {
+function advanceDemandForGameDay(gameDay: number, fare = financeState.economy.fare) {
   refreshDemandCatchments();
   const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
   stationDemandStates = networkState.stations.map((station) => {
@@ -11674,12 +11674,12 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   service: dailySettlementService,
   getGameDay: () => analysisState.dayIndex + 1,
   getLastSettledGameDay: () => currentMeta.lastSettledGameDay ?? -1,
-  hasDailyRecord: (day) => statisticsState.dailyRecords.some((record) => record.day === day),
+  hasDailyRecord: (day) => financeState.statistics.dailyRecords.some((record) => record.day === day),
   getGameMode: () => currentMeta.mode,
   getBankruptcyLimit: () => difficultyConfigs[currentMeta.difficulty].bankruptcyLimit,
-  getEconomy: () => economy,
+  getEconomy: () => financeState.economy,
   getLoans: () => [...loanState.current],
-  getStatistics: () => statisticsState,
+  getStatistics: () => financeState.statistics,
   getPassengerGroups: () => passengerGroups,
   captureAuxiliary: () => ({
     analysis: { ...analysisState },
@@ -11688,9 +11688,9 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     stationDemandStates: stationDemandStates.map((state) => ({ ...state })),
   }),
   restoreState: (snapshot) => {
-    economy = snapshot.economy;
+    financeState.economy = snapshot.economy;
     loanState.restore(snapshot.loans);
-    statisticsState = snapshot.statistics;
+    financeState.statistics = snapshot.statistics;
     passengerGroups = snapshot.passengerGroups;
     analysisState = snapshot.auxiliary.analysis;
     currentMeta = snapshot.auxiliary.meta;
@@ -11699,11 +11699,11 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   },
   prepareDay: (gameDay) => {
     ensureDemandSimulation();
-    if (economy.autoFare) economy.fare = calculateAutoFare();
+    if (financeState.economy.autoFare) financeState.economy.fare = calculateAutoFare();
     regeneratePassengerGroups();
-    advanceDemandForGameDay(gameDay, economy.fare);
+    advanceDemandForGameDay(gameDay, financeState.economy.fare);
     regeneratePassengerGroups();
-    const forecast = calculateCurrentOperatingForecast(operationsState.fleets, economy.fare);
+    const forecast = calculateCurrentOperatingForecast(operationsState.fleets, financeState.economy.fare);
     const maintenance = calculateDailyMaintenanceBreakdown();
     const constructionCostDue = constructionState.projects.flatMap((project) => project.events)
       .filter((event) => !event.applied && event.kind === "extra-cost" && event.triggerDay <= gameDay)
@@ -11719,9 +11719,9 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     };
   },
   applyCommittedState: (state) => {
-    economy = state.economy;
+    financeState.economy = state.economy;
     loanState.replace(state.loans);
-    statisticsState = state.statistics;
+    financeState.statistics = state.statistics;
   },
   commitDay: (gameDay, bankrupt) => {
     analysisState = { ...analysisState, dayIndex: gameDay, lastFingerprint: "" };
@@ -11755,9 +11755,9 @@ function updateCareerProgress(bankrupt: boolean) {
     return;
   }
   const unlocked = new Set(currentMeta.unlockedCityIds);
-  if (economy.cash >= 85000) unlocked.add("daejeon");
-  if (economy.cash >= 130000) unlocked.add("gwangju");
-  if (economy.cash >= 180000) unlocked.add("busan");
+  if (financeState.economy.cash >= 85000) unlocked.add("daejeon");
+  if (financeState.economy.cash >= 130000) unlocked.add("gwangju");
+  if (financeState.economy.cash >= 180000) unlocked.add("busan");
   if (bankrupt) {
     simSpeed = 0;
     gameLoopController.setSpeed(0);
@@ -11806,7 +11806,7 @@ function takeLoan() {
     interestRate: 0.055 * difficultyConfigs[currentMeta.difficulty].loanInterestMultiplier,
     monthlyPayment: 720,
   });
-  economy = { ...economy, cash: economy.cash + principal, loanBalance: economy.loanBalance + principal };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash + principal, loanBalance: financeState.economy.loanBalance + principal };
   redoStack = [];
   requestStateSave("immediate");
   requestUpdate("finance-only", selectedOperationRouteId);
@@ -11815,15 +11815,15 @@ function takeLoan() {
 function repayLoan() {
   if (currentMeta.mode === "sandbox") return;
   const firstLoan = loanState.firstOutstanding();
-  if (!firstLoan || economy.cash <= 0) return;
+  if (!firstLoan || financeState.economy.cash <= 0) return;
   pushHistory();
-  const payment = Math.min(firstLoan.balance, Math.max(1000, Math.floor(economy.cash * 0.25)));
+  const payment = Math.min(firstLoan.balance, Math.max(1000, Math.floor(financeState.economy.cash * 0.25)));
   loanState.replace(
     loanState.current
       .map((loan) => (loan.id === firstLoan.id ? { ...loan, balance: loan.balance - payment } : loan))
       .filter((loan) => loan.balance > 0),
   );
-  economy = { ...economy, cash: economy.cash - payment, loanBalance: Math.max(0, economy.loanBalance - payment) };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - payment, loanBalance: Math.max(0, financeState.economy.loanBalance - payment) };
   redoStack = [];
   requestStateSave("immediate");
   requestUpdate("finance-only", selectedOperationRouteId);
@@ -11916,7 +11916,7 @@ function closeSatisfactionDialog() {
 
 function renderSatisfactionDialog() {
   if (!satisfactionDialogContent || !satisfactionDialog) return;
-  const score = economy.satisfaction;
+  const score = financeState.economy.satisfaction;
   const level = score >= 85 ? "excellent" : score >= 70 ? "stable" : score >= 50 ? "warning" : "critical";
   const label = score >= 85 ? "매우 좋음" : score >= 70 ? "안정" : score >= 50 ? "개선 필요" : "불만 집중";
   const groups = passengerGroups;
@@ -11928,7 +11928,7 @@ function renderSatisfactionDialog() {
   const waitPenalty = averageWait * 1.8;
   const crowdingPenalty = Math.max(0, averageCrowding - 0.75) * 34;
   const transferPenalty = averageTransferResistance * 0.24;
-  const farePenalty = Math.max(0, (economy.fare - 1450) / 55);
+  const farePenalty = Math.max(0, (financeState.economy.fare - 1450) / 55);
   const factors = [
     {
       key: "wait",
@@ -11958,14 +11958,14 @@ function renderSatisfactionDialog() {
       key: "fare",
       icon: "₩",
       title: "요금 체감",
-      value: `${economy.fare.toLocaleString("ko-KR")}원`,
+      value: `${financeState.economy.fare.toLocaleString("ko-KR")}원`,
       note: farePenalty === 0 ? "기준 요금 이하" : farePenalty <= 8 ? "수용 가능" : "부담 증가",
       penalty: farePenalty,
     },
   ];
-  const previousRecord = [...statisticsState.dailyRecords].reverse().find((record) => record.day < analysisState.dayIndex);
+  const previousRecord = [...financeState.statistics.dailyRecords].reverse().find((record) => record.day < analysisState.dayIndex);
   const change = previousRecord ? score - previousRecord.satisfaction : null;
-  const trendValues = statisticsState.dailyRecords
+  const trendValues = financeState.statistics.dailyRecords
     .slice(-6)
     .map((record) => ({ day: record.day + 1, value: record.satisfaction }));
   if (trendValues.at(-1)?.day !== analysisState.dayIndex + 1) trendValues.push({ day: analysisState.dayIndex + 1, value: score });
@@ -12036,31 +12036,31 @@ function renderSatisfactionDialog() {
 }
 
 function updateEconomyHud() {
-  if (fareInput && document.activeElement !== fareInput) fareInput.value = String(economy.fare);
-  const satisfactionLabel = economy.satisfaction >= 85 ? "매우 좋음" : economy.satisfaction >= 70 ? "안정" : economy.satisfaction >= 50 ? "주의" : "불만";
-  const satisfactionEmoji = economy.satisfaction >= 85 ? "😁" : economy.satisfaction >= 70 ? "😊" : economy.satisfaction >= 50 ? "😐" : "😡";
-  const satisfactionColor = economy.satisfaction >= 85 ? "#2ecc71" : economy.satisfaction >= 70 ? "#52d683" : economy.satisfaction >= 50 ? "#f3ca52" : "#ff5d5d";
-  hudRenderer.update("satisfaction", `${economy.satisfaction} - ${satisfactionLabel}`);
+  if (fareInput && document.activeElement !== fareInput) fareInput.value = String(financeState.economy.fare);
+  const satisfactionLabel = financeState.economy.satisfaction >= 85 ? "매우 좋음" : financeState.economy.satisfaction >= 70 ? "안정" : financeState.economy.satisfaction >= 50 ? "주의" : "불만";
+  const satisfactionEmoji = financeState.economy.satisfaction >= 85 ? "😁" : financeState.economy.satisfaction >= 70 ? "😊" : financeState.economy.satisfaction >= 50 ? "😐" : "😡";
+  const satisfactionColor = financeState.economy.satisfaction >= 85 ? "#2ecc71" : financeState.economy.satisfaction >= 70 ? "#52d683" : financeState.economy.satisfaction >= 50 ? "#f3ca52" : "#ff5d5d";
+  hudRenderer.update("satisfaction", `${financeState.economy.satisfaction} - ${satisfactionLabel}`);
   if (satisfactionIcon) {
     hudRenderer.update("satisfactionIcon", satisfactionEmoji);
     satisfactionIcon.style.backgroundColor = satisfactionColor;
   }
-  hudRenderer.update("demand", economy.demand.toLocaleString("ko-KR"));
-  const latestRecord = statisticsState.dailyRecords.at(-1);
-  const dailyNet = latestRecord ? latestRecord.revenue - latestRecord.expenses : economy.revenue - economy.maintenance;
-  hudRenderer.updateFinance(formatSignedCost(economy.cash), formatSignedCost(dailyNet), dailyNet < 0);
+  hudRenderer.update("demand", financeState.economy.demand.toLocaleString("ko-KR"));
+  const latestRecord = financeState.statistics.dailyRecords.at(-1);
+  const dailyNet = latestRecord ? latestRecord.revenue - latestRecord.expenses : financeState.economy.revenue - financeState.economy.maintenance;
+  hudRenderer.updateFinance(formatSignedCost(financeState.economy.cash), formatSignedCost(dailyNet), dailyNet < 0);
 
   // Sync Finance Dialog Readouts & Inputs
-  setText(financeCashReadout, formatSignedCost(economy.cash));
+  setText(financeCashReadout, formatSignedCost(financeState.economy.cash));
   setText(financeDailyNetReadout, formatSignedCost(dailyNet));
   financeDailyNetReadout?.classList.toggle("negative", dailyNet < 0);
   financeDailyNetReadout?.classList.toggle("positive", dailyNet >= 0);
-  setText(financeLoanReadout, formatSignedCost(economy.loanBalance));
-  setText(financeDemandReadout, `${economy.demand.toLocaleString("ko-KR")} 명`);
-  if (dialogFareInput && document.activeElement !== dialogFareInput) dialogFareInput.value = String(economy.fare);
-  dialogAutoFareButton?.classList.toggle("active", economy.autoFare);
-  dialogAutoFareButton?.setAttribute("aria-pressed", String(economy.autoFare));
-  if (dialogAutoFareButton) dialogAutoFareButton.textContent = economy.autoFare ? "자동 운임 적용 중" : "수동 운임 변경";
+  setText(financeLoanReadout, formatSignedCost(financeState.economy.loanBalance));
+  setText(financeDemandReadout, `${financeState.economy.demand.toLocaleString("ko-KR")} 명`);
+  if (dialogFareInput && document.activeElement !== dialogFareInput) dialogFareInput.value = String(financeState.economy.fare);
+  dialogAutoFareButton?.classList.toggle("active", financeState.economy.autoFare);
+  dialogAutoFareButton?.setAttribute("aria-pressed", String(financeState.economy.autoFare));
+  if (dialogAutoFareButton) dialogAutoFareButton.textContent = financeState.economy.autoFare ? "자동 운임 적용 중" : "수동 운임 변경";
 
   hudRenderer.update("city", `${cityConfigs[currentMeta.cityId].name} 관제`);
   updateGameClockHud();
@@ -12079,9 +12079,9 @@ function updateGameClockHud() {
 
 function updateAutoFareButton() {
   if (!autoFareButton) return;
-  autoFareButton.classList.toggle("active", economy.autoFare);
-  autoFareButton.setAttribute("aria-pressed", String(economy.autoFare));
-  autoFareButton.textContent = economy.autoFare ? "자동" : "수동";
+  autoFareButton.classList.toggle("active", financeState.economy.autoFare);
+  autoFareButton.setAttribute("aria-pressed", String(financeState.economy.autoFare));
+  autoFareButton.textContent = financeState.economy.autoFare ? "자동" : "수동";
 }
 
 function updateOperationRouteOptions() {
@@ -12757,8 +12757,8 @@ function openLineManager() {
     localService: route.localServiceEnabled !== false,
     expressService: route.expressServiceEnabled === true || getExpressConfig(route.id).enabled,
     paused: route.operationPaused === true,
-    fare: String(economy.fare),
-    autoFare: economy.autoFare,
+    fare: String(financeState.economy.fare),
+    autoFare: financeState.economy.autoFare,
   });
   syncColorPicker(lineColorInput);
   renderOperatingServiceList(route.id);
@@ -12811,7 +12811,7 @@ function operatingMetricText(metric: OperatingComparisonMetric, value: number | 
 }
 
 function renderOperatingForecastComparison(forecast: DemandResponsiveForecast) {
-  const confirmed = statisticsState.dailyRecords.at(-1);
+  const confirmed = financeState.statistics.dailyRecords.at(-1);
   const confirmedValues = {
     demand: confirmed?.passengers,
     captureRate: confirmed?.captureRate,
@@ -12967,13 +12967,13 @@ function handleTrainPanelClick(event: Event) {
       return;
     }
     const purchaseCost = Math.round(trainCatalog[fleet.trainType].pricePerCar * fleet.cars);
-    if (currentMeta.mode === "career" && purchaseCost > economy.cash) {
-      showToast(`편성 구입 자금이 ${formatCost(purchaseCost - economy.cash)} 부족합니다.`);
+    if (currentMeta.mode === "career" && purchaseCost > financeState.economy.cash) {
+      showToast(`편성 구입 자금이 ${formatCost(purchaseCost - financeState.economy.cash)} 부족합니다.`);
       return;
     }
     pushHistory();
     operationsState.fleets = operationsState.fleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets + 1) : item);
-    economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
+    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - purchaseCost, trainSpent: financeState.economy.trainSpent + purchaseCost };
     redoStack = [];
     requestStateSave();
     renderTrainManager();
@@ -13005,8 +13005,8 @@ function handleTrainPanelClick(event: Event) {
     return;
   }
   const purchaseCost = Math.round(spec.pricePerCar * cars);
-  if (currentMeta.mode === "career" && purchaseCost > economy.cash) {
-    showToast(`편성 구입 자금이 ${formatCost(purchaseCost - economy.cash)} 부족합니다.`);
+  if (currentMeta.mode === "career" && purchaseCost > financeState.economy.cash) {
+    showToast(`편성 구입 자금이 ${formatCost(purchaseCost - financeState.economy.cash)} 부족합니다.`);
     return;
   }
   pushHistory();
@@ -13021,7 +13021,7 @@ function handleTrainPanelClick(event: Event) {
     purchaseCost,
     maintenanceCost: Math.round(spec.maintenancePerCar * cars),
   }]);
-  economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - purchaseCost, trainSpent: financeState.economy.trainSpent + purchaseCost };
   redoStack = [];
   requestStateSave();
   renderTrainManager();
@@ -13036,17 +13036,17 @@ function saveLineManager() {
   const nextName = lineNameInput?.value.trim() || route.name;
   const nextColor = lineColorInput?.value || route.color;
   const nextFare = Number.isNaN(parseInt(lineFareInput?.value || "", 10))
-    ? economy.fare
+    ? financeState.economy.fare
     : clampInteger(parseInt(lineFareInput?.value || "", 10), 900, 4200);
   const serviceChanged =
     route.visibility !== (lineVisibilitySelect?.value === "planning" ? "planning" : "public") ||
     route.operationPaused !== (operationPausedToggle?.checked ?? false);
   const styleChanged = route.name !== nextName || route.color !== nextColor;
-  const fareChanged = economy.fare !== nextFare;
+  const fareChanged = financeState.economy.fare !== nextFare;
   pushHistory();
   const fareVal = parseInt(lineFareInput?.value || "", 10);
   if (!isNaN(fareVal)) {
-    economy = { ...economy, fare: clampInteger(fareVal, 900, 4200) };
+    financeState.economy = { ...financeState.economy, fare: clampInteger(fareVal, 900, 4200) };
   }
   networkState.routes = networkState.routes.map((item) =>
     item.id === route.id
@@ -13392,7 +13392,7 @@ function createPlannedRouteSection(
     expectedCost: segments.reduce((sum, segment) => sum + segment.constructionCost, 0),
     constructionDays: Math.max(0, ...segments.map((segment) => segment.constructionDays ?? Math.round(segment.lengthKm * baseConstructionDaysPerKm))),
     expectedDemand,
-    expectedRevenue: Math.round((expectedDemand * economy.fare * 365) / 100000000),
+    expectedRevenue: Math.round((expectedDemand * financeState.economy.fare * 365) / 100000000),
     transferEffect: estimatePlannedTransferEffect(points),
   };
 }
@@ -13550,7 +13550,7 @@ function splitRouteAtRange(routeId: string, startIndex: number, endIndex: number
   );
   cleanupTransferData();
   const refund = Math.round(removedLength * baseCostPerKm * 0.35);
-  economy = { ...economy, cash: economy.cash + refund, constructionSpent: Math.max(0, economy.constructionSpent - refund) };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash + refund, constructionSpent: Math.max(0, financeState.economy.constructionSpent - refund) };
   redoStack = [];
   requestStateSave();
   selectRoute(routeId, false);
@@ -13590,7 +13590,7 @@ function eraseRouteEndRange(route: RouteLine, remainingCoordinates: Array<[numbe
     .map((config) => config.routeId === route.id ? { ...config, stopStationIds: config.stopStationIds.filter((id) => networkState.stations.some((station) => station.id === id)) } : config);
   cleanupTransferData();
   const refund = Math.round(removedLength * baseCostPerKm * 0.35);
-  economy = { ...economy, cash: economy.cash + refund, constructionSpent: Math.max(0, economy.constructionSpent - refund) };
+  financeState.economy = { ...financeState.economy, cash: financeState.economy.cash + refund, constructionSpent: Math.max(0, financeState.economy.constructionSpent - refund) };
   redoStack = [];
   requestStateSave();
   selectRoute(remaining?.id ?? null, false);
@@ -13921,8 +13921,8 @@ async function confirmRouteMerge() {
   const first = networkState.routes.find((route) => route.id === merge.first.routeId);
   const second = networkState.routes.find((route) => route.id === merge.second.routeId);
   if (!first || !second) return;
-  if (currentMeta.mode === "career" && merge.bridgeCost > economy.cash) {
-    showError(`연결 구간 건설비가 ${formatCost(merge.bridgeCost - economy.cash)} 부족합니다.`);
+  if (currentMeta.mode === "career" && merge.bridgeCost > financeState.economy.cash) {
+    showError(`연결 구간 건설비가 ${formatCost(merge.bridgeCost - financeState.economy.cash)} 부족합니다.`);
     return;
   }
   const before = cloneState();
@@ -13969,7 +13969,7 @@ async function confirmRouteMerge() {
       connectedRouteIds: Array.from(new Set(depot.connectedRouteIds.map((id) => (id === second.id ? first.id : id)))),
     }));
     operationsState.expressConfigs = mergeExpressConfigs(first.id, second.id);
-    economy = { ...economy, cash: economy.cash - bridgeCost, constructionSpent: economy.constructionSpent + bridgeCost };
+    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - bridgeCost, constructionSpent: financeState.economy.constructionSpent + bridgeCost };
     cleanupTransferData();
     synchronizeGraphReferences();
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
@@ -14307,7 +14307,7 @@ function reportIntegrityIssues() {
       ...(plan.connections ?? []).map((connection) => connection.id),
       ...(plan.junctions ?? []).map((junction) => junction.id),
     ]),
-    numericState: { economy, stationDemandStates, analysisState, statisticsState },
+    numericState: { economy: financeState.economy, stationDemandStates, analysisState, statisticsState: financeState.statistics },
   });
   if (issues.length > 0 && import.meta.env.DEV) {
     console.warn(`[integrity] ${issues.length} recoverable issue(s) detected`, issues);
@@ -14625,7 +14625,7 @@ function analyzeConstruction(
     stationInstallCount,
     depotConnected,
     totalCost,
-    balanceAfter: economy.cash - totalCost,
+    balanceAfter: financeState.economy.cash - totalCost,
     durationDays,
     warnings,
   };
@@ -14683,8 +14683,8 @@ function collectConstructionWarnings(input: {
     warnings.push({ code: "too-short", severity: "error", message: `구간 길이가 ${Math.round(input.lengthKm * 1000)}m입니다. 50m 이상이어야 합니다.` });
   else if (input.kind !== "depot" && input.lengthKm * 1000 < 180)
     warnings.push({ code: "short-section", severity: "warning", message: "매우 짧은 구간입니다. 향후 선형 수정이 어려울 수 있습니다." });
-  if (currentMeta.mode === "career" && input.totalCost > economy.cash)
-    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(input.totalCost - economy.cash)} 부족합니다.` });
+  if (currentMeta.mode === "career" && input.totalCost > financeState.economy.cash)
+    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(input.totalCost - financeState.economy.cash)} 부족합니다.` });
   if (input.crossings.some((crossing) => !crossing.mode))
     warnings.push({ code: "river-choice", severity: "error", message: "각 강 통과 지점의 교량 또는 지하 방식을 선택하세요." });
   if (!input.depotConnected && input.kind !== "repair" && input.kind !== "edit")
@@ -14997,7 +14997,7 @@ function cloneState(): SaveState {
     constructionState.plans,
     diagramStateOwner.current,
     analysisState,
-    statisticsState,
+    financeState.statistics,
     constructionState.projects,
     newsEventState.current,
     operationsState.fleets,
@@ -15005,7 +15005,7 @@ function cloneState(): SaveState {
     operationsState.expressConfigs,
     passengerGroups,
     loanState.current,
-    economy,
+    financeState.economy,
     demandZones,
     stationDemandStates,
   );
@@ -15061,7 +15061,7 @@ function applyState(state: SaveState) {
   }
   diagramStateOwner.replace(state.diagramState);
   analysisState = normalizeAnalysisState(state.analysisState);
-  statisticsState = normalizeStatisticsState(state.statisticsState);
+  financeState.statistics = normalizeStatisticsState(state.statisticsState);
   constructionState.replaceProjects(normalizeConstructionProjects(state.constructionProjects));
   newsEventState.replace(normalizeNewsEvents(state.newsEvents));
   operationsState.fleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
@@ -15072,11 +15072,11 @@ function applyState(state: SaveState) {
   operationsState.expressConfigs = state.expressConfigs ?? [];
   passengerGroups = state.passengerGroups ?? [];
   loanState.replace(state.loans ?? []);
-  economy = { ...defaultEconomy, ...(state.economy ?? {}) };
+  financeState.economy = { ...defaultEconomy, ...(state.economy ?? {}) };
   transitRouter = null;
   transitRouterSignature = "";
   synchronizeGraphReferences();
-  if (!state.statisticsState && economy.demand > 0) statisticsState = { ...statisticsState, totalPassengers: economy.demand };
+  if (!state.statisticsState && financeState.economy.demand > 0) financeState.statistics = { ...financeState.statistics, totalPassengers: financeState.economy.demand };
 }
 
 function requestStateSave(kind: "normal" | "immediate" = "normal") {
@@ -15152,12 +15152,11 @@ function loadSavedState() {
     constructionState.reset();
     diagramStateOwner.reset();
     analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
-    statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
+    financeState.reset({ ...defaultEconomy }, { ...defaultStatisticsState, dailyRecords: [] });
     newsEventState.reset();
     operationsState.reset();
     passengerGroups = [];
     loanState.reset();
-    economy = { ...defaultEconomy };
   }
 }
 
@@ -15585,7 +15584,7 @@ function isTutorialStepComplete(step: number) {
   if (step === 6) return Boolean(routeId && operationsState.fleets.some((fleet) => fleet.routeId === routeId && fleet.sets > 0));
   if (step === 7) return Boolean(routeId && isRouteOperational(routeId));
   if (step === 8) return progress.timeStarted;
-  return statisticsState.dailyRecords.some((record) => record.day > progress.startedDay && record.revenue > 0);
+  return financeState.statistics.dailyRecords.some((record) => record.day > progress.startedDay && record.revenue > 0);
 }
 
 function getTutorialFeedback(step: number) {
@@ -15605,7 +15604,7 @@ function getTutorialFeedback(step: number) {
   if (step === 6) return "연결된 차량기지가 준비되었습니다. 하단 구매 버튼으로 열차를 배정하세요.";
   if (step === 7) return "공사 현황을 열고 차량기지·열차·역·운행 경로가 모두 충족됐는지 확인하세요.";
   if (step === 8) return "하단 시간 배속에서 x1 이상을 선택하세요.";
-  return economy.demand <= 0
+  return financeState.economy.demand <= 0
     ? "승객 수요가 없습니다. 노선 개통과 역 연결 상태를 확인하세요."
     : "열차가 운행 중입니다. 게임 하루가 끝나면 운임 수익이 기록됩니다.";
 }
