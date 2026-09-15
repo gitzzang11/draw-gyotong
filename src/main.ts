@@ -54,6 +54,8 @@ import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./up
 import type { Branch, ConstructionMode, Depot, RouteLine, RouteNode, RouteNodeKind, RouteSegment, ServicePattern, Station, TransferGroup } from "./domain/networkTypes.ts";
 import { NetworkState } from "./domain/networkState.ts";
 import { ConstructionState } from "./domain/constructionState.ts";
+import { OperationsState, type ExpressConfig, type TrainFleet } from "./domain/operationsState.ts";
+import { removeOperatingService, replaceExpressConfigForRoute, replaceOperatingService } from "./domain/operationsMutations.ts";
 import { updateConstructionPlan } from "./domain/constructionMutations.ts";
 import { buildTransferGroupMutation } from "./domain/transferMutations.ts";
 import { calculateNetworkFinancials as calculateNetworkFinancialsModel } from "./analysis/networkFinancials.ts";
@@ -265,27 +267,6 @@ type TrainType = "metro" | "commuter" | "express";
 type GameMode = "sandbox" | "career";
 type Difficulty = "easy" | "normal" | "hard";
 type CityId = "seoul" | "busan" | "daejeon" | "gwangju";
-
-type TrainFleet = {
-  id: string;
-  routeId: string;
-  serviceId?: string;
-  trainType: TrainType;
-  cars: number;
-  sets: number;
-  capacity: number;
-  purchaseCost: number;
-  maintenanceCost: number;
-};
-
-type ExpressConfig = {
-  routeId: string;
-  unlocked: boolean;
-  enabled: boolean;
-  stopStationIds: string[];
-  unlockCost: number;
-  extraOperatingCost: number;
-};
 
 type RouteOperation = {
   routeId: string;
@@ -2431,14 +2412,12 @@ const hudRenderer = new HudRenderer({
 });
 const networkState = new NetworkState();
 const constructionState = new ConstructionState();
+const operationsState = new OperationsState();
 const diagramStateOwner = new MetroDiagramStateOwner();
 let analysisState: OperationAnalysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
 let statisticsState: StatisticsState = { ...defaultStatisticsState, dailyRecords: [] };
 
 const newsEventState = new NewsEventStateOwner(80);
-let trainFleets: TrainFleet[] = [];
-let operatingServices: OperatingService[] = [];
-let expressConfigs: ExpressConfig[] = [];
 let passengerGroups: PassengerGroup[] = [];
 let segmentCongestion: SegmentCongestion[] = [];
 let routeCongestionSummaries: RouteCongestionSummary[] = [];
@@ -2556,7 +2535,7 @@ const simulationCoordinator = new SimulationCoordinator({
       playTimeSeconds: (currentMeta.playTimeSeconds ?? 0) + elapsedMinutes / Math.max(1, simSpeed),
     };
   },
-  advanceTrains: () => trainFleets.map((fleet) => fleet.id),
+  advanceTrains: () => operationsState.fleets.map((fleet) => fleet.id),
   getDay: (value) => Math.floor(value / 1440),
 });
 
@@ -4047,12 +4026,12 @@ function demolishBuiltAssets(selection: { routeHits: Map<string, Set<number>>; s
       return { ...depot, connectedRouteIds: Array.from(new Set(routeIds)) };
     });
   const depotIds = new Set(networkState.depots.map((depot) => depot.id));
-  trainFleets = trainFleets.flatMap((fleet) => {
+  operationsState.fleets = operationsState.fleets.flatMap((fleet) => {
     const sections = replacements.get(fleet.routeId);
     if (!sections) return [fleet];
     return sections[0] ? [{ ...fleet, routeId: sections[0].id }] : [];
   });
-  expressConfigs = expressConfigs.flatMap((config) => {
+  operationsState.expressConfigs = operationsState.expressConfigs.flatMap((config) => {
     const sections = replacements.get(config.routeId);
     if (!sections) return [{ ...config, stopStationIds: config.stopStationIds.filter((id) => stationIds.has(id)) }];
     return sections[0] ? [{ ...config, routeId: sections[0].id, stopStationIds: config.stopStationIds.filter((id) => networkState.stations.find((station) => station.id === id)?.connectedRouteIds.includes(sections[0].id)) }] : [];
@@ -4109,7 +4088,7 @@ function demolishStations(stationIds: string[]) {
   pushHistory();
   networkState.stations = networkState.stations.filter((station) => !removedIds.has(station.id));
   networkState.transfers = networkState.transfers.map((transfer) => ({ ...transfer, stationIds: transfer.stationIds.filter((id) => !removedIds.has(id)) }));
-  expressConfigs = expressConfigs.map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removedIds.has(id)) }));
+  operationsState.expressConfigs = operationsState.expressConfigs.map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removedIds.has(id)) }));
   constructionState.replaceProjects(constructionState.projects
     .map((project) => ({ ...project, stationIds: project.stationIds.filter((id) => !removedIds.has(id)) }))
     .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0));
@@ -4879,7 +4858,7 @@ function getOpeningRequirements(project: ConstructionProject) {
     );
   const hasTrains =
     projectRoutes.length > 0 &&
-    projectRoutes.every((route) => trainFleets.some((fleet) => fleet.routeId === route.id && fleet.sets > 0));
+    projectRoutes.every((route) => operationsState.fleets.some((fleet) => fleet.routeId === route.id && fleet.sets > 0));
   const hasStations =
     projectRoutes.length > 0 &&
     projectRoutes.every((route) => networkState.stations.some((station) => isStationOperational(station.id) && station.connectedRouteIds.includes(route.id)));
@@ -5283,9 +5262,9 @@ function mergeCompletedConnectionRoutes(first: RouteLine, second: RouteLine, con
   });
   networkState.routes = networkState.routes.filter((route) => route.id !== second.id).map((route) => route.id === first.id ? merged : route);
   networkState.stations = mergeDuplicateStations(networkState.stations.map((station) => ({ ...station, connectedRouteIds: Array.from(new Set(station.connectedRouteIds.map((id) => id === second.id ? first.id : id))) })));
-  trainFleets = trainFleets.map((fleet) => fleet.routeId === second.id ? { ...fleet, routeId: first.id } : fleet);
+  operationsState.fleets = operationsState.fleets.map((fleet) => fleet.routeId === second.id ? { ...fleet, routeId: first.id } : fleet);
   networkState.depots = networkState.depots.map((depot) => ({ ...depot, connectedRouteIds: Array.from(new Set(depot.connectedRouteIds.map((id) => id === second.id ? first.id : id))) }));
-  expressConfigs = mergeExpressConfigs(first.id, second.id);
+  operationsState.expressConfigs = mergeExpressConfigs(first.id, second.id);
   constructionState.replaceProjects(constructionState.projects.map((project) => ({
     ...project,
     routeIds: Array.from(new Set(project.routeIds.map((id) => id === second.id ? first.id : id))),
@@ -6117,7 +6096,7 @@ function separateTransferStations(memberIds: Set<string>) {
   }
   networkState.stations = separatedStations;
 
-  expressConfigs = expressConfigs.map((config) => {
+  operationsState.expressConfigs = operationsState.expressConfigs.map((config) => {
     const nextStopIds = config.stopStationIds.flatMap((stationId) => {
       const replacements = splitIds.get(stationId);
       if (!replacements) return [stationId];
@@ -6302,7 +6281,7 @@ function buildDiagramGraph(): DiagramGraphInternal {
       routeNodeIds: Array.from(new Set(members.flatMap((station) => station.routeNodeIds ?? []))),
       transferGroupId: members.find((station) => station.transferGroupId)?.transferGroupId,
     };
-    const express = expressConfigs.some(
+    const express = operationsState.expressConfigs.some(
       (config) => config.enabled && routeIds.includes(config.routeId) && members.some((station) => config.stopStationIds.includes(station.id)),
     );
     const branch = visibleRoutes.some((route) => {
@@ -7048,12 +7027,12 @@ function updatePlan(planId: string, updater: (plan: ConstructionPlan) => Constru
   constructionState.replacePlans(updateConstructionPlan(constructionState.plans, planId, updater, recalculatePlan));
 }
 
-function getRouteServiceOperations(routeId: string, fleetSource = trainFleets) {
+function getRouteServiceOperations(routeId: string, fleetSource = operationsState.fleets) {
   const route = networkState.routes.find((item) => item.id === routeId);
   const routeStations = networkState.stations.filter((station) => station.connectedRouteIds.includes(routeId) && isStationOperational(station.id));
-  const serviceIds = new Set(operatingServices.filter((service) => service.routeIds.includes(routeId)).map((service) => service.id));
+  const serviceIds = new Set(operationsState.services.filter((service) => service.routeIds.includes(routeId)).map((service) => service.id));
   const routeFleets = fleetSource.filter((fleet) => fleet.serviceId ? serviceIds.has(fleet.serviceId) : fleet.routeId === routeId);
-  const express = expressConfigs.find((config) => config.routeId === routeId && config.enabled);
+  const express = operationsState.expressConfigs.find((config) => config.routeId === routeId && config.enabled);
   const expressEnabled = Boolean(
     route?.expressServiceEnabled !== false &&
     express &&
@@ -7075,14 +7054,14 @@ function getRouteServiceOperations(routeId: string, fleetSource = trainFleets) {
   });
 }
 
-function getCustomServiceOperations(routeId: string, fleetSource = trainFleets) {
-  return operatingServices
+function getCustomServiceOperations(routeId: string, fleetSource = operationsState.fleets) {
+  return operationsState.services
     .filter((service) => service.routeIds.includes(routeId))
     .map((service) => ({ service, operation: getOperatingServiceOperation(service, fleetSource) }));
 }
 
-function getFleetsServingRoute(routeId: string, fleetSource = trainFleets) {
-  const serviceIds = new Set(operatingServices.filter((service) => service.routeIds.includes(routeId)).map((service) => service.id));
+function getFleetsServingRoute(routeId: string, fleetSource = operationsState.fleets) {
+  const serviceIds = new Set(operationsState.services.filter((service) => service.routeIds.includes(routeId)).map((service) => service.id));
   return fleetSource.filter((fleet) => fleet.serviceId ? serviceIds.has(fleet.serviceId) : fleet.routeId === routeId);
 }
 
@@ -8720,9 +8699,7 @@ function resetWorld() {
   analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
   statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
   newsEventState.reset();
-  trainFleets = [];
-  operatingServices = [];
-  expressConfigs = [];
+  operationsState.reset();
   passengerGroups = [];
   loanState.reset();
   undoStack = [];
@@ -8972,7 +8949,7 @@ function reconcileMapStations(selectedId?: string) {
   });
   const stationEntities: StationRenderEntity[] = networkState.stations.map((station) => {
     const isSelected = station.id === selectedId || selectedTransferStationIds.includes(station.id);
-    const expressConfig = expressConfigs.find((config) => config.routeId === selectedOperationRouteId);
+    const expressConfig = operationsState.expressConfigs.find((config) => config.routeId === selectedOperationRouteId);
     const isExpressStop = Boolean(expressConfig?.enabled && expressConfig.stopStationIds.includes(station.id));
     const transferInfo = selectStationTransferInfo(station.id);
     const isTransferStation = Boolean(transferInfo?.isTransfer);
@@ -9008,7 +8985,7 @@ function reconcileMapTrains() {
 
   const trainEntities: TrainRenderEntity[] = [];
   const maxVisiblePerService = settings.performanceMode === "battery" ? 8 : 18;
-  for (const service of operatingServices) {
+  for (const service of operationsState.services) {
     const ownerRoute = networkState.routes.find((route) => route.id === service.ownerRouteId);
     const serviceRoutes = service.routeIds
       .map((id) => networkState.routes.find((route) => route.id === id))
@@ -9017,7 +8994,7 @@ function reconcileMapTrains() {
     if (serviceRoutes.some((route) => !isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning")) continue;
 
     const operation = getOperatingServiceOperation(service);
-    const displayedFleetSets = trainFleets
+    const displayedFleetSets = operationsState.fleets
       .filter((fleet) => fleet.serviceId === service.id)
       .flatMap((fleet) => Array.from({ length: fleet.sets }, (_, setIndex) => ({ fleet, setNumber: setIndex + 1 })));
     const totalSets = displayedFleetSets.length;
@@ -9073,7 +9050,7 @@ function reconcileLegacyMapTrains() {
   const maxVisiblePerRoute = settings.performanceMode === "battery" ? 8 : 18;
   for (const route of networkState.routes) {
     if (!isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning") continue;
-    const routeFleets = trainFleets.filter((fleet) => fleet.routeId === route.id);
+    const routeFleets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id);
     const serviceOperations = getRouteServiceOperations(route.id);
     const hasExpressFleet = routeFleets.some((fleet) => fleet.trainType === "express");
     let genericSetOrdinal = 0;
@@ -9256,7 +9233,7 @@ function servicePathLengthKm(service: OperatingService) {
   return polylineLengthMeters(service.pathCoordinates) / 1000;
 }
 
-function getOperatingServiceOperation(service: OperatingService, fleetSource = trainFleets) {
+function getOperatingServiceOperation(service: OperatingService, fleetSource = operationsState.fleets) {
   return calculateOperatingServiceOperation({
     serviceId: service.id,
     routeLengthKm: servicePathLengthKm(service),
@@ -9300,7 +9277,7 @@ function buyTrainsForSelectedRoute() {
   const connectedDepotCapacity = networkState.depots
     .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.includes(route.id))
     .reduce((sum, depot) => sum + depot.capacity, 0);
-  const currentSets = trainFleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const currentSets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   const trainType = (trainTypeSelect?.value as TrainType) || "metro";
   const cars = clampInteger(Number(carCountInput?.value ?? 6), 2, 10);
   const sets = clampInteger(Number(setCountInput?.value ?? 1), 1, 30);
@@ -9318,8 +9295,8 @@ function buyTrainsForSelectedRoute() {
 
   const spec = trainCatalog[trainType];
   pushHistory();
-  trainFleets = [
-    ...trainFleets,
+  operationsState.fleets = [
+    ...operationsState.fleets,
     {
       id: createId("fleet"),
       routeId: route.id,
@@ -9331,7 +9308,7 @@ function buyTrainsForSelectedRoute() {
       maintenanceCost: Math.round(spec.maintenancePerCar * cars * sets),
     },
   ];
-  const latestFleet = trainFleets[trainFleets.length - 1];
+  const latestFleet = operationsState.fleets[operationsState.fleets.length - 1];
   economy = { ...economy, cash: economy.cash - latestFleet.purchaseCost, trainSpent: economy.trainSpent + latestFleet.purchaseCost };
   playFeedback("confirm");
   redoStack = [];
@@ -9352,10 +9329,12 @@ function toggleExpressForSelectedRoute() {
     .map((station) => station.id);
   if (!existing.unlocked) {
     pushHistory();
-    expressConfigs = [
-      ...expressConfigs.filter((config) => config.routeId !== routeId),
-      { ...existing, unlocked: true, enabled: true, stopStationIds: normalizeServiceStops(routeStationIds, []) },
-    ];
+    operationsState.expressConfigs = replaceExpressConfigForRoute(operationsState.expressConfigs, routeId, {
+      ...existing,
+      unlocked: true,
+      enabled: true,
+      stopStationIds: normalizeServiceStops(routeStationIds, []),
+    });
     setTool("expressStop");
   } else if (existing.enabled && activeTool !== "expressStop") {
     // Keep the service running while opening the stop editor.
@@ -9363,14 +9342,14 @@ function toggleExpressForSelectedRoute() {
     return;
   } else if (existing.enabled) {
     pushHistory();
-    expressConfigs = expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: false } : config));
+    operationsState.expressConfigs = operationsState.expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: false } : config));
     setTool("pan");
   } else {
     pushHistory();
-    expressConfigs = expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: true } : config));
+    operationsState.expressConfigs = operationsState.expressConfigs.map((config) => (config.routeId === routeId ? { ...config, enabled: true } : config));
     setTool("expressStop");
   }
-  const enabled = expressConfigs.find((config) => config.routeId === routeId)?.enabled ?? !existing.enabled;
+  const enabled = operationsState.expressConfigs.find((config) => config.routeId === routeId)?.enabled ?? !existing.enabled;
   networkState.routes = networkState.routes.map((route) =>
     route.id === routeId
       ? {
@@ -9388,7 +9367,7 @@ function toggleExpressForSelectedRoute() {
 
 function toggleExpressStopAt(point: L.Point) {
   const routeId = selectedOperationRouteId || networkState.routes[0]?.id;
-  const config = expressConfigs.find((item) => item.routeId === routeId && item.enabled);
+  const config = operationsState.expressConfigs.find((item) => item.routeId === routeId && item.enabled);
   if (!config) {
     setText(facilityReadout, "급행을 먼저 켜세요");
     return;
@@ -9409,7 +9388,7 @@ function toggleExpressStopAt(point: L.Point) {
   }
   pushHistory();
   const hasStop = config.stopStationIds.includes(station.id);
-  expressConfigs = expressConfigs.map((item) =>
+  operationsState.expressConfigs = operationsState.expressConfigs.map((item) =>
     item.routeId === routeId
       ? { ...item, stopStationIds: hasStop ? item.stopStationIds.filter((id) => id !== station.id) : [...item.stopStationIds, station.id] }
       : item,
@@ -9423,7 +9402,7 @@ function toggleExpressStopAt(point: L.Point) {
  * 배정 차량, 역별 수요, 급행 설정으로부터 한 노선의 배차·혼잡·비용을 계산한다.
  * 반환값은 표시용 캐시가 아니라 현재 상태에서 언제든 다시 만들 수 있는 파생 데이터다.
  */
-function calculateLegacyRouteOperation(routeId: string, fleetSource = trainFleets): RouteOperation {
+function calculateLegacyRouteOperation(routeId: string, fleetSource = operationsState.fleets): RouteOperation {
   const route = networkState.routes.find((item) => item.id === routeId);
   const routeStations = networkState.stations.filter((station) => station.connectedRouteIds.includes(routeId));
   const routeFleets = getFleetsServingRoute(routeId, fleetSource);
@@ -9451,8 +9430,8 @@ function calculateLegacyRouteOperation(routeId: string, fleetSource = trainFleet
   return { routeId, headwayMin, crowding, waitMin, dailyDemand, hourlyCapacity, operatingCost };
 }
 
-function getRoutingServiceCapacities(routeId?: string, fleetSource = trainFleets): ServiceCapacity[] {
-  return operatingServices.flatMap((service) => {
+function getRoutingServiceCapacities(routeId?: string, fleetSource = operationsState.fleets): ServiceCapacity[] {
+  return operationsState.services.flatMap((service) => {
     if (routeId && !service.routeIds.includes(routeId)) return [];
     const ownerRoute = networkState.routes.find((route) => route.id === service.ownerRouteId);
     if (!ownerRoute || service.routeIds.some((id) => {
@@ -9503,8 +9482,8 @@ function buildAnalysisFingerprint() {
     satisfaction: economy.satisfaction,
     routes: networkState.routes.map((route) => [route.id, route.lengthKm, route.operationPaused, route.visibility]),
     stations: networkState.stations.map((station) => [station.id, station.demand, station.connectedRouteIds]),
-    services: operatingServices.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathOptionId, service.stopStationIds]),
-    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
+    services: operationsState.services.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathOptionId, service.stopStationIds]),
+    fleets: operationsState.fleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
     depots: networkState.depots.map((depot) => [depot.id, depot.capacity, depot.connectedRouteIds]),
     transfers: networkState.transfers.map((transfer) => [transfer.id, transfer.resistance]),
     plans: constructionState.plans.map((plan) => [plan.id, plan.status, plan.remainingCost, plan.expectedDemand]),
@@ -9719,7 +9698,7 @@ function refreshOperationSuggestions(force = false) {
     }
 
     const routeStationCount = networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length;
-    const express = expressConfigs.find((config) => config.routeId === route.id && config.enabled);
+    const express = operationsState.expressConfigs.find((config) => config.routeId === route.id && config.enabled);
     if (!express && routeStationCount >= 8 && route.lengthKm >= 10 && operation.dailyDemand >= Math.max(18000, totalRouteDemand * 0.2)) {
       add(
         "express-opportunity",
@@ -10407,7 +10386,7 @@ function calculateNetworkFinancials() {
     economy,
     routes: networkState.routes,
     depots: networkState.depots,
-    fleets: trainFleets,
+    fleets: operationsState.fleets,
     loans: loanState.current,
     statistics: statisticsState,
     stationPotentialDemand: stationDemandStates.map((state) => state.potentialDemand),
@@ -10426,16 +10405,16 @@ function calculateRouteStatistics(route: RouteLine) {
   const averageTravelTime =
     groups.length > 0
       ? groups.reduce((sum, group) => {
-          const speed = trainFleets.some((fleet) => fleet.routeId === route.id) ? weightedAverageSpeed(trainFleets.filter((fleet) => fleet.routeId === route.id)) : 32;
+          const speed = operationsState.fleets.some((fleet) => fleet.routeId === route.id) ? weightedAverageSpeed(operationsState.fleets.filter((fleet) => fleet.routeId === route.id)) : 32;
           return sum + (group.distanceKm / speed) * 60 + group.waitMin;
         }, 0) / groups.length
       : route.lengthKm > 0
         ? (route.lengthKm / 32) * 30 + operation.waitMin
         : 0;
   const satisfaction = groups.length > 0 ? groups.reduce((sum, group) => sum + group.satisfaction, 0) / groups.length : economy.satisfaction;
-  const sets = trainFleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const sets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   const depotCapacity = networkState.depots.filter((depot) => depot.connectedRouteIds.includes(route.id)).reduce((sum, depot) => sum + depot.capacity, 0);
-  const express = expressConfigs.find((config) => config.routeId === route.id && config.enabled);
+  const express = operationsState.expressConfigs.find((config) => config.routeId === route.id && config.enabled);
   const expressUsage =
     express && groups.length > 0
       ? clampNumber(groups.filter((group) => group.distanceKm >= route.lengthKm * 0.35).reduce((sum, group) => sum + group.activeDemand, 0) / Math.max(1, groups.reduce((sum, group) => sum + group.activeDemand, 0)), 0, 1)
@@ -10747,7 +10726,7 @@ function renderDepotManager() {
     return;
   }
   const connectedRoutes = depot.connectedRouteIds.map((id) => networkState.routes.find((route) => route.id === id)).filter(Boolean) as RouteLine[];
-  const assignedSets = trainFleets
+  const assignedSets = operationsState.fleets
     .filter((fleet) => depot.connectedRouteIds.includes(fleet.routeId))
     .reduce((sum, fleet) => sum + fleet.sets, 0);
   const operational = isDepotOperational(depot.id);
@@ -10834,7 +10813,7 @@ function renderStatisticsScreen() {
 
 function renderOverviewStatistics() {
   const finances = calculateNetworkFinancials();
-  const totalSets = trainFleets.reduce((sum, fleet) => sum + fleet.sets, 0);
+  const totalSets = operationsState.fleets.reduce((sum, fleet) => sum + fleet.sets, 0);
   const totalLength = networkState.routes.reduce((sum, route) => sum + route.lengthKm, 0);
   const transferStationIds = new Set(networkState.transfers.flatMap((transfer) => transfer.stationIds));
   const previous = statisticsState.dailyRecords.at(-2);
@@ -11097,7 +11076,7 @@ function weightedAverageSpeed(fleets: TrainFleet[]) {
 }
 
 function getExpressConfig(routeId: string): ExpressConfig {
-  const existing = expressConfigs.find((config) => config.routeId === routeId);
+  const existing = operationsState.expressConfigs.find((config) => config.routeId === routeId);
   if (existing) return existing;
   const routeStationIds = networkState.stations
     .filter((station) => station.connectedRouteIds.includes(routeId))
@@ -11138,7 +11117,7 @@ function updateOperationHud() {
  */
 function buildPassengerRoutingNetwork(): RoutingNetwork {
   const operationalStations = networkState.stations.filter((station) => isStationOperational(station.id));
-  const services: RoutingNetwork["services"] = operatingServices.flatMap((service) => {
+  const services: RoutingNetwork["services"] = operationsState.services.flatMap((service) => {
     const ownerRoute = networkState.routes.find((route) => route.id === service.ownerRouteId);
     if (!ownerRoute || service.pathCoordinates.length < 2) return [];
     if (service.routeIds.some((id) => {
@@ -11419,13 +11398,13 @@ function buildDemandStructureFingerprint() {
       route.expressServiceEnabled,
     ]),
     transfers: networkState.transfers.map((transfer) => [transfer.id, transfer.stationIds, transfer.resistance]),
-    operatingServices: operatingServices.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathCoordinates, service.stopStationIds]),
+    operatingServices: operationsState.services.map((service) => [service.id, service.ownerRouteId, service.routeIds, service.pathCoordinates, service.stopStationIds]),
   });
 }
 
 function buildDemandServiceFingerprint() {
   return JSON.stringify({
-    fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
+    fleets: operationsState.fleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
     fare: economy.fare,
     events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
     period: getDemandPeriod(simMinutes),
@@ -11529,7 +11508,7 @@ function regeneratePassengerGroups() {
 }
 
 function calculateCurrentOperatingForecast(
-  fleetSource = trainFleets,
+  fleetSource = operationsState.fleets,
   fare = economy.fare,
 ): OperatingForecast {
   return calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
@@ -11537,7 +11516,7 @@ function calculateCurrentOperatingForecast(
 
 function calculateOperatingForecastForGroups(
   groups: PassengerGroup[],
-  fleetSource = trainFleets,
+  fleetSource = operationsState.fleets,
   fare = economy.fare,
 ): OperatingForecast {
   const hour = Math.floor(simMinutes / 60) % 24;
@@ -11579,7 +11558,7 @@ function calculateStationServiceDemand(
   station: Station,
   fare = economy.fare,
   groupsSource = passengerGroups,
-  fleetSource = trainFleets,
+  fleetSource = operationsState.fleets,
 ): { captureRate: number; attractiveness: DemandAttractiveness } {
   const originGroups = groupsSource.filter((group) => group.originStationId === station.id && group.journey);
   const totalWeight = originGroups.reduce((sum, group) => sum + Math.max(1, group.activeDemand), 0);
@@ -11616,7 +11595,7 @@ type DemandResponsiveForecast = OperatingForecast & {
 };
 
 function calculateDemandResponsiveForecast(
-  fleetSource = trainFleets,
+  fleetSource = operationsState.fleets,
   fare = economy.fare,
 ): DemandResponsiveForecast {
   const capacityForecast = calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
@@ -11724,7 +11703,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     regeneratePassengerGroups();
     advanceDemandForGameDay(gameDay, economy.fare);
     regeneratePassengerGroups();
-    const forecast = calculateCurrentOperatingForecast(trainFleets, economy.fare);
+    const forecast = calculateCurrentOperatingForecast(operationsState.fleets, economy.fare);
     const maintenance = calculateDailyMaintenanceBreakdown();
     const constructionCostDue = constructionState.projects.flatMap((project) => project.events)
       .filter((event) => !event.applied && event.kind === "extra-cost" && event.triggerDay <= gameDay)
@@ -11789,17 +11768,17 @@ function updateCareerProgress(bankrupt: boolean) {
   currentMeta = { ...currentMeta, unlockedCityIds: Array.from(unlocked), bankrupt };
 }
 
-function calculateDailyMaintenance(fleetSource = trainFleets) {
+function calculateDailyMaintenance(fleetSource = operationsState.fleets) {
   const breakdown = calculateDailyMaintenanceBreakdown(fleetSource);
   return breakdown.trains + breakdown.depots + breakdown.express;
 }
 
-function calculateDailyMaintenanceBreakdown(fleetSource = trainFleets) {
+function calculateDailyMaintenanceBreakdown(fleetSource = operationsState.fleets) {
   const multiplier = getNewsOperatingCostMultiplier();
   return {
     trains: Math.round(fleetSource.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0) * multiplier),
     depots: Math.round(networkState.depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0) * multiplier),
-    express: Math.round(expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0) * multiplier),
+    express: Math.round(operationsState.expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0) * multiplier),
   };
 }
 
@@ -12117,7 +12096,7 @@ function updateOperationRouteOptions() {
 function updateExpressButton() {
   if (!expressButton) return;
   const routeId = selectedOperationRouteId || selectedRouteId || networkState.routes[0]?.id || "";
-  const config = expressConfigs.find((item) => item.routeId === routeId);
+  const config = operationsState.expressConfigs.find((item) => item.routeId === routeId);
   expressButton.classList.toggle("active", Boolean(config?.enabled));
   expressButton.setAttribute("aria-pressed", String(Boolean(config?.enabled)));
   expressButton.disabled = !routeId;
@@ -12402,7 +12381,7 @@ function renderLeftRouteWindow() {
     id: route.id,
     name: escapeHtml(route.name),
     color: escapeHtml(route.color),
-    meta: `${route.lengthKm.toFixed(1)}km · 역 ${networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 운행 계통 ${operatingServices.filter((service) => service.ownerRouteId === route.id).length}개`,
+    meta: `${route.lengthKm.toFixed(1)}km · 역 ${networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 운행 계통 ${operationsState.services.filter((service) => service.ownerRouteId === route.id).length}개`,
     selected: route.id === selectedRouteId,
   })), (routeId) => {
     selectedRouteId = routeId;
@@ -12498,7 +12477,7 @@ function renderOperatingServiceMapOverlay(service?: OperatingService, changedSta
 }
 
 function renderOperatingServiceList(routeId: string) {
-  const services = operatingServices.filter((service) => service.ownerRouteId === routeId);
+  const services = operationsState.services.filter((service) => service.ownerRouteId === routeId);
   setText(operatingServiceCount, `${services.length}개`);
   if (!operatingServiceList) return;
   operatingServiceList.innerHTML = services.length === 0
@@ -12619,7 +12598,7 @@ function openOperatingServiceEditor(serviceId?: string) {
   if (operatingServiceMapEditActive) finishOperatingServiceMapEdit();
   operatingServiceSection?.setAttribute("open", "");
   editingOperatingServiceId = serviceId ?? null;
-  const service = serviceId ? operatingServices.find((item) => item.id === serviceId) : undefined;
+  const service = serviceId ? operationsState.services.find((item) => item.id === serviceId) : undefined;
   const options = getOperatingServicePathOptions(route.id);
   operatingServicePathSelect.innerHTML = options.map((option) =>
     `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)} · ${option.stationIds.length}개 역</option>`
@@ -12628,7 +12607,7 @@ function openOperatingServiceEditor(serviceId?: string) {
     ? service.pathOptionId
     : options[0]?.id ?? "";
   operatingServicePathSelect.value = selectedOptionId;
-  if (operatingServiceNameInput) operatingServiceNameInput.value = service?.name ?? `${route.name} 계통 ${operatingServices.filter((item) => item.ownerRouteId === route.id).length + 1}`;
+  if (operatingServiceNameInput) operatingServiceNameInput.value = service?.name ?? `${route.name} 계통 ${operationsState.services.filter((item) => item.ownerRouteId === route.id).length + 1}`;
   operatingServiceDraftPreset = service?.preset ?? "all";
   rightLineControlCard?.classList.add("service-mode");
   setText(lineManagerTitle, service ? "운행 계통 관리" : "운행 계통 추가");
@@ -12695,7 +12674,7 @@ function saveOperatingServiceEditor() {
     .filter((input) => input.checked)
     .map((input) => input.value);
   const stopStationIds = option.stationIds.filter((id, index) => checkedStops.includes(id) || index === 0 || index === option.stationIds.length - 1);
-  const existing = editingOperatingServiceId ? operatingServices.find((item) => item.id === editingOperatingServiceId) : undefined;
+  const existing = editingOperatingServiceId ? operationsState.services.find((item) => item.id === editingOperatingServiceId) : undefined;
   const service: OperatingService = {
     id: existing?.id ?? createId("service"),
     name: operatingServiceNameInput?.value.trim() || `${route.name} 운행계통`,
@@ -12710,9 +12689,7 @@ function saveOperatingServiceEditor() {
     createdAt: existing?.createdAt ?? Date.now(),
   };
   pushHistory();
-  operatingServices = existing
-    ? operatingServices.map((item) => item.id === existing.id ? service : item)
-    : [...operatingServices, service];
+  operationsState.services = replaceOperatingService(operationsState.services, service);
   selectedOperatingServiceId = service.id;
   editingOperatingServiceId = service.id;
   redoStack = [];
@@ -12729,7 +12706,7 @@ function handleOperatingServiceListClick(event: Event) {
   const serviceId = card?.dataset.operatingServiceId;
   if (!serviceId) return;
   selectedOperatingServiceId = serviceId;
-  const service = operatingServices.find((item) => item.id === serviceId);
+  const service = operationsState.services.find((item) => item.id === serviceId);
   renderOperatingServiceList(service?.ownerRouteId ?? selectedRouteId ?? "");
   openOperatingServiceEditor(serviceId);
   renderOperatingServiceMapOverlay(service);
@@ -12739,11 +12716,12 @@ function handleOperatingServiceListClick(event: Event) {
 
 function deleteSelectedOperatingService() {
   const serviceId = editingOperatingServiceId;
-  const service = operatingServices.find((item) => item.id === serviceId);
+  const service = operationsState.services.find((item) => item.id === serviceId);
   if (!service) return;
   pushHistory();
-  operatingServices = operatingServices.filter((item) => item.id !== service.id);
-  trainFleets = trainFleets.filter((fleet) => fleet.serviceId !== service.id);
+  const remaining = removeOperatingService(operationsState.services, operationsState.fleets, service.id);
+  operationsState.services = remaining.services;
+  operationsState.fleets = remaining.fleets;
   selectedOperatingServiceId = null;
   closeOperatingServiceEditor();
   renderOperatingServiceMapOverlay();
@@ -12761,7 +12739,7 @@ function openLineManager() {
   }
   selectedRouteId = route.id;
   selectedOperationRouteId = route.id;
-  if (!operatingServices.some((service) => service.id === selectedOperatingServiceId && service.ownerRouteId === route.id)) {
+  if (!operationsState.services.some((service) => service.id === selectedOperatingServiceId && service.ownerRouteId === route.id)) {
     selectedOperatingServiceId = null;
     closeOperatingServiceEditor();
     renderOperatingServiceMapOverlay();
@@ -12794,7 +12772,7 @@ function closeLineManager() {
 }
 
 function openTrainManagerModal() {
-  if (!selectedOperatingServiceId || !operatingServices.some((service) => service.id === selectedOperatingServiceId)) {
+  if (!selectedOperatingServiceId || !operationsState.services.some((service) => service.id === selectedOperatingServiceId)) {
     showToast("먼저 관리할 운행 계통을 선택하세요.");
     return;
   }
@@ -12894,14 +12872,14 @@ function renderServiceOperationSummary(service: OperatingService) {
 
 function renderTrainManager() {
   if (!trainPanel) return;
-  const service = operatingServices.find((item) => item.id === selectedOperatingServiceId);
+  const service = operationsState.services.find((item) => item.id === selectedOperatingServiceId);
   const route = networkState.routes.find((item) => item.id === service?.ownerRouteId);
   if (!route || !service) {
     trainPanel.render("none", `<div class="left-route-empty"><span>선택된 운행 계통이 없습니다</span></div>`, handleTrainPanelClick, handleTrainPanelChange);
     return;
   }
 
-  const routeFleets = trainFleets.filter((fleet) => fleet.serviceId === service.id);
+  const routeFleets = operationsState.fleets.filter((fleet) => fleet.serviceId === service.id);
   const totalSets = routeFleets.reduce((sum, f) => sum + f.sets, 0);
   const connectedDepotCapacity = networkState.depots
     .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.some((routeId) => service.routeIds.includes(routeId)))
@@ -12951,7 +12929,7 @@ function renderTrainManager() {
 function handleTrainPanelChange(event: Event) {
   const target = event.target as HTMLSelectElement;
   if (target.id !== "modalTrainTypeSelect" && target.id !== "modalCarCountSelect") return;
-  const service = operatingServices.find((item) => item.id === selectedOperatingServiceId);
+  const service = operationsState.services.find((item) => item.id === selectedOperatingServiceId);
   const route = networkState.routes.find((item) => item.id === service?.ownerRouteId);
   if (!route || !service) return;
   const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
@@ -12968,22 +12946,22 @@ function handleTrainPanelChange(event: Event) {
     purchaseCost: spec.pricePerCar * cars,
     maintenanceCost: spec.maintenancePerCar * cars,
   };
-  updateOperatingForecastComparison(calculateDemandResponsiveForecast([...trainFleets, previewFleet]));
+  updateOperatingForecastComparison(calculateDemandResponsiveForecast([...operationsState.fleets, previewFleet]));
 }
 
 function handleTrainPanelClick(event: Event) {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
   if (!button) return;
-  const service = operatingServices.find((item) => item.id === selectedOperatingServiceId);
+  const service = operationsState.services.find((item) => item.id === selectedOperatingServiceId);
   const route = networkState.routes.find((item) => item.id === service?.ownerRouteId);
   if (!route || !service) return;
   const connectedDepotCapacity = networkState.depots
     .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.some((routeId) => service.routeIds.includes(routeId)))
     .reduce((sum, depot) => sum + depot.capacity, 0);
   if (button.classList.contains("increase")) {
-    const fleet = trainFleets.find((item) => item.id === button.dataset.fleetId);
+    const fleet = operationsState.fleets.find((item) => item.id === button.dataset.fleetId);
     if (!fleet) return;
-    const currentRouteSets = trainFleets.filter((item) => item.serviceId === service.id).reduce((sum, item) => sum + item.sets, 0);
+    const currentRouteSets = operationsState.fleets.filter((item) => item.serviceId === service.id).reduce((sum, item) => sum + item.sets, 0);
     if (currentRouteSets >= connectedDepotCapacity) {
       showToast("차량기지 수용량이 부족합니다. 기지를 확장하거나 연결 상태를 확인하세요.");
       return;
@@ -12994,7 +12972,7 @@ function handleTrainPanelClick(event: Event) {
       return;
     }
     pushHistory();
-    trainFleets = trainFleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets + 1) : item);
+    operationsState.fleets = operationsState.fleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets + 1) : item);
     economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
     redoStack = [];
     requestStateSave();
@@ -13004,12 +12982,12 @@ function handleTrainPanelClick(event: Event) {
     return;
   }
   if (button.classList.contains("decrease")) {
-    const fleet = trainFleets.find((item) => item.id === button.dataset.fleetId);
+    const fleet = operationsState.fleets.find((item) => item.id === button.dataset.fleetId);
     if (!fleet) return;
     pushHistory();
-    trainFleets = fleet.sets > 1
-      ? trainFleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets - 1) : item)
-      : trainFleets.filter((item) => item.id !== fleet.id);
+    operationsState.fleets = fleet.sets > 1
+      ? operationsState.fleets.map((item) => item.id === fleet.id ? updateFleetSetCount(item, item.sets - 1) : item)
+      : operationsState.fleets.filter((item) => item.id !== fleet.id);
     redoStack = [];
     requestStateSave();
     renderTrainManager();
@@ -13021,7 +12999,7 @@ function handleTrainPanelClick(event: Event) {
   const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
   const cars = Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? 6);
   const spec = trainCatalog[trainType];
-  const currentRouteSets = trainFleets.filter((fleet) => fleet.serviceId === service.id).reduce((sum, fleet) => sum + fleet.sets, 0);
+  const currentRouteSets = operationsState.fleets.filter((fleet) => fleet.serviceId === service.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   if (currentRouteSets >= connectedDepotCapacity) {
     showToast("차량기지 수용량이 부족합니다. 기지를 확장하거나 연결 상태를 확인하세요.");
     return;
@@ -13032,7 +13010,7 @@ function handleTrainPanelClick(event: Event) {
     return;
   }
   pushHistory();
-  trainFleets.push({
+  operationsState.replaceFleets([...operationsState.fleets, {
     id: createId("fleet"),
     routeId: route.id,
     serviceId: service.id,
@@ -13042,7 +13020,7 @@ function handleTrainPanelClick(event: Event) {
     capacity: spec.capacityPerCar * cars,
     purchaseCost,
     maintenanceCost: Math.round(spec.maintenancePerCar * cars),
-  });
+  }]);
   economy = { ...economy, cash: economy.cash - purchaseCost, trainSpent: economy.trainSpent + purchaseCost };
   redoStack = [];
   requestStateSave();
@@ -13115,7 +13093,7 @@ function demolishWholeLine(routeId: string) {
   networkState.stations = networkState.stations
     .filter((station) => !removableStationIds.has(station.id))
     .map((station) => (station.connectedRouteIds.includes(routeId) ? { ...station, connectedRouteIds: station.connectedRouteIds.filter((id) => id !== routeId) } : station));
-  expressConfigs = expressConfigs.map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removableStationIds.has(id)) }));
+  operationsState.expressConfigs = operationsState.expressConfigs.map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removableStationIds.has(id)) }));
   constructionState.replaceProjects(constructionState.projects
     .map((project) => ({
       ...project,
@@ -13567,7 +13545,7 @@ function splitRouteAtRange(routeId: string, startIndex: number, endIndex: number
       ? { ...depot, connectedRouteIds: Array.from(new Set([...depot.connectedRouteIds, secondId])) }
       : depot,
   );
-  expressConfigs = expressConfigs.flatMap((config) =>
+  operationsState.expressConfigs = operationsState.expressConfigs.flatMap((config) =>
     config.routeId === routeId ? [{ ...config, stopStationIds: config.stopStationIds.filter((id) => networkState.stations.find((station) => station.id === id)?.connectedRouteIds.includes(routeId)) }] : [config],
   );
   cleanupTransferData();
@@ -13601,13 +13579,13 @@ function eraseRouteEndRange(route: RouteLine, remainingCoordinates: Array<[numbe
       return { ...station, connectedRouteIds: staysConnected ? station.connectedRouteIds : station.connectedRouteIds.filter((id) => id !== route.id) };
     })
     .filter((station) => station.connectedRouteIds.length > 0);
-  if (!remaining) trainFleets = trainFleets.filter((fleet) => fleet.routeId !== route.id);
+  if (!remaining) operationsState.fleets = operationsState.fleets.filter((fleet) => fleet.routeId !== route.id);
   networkState.depots = networkState.depots.map((depot) =>
     depot.connectedRouteIds.includes(route.id) && (!remaining || !depotTouchesRoute(depot, remaining))
       ? { ...depot, connectedRouteIds: depot.connectedRouteIds.filter((id) => id !== route.id) }
       : depot,
   );
-  expressConfigs = expressConfigs
+  operationsState.expressConfigs = operationsState.expressConfigs
     .filter((config) => remaining || config.routeId !== route.id)
     .map((config) => config.routeId === route.id ? { ...config, stopStationIds: config.stopStationIds.filter((id) => networkState.stations.some((station) => station.id === id)) } : config);
   cleanupTransferData();
@@ -13622,7 +13600,7 @@ function eraseRouteEndRange(route: RouteLine, remainingCoordinates: Array<[numbe
 }
 
 function splitFleetBetweenRoutes(firstId: string, secondId: string) {
-  trainFleets = trainFleets.flatMap((fleet) => {
+  operationsState.fleets = operationsState.fleets.flatMap((fleet) => {
     if (fleet.routeId !== firstId || fleet.sets < 2) return [fleet];
     const secondSets = Math.floor(fleet.sets / 2);
     return [
@@ -13985,12 +13963,12 @@ async function confirmRouteMerge() {
         connectedRouteIds: Array.from(new Set(station.connectedRouteIds.map((id) => (id === second.id ? first.id : id)))),
       })),
     );
-    trainFleets = trainFleets.map((fleet) => (fleet.routeId === second.id ? { ...fleet, routeId: first.id } : fleet));
+    operationsState.fleets = operationsState.fleets.map((fleet) => (fleet.routeId === second.id ? { ...fleet, routeId: first.id } : fleet));
     networkState.depots = networkState.depots.map((depot) => ({
       ...depot,
       connectedRouteIds: Array.from(new Set(depot.connectedRouteIds.map((id) => (id === second.id ? first.id : id)))),
     }));
-    expressConfigs = mergeExpressConfigs(first.id, second.id);
+    operationsState.expressConfigs = mergeExpressConfigs(first.id, second.id);
     economy = { ...economy, cash: economy.cash - bridgeCost, constructionSpent: economy.constructionSpent + bridgeCost };
     cleanupTransferData();
     synchronizeGraphReferences();
@@ -14272,13 +14250,13 @@ function synchronizeGraphReferences() {
     stations: [...networkState.stations],
     transfers: [...networkState.transfers],
     depots: [...networkState.depots],
-    fleets: trainFleets,
-    expressConfigs,
+    fleets: [...operationsState.fleets],
+    expressConfigs: [...operationsState.expressConfigs],
     passengerGroups,
     projects: [...constructionState.projects],
   });
-  trainFleets = synchronized.fleets;
-  expressConfigs = synchronized.expressConfigs;
+  operationsState.fleets = synchronized.fleets;
+  operationsState.expressConfigs = synchronized.expressConfigs;
   passengerGroups = synchronized.passengerGroups;
   constructionState.replaceProjects(synchronized.projects);
   const synchronizedStations = synchronized.stations.map((station) => {
@@ -14298,7 +14276,7 @@ function synchronizeGraphReferences() {
   });
   const validRouteIds = new Set(networkState.routes.map((route) => route.id));
   const validStationIds = new Set(networkState.stations.map((station) => station.id));
-  operatingServices = operatingServices
+  operationsState.services = operationsState.services
     .filter((service) => validRouteIds.has(service.ownerRouteId) && service.routeIds.length > 0 && service.routeIds.every((id) => validRouteIds.has(id)))
     .map((service) => normalizeOperatingService({
       ...service,
@@ -14306,8 +14284,8 @@ function synchronizeGraphReferences() {
       stopStationIds: service.stopStationIds.filter((id) => validStationIds.has(id)),
     }, validRouteIds))
     .filter((service) => service.stationIds.length >= 2 && service.pathCoordinates.length >= 2);
-  const validServiceIds = new Set(operatingServices.map((service) => service.id));
-  trainFleets = trainFleets.filter((fleet) => !fleet.serviceId || validServiceIds.has(fleet.serviceId));
+  const validServiceIds = new Set(operationsState.services.map((service) => service.id));
+  operationsState.fleets = operationsState.fleets.filter((fleet) => !fleet.serviceId || validServiceIds.has(fleet.serviceId));
   reportIntegrityIssues();
 }
 
@@ -14317,8 +14295,8 @@ function reportIntegrityIssues() {
     stations: [...networkState.stations],
     transfers: [...networkState.transfers],
     depots: [...networkState.depots],
-    fleets: trainFleets,
-    expressConfigs,
+    fleets: [...operationsState.fleets],
+    expressConfigs: [...operationsState.expressConfigs],
     passengerGroups,
     projects: [...constructionState.projects],
     blueprintIds: constructionState.plans.flatMap((plan) => [
@@ -14354,7 +14332,7 @@ function mergeDuplicateStations(source: Station[]) {
       ...transfer,
       stationIds: Array.from(new Set(transfer.stationIds.map((id) => replacementIds.get(id) ?? id))),
     }));
-    expressConfigs = expressConfigs.map((config) => ({
+    operationsState.expressConfigs = operationsState.expressConfigs.map((config) => ({
       ...config,
       stopStationIds: Array.from(new Set(config.stopStationIds.map((id) => replacementIds.get(id) ?? id))),
     }));
@@ -14363,10 +14341,10 @@ function mergeDuplicateStations(source: Station[]) {
 }
 
 function mergeExpressConfigs(firstId: string, secondId: string) {
-  const first = expressConfigs.find((config) => config.routeId === firstId) ?? getExpressConfig(firstId);
-  const second = expressConfigs.find((config) => config.routeId === secondId) ?? getExpressConfig(secondId);
+  const first = operationsState.expressConfigs.find((config) => config.routeId === firstId) ?? getExpressConfig(firstId);
+  const second = operationsState.expressConfigs.find((config) => config.routeId === secondId) ?? getExpressConfig(secondId);
   return [
-    ...expressConfigs.filter((config) => config.routeId !== firstId && config.routeId !== secondId),
+    ...operationsState.expressConfigs.filter((config) => config.routeId !== firstId && config.routeId !== secondId),
     {
       ...first,
       routeId: firstId,
@@ -15022,9 +15000,9 @@ function cloneState(): SaveState {
     statisticsState,
     constructionState.projects,
     newsEventState.current,
-    trainFleets,
-    operatingServices,
-    expressConfigs,
+    operationsState.fleets,
+    operationsState.services,
+    operationsState.expressConfigs,
     passengerGroups,
     loanState.current,
     economy,
@@ -15035,9 +15013,9 @@ function cloneState(): SaveState {
 
 function migrateLegacyFleetsToOperatingServices() {
   for (const route of networkState.routes) {
-    const legacyFleets = trainFleets.filter((fleet) => fleet.routeId === route.id && !fleet.serviceId);
+    const legacyFleets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id && !fleet.serviceId);
     if (legacyFleets.length === 0) continue;
-    let service = operatingServices.find((item) => item.ownerRouteId === route.id);
+    let service = operationsState.services.find((item) => item.ownerRouteId === route.id);
     if (!service) {
       const option = getOperatingServicePathOptions(route.id)[0];
       const routeStationIds = option?.stationIds ?? networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).map((station) => station.id);
@@ -15054,9 +15032,9 @@ function migrateLegacyFleetsToOperatingServices() {
         preset: "all",
         createdAt: currentMeta.createdAt,
       };
-      operatingServices.push(service);
+      operationsState.replaceServices([...operationsState.services, service]);
     }
-    trainFleets = trainFleets.map((fleet) =>
+    operationsState.fleets = operationsState.fleets.map((fleet) =>
       fleet.routeId === route.id && !fleet.serviceId ? { ...fleet, serviceId: service!.id } : fleet
     );
   }
@@ -15086,12 +15064,12 @@ function applyState(state: SaveState) {
   statisticsState = normalizeStatisticsState(state.statisticsState);
   constructionState.replaceProjects(normalizeConstructionProjects(state.constructionProjects));
   newsEventState.replace(normalizeNewsEvents(state.newsEvents));
-  trainFleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
-  operatingServices = (state.operatingServices ?? []).map((service) =>
+  operationsState.fleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
+  operationsState.services = (state.operatingServices ?? []).map((service) =>
     normalizeOperatingService(service, new Set(networkState.routes.map((route) => route.id)))
   );
   migrateLegacyFleetsToOperatingServices();
-  expressConfigs = state.expressConfigs ?? [];
+  operationsState.expressConfigs = state.expressConfigs ?? [];
   passengerGroups = state.passengerGroups ?? [];
   loanState.replace(state.loans ?? []);
   economy = { ...defaultEconomy, ...(state.economy ?? {}) };
@@ -15176,9 +15154,7 @@ function loadSavedState() {
     analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
     statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
     newsEventState.reset();
-    trainFleets = [];
-    operatingServices = [];
-    expressConfigs = [];
+    operationsState.reset();
     passengerGroups = [];
     loanState.reset();
     economy = { ...defaultEconomy };
@@ -15606,7 +15582,7 @@ function isTutorialStepComplete(step: number) {
   if (step === 3) return Boolean(routeId && networkState.stations.filter((station) => station.connectedRouteIds.includes(routeId)).length >= 2);
   if (step === 4) return Boolean(depot);
   if (step === 5) return Boolean(routeId && depot?.connectedRouteIds.includes(routeId));
-  if (step === 6) return Boolean(routeId && trainFleets.some((fleet) => fleet.routeId === routeId && fleet.sets > 0));
+  if (step === 6) return Boolean(routeId && operationsState.fleets.some((fleet) => fleet.routeId === routeId && fleet.sets > 0));
   if (step === 7) return Boolean(routeId && isRouteOperational(routeId));
   if (step === 8) return progress.timeStarted;
   return statisticsState.dailyRecords.some((record) => record.day > progress.startedDay && record.revenue > 0);
