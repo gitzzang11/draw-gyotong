@@ -53,6 +53,8 @@ import { applyRealPopulationDensity, getRealPopulationCells } from "./population
 import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
 import type { Branch, ConstructionMode, Depot, RouteLine, RouteNode, RouteNodeKind, RouteSegment, ServicePattern, Station, TransferGroup } from "./domain/networkTypes.ts";
 import { NetworkState } from "./domain/networkState.ts";
+import { ConstructionState } from "./domain/constructionState.ts";
+import { updateConstructionPlan } from "./domain/constructionMutations.ts";
 import { buildTransferGroupMutation } from "./domain/transferMutations.ts";
 import { calculateNetworkFinancials as calculateNetworkFinancialsModel } from "./analysis/networkFinancials.ts";
 import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus, ManualTransferEndpoint, PlanPriority, PlanStatus, PlannedDepot, PlannedRoute, PlannedStation } from "./domain/constructionTypes.ts";
@@ -2428,11 +2430,11 @@ const hudRenderer = new HudRenderer({
   wait: waitReadout,
 });
 const networkState = new NetworkState();
-let plans: ConstructionPlan[] = [];
+const constructionState = new ConstructionState();
 const diagramStateOwner = new MetroDiagramStateOwner();
 let analysisState: OperationAnalysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
 let statisticsState: StatisticsState = { ...defaultStatisticsState, dailyRecords: [] };
-let constructionProjects: ConstructionProject[] = [];
+
 const newsEventState = new NewsEventStateOwner(80);
 let trainFleets: TrainFleet[] = [];
 let operatingServices: OperatingService[] = [];
@@ -3194,7 +3196,7 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
     });
   }
   if (workspaceMode === "construction") {
-    for (const project of constructionProjects.filter((item) => item.status !== "operating" && item.coordinates.length >= 2)) {
+    for (const project of constructionState.projects.filter((item) => item.status !== "operating" && item.coordinates.length >= 2)) {
       const distancePx = nearestScreenPathDistance(point, project.coordinates);
       candidates.push({
         id: project.id,
@@ -3207,7 +3209,7 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
     }
   }
   if (workspaceMode === "planning" || planningMode) {
-    for (const plan of plans.filter((item) => item.cityId === currentMeta.cityId)) {
+    for (const plan of constructionState.plans.filter((item) => item.cityId === currentMeta.cityId)) {
       for (const route of plan.routes) {
         const distancePx = nearestScreenPathDistance(point, route.coordinates);
         candidates.push({
@@ -3866,7 +3868,7 @@ function erasePlannedAssets(
   planId: string,
   selection: { routeHits: Map<string, Set<number>>; stationIds: Set<string>; depotIds: Set<string> },
 ) {
-  const plan = plans.find((item) => item.id === planId);
+  const plan = constructionState.plans.find((item) => item.id === planId);
   if (!plan) return;
   pushHistory();
   const replacements = new Map<string, PlannedRoute[]>();
@@ -4055,14 +4057,14 @@ function demolishBuiltAssets(selection: { routeHits: Map<string, Set<number>>; s
     if (!sections) return [{ ...config, stopStationIds: config.stopStationIds.filter((id) => stationIds.has(id)) }];
     return sections[0] ? [{ ...config, routeId: sections[0].id, stopStationIds: config.stopStationIds.filter((id) => networkState.stations.find((station) => station.id === id)?.connectedRouteIds.includes(sections[0].id)) }] : [];
   });
-  constructionProjects = constructionProjects
+  constructionState.replaceProjects(constructionState.projects
     .map((project) => ({
       ...project,
       routeIds: project.routeIds.flatMap((id) => replacements.has(id) ? replacements.get(id)!.map((route) => route.id) : oldRoutes.has(id) ? [id] : []),
       stationIds: project.stationIds.filter((id) => stationIds.has(id)),
       depotIds: project.depotIds.filter((id) => depotIds.has(id)),
     }))
-    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0));
   cleanupTransferData();
   synchronizeGraphReferences();
   const refund = Math.round(removedLength * baseCostPerKm * 0.35);
@@ -4108,9 +4110,9 @@ function demolishStations(stationIds: string[]) {
   networkState.stations = networkState.stations.filter((station) => !removedIds.has(station.id));
   networkState.transfers = networkState.transfers.map((transfer) => ({ ...transfer, stationIds: transfer.stationIds.filter((id) => !removedIds.has(id)) }));
   expressConfigs = expressConfigs.map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removedIds.has(id)) }));
-  constructionProjects = constructionProjects
+  constructionState.replaceProjects(constructionState.projects
     .map((project) => ({ ...project, stationIds: project.stationIds.filter((id) => !removedIds.has(id)) }))
-    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0));
   cleanupTransferData();
   redoStack = [];
   requestStateSave("immediate");
@@ -4547,7 +4549,7 @@ async function confirmConstructionDraft() {
         : applyConstructionDraft(draft);
     captureTutorialConstruction(draft.kind, selectedId);
     if (usesConstructionTimeline()) {
-      constructionProjects = [...constructionProjects, createConstructionProjectFromDraft(draft, selectedId)];
+      constructionState.replaceProjects([...constructionState.projects, createConstructionProjectFromDraft(draft, selectedId)]);
       applyTutorialConstructionBoost(draft.kind, selectedId);
     }
     economy = {
@@ -4779,7 +4781,7 @@ function normalizeConstructionProjects(source?: ConstructionProject[]) {
 }
 
 function isRouteOperational(routeId: string) {
-  return !constructionProjects.some(
+  return !constructionState.projects.some(
     (project) =>
       project.routeIds.includes(routeId) &&
       !["depot", "station"].includes(project.kind) &&
@@ -4789,16 +4791,16 @@ function isRouteOperational(routeId: string) {
 }
 
 function isStationOperational(stationId: string) {
-  return !constructionProjects.some((project) => project.stationIds.includes(stationId) && project.status !== "operating");
+  return !constructionState.projects.some((project) => project.stationIds.includes(stationId) && project.status !== "operating");
 }
 
 function isDepotOperational(depotId: string) {
-  return !constructionProjects.some((project) => project.depotIds.includes(depotId) && project.status !== "operating");
+  return !constructionState.projects.some((project) => project.depotIds.includes(depotId) && project.status !== "operating");
 }
 
 function updateConstructionProjectsForDay() {
   const startedBlueprints: Array<{ planId: string; blueprintId: string }> = [];
-  const result = constructionCoordinator.advanceDay(constructionProjects, {
+  const result = constructionCoordinator.advanceDay(constructionState.projects, {
     onStarted: (project) => {
       if (project.kind === "plan" && project.sourcePlanId && project.blueprintId) {
         startedBlueprints.push({ planId: project.sourcePlanId, blueprintId: project.blueprintId });
@@ -4825,11 +4827,11 @@ function updateConstructionProjectsForDay() {
     requiresOpening: (project) => ["route", "extension", "branch", "repair", "edit", "plan"].includes(project.kind),
     networkChanged: (project) => ["route", "extension", "branch", "plan"].includes(project.kind),
   });
-  constructionProjects = result.projects.map((project) =>
+  constructionState.replaceProjects(result.projects.map((project) =>
     project.status === "operating" && project.openedAtDay === undefined
       ? { ...project, openedAtDay: analysisState.dayIndex }
       : project,
-  );
+  ));
   for (const started of startedBlueprints) {
     updatePlan(started.planId, (plan) => ({
       ...plan,
@@ -4841,7 +4843,7 @@ function updateConstructionProjectsForDay() {
     }));
   }
   const becameReady = result.completed.filter((completion) =>
-    constructionProjects.some((project) => project.id === completion.projectId && project.status === "opening-ready"),
+    constructionState.projects.some((project) => project.id === completion.projectId && project.status === "opening-ready"),
   ).length;
   if (becameReady > 0) showToast(`${becameReady}개 공사가 완료되었습니다. 개통 조건을 확인하세요.`);
   if (result.changedProjectIds.length > 0) requestUpdateDomains(result.updateDomains);
@@ -4850,13 +4852,13 @@ function updateConstructionProjectsForDay() {
 
 function getOpeningRequirements(project: ConstructionProject) {
   if (project.kind === "plan" && project.sourcePlanId && project.blueprintId) {
-    const connection = plans.find((plan) => plan.id === project.sourcePlanId)?.connections?.find((item) => item.id === project.blueprintId);
+    const connection = constructionState.plans.find((plan) => plan.id === project.sourcePlanId)?.connections?.find((item) => item.id === project.blueprintId);
     if (!connection) return [{ code: "blueprint", label: "연결 설계", met: false, action: "route" }];
     const dependency = project.dependsOnProjectId
       ? [{
           code: "parent-extension",
           label: "선행 연장 개통",
-          met: constructionProjects.some((item) => item.id === project.dependsOnProjectId && item.status === "operating"),
+          met: constructionState.projects.some((item) => item.id === project.dependsOnProjectId && item.status === "operating"),
           action: "route",
         }]
       : [];
@@ -4889,7 +4891,7 @@ function getOpeningRequirements(project: ConstructionProject) {
       ? [{
           code: "parent-extension",
           label: "선행 연장 개통",
-          met: constructionProjects.some((item) => item.id === project.dependsOnProjectId && item.status === "operating"),
+          met: constructionState.projects.some((item) => item.id === project.dependsOnProjectId && item.status === "operating"),
           action: "route",
         }]
       : []),
@@ -4912,12 +4914,12 @@ function closeConstructionManager() {
 function renderConstructionManager() {
   if (!constructionProjectList) return;
   updateConstructionBadge();
-  if (constructionProjects.length === 0) {
+  if (constructionState.projects.length === 0) {
     constructionProjectList.innerHTML = `<div class="construction-project-empty"><strong>진행 중인 공사가 없습니다</strong><span>${currentMeta.mode === "sandbox" && !settings.sandboxConstructionTime ? "샌드박스 모드에서는 건설이 즉시 완료됩니다." : "건설을 확정하면 공사 일정이 이곳에 표시됩니다."}</span></div>`;
     return;
   }
   const statusOrder: Record<ConstructionProjectStatus, number> = { "opening-ready": 0, building: 1, scheduled: 2, planned: 3, operating: 4 };
-  constructionProjectList.innerHTML = [...constructionProjects]
+  constructionProjectList.innerHTML = [...constructionState.projects]
     .sort((a, b) => statusOrder[a.status] - statusOrder[b.status] || b.startedDay - a.startedDay)
     .map(renderConstructionProjectCard)
     .join("");
@@ -4958,7 +4960,7 @@ function renderConstructionProjectCard(project: ConstructionProject) {
 function handleConstructionManagerClick(event: Event) {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button");
   const card = button?.closest<HTMLElement>("[data-project-id]");
-  const project = constructionProjects.find((item) => item.id === card?.dataset.projectId);
+  const project = constructionState.projects.find((item) => item.id === card?.dataset.projectId);
   if (!button || !project) return;
   if (button.hasAttribute("data-open-project")) {
     openConstructionProject(project.id);
@@ -4990,10 +4992,10 @@ function handleConstructionManagerClick(event: Event) {
 }
 
 async function openConstructionProject(projectId: string) {
-  const project = constructionProjects.find((item) => item.id === projectId);
+  const project = constructionState.projects.find((item) => item.id === projectId);
   if (!project || project.status !== "opening-ready") return;
   if (project.dependsOnProjectId) {
-    const parent = constructionProjects.find((item) => item.id === project.dependsOnProjectId);
+    const parent = constructionState.projects.find((item) => item.id === project.dependsOnProjectId);
     if (!parent || parent.status !== "operating") {
       showToast(`선행 공사 ${parent?.name ?? project.dependsOnProjectId}의 개통을 먼저 완료해야 합니다.`);
       return;
@@ -5011,11 +5013,11 @@ async function openConstructionProject(projectId: string) {
     if (project.pendingExtension) applyPendingLineExtension(project.pendingExtension);
     if (project.kind === "plan" && project.sourcePlanId && project.blueprintId) applyCompletedConnectionProject(project);
     if (project.junctionBlueprint) applyCompletedJunctionProject(project);
-    constructionProjects = constructionProjects.map((item) =>
+    constructionState.replaceProjects(constructionState.projects.map((item) =>
       item.id === projectId && isValidConstructionStatusTransition(item.status, "operating")
         ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex, pendingExtension: undefined }
         : item,
-    );
+    ));
     synchronizeGraphReferences();
     currentMeta = { ...currentMeta, updatedAt: Date.now() };
     await flushStateSave();
@@ -5044,7 +5046,7 @@ async function openConstructionProject(projectId: string) {
 }
 
 function getConnectionBlueprintRuntime() {
-  const completedConnections = plans.flatMap((plan) => plan.connections ?? []).filter((connection) => connection.status === "completed" && Boolean(connection.appliedAt));
+  const completedConnections = constructionState.plans.flatMap((plan) => plan.connections ?? []).filter((connection) => connection.status === "completed" && Boolean(connection.appliedAt));
   return {
     entityIds: new Set([...networkState.routes.map((route) => route.id), ...networkState.stations.map((station) => station.id), ...networkState.depots.map((depot) => depot.id)]),
     routeIds: new Set(networkState.routes.map((route) => route.id)),
@@ -5189,7 +5191,7 @@ function appendDepotAccessSegment(connection: ConnectionBlueprint, depot: Depot,
 
 // 여러 도메인 참조를 함께 바꾸는 원자적 트랜잭션이다. 부분 이전은 이중 적용·복구 오류를 만들 수 있어 중앙 GameState 도입 전까지 이 경계를 유지한다.
 function applyCompletedConnectionProject(project: ConstructionProject) {
-  const plan = plans.find((item) => item.id === project.sourcePlanId);
+  const plan = constructionState.plans.find((item) => item.id === project.sourcePlanId);
   const connection = plan?.connections?.find((item) => item.id === project.blueprintId);
   if (!plan || !connection) throw new Error("Connection blueprint is missing from its construction project.");
   if (connection.status === "completed") {
@@ -5284,14 +5286,14 @@ function mergeCompletedConnectionRoutes(first: RouteLine, second: RouteLine, con
   trainFleets = trainFleets.map((fleet) => fleet.routeId === second.id ? { ...fleet, routeId: first.id } : fleet);
   networkState.depots = networkState.depots.map((depot) => ({ ...depot, connectedRouteIds: Array.from(new Set(depot.connectedRouteIds.map((id) => id === second.id ? first.id : id))) }));
   expressConfigs = mergeExpressConfigs(first.id, second.id);
-  constructionProjects = constructionProjects.map((project) => ({
+  constructionState.replaceProjects(constructionState.projects.map((project) => ({
     ...project,
     routeIds: Array.from(new Set(project.routeIds.map((id) => id === second.id ? first.id : id))),
     pendingExtension: project.pendingExtension?.targetLineId === second.id
       ? { ...project.pendingExtension, targetLineId: first.id }
       : project.pendingExtension,
-  }));
-  plans = plans.map((plan) => ({
+  })));
+  constructionState.replacePlans(constructionState.plans.map((plan) => ({
     ...plan,
     routes: plan.routes.map((route) => ({
       ...route,
@@ -5307,7 +5309,7 @@ function mergeCompletedConnectionRoutes(first: RouteLine, second: RouteLine, con
       sourceEntityId: item.sourceEntityId === second.id ? first.id : item.sourceEntityId,
       targetEntityId: item.targetEntityId === second.id ? first.id : item.targetEntityId,
     })),
-  }));
+  })));
   cleanupTransferData();
 }
 
@@ -5386,7 +5388,7 @@ function applyCompletedJunctionProject(project: ConstructionProject) {
     constructionCost: targetRoute.constructionCost + project.baseCost,
   };
   networkState.routes = networkState.routes.map((route) => route.id === targetRoute.id ? updated : route);
-  constructionProjects = constructionProjects.map((item) => item.id === project.id ? { ...item, junctionBlueprint: { ...staged, status: "completed" } } : item);
+  constructionState.replaceProjects(constructionState.projects.map((item) => item.id === project.id ? { ...item, junctionBlueprint: { ...staged, status: "completed" } } : item));
   transitRouter = null;
   transitRouterSignature = "";
   return updated.id;
@@ -5479,7 +5481,7 @@ function focusConstructionProject(project: ConstructionProject) {
 }
 
 function updateConstructionBadge() {
-  const activeCount = constructionProjects.filter((project) => project.status !== "operating").length;
+  const activeCount = constructionState.projects.filter((project) => project.status !== "operating").length;
   if (constructionProjectBadge) {
     constructionProjectBadge.hidden = activeCount === 0;
     constructionProjectBadge.textContent = String(activeCount);
@@ -5736,7 +5738,7 @@ function makeUniqueStationName(baseName: string, position: LatLng, excludingId?:
   const normalized = normalizeAutomaticStationName(baseName);
   const namedStations = [
     ...networkState.stations.map((station) => ({ id: station.id, name: station.name, position: station.position })),
-    ...plans.flatMap((plan) => plan.stations.map((station) => ({ id: station.id, name: station.name, position: station.position }))),
+    ...constructionState.plans.flatMap((plan) => plan.stations.map((station) => ({ id: station.id, name: station.name, position: station.position }))),
   ].filter((station) => station.id !== excludingId && station.name === normalized);
   if (namedStations.length === 0) return normalized;
   const sameArea = namedStations.some(
@@ -5823,14 +5825,14 @@ async function refineAutomaticStationName(
   const current =
     target.kind === "actual"
       ? networkState.stations.find((station) => station.id === target.id)
-      : plans.find((plan) => plan.id === target.planId)?.stations.find((station) => station.id === target.id);
+      : constructionState.plans.find((plan) => plan.id === target.planId)?.stations.find((station) => station.id === target.id);
   if (!current || current.name !== target.initialName) return;
   const nearbyName = await findNearbyOsmStationName(current.position);
   if (!nearbyName || !settings.autoStationNaming) return;
   const latest =
     target.kind === "actual"
       ? networkState.stations.find((station) => station.id === target.id)
-      : plans.find((plan) => plan.id === target.planId)?.stations.find((station) => station.id === target.id);
+      : constructionState.plans.find((plan) => plan.id === target.planId)?.stations.find((station) => station.id === target.id);
   if (!latest || latest.name !== target.initialName) return;
   const nextName = makeUniqueStationName(
     nearbyName,
@@ -5885,7 +5887,7 @@ function createStationAt(point: L.Point) {
   };
   networkState.stations = [...networkState.stations, station];
   if (usesConstructionTimeline()) {
-    constructionProjects = [...constructionProjects, createStationConstructionProject(station)];
+    constructionState.replaceProjects([...constructionState.projects, createStationConstructionProject(station)]);
     applyTutorialConstructionBoost("station", station.id);
   }
   playFeedback("build");
@@ -6836,7 +6838,7 @@ function buildRouteDesignShareData(): RouteDesignShareData {
     requiredExtensions: [],
     cityId: currentMeta.cityId,
     generatedAt: Date.now(),
-    plans: JSON.parse(JSON.stringify(plans.filter((plan) => plan.cityId === currentMeta.cityId))) as ConstructionPlan[],
+    plans: JSON.parse(JSON.stringify(constructionState.plans.filter((plan) => plan.cityId === currentMeta.cityId))) as ConstructionPlan[],
   };
 }
 
@@ -6870,7 +6872,7 @@ async function importShareBundle() {
     const importedPositions = Object.fromEntries(bundle.diagram.stations.filter((station) => knownStationIds.has(station.id)).map((station) => [station.id, station.position]));
     diagramStateOwner.mergeManualPositions(importedPositions);
     const importedPlans = bundle.routeDesign.plans.map((plan) => cloneImportedPlan(plan));
-    plans = [...plans, ...importedPlans];
+    constructionState.replacePlans([...constructionState.plans, ...importedPlans]);
     activePlanId = importedPlans[0]?.id ?? activePlanId;
     await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
@@ -6983,7 +6985,7 @@ function roundSvg(value: number) {
   return Math.round(value * 10) / 10;
 }
 
-function createPlanRecord(name = `계획 ${plans.length + 1}`): ConstructionPlan {
+function createPlanRecord(name = `계획 ${constructionState.plans.length + 1}`): ConstructionPlan {
   return {
     id: createId("plan"),
     name,
@@ -7029,21 +7031,21 @@ function normalizePlans(source: ConstructionPlan[]) {
 }
 
 function getActivePlan(createIfMissing = true) {
-  let plan = plans.find((item) => item.id === activePlanId && item.cityId === currentMeta.cityId);
+  let plan = constructionState.plans.find((item) => item.id === activePlanId && item.cityId === currentMeta.cityId);
   if (!plan) {
-    plan = plans.find((item) => item.cityId === currentMeta.cityId);
+    plan = constructionState.plans.find((item) => item.cityId === currentMeta.cityId);
     if (plan) activePlanId = plan.id;
   }
   if (!plan && createIfMissing) {
     plan = createPlanRecord();
-    plans = [...plans, plan];
+    constructionState.replacePlans([...constructionState.plans, plan]);
     activePlanId = plan.id;
   }
   return plan;
 }
 
 function updatePlan(planId: string, updater: (plan: ConstructionPlan) => ConstructionPlan) {
-  plans = plans.map((plan) => (plan.id === planId ? recalculatePlan(updater(plan)) : plan));
+  constructionState.replacePlans(updateConstructionPlan(constructionState.plans, planId, updater, recalculatePlan));
 }
 
 function getRouteServiceOperations(routeId: string, fleetSource = trainFleets) {
@@ -7362,7 +7364,7 @@ function createNewPlan() {
   }
   pushHistory();
   const plan = createPlanRecord();
-  plans = [...plans, plan];
+  constructionState.replacePlans([...constructionState.plans, plan]);
   activePlanId = plan.id;
   redoStack = [];
   requestStateSave();
@@ -7409,7 +7411,7 @@ function duplicateActivePlan() {
       completed: false,
     })),
   });
-  plans = [...plans, copy];
+  constructionState.replacePlans([...constructionState.plans, copy]);
   activePlanId = copy.id;
   redoStack = [];
   requestStateSave();
@@ -7426,8 +7428,8 @@ function deleteActivePlan() {
     "계획 삭제",
     () => {
       pushHistory();
-      plans = plans.filter((item) => item.id !== plan.id);
-      activePlanId = plans.find((item) => item.cityId === currentMeta.cityId)?.id ?? null;
+      constructionState.replacePlans(constructionState.plans.filter((item) => item.id !== plan.id));
+      activePlanId = constructionState.plans.find((item) => item.cityId === currentMeta.cityId)?.id ?? null;
       redoStack = [];
       requestStateSave();
       renderPlanningDialog();
@@ -7466,7 +7468,7 @@ function closePlanningDialog() {
 }
 
 function renderPlanningDialog() {
-  const cityPlans = plans.filter((plan) => plan.cityId === currentMeta.cityId);
+  const cityPlans = constructionState.plans.filter((plan) => plan.cityId === currentMeta.cityId);
   if (!activePlanId || !cityPlans.some((plan) => plan.id === activePlanId)) activePlanId = cityPlans[0]?.id ?? null;
   if (activePlanSelect) {
     activePlanSelect.innerHTML = cityPlans.map((plan) => `<option value="${plan.id}">${escapeHtml(plan.name)}</option>`).join("");
@@ -7525,7 +7527,7 @@ function renderPlanAssets(plan: ConstructionPlan) {
 }
 
 function deletePlannedStation(planId: string, stationId: string) {
-  const plan = plans.find((item) => item.id === planId);
+  const plan = constructionState.plans.find((item) => item.id === planId);
   const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
   if (!plan || !station) return;
   pushHistory();
@@ -7596,7 +7598,7 @@ function renderPlanComparison() {
     completed: "완공",
     "on-hold": "보류",
   };
-  planComparisonList.innerHTML = plans
+  planComparisonList.innerHTML = constructionState.plans
     .filter((plan) => plan.cityId === currentMeta.cityId)
     .sort((a, b) => b.expectedDemand - a.expectedDemand)
     .map(
@@ -7668,7 +7670,7 @@ function createPlannedStationAt(point: L.Point) {
 function reconcileBlueprints() {
   const entities: BlueprintRenderEntity[] = [];
   mapLayers.clear("selection");
-  for (const plan of plans.filter((item) => item.cityId === currentMeta.cityId)) {
+  for (const plan of constructionState.plans.filter((item) => item.cityId === currentMeta.cityId)) {
     const isActive = plan.id === activePlanId;
     for (const route of plan.routes) {
       const remainingSegments = route.segments.filter((segment) => !route.completedSegmentIds.includes(segment.id));
@@ -8003,7 +8005,7 @@ async function confirmPlanConversion() {
   const createdDepotIds: string[] = [];
   const actualRouteByBlueprint = new Map(plan.routes.flatMap((route) => route.actualRouteId ? [[route.id, route.actualRouteId] as const] : []));
   const constructionProjectByBlueprint = new Map(
-    constructionProjects
+    constructionState.projects
       .filter((project) => project.sourcePlanId === plan.id && Boolean(project.blueprintId))
       .map((project) => [project.blueprintId!, project.id]),
   );
@@ -8036,7 +8038,7 @@ async function confirmPlanConversion() {
             constructionProjectByBlueprint.get(parent.id),
             plannedRoute.id,
           );
-          constructionProjects = [...constructionProjects, project];
+          constructionState.replaceProjects([...constructionState.projects, project]);
           constructionProjectByBlueprint.set(plannedRoute.id, project.id);
         } else {
           applyPendingLineExtension(extensionPayload);
@@ -8065,7 +8067,7 @@ async function confirmPlanConversion() {
         );
         if (usesConstructionTimeline()) {
           const project = createPendingExtensionProject(targetRoute, extensionPayload, plannedRoute.constructionDays, plan.id, undefined, plannedRoute.id);
-          constructionProjects = [...constructionProjects, project];
+          constructionState.replaceProjects([...constructionState.projects, project]);
           constructionProjectByBlueprint.set(plannedRoute.id, project.id);
         } else {
           applyPendingLineExtension(extensionPayload);
@@ -8106,7 +8108,7 @@ async function confirmPlanConversion() {
         completedSegmentIds: Array.from(new Set([...route.completedSegmentIds, ...selection.filter((entry) => entry.kind === "segment" && entry.routeId === route.id).map((entry) => entry.assetId)])),
       })),
     }));
-    const currentPlan = plans.find((item) => item.id === plan.id)!;
+    const currentPlan = constructionState.plans.find((item) => item.id === plan.id)!;
     for (const entry of selection.filter((item) => item.kind === "station")) {
       const plannedStation = currentPlan.stations.find((station) => station.id === entry.assetId);
       if (!plannedStation || plannedStation.completed) continue;
@@ -8138,7 +8140,7 @@ async function confirmPlanConversion() {
       updatePlan(plan.id, (item) => ({ ...item, stations: item.stations.map((planned) => planned.id === plannedStation.id ? { ...planned, completed: true, actualStationId: station.id } : planned) }));
     }
     for (const entry of selection.filter((item) => item.kind === "depot")) {
-      const plannedDepot = plans.find((item) => item.id === plan.id)?.depots.find((depot) => depot.id === entry.assetId);
+      const plannedDepot = constructionState.plans.find((item) => item.id === plan.id)?.depots.find((depot) => depot.id === entry.assetId);
       if (!plannedDepot || plannedDepot.completed) continue;
       const polygon = plannedDepot.polygon.map(([lat, lng]) => L.latLng(lat, lng));
       const areaHa = calculatePolygonAreaHa(polygon);
@@ -8159,7 +8161,7 @@ async function confirmPlanConversion() {
       updatePlan(plan.id, (item) => ({ ...item, depots: item.depots.map((planned) => planned.id === plannedDepot.id ? { ...planned, completed: true, actualDepotId: depot.id } : planned) }));
     }
     for (const entry of selection.filter((item) => item.kind === "transfer")) {
-      const current = plans.find((item) => item.id === plan.id);
+      const current = constructionState.plans.find((item) => item.id === plan.id);
       const plannedTransfer = current?.transfers.find((transfer) => transfer.id === entry.assetId);
       if (!plannedTransfer || plannedTransfer.completed) continue;
       const actualStationIds = [
@@ -8170,7 +8172,7 @@ async function confirmPlanConversion() {
       updatePlan(plan.id, (item) => ({ ...item, transfers: item.transfers.map((transfer) => transfer.id === entry.assetId ? { ...transfer, completed: actualStationIds.length >= 2 } : transfer) }));
     }
     for (const entry of selection.filter((item) => item.kind === "connection")) {
-      const current = plans.find((item) => item.id === plan.id);
+      const current = constructionState.plans.find((item) => item.id === plan.id);
       const connection = current?.connections?.find((item) => item.id === entry.assetId);
       if (!current || !connection || connection.status === "completed") continue;
       if (constructionProjectByBlueprint.has(connection.id)) continue;
@@ -8208,7 +8210,7 @@ async function confirmPlanConversion() {
         ...item,
         connections: (item.connections ?? []).map((candidate) => candidate.id === connection.id ? { ...scheduled, projectId } : candidate),
       }));
-      constructionProjects = [...constructionProjects, project];
+      constructionState.replaceProjects([...constructionState.projects, project]);
       constructionProjectByBlueprint.set(connection.id, projectId);
       if (!usesConstructionTimeline()) {
         updatePlan(current.id, (item) => ({
@@ -8216,22 +8218,22 @@ async function confirmPlanConversion() {
           connections: (item.connections ?? []).map((candidate) => candidate.id === connection.id ? advanceConnectionToConstruction(candidate) : candidate),
         }));
         applyCompletedConnectionProject(project);
-        constructionProjects = constructionProjects.map((item) => item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex } : item);
+        constructionState.replaceProjects(constructionState.projects.map((item) => item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex } : item));
       }
     }
     economy = { ...economy, cash: economy.cash - cost, constructionSpent: economy.constructionSpent + cost };
     if (usesConstructionTimeline()) {
-      constructionProjects = [
-        ...constructionProjects,
+      constructionState.replaceProjects([
+        ...constructionState.projects,
         ...createPlanConstructionProjects(plan, createdRouteIds, createdStationIds, createdDepotIds),
-      ];
+      ]);
       applyTutorialPlanConversionBoost(createdRouteIds, createdStationIds, createdDepotIds);
     }
-    plans = plans.map((item) => item.id === plan.id ? recalculatePlan(item) : item);
-    const convertedPlan = plans.find((item) => item.id === plan.id);
+    constructionState.replacePlans(constructionState.plans.map((item) => item.id === plan.id ? recalculatePlan(item) : item));
+    const convertedPlan = constructionState.plans.find((item) => item.id === plan.id);
     const planCompleted = convertedPlan ? isPlanFullyConverted(convertedPlan) : false;
     if (planCompleted) {
-      plans = plans.filter((item) => item.id !== plan.id);
+      constructionState.replacePlans(constructionState.plans.filter((item) => item.id !== plan.id));
       if (activePlanId === plan.id) activePlanId = null;
     }
     synchronizeGraphReferences();
@@ -8713,11 +8715,10 @@ function resetWorld() {
   demandStructureSignature = "";
   demandServiceSignature = "";
   demandContextSignature = "";
-  plans = [];
+  constructionState.reset();
   diagramStateOwner.reset();
   analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
   statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
-  constructionProjects = [];
   newsEventState.reset();
   trainFleets = [];
   operatingServices = [];
@@ -8955,7 +8956,7 @@ function reconcileMapLines(selectedId?: string) {
 }
 
 function reconcileConstructionProjects() {
-  constructionRenderer.reconcileEntities(buildConstructionRenderEntities(constructionProjects));
+  constructionRenderer.reconcileEntities(buildConstructionRenderEntities(constructionState.projects));
 }
 
 function reconcileMapStations(selectedId?: string) {
@@ -9214,7 +9215,7 @@ function getOperatingServicePathOptions(ownerRouteId: string): OperatingServiceP
     };
   });
 
-  const physicalConnections = plans
+  const physicalConnections = constructionState.plans
     .flatMap((plan) => plan.connections ?? [])
     .filter((connection) =>
       connection.status === "completed" && connection.appliedAt && connection.connectionType === "physical-track" &&
@@ -9506,7 +9507,7 @@ function buildAnalysisFingerprint() {
     fleets: trainFleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
     depots: networkState.depots.map((depot) => [depot.id, depot.capacity, depot.connectedRouteIds]),
     transfers: networkState.transfers.map((transfer) => [transfer.id, transfer.resistance]),
-    plans: plans.map((plan) => [plan.id, plan.status, plan.remainingCost, plan.expectedDemand]),
+    plans: constructionState.plans.map((plan) => [plan.id, plan.status, plan.remainingCost, plan.expectedDemand]),
     day: analysisState.dayIndex,
   });
 }
@@ -9872,7 +9873,7 @@ function refreshOperationSuggestions(force = false) {
     }
   }
 
-  for (const plan of plans.filter((item) => item.status !== "completed" && item.status !== "on-hold")) {
+  for (const plan of constructionState.plans.filter((item) => item.status !== "completed" && item.status !== "on-hold")) {
     const canAfford = currentMeta.mode === "sandbox" || plan.remainingCost <= economy.cash;
     if (plan.remainingCost > 0 && canAfford && plan.expectedDemand >= 12000) {
       add(
@@ -10227,7 +10228,7 @@ function createNewsEvent(day: number): NewsEvent {
 }
 
 function attachConstructionDelayFromNews(event: NewsEvent) {
-  constructionProjects = constructionProjects.map((project) => {
+  constructionState.replaceProjects(constructionState.projects.map((project) => {
     if (!["scheduled", "building"].includes(project.status)) return project;
     const relevant = event.relatedRouteIds.length === 0 || project.routeIds.some((routeId) => event.relatedRouteIds.includes(routeId));
     if (!relevant) return project;
@@ -10246,7 +10247,7 @@ function attachConstructionDelayFromNews(event: NewsEvent) {
         },
       ],
     };
-  });
+  }));
 }
 
 function getActiveNewsEvents() {
@@ -10496,7 +10497,7 @@ function openStationManager(stationId: string) {
 }
 
 function openPlannedStationManager(planId: string, stationId: string) {
-  const plan = plans.find((item) => item.id === planId && item.cityId === currentMeta.cityId);
+  const plan = constructionState.plans.find((item) => item.id === planId && item.cityId === currentMeta.cityId);
   const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
   if (!plan || !station || !stationPanel) return;
   activePlanId = plan.id;
@@ -10595,7 +10596,7 @@ function renderStationManager() {
 
 function renderPlannedStationManager() {
   const selection = selectedPlannedStationManager;
-  const plan = selection ? plans.find((item) => item.id === selection.planId && item.cityId === currentMeta.cityId) : undefined;
+  const plan = selection ? constructionState.plans.find((item) => item.id === selection.planId && item.cityId === currentMeta.cityId) : undefined;
   const station = plan?.stations.find((item) => item.id === selection?.stationId && !item.completed);
   if (!plan || !station || !stationPanel) {
     closeStationManager();
@@ -10680,7 +10681,7 @@ function handleStationManagerClick(event: Event) {
   if (selectedPlannedStationManager) {
     if (action !== "delete-planned") return;
     const { planId, stationId } = selectedPlannedStationManager;
-    const plan = plans.find((item) => item.id === planId && item.cityId === currentMeta.cityId);
+    const plan = constructionState.plans.find((item) => item.id === planId && item.cityId === currentMeta.cityId);
     const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
     if (!plan || !station) return;
     openDecisionDialog(
@@ -10795,9 +10796,9 @@ function demolishDepots(depotIdsToRemove: string[]) {
   if (removedIds.size === 0) return;
   pushHistory();
   networkState.depots = networkState.depots.filter((depot) => !removedIds.has(depot.id));
-  constructionProjects = constructionProjects
+  constructionState.replaceProjects(constructionState.projects
     .map((project) => ({ ...project, depotIds: project.depotIds.filter((id) => !removedIds.has(id)) }))
-    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0));
   redoStack = [];
   requestStateSave("immediate");
   requestUpdate("blueprint-preview", selectedRouteId ?? undefined);
@@ -10986,7 +10987,7 @@ function renderCityStatistics() {
     .filter((item) => item.crowding >= 0.9)
     .sort((a, b) => b.crowding - a.crowding)
     .slice(0, 4);
-  const plannedCoverage = plans.flatMap((plan) => plan.stations.filter((station) => !station.completed).map((station) => ({ ...station, planName: plan.name }))).slice(0, 4);
+  const plannedCoverage = constructionState.plans.flatMap((plan) => plan.stations.filter((station) => !station.completed).map((station) => ({ ...station, planName: plan.name }))).slice(0, 4);
   const unlocked = currentMeta.unlockedCityIds.length;
   return `<div class="statistics-page">
     <section class="city-stat-hero">
@@ -11036,7 +11037,7 @@ function handleStatisticsClick(event: Event) {
     requestUpdate("selection", station.id);
     showToast("선택한 역으로 이동했습니다.");
   } else if (target.dataset.openPlan) {
-    activePlanId = plans.find((plan) => plan.name === target.dataset.openPlan)?.id ?? activePlanId;
+    activePlanId = constructionState.plans.find((plan) => plan.name === target.dataset.openPlan)?.id ?? activePlanId;
     closeStatisticsScreen();
     openPlanningDialog();
   }
@@ -11178,7 +11179,7 @@ function buildPassengerRoutingNetwork(): RoutingNetwork {
 }
 
 function getCompletedPhysicalRoutingLinks() {
-  return plans
+  return constructionState.plans
     .flatMap((plan) => plan.connections ?? [])
     .filter((connection) =>
       connection.status === "completed" &&
@@ -11248,7 +11249,7 @@ function buildLegacyPassengerRoutingNetwork(): RoutingNetwork {
         resistance: transfer.resistance,
       }))
       .filter((transfer) => transfer.stationIds.length >= 2),
-    physicalLinks: plans
+    physicalLinks: constructionState.plans
       .flatMap((plan) => plan.connections ?? [])
       .filter((connection) =>
         connection.status === "completed" &&
@@ -11704,7 +11705,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   captureAuxiliary: () => ({
     analysis: { ...analysisState },
     meta: { ...currentMeta },
-    constructionProjects: constructionProjects.map((project) => ({ ...project, events: project.events.map((event) => ({ ...event })) })),
+    constructionProjects: constructionState.projects.map((project) => ({ ...project, events: project.events.map((event) => ({ ...event })) })),
     stationDemandStates: stationDemandStates.map((state) => ({ ...state })),
   }),
   restoreState: (snapshot) => {
@@ -11714,7 +11715,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     passengerGroups = snapshot.passengerGroups;
     analysisState = snapshot.auxiliary.analysis;
     currentMeta = snapshot.auxiliary.meta;
-    constructionProjects = snapshot.auxiliary.constructionProjects;
+    constructionState.replaceProjects(snapshot.auxiliary.constructionProjects);
     stationDemandStates = snapshot.auxiliary.stationDemandStates;
   },
   prepareDay: (gameDay) => {
@@ -11725,7 +11726,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     regeneratePassengerGroups();
     const forecast = calculateCurrentOperatingForecast(trainFleets, economy.fare);
     const maintenance = calculateDailyMaintenanceBreakdown();
-    const constructionCostDue = constructionProjects.flatMap((project) => project.events)
+    const constructionCostDue = constructionState.projects.flatMap((project) => project.events)
       .filter((event) => !event.applied && event.kind === "extra-cost" && event.triggerDay <= gameDay)
       .reduce((sum, event) => sum + Math.max(0, event.extraCost ?? 0), 0);
     const financesBefore = calculateNetworkFinancials();
@@ -12168,7 +12169,7 @@ function updateHud(selectedId?: string) {
   if (planningMode) {
     const plan = getActivePlan(false);
     hudRenderer.updateMany({
-      routeCount: `${networkState.routes.length}개 노선 · 계획 ${plans.filter((item) => item.cityId === currentMeta.cityId).length}`,
+      routeCount: `${networkState.routes.length}개 노선 · 계획 ${constructionState.plans.filter((item) => item.cityId === currentMeta.cityId).length}`,
       selectedRoute: plan ? `${plan.name} · ${plan.routes.length}개 예정 노선` : "새 계획 대기",
       stationCount: `${networkState.stations.length}개 역 · 예정 ${plan?.stations.filter((item) => !item.completed).length ?? 0}`,
       depotCount: `${networkState.depots.length}개 기지 · 예정 ${plan?.depots.filter((item) => !item.completed).length ?? 0}`,
@@ -13115,13 +13116,13 @@ function demolishWholeLine(routeId: string) {
     .filter((station) => !removableStationIds.has(station.id))
     .map((station) => (station.connectedRouteIds.includes(routeId) ? { ...station, connectedRouteIds: station.connectedRouteIds.filter((id) => id !== routeId) } : station));
   expressConfigs = expressConfigs.map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removableStationIds.has(id)) }));
-  constructionProjects = constructionProjects
+  constructionState.replaceProjects(constructionState.projects
     .map((project) => ({
       ...project,
       routeIds: project.routeIds.filter((id) => id !== routeId),
       stationIds: project.stationIds.filter((id) => !removableStationIds.has(id)),
     }))
-    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0);
+    .filter((project) => project.routeIds.length > 0 || project.stationIds.length > 0 || project.depotIds.length > 0));
   cleanupTransferData();
   synchronizeGraphReferences();
   selectedRouteId = null;
@@ -13318,7 +13319,7 @@ function openPlannedRouteEraseRange(plan: ConstructionPlan, route: PlannedRoute,
 async function erasePlannedRouteRange(planId: string, routeId: string, startIndex: number, endIndex: number) {
   const before = cloneState();
   try {
-    const plan = plans.find((item) => item.id === planId);
+    const plan = constructionState.plans.find((item) => item.id === planId);
     const route = plan?.routes.find((item) => item.id === routeId);
     if (!plan || !route || startIndex < 0 || endIndex >= route.coordinates.length || endIndex - startIndex < 1) return;
     const removedSegmentIds = new Set(route.segments.slice(startIndex, endIndex).map((segment) => segment.id));
@@ -14274,12 +14275,12 @@ function synchronizeGraphReferences() {
     fleets: trainFleets,
     expressConfigs,
     passengerGroups,
-    projects: constructionProjects,
+    projects: [...constructionState.projects],
   });
   trainFleets = synchronized.fleets;
   expressConfigs = synchronized.expressConfigs;
   passengerGroups = synchronized.passengerGroups;
-  constructionProjects = synchronized.projects;
+  constructionState.replaceProjects(synchronized.projects);
   const synchronizedStations = synchronized.stations.map((station) => {
     const connectedRouteIds = station.connectedRouteIds;
     const point = L.latLng(station.position[0], station.position[1]);
@@ -14319,8 +14320,8 @@ function reportIntegrityIssues() {
     fleets: trainFleets,
     expressConfigs,
     passengerGroups,
-    projects: constructionProjects,
-    blueprintIds: plans.flatMap((plan) => [
+    projects: [...constructionState.projects],
+    blueprintIds: constructionState.plans.flatMap((plan) => [
       plan.id,
       ...plan.routes.flatMap((route) => [route.id, ...route.segments.map((segment) => segment.id)]),
       ...plan.stations.map((station) => station.id),
@@ -15015,11 +15016,11 @@ function cloneState(): SaveState {
     network.stations,
     network.transfers,
     network.depots,
-    plans,
+    constructionState.plans,
     diagramStateOwner.current,
     analysisState,
     statisticsState,
-    constructionProjects,
+    constructionState.projects,
     newsEventState.current,
     trainFleets,
     operatingServices,
@@ -15075,15 +15076,15 @@ function applyState(state: SaveState) {
   demandStructureSignature = "";
   demandServiceSignature = "";
   demandContextSignature = "";
-  plans = normalizePlans(state.plans ?? []);
-  const failedRestoredConnections = plans.flatMap((plan) => plan.connections ?? []).filter((connection) => connection.status === "failed" && Boolean(connection.failureReason));
+  constructionState.replacePlans(normalizePlans(state.plans ?? []));
+  const failedRestoredConnections = constructionState.plans.flatMap((plan) => plan.connections ?? []).filter((connection) => connection.status === "failed" && Boolean(connection.failureReason));
   if (failedRestoredConnections.length > 0) {
     console.error("[integrity] connection blueprints were preserved but not replayed because their completed runtime result was missing.", failedRestoredConnections);
   }
   diagramStateOwner.replace(state.diagramState);
   analysisState = normalizeAnalysisState(state.analysisState);
   statisticsState = normalizeStatisticsState(state.statisticsState);
-  constructionProjects = normalizeConstructionProjects(state.constructionProjects);
+  constructionState.replaceProjects(normalizeConstructionProjects(state.constructionProjects));
   newsEventState.replace(normalizeNewsEvents(state.newsEvents));
   trainFleets = (state.trainFleets ?? []).map((fleet) => updateFleetSetCount(fleet, fleet.sets));
   operatingServices = (state.operatingServices ?? []).map((service) =>
@@ -15170,11 +15171,10 @@ function loadSavedState() {
     demandStructureSignature = "";
     demandServiceSignature = "";
     demandContextSignature = "";
-    plans = [];
+    constructionState.reset();
     diagramStateOwner.reset();
     analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
     statisticsState = { ...defaultStatisticsState, dailyRecords: [] };
-    constructionProjects = [];
     newsEventState.reset();
     trainFleets = [];
     operatingServices = [];
@@ -15511,7 +15511,7 @@ function captureTutorialConstruction(kind: ConstructionDraftKind, assetId: strin
 function applyTutorialConstructionBoost(kind: ConstructionDraftKind | "station", assetId: string) {
   if (currentMeta.tutorialCompleted) return;
   const progress = getTutorialProgress();
-  constructionProjects = constructionProjects.map((project) => {
+  constructionState.replaceProjects(constructionState.projects.map((project) => {
     const matches =
       (kind === "route" && project.routeIds.includes(assetId)) ||
       (kind === "depot" && project.depotIds.includes(assetId)) ||
@@ -15524,7 +15524,7 @@ function applyTutorialConstructionBoost(kind: ConstructionDraftKind | "station",
       return { ...project, status: "operating", elapsedDays: project.durationDays, expectedCompletionDay: analysisState.dayIndex, openedAtDay: analysisState.dayIndex };
     }
     return project;
-  });
+  }));
 }
 
 function applyTutorialPlanConversionBoost(routeIds: string[], stationIds: string[], depotIds: string[]) {
