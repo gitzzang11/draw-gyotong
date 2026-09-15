@@ -9,7 +9,7 @@ export class NewsEventStateOwner {
     this.service = new NewsService<NewsEvent>(maximumItems);
   }
 
-  get current() {
+  get current(): readonly NewsEvent[] {
     return this.events;
   }
 
@@ -27,9 +27,10 @@ export class NewsEventStateOwner {
   }
 
   appendMany(events: readonly NewsEvent[]) {
-    const previousLength = this.events.length;
+    const previousEvents = this.events;
     for (const event of events) this.events = this.service.append(this.events, event);
-    return this.events.length !== previousLength;
+    return this.events.length !== previousEvents.length
+      || this.events.some((event, index) => event !== previousEvents[index]);
   }
 
   capture() {

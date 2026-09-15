@@ -3,7 +3,7 @@ import type { Loan } from "../../domain/financeStateTypes";
 export class LoanStateOwner {
   private loans: Loan[] = [];
 
-  get current() {
+  get current(): readonly Loan[] {
     return this.loans;
   }
 

@@ -33,6 +33,15 @@ describe("NewsEventStateOwner", () => {
     expect(owner.current.map((item) => item.id)).toEqual(["b", "c"]);
   });
 
+  it("reports a bounded append when contents change without changing length", () => {
+    const owner = new NewsEventStateOwner(2);
+    owner.replace([event("a"), event("b")]);
+
+    expect(owner.appendMany([event("c")])).toBe(true);
+    expect(owner.current.map((item) => item.id)).toEqual(["b", "c"]);
+    expect(owner.appendMany([event("c")])).toBe(false);
+  });
+
   it("owns read and response mutations", () => {
     const owner = new NewsEventStateOwner();
     owner.replace([event("active"), event("expired", -10)]);
