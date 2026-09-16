@@ -62,6 +62,8 @@ import { calculateNetworkFinancials as calculateNetworkFinancialsModel } from ".
 import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus, ManualTransferEndpoint, PlanPriority, PlanStatus, PlannedDepot, PlannedRoute, PlannedStation } from "./domain/constructionTypes.ts";
 import type { EconomyState, Loan, StatisticsState } from "./domain/financeStateTypes.ts";
 import { FinanceState } from "./domain/financeState.ts";
+import { DemandState } from "./domain/demandState.ts";
+import { AnalysisStateOwner } from "./domain/analysisStateOwner.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
 import { captureGameState } from "./storage/serialization.ts";
@@ -2415,16 +2417,14 @@ const networkState = new NetworkState();
 const constructionState = new ConstructionState();
 const operationsState = new OperationsState();
 const diagramStateOwner = new MetroDiagramStateOwner();
-let analysisState: OperationAnalysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
+const analysisStateOwner = new AnalysisStateOwner<OperationAnalysisState>({ ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} });
 
 const newsEventState = new NewsEventStateOwner(80);
-let passengerGroups: PassengerGroup[] = [];
+const demandState = new DemandState();
 let segmentCongestion: SegmentCongestion[] = [];
 let routeCongestionSummaries: RouteCongestionSummary[] = [];
 let transitRouter: TransitRouter | null = null;
 let transitRouterSignature = "";
-let demandZones: DemandZone[] = [];
-let stationDemandStates: StationDemandState[] = [];
 let demandStructureSignature = "";
 let demandServiceSignature = "";
 let demandContextSignature = "";
@@ -4605,10 +4605,10 @@ function createConstructionProjectFromDraft(draft: ConstructionDraft, selectedId
     stationIds: [],
     depotIds: depot ? [depot.id] : [],
     coordinates: draft.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
-    startedDay: analysisState.dayIndex,
+    startedDay: analysisStateOwner.current.dayIndex,
     durationDays,
     elapsedDays: 0,
-    expectedCompletionDay: analysisState.dayIndex + durationDays,
+    expectedCompletionDay: analysisStateOwner.current.dayIndex + durationDays,
     baseCost: Math.max(0, draft.analysis.totalCost),
     additionalCost: 0,
     delayDays: 0,
@@ -4656,10 +4656,10 @@ function createStationConstructionProject(station: Station): ConstructionProject
     stationIds: [station.id],
     depotIds: [],
     coordinates: [station.position],
-    startedDay: analysisState.dayIndex,
+    startedDay: analysisStateOwner.current.dayIndex,
     durationDays,
     elapsedDays: 0,
-    expectedCompletionDay: analysisState.dayIndex + durationDays,
+    expectedCompletionDay: analysisStateOwner.current.dayIndex + durationDays,
     baseCost: 0,
     additionalCost: 0,
     delayDays: 0,
@@ -4696,10 +4696,10 @@ function createPlanConstructionProjects(
       stationIds: [],
       depotIds: [],
       coordinates: route.coordinates,
-      startedDay: analysisState.dayIndex,
+      startedDay: analysisStateOwner.current.dayIndex,
       durationDays,
       elapsedDays: 0,
-      expectedCompletionDay: analysisState.dayIndex + durationDays,
+      expectedCompletionDay: analysisStateOwner.current.dayIndex + durationDays,
       baseCost: route.constructionCost,
       additionalCost: 0,
       delayDays: 0,
@@ -4724,10 +4724,10 @@ function createPlanConstructionProjects(
       stationIds: [],
       depotIds: [depot.id],
       coordinates: depot.polygon,
-      startedDay: analysisState.dayIndex,
+      startedDay: analysisStateOwner.current.dayIndex,
       durationDays,
       elapsedDays: 0,
-      expectedCompletionDay: analysisState.dayIndex + durationDays,
+      expectedCompletionDay: analysisStateOwner.current.dayIndex + durationDays,
       baseCost: depot.constructionCost ?? 0,
       additionalCost: 0,
       delayDays: 0,
@@ -4790,7 +4790,7 @@ function updateConstructionProjectsForDay() {
         ? { ...project, junctionBlueprint: transitionBlueprint(project.junctionBlueprint, "under-construction") }
         : project;
       const appliedEvents = next.events.map((event) => {
-      if (event.applied || event.triggerDay > analysisState.dayIndex) return event;
+      if (event.applied || event.triggerDay > analysisStateOwner.current.dayIndex) return event;
       if (event.kind === "delay") {
         const delay = Math.max(0, event.delayDays ?? 0);
         next = { ...next, delayDays: next.delayDays + delay, expectedCompletionDay: next.expectedCompletionDay + delay };
@@ -4808,7 +4808,7 @@ function updateConstructionProjectsForDay() {
   });
   constructionState.replaceProjects(result.projects.map((project) =>
     project.status === "operating" && project.openedAtDay === undefined
-      ? { ...project, openedAtDay: analysisState.dayIndex }
+      ? { ...project, openedAtDay: analysisStateOwner.current.dayIndex }
       : project,
   ));
   for (const started of startedBlueprints) {
@@ -4994,7 +4994,7 @@ async function openConstructionProject(projectId: string) {
     if (project.junctionBlueprint) applyCompletedJunctionProject(project);
     constructionState.replaceProjects(constructionState.projects.map((item) =>
       item.id === projectId && isValidConstructionStatusTransition(item.status, "operating")
-        ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex, pendingExtension: undefined }
+        ? { ...item, status: "operating", openedAtDay: analysisStateOwner.current.dayIndex, pendingExtension: undefined }
         : item,
     ));
     synchronizeGraphReferences();
@@ -5434,10 +5434,10 @@ function createPendingExtensionProject(
     stationIds: [],
     depotIds: [],
     coordinates: pendingExtension.coordinates,
-    startedDay: analysisState.dayIndex,
+    startedDay: analysisStateOwner.current.dayIndex,
     durationDays: normalizedDuration,
     elapsedDays: 0,
-    expectedCompletionDay: analysisState.dayIndex + normalizedDuration,
+    expectedCompletionDay: analysisStateOwner.current.dayIndex + normalizedDuration,
     baseCost: pendingExtension.constructionCost,
     additionalCost: 0,
     delayDays: 0,
@@ -5521,10 +5521,10 @@ function applyRouteConstructionDraft(draft: ConstructionDraft) {
         stationIds: [],
         depotIds: [],
         coordinates: draft.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
-        startedDay: analysisState.dayIndex,
+        startedDay: analysisStateOwner.current.dayIndex,
         durationDays: 1,
         elapsedDays: 1,
-        expectedCompletionDay: analysisState.dayIndex,
+        expectedCompletionDay: analysisStateOwner.current.dayIndex,
         baseCost: cost,
         additionalCost: 0,
         delayDays: 0,
@@ -6104,9 +6104,9 @@ function separateTransferStations(memberIds: Set<string>) {
     });
     return { ...config, stopStationIds: Array.from(new Set(nextStopIds)) };
   });
-  analysisState = {
-    ...analysisState,
-    demandHistory: analysisState.demandHistory.map((snapshot) => {
+  analysisStateOwner.current = {
+    ...analysisStateOwner.current,
+    demandHistory: analysisStateOwner.current.demandHistory.map((snapshot) => {
       const stationDemand = { ...snapshot.stationDemand };
       for (const [sourceId, replacements] of splitIds) {
         const sourceDemand = stationDemand[sourceId];
@@ -8171,10 +8171,10 @@ async function confirmPlanConversion() {
         stationIds: [],
         depotIds: [],
         coordinates: (connection.coordinates ?? []).map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
-        startedDay: analysisState.dayIndex,
+        startedDay: analysisStateOwner.current.dayIndex,
         durationDays,
         elapsedDays: usesConstructionTimeline() ? 0 : durationDays,
-        expectedCompletionDay: analysisState.dayIndex + durationDays,
+        expectedCompletionDay: analysisStateOwner.current.dayIndex + durationDays,
         baseCost: connection.estimatedCost,
         additionalCost: 0,
         delayDays: 0,
@@ -8197,7 +8197,7 @@ async function confirmPlanConversion() {
           connections: (item.connections ?? []).map((candidate) => candidate.id === connection.id ? advanceConnectionToConstruction(candidate) : candidate),
         }));
         applyCompletedConnectionProject(project);
-        constructionState.replaceProjects(constructionState.projects.map((item) => item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisState.dayIndex } : item));
+        constructionState.replaceProjects(constructionState.projects.map((item) => item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisStateOwner.current.dayIndex } : item));
       }
     }
     financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - cost, constructionSpent: financeState.economy.constructionSpent + cost };
@@ -8689,18 +8689,16 @@ function resetWorld() {
   draftRouteName = "";
   operatingServiceDraftPreset = "all";
   networkState.reset();
-  demandZones = [];
-  stationDemandStates = [];
+  demandState.reset();
   demandStructureSignature = "";
   demandServiceSignature = "";
   demandContextSignature = "";
   constructionState.reset();
   diagramStateOwner.reset();
-  analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
+  analysisStateOwner.current = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
   financeState.reset({ ...defaultEconomy }, { ...defaultStatisticsState, dailyRecords: [] });
   newsEventState.reset();
   operationsState.reset();
-  passengerGroups = [];
   loanState.reset();
   undoStack = [];
   redoStack = [];
@@ -9453,7 +9451,7 @@ function calculateRouteOperation(routeId: string): RouteOperation {
   const base = calculateLegacyRouteOperation(routeId);
   const route = networkState.routes.find((item) => item.id === routeId);
   if (!route || !isRouteOperational(routeId)) return { ...base, dailyDemand: 0, crowding: 0 };
-  const dailyDemand = passengerGroups
+  const dailyDemand = demandState.passengerGroups
     .filter((group) => group.journey?.routeIds.includes(routeId) ?? group.routeIds.includes(routeId))
     .reduce((sum, group) => sum + group.activeDemand, 0);
   const summary = routeCongestionSummaries.find((item) => item.routeId === routeId);
@@ -9487,7 +9485,7 @@ function buildAnalysisFingerprint() {
     depots: networkState.depots.map((depot) => [depot.id, depot.capacity, depot.connectedRouteIds]),
     transfers: networkState.transfers.map((transfer) => [transfer.id, transfer.resistance]),
     plans: constructionState.plans.map((plan) => [plan.id, plan.status, plan.remainingCost, plan.expectedDemand]),
-    day: analysisState.dayIndex,
+    day: analysisStateOwner.current.dayIndex,
   });
 }
 
@@ -9497,9 +9495,9 @@ function buildAnalysisFingerprint() {
  */
 function refreshOperationSuggestions(force = false) {
   const fingerprint = buildAnalysisFingerprint();
-  if (!force && fingerprint === analysisState.lastFingerprint) return;
-  const day = analysisState.dayIndex;
-  const existing = new Map(analysisState.suggestions.map((suggestion) => [suggestion.id, suggestion]));
+  if (!force && fingerprint === analysisStateOwner.current.lastFingerprint) return;
+  const day = analysisStateOwner.current.dayIndex;
+  const existing = new Map(analysisStateOwner.current.suggestions.map((suggestion) => [suggestion.id, suggestion]));
   const proposals: OperationSuggestion[] = [];
   const add = (
     code: string,
@@ -9519,7 +9517,7 @@ function refreshOperationSuggestions(force = false) {
   ) => {
     const id = `ops:${code}:${targetType}:${targetId}`;
     const previous = existing.get(id);
-    const decision = analysisState.decisions[id];
+    const decision = analysisStateOwner.current.decisions[id];
     let status: SuggestionStatus = previous?.status ?? "active";
     let remindAtDay = previous?.remindAtDay;
     if (decision?.status === "hidden") status = "hidden";
@@ -9529,7 +9527,7 @@ function refreshOperationSuggestions(force = false) {
         remindAtDay = decision.untilDay;
       } else {
         status = "active";
-        delete analysisState.decisions[id];
+        delete analysisStateOwner.current.decisions[id];
       }
     }
     proposals.push({
@@ -9737,7 +9735,7 @@ function refreshOperationSuggestions(force = false) {
     );
   }
 
-  const oldSnapshot = [...analysisState.demandHistory].reverse().find((snapshot) => snapshot.day <= day - 7);
+  const oldSnapshot = [...analysisStateOwner.current.demandHistory].reverse().find((snapshot) => snapshot.day <= day - 7);
   if (oldSnapshot && oldSnapshot.satisfaction - financeState.economy.satisfaction >= 8) {
     add(
       "satisfaction-drop",
@@ -9873,20 +9871,20 @@ function refreshOperationSuggestions(force = false) {
     }
   }
 
-  analysisState = { ...analysisState, suggestions: proposals, lastFingerprint: fingerprint };
+  analysisStateOwner.current = { ...analysisStateOwner.current, suggestions: proposals, lastFingerprint: fingerprint };
   updateAnalysisBadge();
 }
 
 function recordDemandSnapshot() {
   const snapshot: DemandSnapshot = {
-    day: analysisState.dayIndex,
+    day: analysisStateOwner.current.dayIndex,
     totalDemand: financeState.economy.demand,
     satisfaction: financeState.economy.satisfaction,
     stationDemand: Object.fromEntries(networkState.stations.map((station) => [station.id, station.demand])),
   };
-  analysisState = {
-    ...analysisState,
-    demandHistory: [...analysisState.demandHistory.filter((item) => item.day !== snapshot.day), snapshot].slice(-30),
+  analysisStateOwner.current = {
+    ...analysisStateOwner.current,
+    demandHistory: [...analysisStateOwner.current.demandHistory.filter((item) => item.day !== snapshot.day), snapshot].slice(-30),
     lastFingerprint: "",
   };
 }
@@ -9906,11 +9904,11 @@ function closeAnalysisScreen() {
 function renderAnalysisScreen() {
   refreshOperationSuggestions();
   const filter = analysisFilter?.value || "active";
-  const visible = analysisState.suggestions.filter((suggestion) => {
+  const visible = analysisStateOwner.current.suggestions.filter((suggestion) => {
     if (filter === "all") return true;
     return suggestion.status === filter;
   });
-  const active = analysisState.suggestions.filter((suggestion) => suggestion.status === "active");
+  const active = analysisStateOwner.current.suggestions.filter((suggestion) => suggestion.status === "active");
   const critical = active.filter((suggestion) => suggestion.severity === "critical").length;
   const warning = active.filter((suggestion) => suggestion.severity === "warning").length;
   const info = active.filter((suggestion) => suggestion.severity === "info").length;
@@ -9919,7 +9917,7 @@ function renderAnalysisScreen() {
     analysisScreen.style.setProperty("--analysis-health", String(health));
     analysisScreen.dataset.health = health >= 86 ? "stable" : health >= 65 ? "warning" : "critical";
   }
-  setText(analysisUpdatedAt, `게임 ${analysisState.dayIndex}일차 · ${analysisState.demandHistory.length}일 추세`);
+  setText(analysisUpdatedAt, `게임 ${analysisStateOwner.current.dayIndex}일차 · ${analysisStateOwner.current.demandHistory.length}일 추세`);
   setText(analysisHealthScore, String(health));
   setText(analysisHealthLabel, health >= 86 ? "안정적" : health >= 65 ? "점검 필요" : "집중 개선");
   setText(analysisCriticalCount, String(critical));
@@ -9940,7 +9938,7 @@ function renderSuggestionCard(suggestion: OperationSuggestion) {
   const severityIcon = suggestion.severity === "critical" ? "!" : suggestion.severity === "warning" ? "△" : "i";
   const statusLabel =
     suggestion.status === "later"
-      ? `${Math.max(0, (suggestion.remindAtDay ?? analysisState.dayIndex) - analysisState.dayIndex)}일 후 다시 표시`
+      ? `${Math.max(0, (suggestion.remindAtDay ?? analysisStateOwner.current.dayIndex) - analysisStateOwner.current.dayIndex)}일 후 다시 표시`
       : suggestion.status === "hidden"
         ? "숨김됨"
         : "현재 제안";
@@ -10023,7 +10021,7 @@ function focusTransferOnMap(transferId: string, openManager = false) {
 function handleSuggestionClick(event: Event) {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-command]");
   const card = button?.closest<HTMLElement>("[data-suggestion-id]");
-  const suggestion = analysisState.suggestions.find((item) => item.id === card?.dataset.suggestionId);
+  const suggestion = analysisStateOwner.current.suggestions.find((item) => item.id === card?.dataset.suggestionId);
   if (!button || !suggestion) return;
   const command = button.dataset.command;
   if (command === "hide" || command === "later" || command === "restore") {
@@ -10033,7 +10031,7 @@ function handleSuggestionClick(event: Event) {
   if (command === "hide") {
     setSuggestionDecision(suggestion.id, "hidden");
   } else if (command === "later") {
-    setSuggestionDecision(suggestion.id, "later", analysisState.dayIndex + (suggestion.severity === "critical" ? 3 : 7));
+    setSuggestionDecision(suggestion.id, "later", analysisStateOwner.current.dayIndex + (suggestion.severity === "critical" ? 3 : 7));
   } else if (command === "restore") {
     setSuggestionDecision(suggestion.id, "active");
   } else if (command === "execute") {
@@ -10045,13 +10043,13 @@ function handleSuggestionClick(event: Event) {
 }
 
 function setSuggestionDecision(id: string, status: SuggestionStatus, untilDay?: number) {
-  const decisions = { ...analysisState.decisions };
+  const decisions = { ...analysisStateOwner.current.decisions };
   if (status === "active") delete decisions[id];
   else decisions[id] = { status, untilDay };
-  analysisState = {
-    ...analysisState,
+  analysisStateOwner.current = {
+    ...analysisStateOwner.current,
     decisions,
-    suggestions: analysisState.suggestions.map((suggestion) =>
+    suggestions: analysisStateOwner.current.suggestions.map((suggestion) =>
       suggestion.id === id ? { ...suggestion, status, remindAtDay: untilDay } : suggestion,
     ),
   };
@@ -10108,7 +10106,7 @@ function executeSuggestion(suggestion: OperationSuggestion) {
 }
 
 function updateAnalysisBadge() {
-  const urgentCount = analysisState.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
+  const urgentCount = analysisStateOwner.current.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
   if (analysisBadge) {
     analysisBadge.hidden = urgentCount === 0;
     analysisBadge.textContent = String(urgentCount);
@@ -10125,7 +10123,7 @@ function normalizeStatisticsState(state?: StatisticsState): StatisticsState {
 }
 
 function isNewsEventActive(event: NewsEvent) {
-  return analysisState.dayIndex >= event.startedDay && analysisState.dayIndex < event.startedDay + event.durationDays;
+  return analysisStateOwner.current.dayIndex >= event.startedDay && analysisStateOwner.current.dayIndex < event.startedDay + event.durationDays;
 }
 
 function normalizeNewsEvents(source?: NewsEvent[]) {
@@ -10149,7 +10147,7 @@ function hashNewsSeed(day: number, salt: string) {
 }
 
 function updateNewsEventsForDay(dispatch = true) {
-  const day = analysisState.dayIndex;
+  const day = analysisStateOwner.current.dayIndex;
   const result = eventCoordinator.advanceDay(newsEventState.current, day, hashNewsSeed(day, currentMeta.slotId));
   newsEventState.replace(result.events);
   const runtimeResult = eventRuntimeAdapter.process({
@@ -10219,7 +10217,7 @@ function attachConstructionDelayFromNews(event: NewsEvent) {
         {
           id: createId("construction-event"),
           kind: "delay",
-          triggerDay: analysisState.dayIndex,
+          triggerDay: analysisStateOwner.current.dayIndex,
           delayDays,
           message: `${event.title}: 안전 점검 ${delayDays}일 추가`,
           applied: false,
@@ -10270,7 +10268,7 @@ function renderNewsFeed() {
 
 function renderNewsCard(event: NewsEvent) {
   const active = isNewsEventActive(event);
-  const remaining = Math.max(0, event.startedDay + event.durationDays - analysisState.dayIndex);
+  const remaining = Math.max(0, event.startedDay + event.durationDays - analysisStateOwner.current.dayIndex);
   const demandPercent = Math.round((event.demandMultiplier - 1) * 100);
   const costPercent = Math.round((event.operatingCostMultiplier - 1) * 100);
   const routeNames = event.relatedRouteIds.map((id) => networkState.routes.find((route) => route.id === id)?.name).filter(Boolean);
@@ -10389,7 +10387,7 @@ function calculateNetworkFinancials() {
     fleets: operationsState.fleets,
     loans: loanState.current,
     statistics: financeState.statistics,
-    stationPotentialDemand: stationDemandStates.map((state) => state.potentialDemand),
+    stationPotentialDemand: demandState.stationDemandStates.map((state) => state.potentialDemand),
     dailyMaintenance: calculateDailyMaintenance(),
   });
 }
@@ -10397,9 +10395,9 @@ function calculateNetworkFinancials() {
 function calculateRouteStatistics(route: RouteLine) {
   const operation = calculateRouteOperation(route.id);
   const congestionSegments = segmentCongestion.filter((segment) => segment.routeId === route.id);
-  const groups = passengerGroups.filter((group) => group.routeIds.includes(route.id));
+  const groups = demandState.passengerGroups.filter((group) => group.routeIds.includes(route.id));
   const passengers = Math.round(groups.reduce((sum, group) => sum + group.activeDemand / Math.max(1, group.routeIds.length), 0));
-  const totalPassengers = passengerGroups.reduce((sum, group) => sum + group.activeDemand, 0);
+  const totalPassengers = demandState.passengerGroups.reduce((sum, group) => sum + group.activeDemand, 0);
   const fareRevenue = totalPassengers > 0 ? Math.round((passengers / totalPassengers) * calculateNetworkFinancials().dailyRevenue) : 0;
   const maintenance = operation.operatingCost;
   const averageTravelTime =
@@ -10437,16 +10435,16 @@ function calculateRouteStatistics(route: RouteLine) {
 }
 
 function calculateStationStatistics(station: Station) {
-  const demandState = stationDemandStates.find((state) => state.stationId === station.id);
-  const relatedGroups = passengerGroups.filter((group) => group.originStationId === station.id || group.destinationStationId === station.id);
+  const stationDemandState = demandState.stationDemandStates.find((state) => state.stationId === station.id);
+  const relatedGroups = demandState.passengerGroups.filter((group) => group.originStationId === station.id || group.destinationStationId === station.id);
   const boardings = relatedGroups.reduce((sum, group) => sum + group.activeDemand, 0);
   const transferPassengers = relatedGroups.filter((group) => group.routeIds.length > 1).reduce((sum, group) => sum + group.activeDemand, 0);
   const operations = station.connectedRouteIds.map((routeId) => calculateRouteOperation(routeId));
   const crowding = operations.length > 0 ? operations.reduce((sum, operation) => sum + operation.crowding, 0) / operations.length : 0;
   const waitMin = operations.length > 0 ? operations.reduce((sum, operation) => sum + (operation.waitMin || 0), 0) / operations.length : 0;
-  const potentialDemand = demandState?.potentialDemand ?? station.potentialDemand ?? station.demand;
-  const realizedDemand = demandState?.realizedDemand ?? station.realizedDemand ?? station.demand;
-  const previousDemand = demandState?.previousRealizedDemand ?? realizedDemand;
+  const potentialDemand = stationDemandState?.potentialDemand ?? station.potentialDemand ?? station.demand;
+  const realizedDemand = stationDemandState?.realizedDemand ?? station.realizedDemand ?? station.demand;
+  const previousDemand = stationDemandState?.previousRealizedDemand ?? realizedDemand;
   const growth = previousDemand > 0 ? realizedDemand / previousDemand - 1 : 0;
   const profileWeights = [0.025, 0.018, 0.015, 0.014, 0.018, 0.035, 0.07, 0.115, 0.095, 0.055, 0.04, 0.038, 0.042, 0.04, 0.043, 0.052, 0.075, 0.105, 0.075, 0.045, 0.032, 0.025, 0.018, 0.013];
   const hourly = profileWeights.map((weight, hour) => ({ hour, passengers: Math.round(boardings * weight) }));
@@ -10458,11 +10456,11 @@ function calculateStationStatistics(station: Station) {
     waitMin,
     potentialDemand,
     realizedDemand,
-    captureRate: demandState?.transitCaptureRate ?? (potentialDemand > 0 ? realizedDemand / potentialDemand : 0),
+    captureRate: stationDemandState?.transitCaptureRate ?? (potentialDemand > 0 ? realizedDemand / potentialDemand : 0),
     growth,
-    trend: demandState?.trend ?? "stable",
-    positiveReasons: demandState?.positiveReasons ?? [],
-    negativeReasons: demandState?.negativeReasons ?? [],
+    trend: stationDemandState?.trend ?? "stable",
+    positiveReasons: stationDemandState?.positiveReasons ?? [],
+    negativeReasons: stationDemandState?.negativeReasons ?? [],
     hourly,
   };
 }
@@ -10629,7 +10627,7 @@ function selectStationTransferInfo(stationId: string) {
       underConstruction: !isRouteOperational(route.id) || route.visibility === "planning",
     })),
     transfers: [...networkState.transfers],
-    passengerGroups,
+    passengerGroups: [...demandState.passengerGroups],
   });
 }
 
@@ -10944,7 +10942,7 @@ function renderCityStatistics() {
   const finances = calculateNetworkFinancials();
   const city = cityConfigs[currentMeta.cityId];
   const center = L.latLng(city.center);
-  const oldSnapshot = [...analysisState.demandHistory].reverse().find((snapshot) => snapshot.day <= analysisState.dayIndex - 7);
+  const oldSnapshot = [...analysisStateOwner.current.demandHistory].reverse().find((snapshot) => snapshot.day <= analysisStateOwner.current.dayIndex - 7);
   const regions = [
     { key: "nw", label: "북서", current: 0, previous: 0 },
     { key: "ne", label: "북동", current: 0, previous: 0 },
@@ -10958,8 +10956,8 @@ function renderCityStatistics() {
     region.current += station.demand;
     region.previous += oldSnapshot?.stationDemand[station.id] ?? station.demand;
   }
-  const networkPotential = stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0);
-  const networkRealized = stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0);
+  const networkPotential = demandState.stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0);
+  const networkRealized = demandState.stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0);
   const captureRate = networkPotential > 0 ? networkRealized / networkPotential : 0;
   const congested = networkState.stations
     .map(calculateStationStatistics)
@@ -11319,7 +11317,7 @@ function getPassengerDemandEventMultiplier(origin: Station, destination: Station
 }
 
 function synchronizeStationDemandMirrors() {
-  const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
+  const stateByStation = new Map(demandState.stationDemandStates.map((state) => [state.stationId, state]));
   networkState.stations = networkState.stations.map((station) => {
     const state = stateByStation.get(station.id);
     if (!state) return station;
@@ -11335,32 +11333,32 @@ function synchronizeStationDemandMirrors() {
 
 function refreshDemandCatchments() {
   const inputs = getDemandStationInputs();
-  if (demandZones.length === 0) {
-    demandZones = createRegionalDemandGrid(
+  if (demandState.demandZones.length === 0) {
+    demandState.demandZones = createRegionalDemandGrid(
       cityConfigs[currentMeta.cityId].center as [number, number],
       currentMeta.cityId,
       cityConfigs[currentMeta.cityId].demandMultiplier,
     );
-  } else if (!demandZones.some((zone) => zone.id.startsWith(`demand-zone:${currentMeta.cityId}:`))) {
+  } else if (!demandState.demandZones.some((zone) => zone.id.startsWith(`demand-zone:${currentMeta.cityId}:`))) {
     // Legacy saves retain their inferred regional zones. Adjacent new stations
     // compete for these zones instead of creating another copy of demand.
-    demandZones = createLegacyDemandZones(inputs, demandZones);
+    demandState.demandZones = createLegacyDemandZones(inputs, [...demandState.demandZones]);
   }
-  demandZones = applyRealPopulationDensity(currentMeta.cityId, demandZones);
+  demandState.demandZones = applyRealPopulationDensity(currentMeta.cityId, demandState.demandZones);
   const allocation = allocateCatchmentDemand(
-    demandZones,
+    [...demandState.demandZones],
     inputs,
-    analysisState.dayIndex,
+    analysisStateOwner.current.dayIndex,
     getDemandPeriod(simMinutes),
   );
-  const existingByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
-  stationDemandStates = inputs.map((input) => {
+  const existingByStation = new Map(demandState.stationDemandStates.map((state) => [state.stationId, state]));
+  demandState.stationDemandStates = inputs.map((input) => {
     const existing = existingByStation.get(input.id);
     if (!existing) {
       const initial = createStationDemandState(
         { ...input, legacyDemand: Math.round((allocation.stationPotential.get(input.id) ?? 0) * 0.18) },
         allocation,
-        analysisState.dayIndex,
+        analysisStateOwner.current.dayIndex,
       );
       return initial;
     }
@@ -11415,7 +11413,7 @@ function ensureDemandSimulation() {
   const structure = buildDemandStructureFingerprint();
   const service = buildDemandServiceFingerprint();
   const context = JSON.stringify({
-    day: analysisState.dayIndex,
+    day: analysisStateOwner.current.dayIndex,
     period: getDemandPeriod(simMinutes),
     events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
   });
@@ -11423,7 +11421,7 @@ function ensureDemandSimulation() {
   const serviceChanged = service !== demandServiceSignature;
   const contextChanged = context !== demandContextSignature;
   if (!structureChanged && !serviceChanged && !contextChanged) return;
-  if (structureChanged || contextChanged || stationDemandStates.length !== networkState.stations.length) refreshDemandCatchments();
+  if (structureChanged || contextChanged || demandState.stationDemandStates.length !== networkState.stations.length) refreshDemandCatchments();
   regeneratePassengerGroups();
   demandStructureSignature = structure;
   demandServiceSignature = service;
@@ -11433,7 +11431,7 @@ function ensureDemandSimulation() {
 function regeneratePassengerGroups() {
   const operationalStations = networkState.stations.filter((station) => isStationOperational(station.id));
   if (operationalStations.length < 2) {
-    passengerGroups = [];
+    demandState.passengerGroups = [];
     segmentCongestion = [];
     routeCongestionSummaries = [];
     financeState.economy = { ...financeState.economy, demand: 0 };
@@ -11442,7 +11440,7 @@ function regeneratePassengerGroups() {
   const router = getPassengerRouter();
   const hour = Math.floor(simMinutes / 60) % 24;
   const period = getDemandPeriod(simMinutes);
-  const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
+  const stateByStation = new Map(demandState.stationDemandStates.map((state) => [state.stationId, state]));
   const origins = [...operationalStations].sort((a, b) => b.demand - a.demand);
   const destinationStations = operationalStations.map((station) => ({
     id: station.id,
@@ -11456,7 +11454,7 @@ function regeneratePassengerGroups() {
   for (const origin of origins) {
     const originDestination = destinationStations.find((station) => station.id === origin.id)!;
     const choices = selectPassengerDestinations(originDestination, destinationStations, {
-      seed: `${currentMeta.slotId}:${analysisState.dayIndex}:${hour}`,
+      seed: `${currentMeta.slotId}:${analysisStateOwner.current.dayIndex}:${hour}`,
       maxDestinations: operationalStations.length > 150 ? 6 : 8,
       distanceKm: (from, to) => map.distance(L.latLng(...from.position), L.latLng(...to.position)) / 1000,
     });
@@ -11494,11 +11492,11 @@ function regeneratePassengerGroups() {
         });
     }
   }
-  passengerGroups = [...groupsByOd.values()];
+  demandState.passengerGroups = [...groupsByOd.values()];
   const forecast = calculateCurrentOperatingForecast();
   segmentCongestion = forecast.segmentCongestion;
   routeCongestionSummaries = forecast.routeSummaries;
-  passengerGroups = passengerGroups.map((group, index) => ({
+  demandState.passengerGroups = demandState.passengerGroups.map((group, index) => ({
     ...group,
     crowding: forecast.groupMetrics[index]?.crowding ?? group.crowding,
     waitMin: forecast.groupMetrics[index]?.waitMin ?? group.waitMin,
@@ -11511,7 +11509,7 @@ function calculateCurrentOperatingForecast(
   fleetSource = operationsState.fleets,
   fare = financeState.economy.fare,
 ): OperatingForecast {
-  return calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
+  return calculateOperatingForecastForGroups([...demandState.passengerGroups], fleetSource, fare);
 }
 
 function calculateOperatingForecastForGroups(
@@ -11534,7 +11532,7 @@ function calculateOperatingForecastForGroups(
   });
   const maintenance = calculateDailyMaintenanceBreakdown(fleetSource);
   const preview = calculateDailySettlement({
-    gameDay: analysisState.dayIndex + 1,
+    gameDay: analysisStateOwner.current.dayIndex + 1,
     gameMode: currentMeta.mode,
     currentMoney: financeState.economy.cash,
     fareRevenue: forecast.revenue,
@@ -11557,7 +11555,7 @@ function calculateOperatingForecastForGroups(
 function calculateStationServiceDemand(
   station: Station,
   fare = financeState.economy.fare,
-  groupsSource = passengerGroups,
+  groupsSource = demandState.passengerGroups,
   fleetSource = operationsState.fleets,
 ): { captureRate: number; attractiveness: DemandAttractiveness } {
   const originGroups = groupsSource.filter((group) => group.originStationId === station.id && group.journey);
@@ -11598,8 +11596,8 @@ function calculateDemandResponsiveForecast(
   fleetSource = operationsState.fleets,
   fare = financeState.economy.fare,
 ): DemandResponsiveForecast {
-  const capacityForecast = calculateOperatingForecastForGroups(passengerGroups, fleetSource, fare);
-  const measuredGroups = passengerGroups.map((group, index) => ({
+  const capacityForecast = calculateOperatingForecastForGroups([...demandState.passengerGroups], fleetSource, fare);
+  const measuredGroups = demandState.passengerGroups.map((group, index) => ({
     ...group,
     crowding: capacityForecast.groupMetrics[index]?.crowding ?? group.crowding,
     waitMin: capacityForecast.groupMetrics[index]?.waitMin ?? group.waitMin,
@@ -11607,13 +11605,13 @@ function calculateDemandResponsiveForecast(
   }));
   const projectedByStation = new Map<string, StationDemandState>();
   for (const station of networkState.stations) {
-    const state = stationDemandStates.find((candidate) => candidate.stationId === station.id);
+    const state = demandState.stationDemandStates.find((candidate) => candidate.stationId === station.id);
     if (!state) continue;
     const service = calculateStationServiceDemand(station, fare, measuredGroups, fleetSource);
     projectedByStation.set(station.id, previewStationDemand(state, service.captureRate));
   }
-  const projectedGroups = passengerGroups.map((group) => {
-    const current = stationDemandStates.find((state) => state.stationId === group.originStationId);
+  const projectedGroups = demandState.passengerGroups.map((group) => {
+    const current = demandState.stationDemandStates.find((state) => state.stationId === group.originStationId);
     const projected = projectedByStation.get(group.originStationId);
     const ratio = current && projected && current.realizedDemand > 0
       ? projected.realizedDemand / current.realizedDemand
@@ -11631,14 +11629,14 @@ function calculateDemandResponsiveForecast(
 
 function advanceDemandForGameDay(gameDay: number, fare = financeState.economy.fare) {
   refreshDemandCatchments();
-  const stateByStation = new Map(stationDemandStates.map((state) => [state.stationId, state]));
-  stationDemandStates = networkState.stations.map((station) => {
+  const stateByStation = new Map(demandState.stationDemandStates.map((state) => [state.stationId, state]));
+  demandState.stationDemandStates = networkState.stations.map((station) => {
     const existing = stateByStation.get(station.id);
     if (!existing) {
       const allocation = allocateCatchmentDemand(
-        demandZones,
+        [...demandState.demandZones],
         getDemandStationInputs(),
-        analysisState.dayIndex,
+        analysisStateOwner.current.dayIndex,
         getDemandPeriod(simMinutes),
       );
       return createStationDemandState(
@@ -11649,7 +11647,7 @@ function advanceDemandForGameDay(gameDay: number, fare = financeState.economy.fa
           legacyDemand: 0,
         },
         allocation,
-        analysisState.dayIndex,
+        analysisStateOwner.current.dayIndex,
         0,
       );
     }
@@ -11672,7 +11670,7 @@ function advanceDemandForGameDay(gameDay: number, fare = financeState.economy.fa
  */
 const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisState, GameMeta, NewsEvent> = {
   service: dailySettlementService,
-  getGameDay: () => analysisState.dayIndex + 1,
+  getGameDay: () => analysisStateOwner.current.dayIndex + 1,
   getLastSettledGameDay: () => currentMeta.lastSettledGameDay ?? -1,
   hasDailyRecord: (day) => financeState.statistics.dailyRecords.some((record) => record.day === day),
   getGameMode: () => currentMeta.mode,
@@ -11680,22 +11678,22 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
   getEconomy: () => financeState.economy,
   getLoans: () => [...loanState.current],
   getStatistics: () => financeState.statistics,
-  getPassengerGroups: () => passengerGroups,
+  getPassengerGroups: () => [...demandState.passengerGroups],
   captureAuxiliary: () => ({
-    analysis: { ...analysisState },
+    analysis: { ...analysisStateOwner.current },
     meta: { ...currentMeta },
     constructionProjects: constructionState.projects.map((project) => ({ ...project, events: project.events.map((event) => ({ ...event })) })),
-    stationDemandStates: stationDemandStates.map((state) => ({ ...state })),
+    stationDemandStates: demandState.stationDemandStates.map((state) => ({ ...state })),
   }),
   restoreState: (snapshot) => {
     financeState.economy = snapshot.economy;
     loanState.restore(snapshot.loans);
     financeState.statistics = snapshot.statistics;
-    passengerGroups = snapshot.passengerGroups;
-    analysisState = snapshot.auxiliary.analysis;
+    demandState.passengerGroups = snapshot.passengerGroups;
+    analysisStateOwner.current = snapshot.auxiliary.analysis;
     currentMeta = snapshot.auxiliary.meta;
     constructionState.replaceProjects(snapshot.auxiliary.constructionProjects);
-    stationDemandStates = snapshot.auxiliary.stationDemandStates;
+    demandState.stationDemandStates = snapshot.auxiliary.stationDemandStates;
   },
   prepareDay: (gameDay) => {
     ensureDemandSimulation();
@@ -11714,8 +11712,8 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
       maintenance,
       constructionCostDue,
       financesBefore,
-      totalPotential: stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0),
-      totalRealized: stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0),
+      totalPotential: demandState.stationDemandStates.reduce((sum, state) => sum + state.potentialDemand, 0),
+      totalRealized: demandState.stationDemandStates.reduce((sum, state) => sum + state.realizedDemand, 0),
     };
   },
   applyCommittedState: (state) => {
@@ -11724,16 +11722,16 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     financeState.statistics = state.statistics;
   },
   commitDay: (gameDay, bankrupt) => {
-    analysisState = { ...analysisState, dayIndex: gameDay, lastFingerprint: "" };
+    analysisStateOwner.current = { ...analysisStateOwner.current, dayIndex: gameDay, lastFingerprint: "" };
     currentMeta = { ...currentMeta, lastSettledGameDay: gameDay };
     updateCareerProgress(bankrupt);
     const eventResult = updateNewsEventsForDay(false);
     updateConstructionProjectsForDay();
     recordDemandSnapshot();
     refreshOperationSuggestions(true);
-    const criticalCount = analysisState.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
-    if (criticalCount > 0 && analysisState.lastNotifiedDay !== gameDay) {
-      analysisState = { ...analysisState, lastNotifiedDay: gameDay };
+    const criticalCount = analysisStateOwner.current.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
+    if (criticalCount > 0 && analysisStateOwner.current.lastNotifiedDay !== gameDay) {
+      analysisStateOwner.current = { ...analysisStateOwner.current, lastNotifiedDay: gameDay };
       showToast(`운영 분석에 우선 확인 제안 ${criticalCount}건이 있습니다.`);
     }
     return { newsEvents: eventResult.newsEvents, updateDomains: eventResult.updateDomains };
@@ -11919,7 +11917,7 @@ function renderSatisfactionDialog() {
   const score = financeState.economy.satisfaction;
   const level = score >= 85 ? "excellent" : score >= 70 ? "stable" : score >= 50 ? "warning" : "critical";
   const label = score >= 85 ? "매우 좋음" : score >= 70 ? "안정" : score >= 50 ? "개선 필요" : "불만 집중";
-  const groups = passengerGroups;
+  const groups = demandState.passengerGroups;
   const average = (values: number[]) => values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
   const averageWait = average(groups.map((group) => group.waitMin));
   const averageCrowding = average(groups.map((group) => group.crowding));
@@ -11963,12 +11961,12 @@ function renderSatisfactionDialog() {
       penalty: farePenalty,
     },
   ];
-  const previousRecord = [...financeState.statistics.dailyRecords].reverse().find((record) => record.day < analysisState.dayIndex);
+  const previousRecord = [...financeState.statistics.dailyRecords].reverse().find((record) => record.day < analysisStateOwner.current.dayIndex);
   const change = previousRecord ? score - previousRecord.satisfaction : null;
   const trendValues = financeState.statistics.dailyRecords
     .slice(-6)
     .map((record) => ({ day: record.day + 1, value: record.satisfaction }));
-  if (trendValues.at(-1)?.day !== analysisState.dayIndex + 1) trendValues.push({ day: analysisState.dayIndex + 1, value: score });
+  if (trendValues.at(-1)?.day !== analysisStateOwner.current.dayIndex + 1) trendValues.push({ day: analysisStateOwner.current.dayIndex + 1, value: score });
   const worstGroups = [...groups].sort((a, b) => a.satisfaction - b.satisfaction || b.activeDemand - a.activeDemand).slice(0, 3);
   const dominantFactor = [...factors].sort((a, b) => b.penalty - a.penalty)[0];
   const recommendations: Array<{ icon: string; title: string; text: string }> = [];
@@ -12072,7 +12070,7 @@ function updateGameClockHud() {
   const hours = Math.floor(simMinutes / 60) % 24;
   const minutes = Math.floor(simMinutes % 60);
   hudRenderer.updateClock(
-    `${analysisState.dayIndex + 1}일차`,
+    `${analysisStateOwner.current.dayIndex + 1}일차`,
     `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
   );
 }
@@ -14252,12 +14250,12 @@ function synchronizeGraphReferences() {
     depots: [...networkState.depots],
     fleets: [...operationsState.fleets],
     expressConfigs: [...operationsState.expressConfigs],
-    passengerGroups,
+    passengerGroups: [...demandState.passengerGroups],
     projects: [...constructionState.projects],
   });
   operationsState.fleets = synchronized.fleets;
   operationsState.expressConfigs = synchronized.expressConfigs;
-  passengerGroups = synchronized.passengerGroups;
+  demandState.passengerGroups = synchronized.passengerGroups;
   constructionState.replaceProjects(synchronized.projects);
   const synchronizedStations = synchronized.stations.map((station) => {
     const connectedRouteIds = station.connectedRouteIds;
@@ -14297,7 +14295,7 @@ function reportIntegrityIssues() {
     depots: [...networkState.depots],
     fleets: [...operationsState.fleets],
     expressConfigs: [...operationsState.expressConfigs],
-    passengerGroups,
+    passengerGroups: [...demandState.passengerGroups],
     projects: [...constructionState.projects],
     blueprintIds: constructionState.plans.flatMap((plan) => [
       plan.id,
@@ -14307,7 +14305,7 @@ function reportIntegrityIssues() {
       ...(plan.connections ?? []).map((connection) => connection.id),
       ...(plan.junctions ?? []).map((junction) => junction.id),
     ]),
-    numericState: { economy: financeState.economy, stationDemandStates, analysisState, statisticsState: financeState.statistics },
+    numericState: { economy: financeState.economy, stationDemandStates: demandState.stationDemandStates, analysisState: analysisStateOwner.current, statisticsState: financeState.statistics },
   });
   if (issues.length > 0 && import.meta.env.DEV) {
     console.warn(`[integrity] ${issues.length} recoverable issue(s) detected`, issues);
@@ -14996,18 +14994,18 @@ function cloneState(): SaveState {
     network.depots,
     constructionState.plans,
     diagramStateOwner.current,
-    analysisState,
+    analysisStateOwner.current,
     financeState.statistics,
     constructionState.projects,
     newsEventState.current,
     operationsState.fleets,
     operationsState.services,
     operationsState.expressConfigs,
-    passengerGroups,
+    [...demandState.passengerGroups],
     loanState.current,
     financeState.economy,
-    demandZones,
-    stationDemandStates,
+    [...demandState.demandZones],
+    [...demandState.stationDemandStates],
   );
 }
 
@@ -15049,8 +15047,8 @@ function applyState(state: SaveState) {
     transfers: state.transfers,
     depots: state.depots,
   });
-  demandZones = state.demandZones ?? [];
-  stationDemandStates = state.stationDemandStates ?? [];
+  demandState.demandZones = state.demandZones ?? [];
+  demandState.stationDemandStates = state.stationDemandStates ?? [];
   demandStructureSignature = "";
   demandServiceSignature = "";
   demandContextSignature = "";
@@ -15060,7 +15058,7 @@ function applyState(state: SaveState) {
     console.error("[integrity] connection blueprints were preserved but not replayed because their completed runtime result was missing.", failedRestoredConnections);
   }
   diagramStateOwner.replace(state.diagramState);
-  analysisState = normalizeAnalysisState(state.analysisState);
+  analysisStateOwner.current = normalizeAnalysisState(state.analysisState);
   financeState.statistics = normalizeStatisticsState(state.statisticsState);
   constructionState.replaceProjects(normalizeConstructionProjects(state.constructionProjects));
   newsEventState.replace(normalizeNewsEvents(state.newsEvents));
@@ -15070,7 +15068,7 @@ function applyState(state: SaveState) {
   );
   migrateLegacyFleetsToOperatingServices();
   operationsState.expressConfigs = state.expressConfigs ?? [];
-  passengerGroups = state.passengerGroups ?? [];
+  demandState.passengerGroups = state.passengerGroups ?? [];
   loanState.replace(state.loans ?? []);
   financeState.economy = { ...defaultEconomy, ...(state.economy ?? {}) };
   transitRouter = null;
@@ -15144,18 +15142,16 @@ function loadSavedState() {
     networkState.routes = localRecoveryStore.readLegacyRoutes<RouteLine>().map((route) => rebuildRouteGraph(route));
   } catch {
     networkState.reset();
-    demandZones = [];
-    stationDemandStates = [];
+    demandState.reset();
     demandStructureSignature = "";
     demandServiceSignature = "";
     demandContextSignature = "";
     constructionState.reset();
     diagramStateOwner.reset();
-    analysisState = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
+    analysisStateOwner.current = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
     financeState.reset({ ...defaultEconomy }, { ...defaultStatisticsState, dailyRecords: [] });
     newsEventState.reset();
     operationsState.reset();
-    passengerGroups = [];
     loanState.reset();
   }
 }
@@ -15186,7 +15182,7 @@ function updateDynamicLayers() {
   }
 
   populationDensityLayer.clearLayers();
-  if (demandZones.length === 0) return;
+  if (demandState.demandZones.length === 0) return;
   renderPopulationDensityCells();
 }
 
@@ -15451,7 +15447,7 @@ function createTutorialProgress(): TutorialProgress {
     mapZoomed: false,
     colorSelected: false,
     timeStarted: false,
-    startedDay: analysisState?.dayIndex ?? 0,
+    startedDay: analysisStateOwner.current.dayIndex ?? 0,
   };
 }
 
@@ -15493,10 +15489,10 @@ function applyTutorialConstructionBoost(kind: ConstructionDraftKind | "station",
       (kind === "station" && project.stationIds.includes(assetId));
     if (!matches) return project;
     if (kind === "route" && progress.targetRouteId === assetId) {
-      return { ...project, status: "opening-ready", elapsedDays: project.durationDays, expectedCompletionDay: analysisState.dayIndex };
+      return { ...project, status: "opening-ready", elapsedDays: project.durationDays, expectedCompletionDay: analysisStateOwner.current.dayIndex };
     }
     if (kind === "depot" || kind === "station") {
-      return { ...project, status: "operating", elapsedDays: project.durationDays, expectedCompletionDay: analysisState.dayIndex, openedAtDay: analysisState.dayIndex };
+      return { ...project, status: "operating", elapsedDays: project.durationDays, expectedCompletionDay: analysisStateOwner.current.dayIndex, openedAtDay: analysisStateOwner.current.dayIndex };
     }
     return project;
   }));
