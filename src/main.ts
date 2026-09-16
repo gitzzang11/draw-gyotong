@@ -65,6 +65,7 @@ import { TransitRouterCache } from "./runtime/transitRouterCache.ts";
 import { DemandRuntimeCache } from "./runtime/demandRuntimeCache.ts";
 import { CongestionRuntimeState } from "./runtime/congestionRuntimeState.ts";
 import { SimulationRuntimeEffects } from "./runtime/simulationRuntimeEffects.ts";
+import { SimulationApplicationOrchestrator } from "./runtime/simulationApplicationOrchestrator.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
 import { captureGameState } from "./storage/serialization.ts";
@@ -2534,15 +2535,24 @@ const simulationCoordinator = new SimulationCoordinator({
   getDay: (value) => Math.floor(value / 1440),
 });
 
+const simulationApplication = new SimulationApplicationOrchestrator({
+  settleDay: () => settleSimulationDay(),
+  requestRenderDomains: (domains) => requestUpdateDomains(domains),
+  pauseSimulation: () => gameLoopController.pause(),
+  reportRuntimeError: (error) => console.error("Game loop failed", error),
+  showRuntimeError: () => showError("게임 시간 진행 중 오류가 발생해 시뮬레이션을 일시정지했습니다."),
+  dispatchSettlement: (result) => void runtimeResultDispatcher.dispatch([result]),
+  reportSettlementFailure: (error) => {
+    console.error("Daily settlement failed", error);
+    showError("일일 결산을 적용하지 못해 이전 경제 상태로 복구했습니다.");
+  },
+});
+
 const gameLoopController = new GameLoopController({
   advanceSimulationTick: (deltaMinutes) => simulationCoordinator.advance(deltaMinutes),
-  onGameDayChanged: () => settleSimulationDay(),
-  requestRenderDomains: ({ domains }) => requestUpdateDomains(domains),
-  onRuntimeError: (error) => {
-    console.error("Game loop failed", error);
-    gameLoopController.pause();
-    showError("게임 시간 진행 중 오류가 발생해 시뮬레이션을 일시정지했습니다.");
-  },
+  onGameDayChanged: (result) => simulationApplication.handleGameDayChanged(result),
+  requestRenderDomains: (request) => simulationApplication.handleRenderRequest(request),
+  onRuntimeError: (error) => simulationApplication.handleRuntimeError(error),
   renderIntervalMs: settings.performanceMode === "battery" ? 66 : 16,
 });
 
@@ -11730,12 +11740,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
 
 function settleSimulationDay() {
   const result = dailySettlementRuntime.settleDay(dailySettlementContext);
-  if (result.status === "failed") {
-    console.error("Daily settlement failed", result.error);
-    showError("일일 결산을 적용하지 못해 이전 경제 상태로 복구했습니다.");
-    return;
-  }
-  if (result.applied) void runtimeResultDispatcher.dispatch([result]);
+  simulationApplication.handleSettlementResult(result);
 }
 function updateCareerProgress(bankrupt: boolean) {
   if (currentMeta.mode === "sandbox") {
