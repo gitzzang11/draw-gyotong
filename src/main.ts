@@ -10,11 +10,7 @@ import {
   type RoutingNetwork,
   type TransitServiceKind,
 } from "./transitRouting.ts";
-import {
-  type RouteCongestionSummary,
-  type SegmentCongestion,
-  type ServiceCapacity,
-} from "./congestion.ts";
+import { type ServiceCapacity } from "./congestion.ts";
 import {
   calculateOperatingForecast,
   calculatePassengerSatisfaction,
@@ -64,6 +60,11 @@ import type { EconomyState, Loan, StatisticsState } from "./domain/financeStateT
 import { FinanceState } from "./domain/financeState.ts";
 import { DemandState } from "./domain/demandState.ts";
 import { AnalysisStateOwner } from "./domain/analysisStateOwner.ts";
+import { SimulationRuntimeState } from "./runtime/simulationRuntimeState.ts";
+import { TransitRouterCache } from "./runtime/transitRouterCache.ts";
+import { DemandRuntimeCache } from "./runtime/demandRuntimeCache.ts";
+import { CongestionRuntimeState } from "./runtime/congestionRuntimeState.ts";
+import { SimulationRuntimeEffects } from "./runtime/simulationRuntimeEffects.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
 import { captureGameState } from "./storage/serialization.ts";
@@ -2421,13 +2422,9 @@ const analysisStateOwner = new AnalysisStateOwner<OperationAnalysisState>({ ...d
 
 const newsEventState = new NewsEventStateOwner(80);
 const demandState = new DemandState();
-let segmentCongestion: SegmentCongestion[] = [];
-let routeCongestionSummaries: RouteCongestionSummary[] = [];
-let transitRouter: TransitRouter | null = null;
-let transitRouterSignature = "";
-let demandStructureSignature = "";
-let demandServiceSignature = "";
-let demandContextSignature = "";
+const congestionRuntimeState = new CongestionRuntimeState();
+const transitRouterCache = new TransitRouterCache();
+const demandRuntimeCache = new DemandRuntimeCache();
 const loanState = new LoanStateOwner();
 const financeState = new FinanceState({ ...defaultEconomy }, { ...defaultStatisticsState, dailyRecords: [] });
 let currentMeta: GameMeta = createDefaultMeta();
@@ -2493,7 +2490,6 @@ let selectedPlannedStationManager: { planId: string; stationId: string } | null 
 let selectedStationManagerId: string | null = null;
 let selectedOperationRouteId = "";
 let simSpeed = 0;
-let simMinutes = 360;
 let activeStatisticsTab: "overview" | "routes" | "stations" | "city" = "overview";
 let selectedStatisticsRouteId = "";
 let selectedStatisticsStationId = "";
@@ -2505,7 +2501,7 @@ let trainInteractionLockedUntil = 0;
 let loadingComplete = false;
 let retryAction: (() => void) | null = null;
 let tileErrorReported = false;
-let simulationRuntimeMinutes = simMinutes;
+const simulationRuntimeState = new SimulationRuntimeState(360);
 type TrainHitTarget = {
   key: string;
   routeId: string;
@@ -2525,11 +2521,10 @@ const trainHitTargets = new Map<string, TrainHitTarget>();
 const mapSelectionGestureController = new MapSelectionGestureController();
 
 const simulationCoordinator = new SimulationCoordinator({
-  getTime: () => simulationRuntimeMinutes,
+  getTime: () => simulationRuntimeState.minutes,
   setTime: (value) => {
-    const elapsedMinutes = Math.max(0, value - simulationRuntimeMinutes);
-    simulationRuntimeMinutes = value;
-    simMinutes = ((value % 1440) + 1440) % 1440;
+    const elapsedMinutes = Math.max(0, value - simulationRuntimeState.minutes);
+    simulationRuntimeState.setMinutes(value);
     currentMeta = {
       ...currentMeta,
       playTimeSeconds: (currentMeta.playTimeSeconds ?? 0) + elapsedMinutes / Math.max(1, simSpeed),
@@ -2554,15 +2549,15 @@ const gameLoopController = new GameLoopController({
 const constructionCoordinator = new ConstructionCoordinator<ConstructionProject>();
 const eventRuntimeAdapter = new EventRuntimeAdapter<NewsEvent, NewsEvent[], NewsEvent>();
 const networkInvalidation = new NetworkInvalidation();
+const simulationRuntimeEffects = new SimulationRuntimeEffects(
+  () => networkInvalidation.evaluate(["segment-add"]),
+  transitRouterCache,
+);
 const runtimeResultDispatcher = new RuntimeResultDispatcher<NewsEvent>({
   requestUpdates: (domains) => requestUpdateDomains(domains),
   requestSave: (mode) => requestStateSave(mode === "immediate" ? "immediate" : "normal"),
   appendNews: (events) => newsEventState.appendMany(events),
-  invalidateNetwork: () => {
-    networkInvalidation.evaluate(["segment-add"]);
-    transitRouter = null;
-    transitRouterSignature = "";
-  },
+  invalidateNetwork: () => simulationRuntimeEffects.invalidateStructuralNetwork(),
   reportError: (error) => console.error("Runtime result dispatch failed", error),
 });
 const eventCoordinator = new EventCoordinator<NewsEvent>({
@@ -5232,8 +5227,7 @@ function applyCompletedConnectionProject(project: ConstructionProject) {
       : candidate),
   }));
   if (connection.connectionType !== "crossing-only") {
-    transitRouter = null;
-    transitRouterSignature = "";
+    transitRouterCache.invalidate();
   }
   return actualEntityIds;
 }
@@ -5368,8 +5362,7 @@ function applyCompletedJunctionProject(project: ConstructionProject) {
   };
   networkState.routes = networkState.routes.map((route) => route.id === targetRoute.id ? updated : route);
   constructionState.replaceProjects(constructionState.projects.map((item) => item.id === project.id ? { ...item, junctionBlueprint: { ...staged, status: "completed" } } : item));
-  transitRouter = null;
-  transitRouterSignature = "";
+  transitRouterCache.invalidate();
   return updated.id;
 }
 
@@ -8690,9 +8683,9 @@ function resetWorld() {
   operatingServiceDraftPreset = "all";
   networkState.reset();
   demandState.reset();
-  demandStructureSignature = "";
-  demandServiceSignature = "";
-  demandContextSignature = "";
+  demandRuntimeCache.invalidate();
+  transitRouterCache.invalidate();
+  congestionRuntimeState.reset();
   constructionState.reset();
   diagramStateOwner.reset();
   analysisStateOwner.current = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
@@ -8721,8 +8714,7 @@ function resetWorld() {
   simSpeed = 0;
   gameLoopController.setSpeed(0);
   gameLoopController.pause();
-  simMinutes = 360;
-  simulationRuntimeMinutes = simMinutes;
+  simulationRuntimeState.reset(360);
 }
 
 function closeSlotScopedSurfaces() {
@@ -9007,7 +8999,7 @@ function reconcileMapTrains() {
     for (let index = 0; index < displaySets; index += 1) {
       const displayedTrain = displayedFleetSets[index];
       if (!displayedTrain) continue;
-      const progressBase = (simMinutes % Math.max(operation.roundTripMin, 12)) / Math.max(operation.roundTripMin, 12);
+      const progressBase = (simulationRuntimeState.clockMinutes % Math.max(operation.roundTripMin, 12)) / Math.max(operation.roundTripMin, 12);
       const progress = (progressBase + index / displaySets) % 1;
       const travelProgress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
       const position = interpolateAlongRoute(routePoints, travelProgress);
@@ -9078,7 +9070,7 @@ function reconcileLegacyMapTrains() {
       const operation = serviceKind === "express" ? serviceOperations.express : serviceOperations.local;
       if (!operation.enabled) continue;
       const cycleMinutes = Math.max(operation.headwayMin * Math.max(1, operation.trainSets), 12);
-      const progressBase = (simMinutes % cycleMinutes) / cycleMinutes;
+      const progressBase = (simulationRuntimeState.clockMinutes % cycleMinutes) / cycleMinutes;
       const key = `${route.id}:${displayedTrain.fleet.id}:${displayedTrain.setNumber}`;
       const progress = (progressBase + index / displaySets) % 1;
       const routePoints = routePaths[index % routePaths.length];
@@ -9454,7 +9446,7 @@ function calculateRouteOperation(routeId: string): RouteOperation {
   const dailyDemand = demandState.passengerGroups
     .filter((group) => group.journey?.routeIds.includes(routeId) ?? group.routeIds.includes(routeId))
     .reduce((sum, group) => sum + group.activeDemand, 0);
-  const summary = routeCongestionSummaries.find((item) => item.routeId === routeId);
+  const summary = congestionRuntimeState.routeCongestionSummaries.find((item) => item.routeId === routeId);
   const hourlyCapacity = getRoutingServiceCapacities(routeId).reduce((sum, capacity) => sum + capacity.hourlyCapacity, 0);
   const crowding = summary?.representativeCrowding ?? 0;
   const waitMin = base.headwayMin > 0
@@ -10394,7 +10386,7 @@ function calculateNetworkFinancials() {
 
 function calculateRouteStatistics(route: RouteLine) {
   const operation = calculateRouteOperation(route.id);
-  const congestionSegments = segmentCongestion.filter((segment) => segment.routeId === route.id);
+  const congestionSegments = congestionRuntimeState.segmentCongestion.filter((segment) => segment.routeId === route.id);
   const groups = demandState.passengerGroups.filter((group) => group.routeIds.includes(route.id));
   const passengers = Math.round(groups.reduce((sum, group) => sum + group.activeDemand / Math.max(1, group.routeIds.length), 0));
   const totalPassengers = demandState.passengerGroups.reduce((sum, group) => sum + group.activeDemand, 0);
@@ -11133,7 +11125,7 @@ function buildPassengerRoutingNetwork(): RoutingNetwork {
       stopStationIds,
       speedKph: operation.averageSpeedKph,
       headwayMin: operation.headwayMin,
-      crowding: routeCongestionSummaries.find((summary) => summary.routeId === service.ownerRouteId)?.representativeCrowding ?? 0,
+      crowding: congestionRuntimeState.routeCongestionSummaries.find((summary) => summary.routeId === service.ownerRouteId)?.representativeCrowding ?? 0,
     }];
   });
   return {
@@ -11206,7 +11198,7 @@ function buildLegacyPassengerRoutingNetwork(): RoutingNetwork {
         stopStationIds,
         speedKph: operation.averageSpeedKph,
         headwayMin: operation.headwayMin,
-        crowding: routeCongestionSummaries.find((summary) => summary.routeId === route.id)?.representativeCrowding ?? 0,
+        crowding: congestionRuntimeState.routeCongestionSummaries.find((summary) => summary.routeId === route.id)?.representativeCrowding ?? 0,
       });
     }
     return result;
@@ -11258,13 +11250,13 @@ void legacyServiceCompatibility;
 function getPassengerRouter() {
   const network = buildPassengerRoutingNetwork();
   const signature = buildNetworkSignature(network);
-  if (!transitRouter || signature !== transitRouterSignature) {
-    transitRouter = new TransitRouter(network);
-    transitRouterSignature = signature;
+  if (!transitRouterCache.current || signature !== transitRouterCache.signature) {
+    const router = new TransitRouter(network);
+    transitRouterCache.set(router, signature);
   } else {
-    transitRouter.updateOperatingState(network.services);
+    transitRouterCache.current.updateOperatingState(network.services);
   }
-  return transitRouter;
+  return transitRouterCache.current!;
 }
 
 function getDemandStationInputs() {
@@ -11302,7 +11294,7 @@ function getDemandEvents(): DemandEvent[] {
 }
 
 function getPassengerDemandEventMultiplier(origin: Station, destination: Station, routeIds: string[]) {
-  const period = getDemandPeriod(simMinutes);
+  const period = getDemandPeriod(simulationRuntimeState.clockMinutes);
   const demandEventsById = new Map(getDemandEvents().map((event) => [event.id, event]));
   return getActiveNewsEvents().reduce((multiplier, event) => {
     const demandEvent = demandEventsById.get(event.id);
@@ -11349,7 +11341,7 @@ function refreshDemandCatchments() {
     [...demandState.demandZones],
     inputs,
     analysisStateOwner.current.dayIndex,
-    getDemandPeriod(simMinutes),
+    getDemandPeriod(simulationRuntimeState.clockMinutes),
   );
   const existingByStation = new Map(demandState.stationDemandStates.map((state) => [state.stationId, state]));
   demandState.stationDemandStates = inputs.map((input) => {
@@ -11405,7 +11397,7 @@ function buildDemandServiceFingerprint() {
     fleets: operationsState.fleets.map((fleet) => [fleet.id, fleet.routeId, fleet.serviceId, fleet.sets, fleet.cars, fleet.trainType]),
     fare: financeState.economy.fare,
     events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
-    period: getDemandPeriod(simMinutes),
+    period: getDemandPeriod(simulationRuntimeState.clockMinutes),
   });
 }
 
@@ -11414,32 +11406,31 @@ function ensureDemandSimulation() {
   const service = buildDemandServiceFingerprint();
   const context = JSON.stringify({
     day: analysisStateOwner.current.dayIndex,
-    period: getDemandPeriod(simMinutes),
+    period: getDemandPeriod(simulationRuntimeState.clockMinutes),
     events: getActiveNewsEvents().map((event) => [event.id, event.demandMultiplier]),
   });
-  const structureChanged = structure !== demandStructureSignature;
-  const serviceChanged = service !== demandServiceSignature;
-  const contextChanged = context !== demandContextSignature;
+  const structureChanged = structure !== demandRuntimeCache.structureSignature;
+  const serviceChanged = service !== demandRuntimeCache.serviceSignature;
+  const contextChanged = context !== demandRuntimeCache.contextSignature;
   if (!structureChanged && !serviceChanged && !contextChanged) return;
   if (structureChanged || contextChanged || demandState.stationDemandStates.length !== networkState.stations.length) refreshDemandCatchments();
   regeneratePassengerGroups();
-  demandStructureSignature = structure;
-  demandServiceSignature = service;
-  demandContextSignature = context;
+  demandRuntimeCache.setStructureSignature(structure);
+  demandRuntimeCache.setServiceSignature(service);
+  demandRuntimeCache.setContextSignature(context);
 }
 
 function regeneratePassengerGroups() {
   const operationalStations = networkState.stations.filter((station) => isStationOperational(station.id));
   if (operationalStations.length < 2) {
     demandState.passengerGroups = [];
-    segmentCongestion = [];
-    routeCongestionSummaries = [];
+    congestionRuntimeState.reset();
     financeState.economy = { ...financeState.economy, demand: 0 };
     return;
   }
   const router = getPassengerRouter();
-  const hour = Math.floor(simMinutes / 60) % 24;
-  const period = getDemandPeriod(simMinutes);
+  const hour = Math.floor(simulationRuntimeState.clockMinutes / 60) % 24;
+  const period = getDemandPeriod(simulationRuntimeState.clockMinutes);
   const stateByStation = new Map(demandState.stationDemandStates.map((state) => [state.stationId, state]));
   const origins = [...operationalStations].sort((a, b) => b.demand - a.demand);
   const destinationStations = operationalStations.map((station) => ({
@@ -11468,7 +11459,7 @@ function regeneratePassengerGroups() {
         return sum + (transfer?.resistance ?? 8);
       }, 0);
       const operationCrowding = journey.legs.length > 0
-        ? journey.legs.reduce((sum, leg) => sum + (routeCongestionSummaries.find((item) => item.routeId === leg.routeId)?.representativeCrowding ?? 0), 0) / journey.legs.length
+        ? journey.legs.reduce((sum, leg) => sum + (congestionRuntimeState.routeCongestionSummaries.find((item) => item.routeId === leg.routeId)?.representativeCrowding ?? 0), 0) / journey.legs.length
         : 0;
       const basePeople = Math.max(1, Math.round((stateByStation.get(origin.id)?.realizedDemand ?? origin.demand) * choice.share));
       const satisfaction = calculatePassengerSatisfaction(journey.waitTimeMin, operationCrowding, transferResistance, financeState.economy.fare);
@@ -11494,8 +11485,7 @@ function regeneratePassengerGroups() {
   }
   demandState.passengerGroups = [...groupsByOd.values()];
   const forecast = calculateCurrentOperatingForecast();
-  segmentCongestion = forecast.segmentCongestion;
-  routeCongestionSummaries = forecast.routeSummaries;
+  congestionRuntimeState.replace({ segmentCongestion: forecast.segmentCongestion, routeCongestionSummaries: forecast.routeSummaries });
   demandState.passengerGroups = demandState.passengerGroups.map((group, index) => ({
     ...group,
     crowding: forecast.groupMetrics[index]?.crowding ?? group.crowding,
@@ -11517,7 +11507,7 @@ function calculateOperatingForecastForGroups(
   fleetSource = operationsState.fleets,
   fare = financeState.economy.fare,
 ): OperatingForecast {
-  const hour = Math.floor(simMinutes / 60) % 24;
+  const hour = Math.floor(simulationRuntimeState.clockMinutes / 60) % 24;
   const hourlyDemandShare = hour >= 7 && hour <= 9 ? 0.105 : hour >= 17 && hour <= 19 ? 0.095 : 0.045;
   const forecast = calculateOperatingForecast({
     groups,
@@ -11637,7 +11627,7 @@ function advanceDemandForGameDay(gameDay: number, fare = financeState.economy.fa
         [...demandState.demandZones],
         getDemandStationInputs(),
         analysisStateOwner.current.dayIndex,
-        getDemandPeriod(simMinutes),
+        getDemandPeriod(simulationRuntimeState.clockMinutes),
       );
       return createStationDemandState(
         {
@@ -12067,8 +12057,8 @@ function updateEconomyHud() {
 }
 
 function updateGameClockHud() {
-  const hours = Math.floor(simMinutes / 60) % 24;
-  const minutes = Math.floor(simMinutes % 60);
+  const hours = Math.floor(simulationRuntimeState.clockMinutes / 60) % 24;
+  const minutes = Math.floor(simulationRuntimeState.clockMinutes % 60);
   hudRenderer.updateClock(
     `${analysisStateOwner.current.dayIndex + 1}일차`,
     `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
@@ -15049,9 +15039,7 @@ function applyState(state: SaveState) {
   });
   demandState.demandZones = state.demandZones ?? [];
   demandState.stationDemandStates = state.stationDemandStates ?? [];
-  demandStructureSignature = "";
-  demandServiceSignature = "";
-  demandContextSignature = "";
+  demandRuntimeCache.invalidate();
   constructionState.replacePlans(normalizePlans(state.plans ?? []));
   const failedRestoredConnections = constructionState.plans.flatMap((plan) => plan.connections ?? []).filter((connection) => connection.status === "failed" && Boolean(connection.failureReason));
   if (failedRestoredConnections.length > 0) {
@@ -15071,8 +15059,8 @@ function applyState(state: SaveState) {
   demandState.passengerGroups = state.passengerGroups ?? [];
   loanState.replace(state.loans ?? []);
   financeState.economy = { ...defaultEconomy, ...(state.economy ?? {}) };
-  transitRouter = null;
-  transitRouterSignature = "";
+  transitRouterCache.invalidate();
+  congestionRuntimeState.reset();
   synchronizeGraphReferences();
   if (!state.statisticsState && financeState.economy.demand > 0) financeState.statistics = { ...financeState.statistics, totalPassengers: financeState.economy.demand };
 }
@@ -15089,8 +15077,7 @@ const stateRecoveryCoordinator = new StateRecoveryCoordinator<SaveState>({
   requestUpdates: (domains) => requestUpdateDomains(domains),
   fullReconcile: () => renderAll(),
   rebuildRouter: () => {
-    transitRouter = null;
-    transitRouterSignature = "";
+    transitRouterCache.invalidate();
   },
   validate: synchronizeGraphReferences,
 });
@@ -15143,9 +15130,9 @@ function loadSavedState() {
   } catch {
     networkState.reset();
     demandState.reset();
-    demandStructureSignature = "";
-    demandServiceSignature = "";
-    demandContextSignature = "";
+    demandRuntimeCache.invalidate();
+    transitRouterCache.invalidate();
+    congestionRuntimeState.reset();
     constructionState.reset();
     diagramStateOwner.reset();
     analysisStateOwner.current = { ...defaultAnalysisState, demandHistory: [], suggestions: [], decisions: {} };
