@@ -22,7 +22,9 @@ import {
   pointInPolygon as hitPointInPolygon,
   resolveMapTarget,
   type MapHitCandidate,
+  type RankedMapTarget,
 } from "./mapHitTest.ts";
+import { MapSelectionApplicationController } from "./map/mapSelectionApplicationController.ts";
 import { calculateEdgeHudProximity } from "./hudProximity.ts";
 import {
   isValidConstructionStatusTransition,
@@ -150,6 +152,7 @@ import { getStationTransferInfo } from "./stationTransferInfo.ts";
 import { mergeLineExtension, resolveReferencedLineColor, type LineExtensionPayload } from "./lineExtension.ts";
 import { type RoutePlanningTool } from "./routePlanning.ts";
 import { RoutePlanningController } from "./tools/routePlanningController.ts";
+import { RoutePlanningToolChangeController } from "./tools/routePlanningToolChangeController.ts";
 import {
   createJunctionBlueprint,
   createConnectionBlueprint,
@@ -2470,6 +2473,21 @@ let activePlanningBranch: PlanningBranchDraft | null = null;
 let pendingMerge: PendingMerge | null = null;
 let activeConnectionSource: PlannedRouteMergeEndpoint | RouteMergeEndpoint | null = null;
 const routePlanningController = new RoutePlanningController<ToolMode>();
+const routePlanningToolChangeController = new RoutePlanningToolChangeController(routePlanningController, {
+  saveDraft: (session) => {
+    const plan = getActivePlan(true);
+    if (plan) {
+      updatePlan(plan.id, (item) => ({
+        ...item,
+        routePlanningDrafts: [...(item.routePlanningDrafts ?? []).filter((draft) => draft.id !== session.id), structuredClone(session)],
+      }));
+      requestStateSave();
+    }
+  },
+  closeDialog: closeDecisionDialog,
+  changeTool: setTool,
+  notifyDraftSaved: () => showToast("진행 중인 설계를 임시 저장했습니다."),
+});
 let selectedRouteId: string | null = null;
 let planningMode = false;
 let activePlanId: string | null = null;
@@ -3274,17 +3292,17 @@ function openMapTargetChoice(candidates: Array<MapHitCandidate & { score: number
   routeChoiceDialog.hidden = false;
 }
 
+const mapSelectionApplicationController = new MapSelectionApplicationController<RankedMapTarget>({
+  clearSelection: () => selectRoute(null),
+  openAlternatives: (candidates) => openMapTargetChoice(candidates),
+  activateSelection: (selection) => {
+    if (selection.data) activateMapSelection(selection.data as MapSelectionData);
+  },
+});
+
 function handleUnifiedMapSelection(point: L.Point, pointerType: string) {
   const result = resolveMapTarget(collectMapHitCandidates(point, pointerType), pointerType, 7, workspaceMode);
-  if (!result.selected) {
-    selectRoute(null);
-    return;
-  }
-  if (result.alternatives.length > 0) {
-    openMapTargetChoice([result.selected, ...result.alternatives]);
-    return;
-  }
-  if (result.selected.data) activateMapSelection(result.selected.data as MapSelectionData);
+  mapSelectionApplicationController.apply(result);
 }
 
 function resetRouteDrawingHudProximity() {
@@ -13459,35 +13477,20 @@ function bindDecisionDialogListeners() {
 function openPlanningToolChangeDialog(tool: ToolMode) {
   if (!decisionDialog || !routePlanningController.session) return;
   routePlanningController.requestToolChange(tool);
-  const requestedTool = tool;
   setText(decisionMessage, "진행 중인 설계가 있습니다.");
   setText(decisionWarning, "임시 저장하거나 현재 작업을 취소한 뒤 도구를 변경할 수 있습니다. 창을 닫으면 계속 편집합니다.");
   if (decisionWarning) decisionWarning.hidden = false;
   if (decisionSaveDraftButton) decisionSaveDraftButton.hidden = false;
   if (decisionConfirmButton) decisionConfirmButton.textContent = "현재 작업 취소 후 변경";
   pendingDecision = () => {
-    routePlanningController.cancel();
-    routePlanningController.runBypassingToolChangeGuard(() => setTool(requestedTool));
+    routePlanningToolChangeController.cancelAndChange();
   };
   dialogManager.open("decision");
   bindDecisionDialogListeners();
 }
 
 function saveRoutePlanningDraftAndChangeTool() {
-  const session = routePlanningController.session;
-  const nextTool = routePlanningController.pendingToolChange;
-  if (!session || !nextTool) return;
-  const plan = getActivePlan(true);
-  if (plan) {
-    updatePlan(plan.id, (item) => ({
-      ...item,
-      routePlanningDrafts: [...(item.routePlanningDrafts ?? []).filter((draft) => draft.id !== session.id), structuredClone(session)],
-    }));
-    requestStateSave();
-  }
-  closeDecisionDialog();
-  routePlanningController.runBypassingToolChangeGuard(() => setTool(nextTool));
-  showToast("진행 중인 설계를 임시 저장했습니다.");
+  routePlanningToolChangeController.saveDraftAndChange();
 }
 
 function splitRouteAtRange(routeId: string, startIndex: number, endIndex: number, removedLength: number) {
