@@ -41,7 +41,7 @@ describe("SaveFacade", () => {
   it("is initialized before the map-ready bootstrap can enumerate save slots", () => {
     const mainSource = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
     expect(mainSource.indexOf("const saveFacade = new SaveFacade")).toBeGreaterThan(-1);
-    expect(mainSource.indexOf("const saveFacade = new SaveFacade")).toBeLessThan(mainSource.indexOf("map.whenReady"));
+    expect(mainSource.indexOf("const saveFacade = new SaveFacade")).toBeLessThan(mainSource.indexOf("registerMapLifecycle(map"));
   });
 
   it("captures the latest prepared runtime snapshot through the existing update gateway", async () => {

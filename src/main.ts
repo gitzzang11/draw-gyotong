@@ -69,6 +69,8 @@ import { DemandRuntimeCache } from "./runtime/demandRuntimeCache.ts";
 import { CongestionRuntimeState } from "./runtime/congestionRuntimeState.ts";
 import { SimulationRuntimeEffects } from "./runtime/simulationRuntimeEffects.ts";
 import { SimulationApplicationOrchestrator } from "./runtime/simulationApplicationOrchestrator.ts";
+import { initializeGameShell } from "./runtime/gameShellInitializer.ts";
+import { registerMapLifecycle } from "./map/mapLifecycleBindings.ts";
 import type { NewsEvent, NewsEventAction, NewsEventKind } from "./domain/eventTypes.ts";
 import type { PassengerGroup } from "./domain/simulationStateTypes.ts";
 import { captureGameState } from "./storage/serialization.ts";
@@ -106,6 +108,7 @@ import { DepotPanel } from "./ui/depotPanel.ts";
 import { OperationsPanel } from "./ui/operationsPanel.ts";
 import { hexToHsl, hslToHex } from "./ui/colorPickerModel.ts";
 import { formatCost, formatDate, formatPlayTime, formatSignedCost } from "./ui/displayFormatters.ts";
+import { saveEditedSlot as persistEditedSlot } from "./ui/saveSlotEditorController.ts";
 import {
   MetroDiagramStateOwner,
   type DiagramPoint,
@@ -2604,8 +2607,27 @@ const saveFacade = new SaveFacade<SaveState>({
   onError: (error) => console.warn("[save] 상태 저장 실패", error),
 });
 const bootstrapController = new BootstrapController({
-  createShell: initializeGameShell,
-  initializeStorage: () => undefined,
+  createShell: () => initializeGameShell({
+    applySettingsToUi,
+    renderCityOptions,
+    listSaveSlots,
+    setSlotSummaries: (slots) => { slotSummaries = slots; },
+    loadSavedState,
+    getCityId: () => metaState.current.cityId,
+    applyCityMapConstraints,
+    updateEconomyHud,
+    renderStartScreen,
+    showStartScreen: (visible) => {
+      if (visible && startScreen) startScreen.hidden = false;
+    },
+    hasNetworkRoutes: () => networkState.routes.length > 0,
+    activateSession: () => { hasActiveGameSession = true; },
+    resetMeta: () => metaState.reset(createDefaultMeta()),
+    saveCurrentSlot,
+    startAutoSave,
+    updateCacheReadout,
+  }),
+  initializeStorage: () => { getSaveSlotService(); },
   loadSettings: () => undefined,
   loadState: () => undefined,
   initializeMap: () => {
@@ -2637,35 +2659,33 @@ mapInputListeners.add("window:pointermove-fallback", window, "pointermove", onWi
 mapInputListeners.add("window:pointerup-fallback", window, "pointerup", onWindowPointerUp, { passive: false, capture: true });
 mapInputListeners.add("window:pointercancel-fallback", window, "pointercancel", onWindowPointerCancel, { passive: false, capture: true });
 
-map.whenReady(() => {
-  void bootstrapController.initialize().then(() => {
+registerMapLifecycle(map, baseLayer, {
+  onReady: () => bootstrapController.initialize().then(() => {
     updateLoadingProgress(52, "기본 지도를 불러오고 있습니다");
   }).catch((error) => {
     console.error("Bootstrap failed", error);
     showError("게임을 초기화하지 못했습니다.");
-  });
+  }),
+  onBaseLayerLoad: () => finishLoading(),
+  onBaseLayerError: () => {
+    if (tileErrorReported) return;
+    tileErrorReported = true;
+    showToast("일부 지도 타일을 불러오지 못했습니다. 캐시 지도를 사용합니다.");
+    window.setTimeout(() => {
+      tileErrorReported = false;
+    }, 12000);
+  },
+  onViewportChange: (event) => {
+    if (event.type === "zoomend") requestUpdate("viewport", selectedRouteId ?? undefined);
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      updateDynamicLayers();
+    }, 220);
+  },
+  onDragEnd: () => recordTutorialSignal("mapMoved"),
+  onZoomEnd: () => recordTutorialSignal("mapZoomed"),
+  onLoadingTimeout: () => finishLoading(),
 });
-
-baseLayer.on("load", () => finishLoading());
-baseLayer.on("tileerror", () => {
-  if (tileErrorReported) return;
-  tileErrorReported = true;
-  showToast("일부 지도 타일을 불러오지 못했습니다. 캐시 지도를 사용합니다.");
-  window.setTimeout(() => {
-    tileErrorReported = false;
-  }, 12000);
-});
-window.setTimeout(() => finishLoading(), 3500);
-
-map.on("zoomend moveend", (event) => {
-  if (event.type === "zoomend") requestUpdate("viewport", selectedRouteId ?? undefined);
-  window.clearTimeout(debounceTimer);
-  debounceTimer = window.setTimeout(() => {
-    updateDynamicLayers();
-  }, 220);
-});
-map.on("dragend", () => recordTutorialSignal("mapMoved"));
-map.on("zoomend", () => recordTutorialSignal("mapZoomed"));
 
 routeTool?.addEventListener("click", () => setTool(activeTool === "route" ? "pan" : "route"));
 modifyToolsButton?.addEventListener("click", () => {
@@ -8387,28 +8407,6 @@ function renderAll(selectedId?: string) {
   flushUpdates(selectedId);
 }
 
-async function initializeGameShell() {
-  applySettingsToUi();
-  renderCityOptions();
-  try {
-    slotSummaries = await listSaveSlots();
-  } catch {
-    slotSummaries = [];
-  }
-  if (slotSummaries.length === 0) loadSavedState();
-  applyCityMapConstraints(metaState.current.cityId);
-  updateEconomyHud();
-  renderStartScreen();
-  if (slotSummaries.length > 0 && startScreen) startScreen.hidden = false;
-  if (slotSummaries.length === 0 && networkState.routes.length > 0) {
-    hasActiveGameSession = true;
-    metaState.reset(createDefaultMeta());
-    await saveCurrentSlot("기존 저장 이전");
-  }
-  startAutoSave();
-  void updateCacheReadout();
-}
-
 function renderStartScreen() {
   renderCityOptions();
   if (!slotList) return;
@@ -8525,31 +8523,39 @@ async function saveEditedSlot() {
   const networkTitle = saveEditorNetworkTitleInput?.value.trim() ?? "";
   if (submitSaveEditorButton) submitSaveEditorButton.disabled = true;
   try {
-    if (isActiveSaveSlot(slotId)) await flushStateSave();
-    const state = await readSaveSlot(slotId);
-    if (!state?.meta) throw new Error("Save metadata is missing");
-    const updatedAt = Date.now();
-    const nextMeta: GameMeta = {
-      ...state.meta,
-      slotName,
-      mode,
-      difficulty,
-      networkTitle: networkTitle || undefined,
-      unlockedCityIds: mode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : state.meta.unlockedCityIds,
-      updatedAt,
-    };
-    await saveFacade.update({ ...state, meta: nextMeta });
-    if (isActiveSaveSlot(slotId)) {
-      metaState.replace({ ...metaState.current, ...nextMeta });
-      renderAll();
-    }
-    slotSummaries = await listSaveSlots();
-    renderStartScreen();
-    renderInGameSlotList();
-    setText(saveStatus, "세이브 설정 수정");
-    closeSaveEditor();
-    showToast("세이브 이름과 설정을 변경했습니다.");
-    playFeedback("confirm");
+    await persistEditedSlot({ slotId, slotName, mode, difficulty, networkTitle }, {
+      isActiveSlot: isActiveSaveSlot,
+      flushActiveSlot: flushStateSave,
+      readSlot: async (requestedSlotId) => {
+        const state = await readSaveSlot(requestedSlotId);
+        return state?.meta ? { state, meta: state.meta } : null;
+      },
+      buildMeta: (meta, input, updatedAt): GameMeta => ({
+        ...meta,
+        slotName: input.slotName,
+        mode: input.mode,
+        difficulty: input.difficulty,
+        networkTitle: input.networkTitle || undefined,
+        unlockedCityIds: input.mode === "sandbox" ? (Object.keys(cityConfigs) as CityId[]) : meta.unlockedCityIds,
+        updatedAt,
+      }),
+      updateSlot: async (state, meta) => { await saveFacade.update({ ...state, meta }); },
+      applyActiveMeta: (nextMeta) => {
+        metaState.replace({ ...metaState.current, ...nextMeta });
+        renderAll();
+      },
+      refreshSlots: async () => { slotSummaries = await listSaveSlots(); },
+      refreshViews: () => {
+        renderStartScreen();
+        renderInGameSlotList();
+      },
+      setStatus: (status) => setText(saveStatus, status),
+      closeEditor: closeSaveEditor,
+      notifySuccess: () => {
+        showToast("세이브 이름과 설정을 변경했습니다.");
+        playFeedback("confirm");
+      },
+    });
   } catch (error) {
     console.error(error);
     if (saveEditorError) {
