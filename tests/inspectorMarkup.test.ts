@@ -37,6 +37,12 @@ describe("inspector markup", () => {
     expect(lineMarkHtml({ name: "2호선", color: "#2E9E4F" })).toContain("--line-color:#2E9E4F");
   });
 
+  it("marks planned lines with the dashed variant and body text colour", () => {
+    const html = lineMarkHtml({ name: "기획선", color: "#F2C200" }, "sm", "plan");
+    expect(html).toContain("dg-line-mark--plan");
+    expect(html).not.toContain("dg-line-mark--on-dark");
+  });
+
   it("pairs tones with a shape, not colour alone", () => {
     const html = metricRowsHtml([{ label: "추세", value: "하락", tone: "down" }, { label: "혼잡", value: "132%", tone: "danger" }]);
     expect(html).toContain("▼ 하락");

@@ -82,8 +82,7 @@ textarea {
 }
 
 button,
-.ops-button,
-.action-button {
+.ops-button {
   border-color: var(--color-border-subtle);
   border-radius: 6px;
   background: var(--color-surface-1);
@@ -98,8 +97,7 @@ button,
 }
 
 button:hover,
-.ops-button:hover,
-.action-button:hover {
+.ops-button:hover {
   border-color: var(--color-border-strong);
   background: var(--color-surface-2);
   box-shadow: none;
@@ -107,8 +105,7 @@ button:hover,
 }
 
 button:active,
-.ops-button:active,
-.action-button:active {
+.ops-button:active {
   transform: scale(0.98);
 }
 
@@ -390,7 +387,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .section-card-header > span,
-.dialog-heading > div > span,
 .section-title > span {
   color: var(--color-accent) !important;
   background: transparent !important;
@@ -517,19 +513,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    rule still carried the centered panel translate, which shifted it half a
    panel left even after right anchoring was applied. */
 
-.dialog-heading {
-  border-color: var(--color-border-subtle) !important;
-  border-radius: 0 !important;
-  background: var(--color-surface-0) !important;
-  color: var(--color-text-primary) !important;
-  box-shadow: none !important;
-}
-
-.dialog-heading h2 {
-  color: var(--color-text-primary) !important;
-  text-shadow: none !important;
-}
-
 .analysis-summary-grid,
 .news-summary {
   gap: 0 !important;
@@ -549,7 +532,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.plan-asset-card,
 .analysis-card,
 .news-card,
 .news-item {
@@ -567,17 +549,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   background: var(--color-surface-1) !important;
 }
 
-.plan-conversion-intro,
-.plan-conversion-summary,
-.planning-form-card {
-  border-color: var(--color-border-subtle) !important;
-  border-radius: 8px !important;
-  background: var(--color-surface-1) !important;
-  box-shadow: none !important;
-}
-
-.planning-actions,
-.conversion-actions,
 .dialog-actions {
   border-color: var(--color-border-strong) !important;
   background: var(--color-surface-0) !important;
@@ -600,9 +571,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .dialog-backdrop > section,
-.dialog-backdrop > div > section,
-.planning-dialog,
-.plan-conversion-dialog {
+.dialog-backdrop > div > section {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
   background: var(--color-surface-0) !important;
@@ -646,17 +615,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: inset 0 -3px 0 var(--color-accent) !important;
 }
 
-.planning-editor,
-.plan-comparison,
-.plan-conversion-group {
-  border-color: var(--color-border-subtle) !important;
-  border-radius: 8px !important;
-  background: var(--color-surface-1) !important;
-  box-shadow: none !important;
-}
-
-.planning-save-button,
-.action-button--build,
 .dialog-actions .primary {
   border: 1px solid var(--color-accent) !important;
   border-radius: 6px !important;
@@ -669,7 +627,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 /* Legacy route-panel selectors carry stronger blue-gradient declarations. */
 
-.planning-delete-button,
 .danger {
   border-color: color-mix(in srgb, var(--color-danger) 48%, var(--color-border-subtle)) !important;
   border-radius: 4px !important;
@@ -680,9 +637,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .route-choice-item,
 .construction-project-item,
-.plan-conversion-route,
-.plan-conversion-segment,
-.plan-conversion-facility {
+.plan-conversion-segment {
   border: 0 !important;
   border-bottom: 1px solid var(--color-border-subtle) !important;
   border-radius: 0 !important;
@@ -691,9 +646,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .route-choice-item.selected,
-.plan-conversion-route.selected,
-.plan-conversion-segment.selected,
-.plan-conversion-facility.selected {
+.plan-conversion-segment.selected {
   background: var(--color-accent-dim) !important;
   box-shadow: inset 3px 0 0 var(--color-accent) !important;
 }
@@ -832,15 +785,6 @@ body .game-shell .news-screen > .news-header #closeNewsButton {
   transform: none !important;
 }
 
-body .game-shell .dialog-backdrop .dialog-close {
-  position: absolute !important;
-  top: 50% !important;
-  right: max(12px, env(safe-area-inset-right)) !important;
-  z-index: 6 !important;
-  margin: 0 !important;
-  transform: translateY(-50%) !important;
-}
-
 /* Legacy button bundles include ID selectors, so dialog anchors need matching
    specificity to keep their close actions pinned to the heading. */
 
@@ -875,10 +819,6 @@ body .game-shell .dialog-backdrop .dialog-close {
 
   .diagram-controls {
     justify-content: flex-start !important;
-  }
-
-  .planning-dialog .planning-toolbar-actions button {
-    white-space: nowrap !important;
   }
 
   body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
@@ -920,8 +860,7 @@ body .game-shell .dialog-backdrop .dialog-close {
 
 @media (hover: none) {
   button:hover,
-  .ops-button:hover,
-  .action-button:hover {
+  .ops-button:hover {
     transform: none !important;
   }
 }

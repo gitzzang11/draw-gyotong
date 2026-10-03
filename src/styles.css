@@ -97,8 +97,7 @@ html, body, #app {
 }
 
 button,
-.ops-button,
-.action-button {
+.ops-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -120,8 +119,6 @@ button,
 
 button svg,
 .ops-button svg,
-.action-button svg,
-.button-icon,
 .tool-glyph {
   display: inline-block;
   vertical-align: middle;
@@ -129,7 +126,6 @@ button svg,
   margin: 0 !important;
 }
 
-.dialog-close,
 .compact-close {
   display: inline-flex !important;
   align-items: center !important;
@@ -139,8 +135,7 @@ button svg,
 }
 
 button:hover,
-.ops-button:hover,
-.action-button:hover {
+.ops-button:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: var(--c-border-light);
   color: var(--c-text-main);
@@ -156,8 +151,7 @@ textarea:focus-visible {
 }
 
 button:disabled,
-.ops-button:disabled,
-.action-button:disabled {
+.ops-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none !important;
@@ -165,8 +159,7 @@ button:disabled,
 }
 
 /* Specific button variants */
-.ops-button.primary,
-.action-button.primary {
+.ops-button.primary {
   background: linear-gradient(135deg, var(--c-secondary), var(--c-primary)) !important;
   color: #07090E !important;
   border: none !important;
@@ -174,8 +167,7 @@ button:disabled,
   box-shadow: 0 4px 16px var(--c-primary-glow);
 }
 
-.ops-button.danger,
-.action-button.danger {
+.ops-button.danger {
   background: linear-gradient(135deg, var(--c-danger), #B91C1C) !important;
   color: #FFFFFF !important;
   border: none !important;
@@ -828,570 +820,6 @@ tr:hover td {
 }
 
 /* Plan to construction conversion */
-.plan-conversion-dialog {
-  width: min(900px, calc(100vw - 28px)) !important;
-  max-height: min(860px, calc(100dvh - 28px)) !important;
-  padding: 0 !important;
-  gap: 0 !important;
-  overflow: hidden;
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-  background:
-    radial-gradient(circle at 88% 0%, rgba(56, 189, 248, 0.14), transparent 36%),
-    linear-gradient(155deg, rgba(19, 28, 39, 0.99), rgba(7, 12, 20, 0.99)) !important;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.72), 0 0 40px rgba(14, 165, 233, 0.09) !important;
-}
-
-.plan-conversion-heading {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center !important;
-  gap: 13px !important;
-  padding: 18px 22px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.plan-conversion-heading-icon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  border-radius: 13px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(37, 99, 235, 0.14));
-  color: #7dd3fc;
-  font-size: 19px;
-  box-shadow: 0 0 20px rgba(14, 165, 233, 0.14);
-}
-
-.plan-conversion-heading h2 {
-  margin: 2px 0 !important;
-}
-
-.plan-conversion-heading p {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 10px;
-}
-
-.plan-conversion-intro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 14px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(2, 6, 12, 0.32);
-}
-
-.plan-conversion-intro > div:first-child {
-  display: grid;
-  gap: 4px;
-}
-
-.plan-conversion-intro strong {
-  color: #eaf4ff;
-  font-size: 13px;
-}
-
-.plan-conversion-intro span {
-  color: #91a0b3;
-  font-size: 10px;
-  line-height: 1.45;
-}
-
-.plan-conversion-balance {
-  flex: 0 0 auto;
-  display: grid;
-  gap: 2px;
-  padding: 8px 12px;
-  border: 1px solid rgba(52, 211, 153, 0.22);
-  border-radius: 10px;
-  background: rgba(6, 78, 59, 0.13);
-  text-align: right;
-}
-
-.plan-conversion-balance strong {
-  color: #6ee7b7;
-  font-size: 14px;
-}
-
-.plan-conversion-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.plan-conversion-selection {
-  min-width: 0;
-  padding: 16px 18px 18px;
-  overflow: hidden;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.plan-conversion-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.plan-conversion-toolbar > div:first-child {
-  display: grid;
-  gap: 2px;
-}
-
-.plan-conversion-toolbar > div:first-child span {
-  color: #38bdf8;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.13em;
-}
-
-.plan-conversion-toolbar > div:first-child strong {
-  color: #f1f5f9;
-  font-size: 14px;
-}
-
-.plan-conversion-toolbar > div:last-child {
-  display: flex;
-  gap: 6px;
-}
-
-.plan-conversion-toolbar button {
-  min-height: 32px;
-  padding: 6px 10px;
-  border: 1px solid rgba(125, 211, 252, 0.18);
-  border-radius: 8px;
-  background: rgba(56, 189, 248, 0.07);
-  color: #a8dfff;
-  font-size: 10px;
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.plan-conversion-toolbar button:hover {
-  border-color: rgba(125, 211, 252, 0.42);
-  background: rgba(56, 189, 248, 0.14);
-}
-
-.plan-conversion-items {
-  max-height: min(510px, calc(100dvh - 300px)) !important;
-  padding-right: 5px;
-  gap: 14px !important;
-}
-
-.plan-conversion-group {
-  display: grid;
-  gap: 8px;
-}
-
-.plan-conversion-group > header {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 2px 3px;
-}
-
-.plan-conversion-group > header > span {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 8px;
-  background: rgba(56, 189, 248, 0.1);
-  color: #7dd3fc;
-  font-size: 9px;
-  font-weight: 900;
-}
-
-.plan-conversion-group > header > div {
-  display: grid;
-  gap: 1px;
-}
-
-.plan-conversion-group > header strong {
-  color: #dce8f5;
-  font-size: 11px;
-}
-
-.plan-conversion-group > header small {
-  color: #7f8da0;
-  font-size: 9px;
-}
-
-.plan-conversion-route {
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--conversion-route-color) 30%, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--conversion-route-color) 8%, transparent), rgba(255, 255, 255, 0.025));
-}
-
-.plan-conversion-route-toggle,
-.plan-conversion-facility,
-.plan-conversion-segments label {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 12px;
-  cursor: pointer;
-}
-
-.plan-conversion-route-toggle > i {
-  width: 10px;
-  height: 10px;
-  border: 3px solid rgba(255, 255, 255, 0.88);
-  border-radius: 50%;
-  background: var(--conversion-route-color);
-  box-shadow: 0 0 0 2px var(--conversion-route-color);
-}
-
-.plan-conversion-route-toggle > span,
-.plan-conversion-facility > span,
-.plan-conversion-segments label > span {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.plan-conversion-route-toggle strong,
-.plan-conversion-facility strong,
-.plan-conversion-segments strong {
-  overflow: hidden;
-  color: #eef6ff;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.plan-conversion-route-toggle small,
-.plan-conversion-facility small,
-.plan-conversion-segments small {
-  color: #8291a5;
-  font-size: 9px;
-}
-
-.plan-conversion-route-toggle em,
-.plan-conversion-facility em,
-.plan-conversion-segments em {
-  color: #bae6fd;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.plan-conversion-route details {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.plan-conversion-route summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  color: #9fb0c4;
-  font-size: 9px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.plan-conversion-route summary::after {
-  content: "＋";
-  color: #7dd3fc;
-  font-size: 13px;
-}
-
-.plan-conversion-route details[open] summary::after {
-  content: "－";
-}
-
-.plan-conversion-segments {
-  display: grid;
-  gap: 1px;
-  padding: 0 8px 8px;
-}
-
-.plan-conversion-segments label {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  padding: 8px 9px;
-  border-radius: 8px;
-  background: rgba(2, 6, 12, 0.28);
-}
-
-.plan-conversion-facilities {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.plan-conversion-facility {
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.028);
-}
-
-.plan-conversion-facility > i {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 8px;
-  background: rgba(56, 189, 248, 0.1);
-  color: #7dd3fc;
-  font-size: 11px;
-  font-style: normal;
-}
-
-.plan-conversion-items input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #0ea5e9;
-}
-
-.plan-conversion-summary {
-  align-self: stretch;
-  display: flex !important;
-  flex-direction: column;
-  justify-content: flex-start !important;
-  gap: 13px;
-  padding: 17px !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: rgba(2, 6, 12, 0.4) !important;
-  font-weight: 400 !important;
-}
-
-.conversion-summary-status {
-  display: grid;
-  gap: 5px;
-  padding: 12px;
-  border: 1px solid rgba(52, 211, 153, 0.22);
-  border-radius: 11px;
-  background: rgba(6, 78, 59, 0.12);
-}
-
-.plan-conversion-summary[data-state="invalid"] .conversion-summary-status,
-.plan-conversion-summary[data-state="shortfall"] .conversion-summary-status {
-  border-color: rgba(248, 113, 113, 0.28);
-  background: rgba(127, 29, 29, 0.14);
-}
-
-.plan-conversion-summary[data-state="empty"] .conversion-summary-status {
-  border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(51, 65, 85, 0.12);
-}
-
-.conversion-summary-status span {
-  color: #6ee7b7;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-}
-
-.plan-conversion-summary[data-state="invalid"] .conversion-summary-status span,
-.plan-conversion-summary[data-state="shortfall"] .conversion-summary-status span {
-  color: #fca5a5;
-}
-
-.conversion-summary-status strong {
-  color: #effbf7;
-  font-size: 12px;
-}
-
-.conversion-summary-status p {
-  margin: 0;
-  color: #93a4b6;
-  font-size: 9px;
-  line-height: 1.45;
-}
-
-.conversion-summary-cost {
-  display: grid;
-  gap: 3px;
-  padding: 13px;
-  border: 1px solid rgba(56, 189, 248, 0.18);
-  border-radius: 11px;
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(37, 99, 235, 0.06));
-}
-
-.conversion-summary-cost span,
-.conversion-summary-progress span {
-  color: #8fa1b5;
-  font-size: 9px;
-}
-
-.conversion-summary-cost strong {
-  color: #7dd3fc;
-  font-size: 22px;
-}
-
-.conversion-summary-cost small {
-  color: #a9b5c4;
-  font-size: 9px;
-}
-
-.conversion-summary-progress {
-  display: grid;
-  gap: 7px;
-}
-
-.conversion-summary-progress > div {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.conversion-summary-progress strong {
-  color: #e5eef8;
-  font-size: 14px;
-}
-
-.conversion-summary-progress strong small {
-  color: #708094;
-  font-size: 9px;
-}
-
-.conversion-summary-progress progress {
-  width: 100%;
-  height: 6px;
-  overflow: hidden;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.conversion-summary-progress progress::-webkit-progress-bar {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.conversion-summary-progress progress::-webkit-progress-value {
-  border-radius: 999px;
-  background: linear-gradient(90deg, #0ea5e9, #38bdf8);
-}
-
-.conversion-summary-breakdown {
-  display: grid;
-  gap: 1px;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.conversion-summary-breakdown > div {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
-  background: rgba(7, 12, 20, 0.96);
-}
-
-.conversion-summary-breakdown dt {
-  color: #8796a8;
-  font-size: 9px;
-}
-
-.conversion-summary-breakdown dd {
-  margin: 0;
-  color: #dce7f3;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.plan-conversion-dialog .conversion-actions {
-  display: grid !important;
-  grid-template-columns: auto 1fr minmax(210px, 1.35fr);
-  gap: 9px !important;
-  padding: 14px 18px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(2, 6, 12, 0.58);
-}
-
-.plan-conversion-dialog .conversion-actions button {
-  min-height: 44px;
-  border-radius: 10px;
-}
-
-#fundPlanWithLoanButton {
-  color: #fcd34d;
-  border: 1px solid rgba(251, 191, 36, 0.28);
-  background: rgba(120, 53, 15, 0.16);
-}
-
-#fundPlanWithLoanButton[hidden] {
-  display: none !important;
-}
-
-.plan-conversion-toolbar button:disabled {
-  cursor: not-allowed;
-  opacity: 0.38;
-}
-
-#cancelPlanConversionButton {
-  color: #aab6c5;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-#confirmPlanConversionButton {
-  border: 0;
-  background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.24);
-}
-
-#confirmPlanConversionButton:disabled {
-  cursor: not-allowed;
-  filter: grayscale(0.65);
-  opacity: 0.45;
-}
-
-@media (max-width: 760px) {
-  .plan-conversion-dialog {
-    width: calc(100vw - 16px) !important;
-    max-height: calc(100dvh - 16px) !important;
-  }
-
-  .plan-conversion-intro {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .plan-conversion-balance {
-    text-align: left;
-  }
-
-  .plan-conversion-layout {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-
-  .plan-conversion-selection {
-    overflow: visible;
-    border-right: 0;
-  }
-
-  .plan-conversion-items {
-    max-height: none !important;
-  }
-
-  .plan-conversion-facilities {
-    grid-template-columns: 1fr;
-  }
-
-  .plan-conversion-dialog .conversion-actions {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  #fundPlanWithLoanButton {
-    grid-column: 1 / -1;
-  }
-}
 
 /* ----------------------------------------------------
    7. SUB CARDS & POPOVERS
@@ -1478,32 +906,10 @@ tr:hover td {
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.dialog-close {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  color: var(--c-text-muted);
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.dialog-close:hover {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--c-danger);
-  border-color: var(--c-danger);
-}
-
 .statistics-screen,
 .news-screen,
 .analysis-screen,
-.diagram-screen,
-.planning-dialog,
-.plan-conversion-dialog {
+.diagram-screen {
   background: var(--c-bg-glass);
   backdrop-filter: var(--glass-blur-dense);
   -webkit-backdrop-filter: var(--glass-blur-dense);
@@ -1517,464 +923,8 @@ tr:hover td {
 /* ----------------------------------------------------
    11.5 PLANNING DIALOG & CONVERSION DIALOG
 ---------------------------------------------------- */
-.planning-dialog {
-  width: min(880px, 95vw);
-  max-height: 90dvh;
-  background: rgba(12, 17, 28, 0.94);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid var(--c-border-light);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.88), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  color: var(--c-text-main);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.planning-dialog .dialog-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 12px;
-}
-
-.planning-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 8px 12px;
-  flex-wrap: wrap;
-}
-
-.planning-toolbar select {
-  flex: 1;
-  min-width: 180px;
-  background: rgba(15, 23, 42, 0.9) !important;
-}
-
-.planning-toolbar button {
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  min-height: 38px;
-}
-
-#newPlanButton {
-  background: linear-gradient(135deg, var(--c-primary), #00B4D8) !important;
-  color: #07090E !important;
-  border: none !important;
-  font-weight: 800;
-}
-
-.planning-layout {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-@media (max-width: 768px) {
-  .planning-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.planning-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-}
-
-.planning-editor label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.planning-field-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.plan-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-}
-
-.plan-summary > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.plan-summary span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.plan-summary strong {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--c-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.plan-asset-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 220px;
-  overflow-y: auto;
-}
-
-.plan-asset-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: space-between;
-}
-
-.plan-asset-card i {
-  width: 10px;
-  height: 24px;
-  border-radius: var(--radius-full);
-  background: var(--asset-color, var(--c-primary));
-  flex-shrink: 0;
-}
-
-.plan-asset-card > div:first-of-type {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.plan-asset-card strong {
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.plan-asset-card span {
-  font-size: 11px;
-  color: var(--c-text-muted);
-}
-
-.asset-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.asset-actions button {
-  padding: 4px 8px;
-  font-size: 11px;
-  min-height: 30px;
-}
-
-.planning-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-#convertPlanButton {
-  flex: 1;
-  background: linear-gradient(135deg, var(--c-success), #059669) !important;
-  color: #FFFFFF !important;
-  border: none !important;
-  font-weight: 800;
-  min-height: 46px;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
-}
-
-.plan-comparison {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.plan-comparison .section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.plan-comparison .section-title span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-primary);
-  letter-spacing: 1px;
-  background: rgba(0, 242, 254, 0.1);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-#planComparisonList {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 480px;
-  overflow-y: auto;
-}
-
-.comparison-card {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.comparison-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--c-border-light);
-  transform: translateX(2px);
-}
-
-.comparison-card.active {
-  border-color: var(--c-primary);
-  background: rgba(0, 242, 254, 0.08);
-  box-shadow: 0 0 14px rgba(0, 242, 254, 0.15);
-}
-
-.comparison-card span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-secondary);
-}
-
-.comparison-card strong {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--c-text-main);
-}
-
-.comparison-card dl {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px 8px;
-}
-
-.comparison-card dl div {
-  display: flex;
-  gap: 4px;
-  font-size: 11px;
-}
-
-.comparison-card dt {
-  color: var(--c-text-dim);
-}
-
-.comparison-card dd {
-  margin: 0;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.planning-empty {
-  text-align: center;
-  padding: 24px;
-  color: var(--c-text-muted);
-  font-size: 13px;
-}
 
 /* Planning portfolio refresh */
-.planning-dialog {
-  width: min(980px, 95vw);
-  padding: 0;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(0, 242, 254, 0.09), transparent 30%),
-    rgba(9, 14, 24, 0.96);
-}
-
-.planning-dialog .planning-dialog-heading {
-  padding: 22px 24px 18px;
-  background: linear-gradient(90deg, rgba(0, 242, 254, 0.07), transparent 55%);
-}
-
-.planning-heading-copy p {
-  margin: 6px 0 0;
-  color: var(--c-text-muted);
-  font-size: 12px;
-}
-
-.planning-dialog-heading .dialog-close {
-  align-self: flex-start;
-}
-
-.planning-dialog .planning-toolbar {
-  margin: 0 24px;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.035);
-  border-color: rgba(255, 255, 255, 0.09);
-  border-radius: 14px;
-}
-
-.planning-selector {
-  flex: 1;
-  min-width: 220px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.planning-selector > span {
-  color: var(--c-text-muted);
-  font-size: 11px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.planning-selector select {
-  flex: 1;
-}
-
-.planning-toolbar-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.planning-delete-button {
-  color: #fda4af;
-}
-
-.planning-dialog .planning-layout {
-  gap: 18px;
-  padding: 0 24px 24px;
-}
-
-.planning-dialog .planning-editor {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.planning-form-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-}
-
-.planning-section-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.planning-section-heading > span {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  color: #041014;
-  background: var(--c-primary);
-  font-size: 10px;
-  font-weight: 900;
-}
-
-.planning-section-heading > div,
-.plan-comparison .section-title > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.planning-section-heading strong {
-  font-size: 13px;
-}
-
-.planning-section-heading small,
-.plan-comparison .section-title small {
-  color: var(--c-text-dim);
-  font-size: 10px;
-}
-
-.planning-dialog .plan-summary {
-  background: rgba(0, 242, 254, 0.035);
-}
-
-.planning-save-button {
-  min-width: 120px;
-}
-
-.planning-dialog .plan-comparison {
-  background: rgba(255, 255, 255, 0.025);
-}
-
-@media (max-width: 768px) {
-  .planning-dialog {
-    width: 100vw;
-    max-height: 94dvh;
-    border-radius: 20px 20px 0 0;
-    align-self: end;
-  }
-
-  .planning-dialog .dialog-heading,
-  .planning-dialog .planning-layout {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .planning-dialog .planning-toolbar {
-    margin-inline: 16px;
-  }
-
-  .planning-selector,
-  .planning-toolbar-actions {
-    width: 100%;
-  }
-
-  .planning-toolbar-actions button {
-    flex: 1;
-  }
-
-  .planning-dialog .planning-field-row,
-  .planning-dialog .plan-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 
 /* ----------------------------------------------------
    14. FINANCE DIALOG (.finance-dialog)
@@ -1984,43 +934,10 @@ tr:hover td {
    14.5 CONSTRUCTION MANAGER DIALOG (.construction-manager-dialog)
 ---------------------------------------------------- */
 
-.plan-conversion-dialog {
-  width: min(520px, 94vw);
-  max-height: 88dvh;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .conversion-help {
   margin: 0;
   font-size: 12px;
   color: var(--c-text-muted);
-}
-
-.plan-conversion-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.plan-conversion-summary {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 800;
-}
-
-.conversion-actions {
-  display: flex;
-  gap: 10px;
 }
 
 /* ----------------------------------------------------
@@ -2034,30 +951,6 @@ tr:hover td {
 /* ----------------------------------------------------
    14. FINANCE DIALOG
 ---------------------------------------------------- */
-
-.plan-conversion-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.plan-conversion-summary {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 800;
-}
-
-.conversion-actions {
-  display: flex;
-  gap: 10px;
-}
 
 /* ----------------------------------------------------
    12. DECISION / CONFIRMATION MODAL
@@ -4504,8 +3397,6 @@ textarea {
 
 button,
 .ops-button,
-.action-button,
-.dialog-close,
 .compact-close {
   border-radius: var(--radius-md);
   box-shadow: none;
@@ -4513,14 +3404,12 @@ button,
 }
 
 button:hover,
-.ops-button:hover,
-.action-button:hover {
+.ops-button:hover {
   transform: translateY(-1px);
 }
 
 button:active,
-.ops-button:active,
-.action-button:active {
+.ops-button:active {
   transform: translateY(0);
 }
 
@@ -4818,34 +3707,11 @@ textarea:where(:not([class*="dg-"])) {
    WINDOW CLOSE CONTROLS
    Keep every dismiss action in the same, predictable top-right position.
 ------------------------------------------------------------------------- */
-.dialog-heading,
 .diagram-header,
 .analysis-header,
 .statistics-header,
 .news-header {
   position: relative;
-}
-
-.dialog-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding-right: 52px;
-  box-sizing: border-box;
-}
-
-.dialog-heading > .dialog-close {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  z-index: 2;
-}
-
-.planning-dialog .planning-dialog-heading,
-.plan-conversion-heading {
-  padding-right: 70px !important;
 }
 
 .diagram-header,
@@ -4867,13 +3733,6 @@ textarea:where(:not([class*="dg-"])) {
 }
 
 @media (max-width: 700px) {
-  .dialog-heading {
-    padding-right: 48px;
-  }
-
-  .dialog-heading > .dialog-close {
-    right: 0;
-  }
 
   .diagram-header,
   .analysis-header,
@@ -4898,8 +3757,7 @@ textarea:where(:not([class*="dg-"])) {
 /* 눌림 피드백: 100~160ms의 짧은 scale 축소. 활성 상태와 혼동되지 않게 한다. */
 /* dg- 컴포넌트는 새 디자인 시스템의 피드백을 쓴다(src/design). */
 button:where(:not([class*="dg-"])):active,
-.ops-button:active,
-.action-button:active {
+.ops-button:active {
   transform: scale(var(--press-scale)) !important;
   transition: transform var(--press-transition) !important;
 }
@@ -4908,7 +3766,6 @@ button:where(:not([class*="dg-"])):active,
 @media (hover: none) {
   button:hover,
   .ops-button:hover,
-  .action-button:hover,
   .slot-card:hover,
   .hero-action-btn:hover {
     transform: none !important;
@@ -4969,18 +3826,6 @@ button:where(:not([class*="dg-"])):active,
     padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   }
 
-  .dialog-backdrop > .planning-dialog,
-  .dialog-backdrop > .plan-conversion-dialog {
-    width: min(100%, 680px) !important;
-    max-height: min(88dvh, 680px) !important;
-    margin: 0;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-    border-radius: 18px 18px 0 0 !important;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .dialog-backdrop .dialog-close,
   .dialog-backdrop .compact-close {
     min-width: 44px;
     min-height: 44px;
@@ -5562,11 +4407,6 @@ button:where(:not([class*="dg-"])):active,
   .difficulty-choice-grid .setup-choice-card {
     min-height: 52px;
   }
-
-  .dialog-backdrop > .planning-dialog,
-  .dialog-backdrop > .plan-conversion-dialog {
-    max-height: min(84dvh, 620px) !important;
-  }
 }
 
 @media (max-width: 700px) and (orientation: landscape) {
@@ -5615,7 +4455,6 @@ button:where(:not([class*="dg-"])):active,
 /* Floating map windows header layout & minimizer button styling */
 
 /* 1:1 Aspect Ratio for Close Buttons */
-.dialog-close,
 .compact-close {
   width: 26px !important;
   height: 26px !important;
@@ -6171,7 +5010,6 @@ button:where(:not([class*="dg-"])):active,
 /* Shared floating-window action shape. Keep every window header control in
    the same rounded-square language, including full-screen workspaces and
    dialog-backed floating panels. */
-.dialog-backdrop .dialog-close,
 .diagram-screen .diagram-close,
 .analysis-screen .analysis-close,
 .statistics-screen .statistics-close,
@@ -6180,7 +5018,6 @@ button:where(:not([class*="dg-"])):active,
   box-sizing: border-box !important;
 }
 
-.dialog-backdrop .dialog-close,
 .diagram-screen .diagram-close,
 .analysis-screen .analysis-close,
 .statistics-screen .statistics-close,
@@ -6235,7 +5072,6 @@ button:where(:not([class*="dg-"])):active,
 
   /* Dialog close controls retain a real touch target even though the shared
      desktop shape rule sets their visual size to 26px. */
-  .dialog-backdrop .dialog-close,
   .dialog-backdrop .compact-close,
   .diagram-screen .diagram-close,
   .analysis-screen .analysis-close,
@@ -6663,20 +5499,6 @@ button:where(:not([class*="dg-"])):active,
     touch-action: pan-y;
   }
 
-  .plan-conversion-layout,
-  .plan-asset-list,
-  #planComparisonList,
-  .plan-conversion-items {
-    flex: 0 0 auto !important;
-    min-height: auto !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    overscroll-behavior: auto !important;
-    -webkit-overflow-scrolling: auto;
-    touch-action: auto;
-  }
-
   /* Full-screen reports keep their header in place and use one content
      scroller instead of separate left/right panel scrollbars. */
   .analysis-body,
@@ -6722,410 +5544,6 @@ button:where(:not([class*="dg-"])):active,
 /* The plan conversion flow must use the complete mobile safe viewport. The
    generic 620px bottom-sheet cap left the dialog anchored to the lower edge
    on tall phones and made its summary/actions appear cropped. */
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .dialog-backdrop:has(> .plan-conversion-dialog) {
-    align-items: center;
-    padding: max(6px, env(safe-area-inset-top))
-      max(6px, env(safe-area-inset-right))
-      max(6px, env(safe-area-inset-bottom))
-      max(6px, env(safe-area-inset-left));
-  }
-
-  .dialog-backdrop > .plan-conversion-dialog {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-    border-radius: 16px !important;
-  }
-
-  .plan-conversion-heading,
-  .plan-conversion-intro,
-  .plan-conversion-layout,
-  .plan-conversion-selection,
-  .plan-conversion-summary,
-  .plan-conversion-dialog .conversion-actions {
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-}
 
 /* Planning portfolio: clearer hierarchy on desktop and one scroll owner on
    phones. All visible controls below are backed by existing plan actions. */
-.planning-dialog {
-  width: min(1080px, 96vw);
-  border-color: rgba(72, 214, 191, 0.28);
-  background:
-    radial-gradient(circle at 12% -8%, rgba(57, 222, 194, 0.13), transparent 32%),
-    linear-gradient(155deg, rgba(11, 22, 31, 0.98), rgba(7, 14, 23, 0.98));
-}
-
-.planning-dialog .planning-dialog-heading {
-  min-height: 82px;
-  box-sizing: border-box;
-  border-bottom-color: rgba(91, 228, 205, 0.15);
-}
-
-.planning-dialog .planning-heading-copy > span {
-  color: #57e3ca;
-  letter-spacing: 0.16em;
-}
-
-.planning-dialog .planning-heading-copy h2 {
-  margin-top: 3px;
-  font-size: clamp(20px, 2.2vw, 28px);
-}
-
-.planning-dialog .planning-toolbar {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) auto;
-  gap: 10px;
-  padding: 9px;
-  border-color: rgba(130, 163, 180, 0.2);
-  background: rgba(5, 13, 21, 0.62);
-}
-
-.planning-dialog .planning-selector {
-  min-width: 0;
-  padding-left: 4px;
-}
-
-.planning-dialog .planning-selector select {
-  min-height: 40px;
-  border-color: rgba(87, 227, 202, 0.28);
-}
-
-.planning-dialog .planning-toolbar-actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-height: 40px;
-  border-radius: 10px;
-}
-
-.planning-dialog #newPlanButton {
-  box-shadow: 0 6px 18px rgba(0, 210, 184, 0.18);
-}
-
-.planning-dialog .planning-layout {
-  grid-template-columns: minmax(0, 1.5fr) minmax(285px, 0.85fr);
-  align-items: stretch;
-}
-
-.planning-dialog .planning-editor,
-.planning-dialog .plan-comparison {
-  min-width: 0;
-}
-
-.planning-dialog .planning-form-card {
-  border-color: rgba(130, 163, 180, 0.18);
-  background: linear-gradient(135deg, rgba(20, 37, 49, 0.68), rgba(11, 23, 33, 0.72));
-}
-
-.planning-dialog .planning-form-card input,
-.planning-dialog .planning-form-card select,
-.planning-dialog .planning-form-card textarea {
-  border-color: rgba(130, 163, 180, 0.22);
-  background: rgba(5, 14, 23, 0.78);
-  color: #e8f2f5;
-}
-
-.planning-dialog .planning-form-card input::placeholder,
-.planning-dialog .planning-form-card textarea::placeholder { color: #708793; }
-
-.planning-dialog .plan-summary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding: 8px;
-  border-color: rgba(87, 227, 202, 0.2);
-  background: rgba(22, 105, 92, 0.08);
-}
-
-.planning-dialog .plan-summary > div {
-  min-width: 0;
-  min-height: 54px;
-  justify-content: center;
-  padding: 7px 9px;
-  border: 1px solid rgba(130, 163, 180, 0.13);
-  border-radius: 9px;
-  background: rgba(7, 18, 27, 0.62);
-}
-
-.planning-dialog .plan-summary > .plan-summary-primary {
-  border-color: rgba(87, 227, 202, 0.32);
-  background: linear-gradient(135deg, rgba(46, 190, 165, 0.18), rgba(9, 30, 36, 0.75));
-}
-
-.planning-dialog .plan-summary strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #61e7cf;
-}
-
-.planning-dialog .plan-asset-list {
-  gap: 6px;
-  padding-right: 2px;
-}
-
-.planning-dialog .plan-asset-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 9px;
-  min-height: 58px;
-  padding: 8px 9px;
-  overflow: hidden;
-  border-color: rgba(130, 163, 180, 0.16);
-  background: rgba(14, 29, 40, 0.72);
-}
-
-.planning-dialog .plan-asset-card:hover {
-  border-color: rgba(87, 227, 202, 0.32);
-  background: rgba(20, 42, 53, 0.82);
-}
-
-.planning-dialog .plan-asset-card > i {
-  width: 6px;
-  height: 34px;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--asset-color) 55%, transparent);
-}
-
-.planning-dialog .plan-asset-card.facility::before {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  color: #70dfcb;
-  background: rgba(69, 205, 181, 0.12);
-  font-size: 13px;
-  content: "•";
-}
-
-.planning-dialog .plan-asset-card[data-asset-kind="station"]::before { content: "역"; font-size: 10px; font-weight: 900; }
-.planning-dialog .plan-asset-card[data-asset-kind="depot"]::before { content: "기"; font-size: 10px; font-weight: 900; }
-.planning-dialog .plan-asset-card[data-asset-kind="transfer"]::before { content: "⇄"; }
-
-.planning-dialog .plan-asset-copy {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  align-content: center;
-  gap: 2px 7px !important;
-  min-width: 0;
-}
-
-.planning-dialog .plan-asset-copy small {
-  padding: 2px 5px;
-  border-radius: 5px;
-  color: #60e3cb;
-  background: rgba(62, 207, 182, 0.1);
-  font-size: 9px;
-  font-weight: 900;
-}
-
-.planning-dialog .plan-asset-copy strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.planning-dialog .plan-asset-copy > span {
-  grid-column: 1 / -1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.planning-dialog .asset-actions,
-.planning-dialog .plan-asset-card > button {
-  align-self: center;
-}
-
-.planning-dialog .asset-actions button,
-.planning-dialog .plan-asset-card > button {
-  min-height: 32px;
-  padding: 4px 8px;
-  border-radius: 8px;
-}
-
-.planning-dialog .asset-actions button:last-child,
-.planning-dialog .plan-asset-card > button {
-  color: #ff9ba5;
-  border-color: rgba(255, 104, 119, 0.24);
-}
-
-.planning-dialog .planning-actions {
-  padding: 8px;
-  border: 1px solid rgba(130, 163, 180, 0.16);
-  border-radius: 12px;
-  background: rgba(6, 15, 24, 0.72);
-}
-
-.planning-dialog .planning-save-button,
-.planning-dialog #convertPlanButton {
-  min-height: 42px;
-  border-radius: 10px;
-}
-
-.planning-dialog .plan-comparison {
-  position: sticky;
-  top: 12px;
-  align-self: start;
-  border-color: rgba(130, 163, 180, 0.16);
-  background: rgba(5, 14, 22, 0.55);
-}
-
-.planning-dialog #planComparisonList {
-  gap: 7px;
-}
-
-.planning-dialog .comparison-card {
-  position: relative;
-  gap: 5px;
-  padding: 11px;
-  overflow: hidden;
-  border-radius: 12px;
-  background: rgba(14, 29, 40, 0.74);
-}
-
-.planning-dialog .comparison-card::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: #7290a0;
-  content: "";
-}
-
-.planning-dialog .comparison-card.status-ready::before,
-.planning-dialog .comparison-card.status-completed::before { background: #4de0bd; }
-.planning-dialog .comparison-card.status-insufficient::before { background: #ff697b; }
-.planning-dialog .comparison-card.status-review::before,
-.planning-dialog .comparison-card.status-partial::before { background: #ffc95c; }
-
-.planning-dialog .comparison-card.active {
-  border-color: rgba(87, 227, 202, 0.7);
-  background: linear-gradient(135deg, rgba(37, 173, 150, 0.2), rgba(13, 33, 43, 0.86));
-  box-shadow: inset 0 0 0 1px rgba(87, 227, 202, 0.08), 0 8px 20px rgba(0, 0, 0, 0.18);
-}
-
-.planning-dialog .comparison-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.planning-dialog .comparison-card-top em,
-.planning-dialog .comparison-card-top b {
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 9px;
-  font-style: normal;
-}
-
-.planning-dialog .comparison-card-top em { color: #61e7cf; background: rgba(65, 215, 189, 0.12); }
-.planning-dialog .comparison-card-top b { color: #b5c5ce; background: rgba(142, 166, 180, 0.1); }
-.planning-dialog .comparison-card > small { color: #8298a5; font-size: 9px; }
-.planning-dialog .comparison-card dl { padding-top: 6px; border-top: 1px solid rgba(130, 163, 180, 0.12); }
-
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .dialog-backdrop:has(> .planning-dialog) {
-    align-items: center;
-    padding: max(5px, env(safe-area-inset-top))
-      max(5px, env(safe-area-inset-right))
-      max(5px, env(safe-area-inset-bottom))
-      max(5px, env(safe-area-inset-left));
-  }
-
-  .dialog-backdrop > .planning-dialog {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
-    box-sizing: border-box;
-    border-radius: 14px !important;
-    overflow-y: auto !important;
-    overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .planning-dialog .planning-dialog-heading {
-    min-height: 60px;
-    padding: 9px 54px 8px 12px !important;
-  }
-
-  .planning-dialog .planning-heading-copy p { display: none; }
-  .planning-dialog .planning-heading-copy h2 { font-size: 18px; }
-  .planning-dialog .planning-dialog-heading .dialog-close { top: 9px; right: 10px; }
-
-  .planning-dialog .planning-toolbar {
-    grid-template-columns: minmax(220px, 1fr) auto;
-    margin: 0 10px;
-    padding: 6px;
-  }
-
-  .planning-dialog .planning-selector > span { display: none; }
-  .planning-dialog .planning-selector select,
-  .planning-dialog .planning-toolbar-actions button { min-height: 34px; }
-  .planning-dialog .planning-toolbar-actions button { padding: 4px 8px; font-size: 10px; }
-
-  .planning-dialog .planning-layout {
-    grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.75fr);
-    gap: 10px;
-    padding: 0 10px 10px;
-  }
-
-  .planning-dialog .planning-editor { gap: 8px; }
-  .planning-dialog .planning-form-card { gap: 7px; padding: 9px; }
-  .planning-dialog .planning-form-card input,
-  .planning-dialog .planning-form-card select { min-height: 34px; }
-  .planning-dialog .planning-form-card textarea { min-height: 54px; }
-  .planning-dialog .planning-section-heading { gap: 7px; }
-  .planning-dialog .planning-section-heading > span { width: 24px; height: 24px; }
-  .planning-dialog .planning-section-heading small,
-  .planning-dialog .plan-comparison .section-title small { display: none; }
-
-  .planning-dialog .plan-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .planning-dialog .plan-summary > div { min-height: 46px; padding: 5px 6px; }
-  .planning-dialog .plan-summary span { font-size: 8px; }
-  .planning-dialog .plan-summary strong { font-size: 11px; }
-
-  .planning-dialog .plan-asset-list,
-  .planning-dialog #planComparisonList {
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  .planning-dialog .plan-asset-card { min-height: 50px; padding: 6px 7px; }
-  .planning-dialog .asset-actions { flex-wrap: wrap; justify-content: flex-end; max-width: 112px; }
-  .planning-dialog .asset-actions button,
-  .planning-dialog .plan-asset-card > button { min-height: 30px; font-size: 9px; }
-  .planning-dialog .planning-actions { position: sticky; bottom: 0; z-index: 2; padding: 6px; backdrop-filter: blur(14px); }
-  .planning-dialog .planning-save-button,
-  .planning-dialog #convertPlanButton { min-height: 36px; }
-  .planning-dialog .plan-comparison { padding: 9px; gap: 8px; }
-  .planning-dialog .comparison-card { padding: 9px; }
-  .planning-dialog .comparison-card dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 700px) and (orientation: portrait) {
-  .planning-dialog .planning-toolbar,
-  .planning-dialog .planning-layout { grid-template-columns: 1fr; }
-  .planning-dialog .planning-toolbar-actions { width: 100%; }
-  .planning-dialog .planning-toolbar-actions button { flex: 1; }
-  .planning-dialog .plan-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}

@@ -418,6 +418,61 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-project__actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-2); }
 .game-project__requirements { display: grid; }
 
+/* ===== 기획 목록 ===== */
+.game-planning { z-index: 2000; }
+.game-planning .dg-dialog { width: min(820px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-planning__picker { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: var(--space-2); }
+.game-planning__picker-actions { display: flex; gap: var(--space-2); }
+.game-planning__fields { display: grid; gap: var(--space-2); }
+.game-planning__notes { min-height: 64px; resize: vertical; }
+.game-planning__save { justify-self: end; }
+.game-planning__compare-list { display: grid; gap: var(--space-1); }
+.game-plan-asset { display: flex; align-items: center; flex-wrap: wrap; gap: 2px var(--space-2); min-height: var(--touch-min); padding: 4px 0; border-top: var(--line-hair) solid var(--rule); }
+.game-plan-asset:first-child { border-top: 0; }
+.game-plan-asset__main { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 180px; min-width: 0; }
+.game-plan-asset__actions { display: flex; gap: var(--space-1); margin-left: auto; }
+.game-plan-asset__icon { width: 24px; flex: none; text-align: center; font-weight: 800; }
+.game-plan-compare {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: var(--space-2);
+  justify-content: stretch;
+  text-align: left;
+  font: var(--type-body);
+  color: var(--text-1);
+  background: var(--surface-0);
+  border: var(--line-hair) dashed var(--text-3);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.game-plan-compare[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); border-style: solid; border-color: var(--invert-bg); }
+.game-plan-compare small { font: var(--type-label); font-weight: 600; opacity: .8; }
+.game-plan-compare__head { display: flex; align-items: center; gap: var(--space-2); }
+.game-plan-compare__head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-plan-compare__metrics { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); font: var(--type-label); }
+.game-plan-compare__metrics b { font-variant-numeric: tabular-nums; }
+/* 넓은 가로 화면에서는 편집과 비교를 나란히 둔다. 좁으면 비교가 아래로 내려간다. */
+@media (min-width: 760px) {
+  .game-planning__body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+  .game-planning__compare { position: sticky; top: 0; border-left: var(--line-hair) dashed var(--rule); border-bottom: 0; }
+}
+
+/* ===== 기획안 건설 전환 ===== */
+.game-conversion { z-index: 2000; }
+.game-conversion .dg-dialog { width: min(560px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-conversion__plan { margin: 0 0 var(--space-1); font: var(--type-sign); font-size: 16px; line-height: 22px; }
+.game-conversion__scope { display: flex; align-items: center; }
+.game-conversion__scope-actions { display: flex; gap: var(--space-1); margin-left: auto; text-transform: none; letter-spacing: 0; }
+.game-conversion__group { margin: var(--space-2) 0 0; font: var(--type-label); color: var(--text-2); }
+.game-conversion__item { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); padding: 4px 0; border-top: var(--line-hair) solid var(--rule); cursor: pointer; }
+.game-conversion__item input { width: 20px; height: 20px; margin: 0; accent-color: var(--text-1); flex: none; }
+.game-conversion__item .game-route-item__text { flex: 1; }
+.game-conversion__cost { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.game-conversion__segments { padding-left: 28px; }
+.game-conversion__segments > .game-fold__summary { min-height: 36px; }
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 2000; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }

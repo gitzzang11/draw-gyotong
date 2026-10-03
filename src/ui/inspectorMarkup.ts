@@ -62,11 +62,13 @@ export function safeColor(color: string) {
   return /^#[0-9a-f]{3,8}$/i.test(color.trim()) ? color.trim() : "#6B7076";
 }
 
-export function lineMarkHtml(route: Pick<InspectorRoute, "name" | "color">, size: "sm" | "md" | "lg" = "md") {
+export function lineMarkHtml(route: Pick<InspectorRoute, "name" | "color">, size: "sm" | "md" | "lg" = "md", variant?: "plan" | "building") {
   const color = safeColor(route.color);
   const classes = ["dg-line-mark"];
   if (size !== "md") classes.push(`dg-line-mark--${size}`);
-  if (prefersDarkText(color)) classes.push("dg-line-mark--on-dark");
+  if (variant) classes.push(`dg-line-mark--${variant}`);
+  // 기획 기호는 배경이 투명해 본문 글자색을 쓴다.
+  if (variant !== "plan" && prefersDarkText(color)) classes.push("dg-line-mark--on-dark");
   return `<span class="${classes.join(" ")}" style="--line-color:${color}" aria-hidden="true">${escapeHtml(lineMarkLabel(route.name))}</span>`;
 }
 

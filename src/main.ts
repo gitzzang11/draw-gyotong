@@ -3,7 +3,7 @@ import "./legacy.css";
 import "./design/tokens.css";
 import "./design/components.css";
 import "./design/hud.css";
-import { lineMarkHtml } from "./ui/inspectorMarkup.ts";
+import { lineMarkHtml, metricRowsHtml } from "./ui/inspectorMarkup.ts";
 import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
@@ -1404,88 +1404,94 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="planningDialog" class="dialog-backdrop" hidden>
-      <section class="planning-dialog" role="dialog" aria-modal="true" aria-labelledby="planningDialogTitle">
-        <div class="dialog-heading planning-dialog-heading">
-          <div class="planning-heading-copy">
-            <span>PLANNING PORTFOLIO</span>
-            <h2 id="planningDialogTitle">기획 목록</h2>
-            <p>기획안을 비교하고 포함된 노선과 시설을 관리합니다.</p>
-          </div>
-          <button id="closePlanningButton" class="dialog-close" type="button" aria-label="계획 관리 닫기">×</button>
-        </div>
-        <div class="planning-toolbar" aria-label="기획안 관리">
-          <label class="planning-selector"><span>현재 기획안</span><select id="activePlanSelect" aria-label="활성 계획"></select></label>
-          <div class="planning-toolbar-actions">
-            <button id="newPlanButton" type="button"><span aria-hidden="true">＋</span> 새 기획안</button>
-            <button id="duplicatePlanButton" type="button"><span aria-hidden="true">▣</span> 복제</button>
-            <button id="deletePlanButton" class="planning-delete-button" type="button"><span aria-hidden="true">⌫</span> 삭제</button>
-          </div>
-        </div>
-        <div class="planning-layout">
-          <section class="planning-editor">
-            <div class="planning-section-heading"><span aria-hidden="true">01</span><div><strong>기본 정보</strong><small>기획안의 목적과 검토 상태를 정합니다.</small></div></div>
-            <div class="planning-form-card">
-              <label><span>기획안 이름</span><input id="planNameInput" maxlength="32" /></label>
-              <div class="planning-field-row">
-              <label><span>검토 상태</span><select id="planStatusSelect">
-                <option value="draft">초안</option><option value="review">검토 중</option>
-                <option value="insufficient">자금 부족</option><option value="ready">건설 가능</option>
-                <option value="partial">일부 건설</option><option value="completed">완공</option>
-                <option value="on-hold">보류</option>
-              </select></label>
-              <label><span>우선순위</span><select id="planPrioritySelect">
-                <option value="low">낮음</option><option value="normal">보통</option>
-                <option value="high">높음</option><option value="critical">최우선</option>
-              </select></label>
+    <div id="planningDialog" class="dg-hud dg-scrim game-planning" hidden>
+      <section class="dg-panel dg-dialog dg-planning" role="dialog" aria-modal="true" aria-labelledby="planningDialogTitle">
+        <header class="dg-panel__header">
+          <span class="dg-mode-mark dg-mode-mark--plan" aria-hidden="true"></span>
+          <h2 id="planningDialogTitle" class="dg-panel__title">기획 목록</h2>
+          <div class="dg-panel__header-end"><button id="closePlanningButton" class="dg-icon-btn" type="button" aria-label="기획 목록 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body game-planning__body">
+          <div class="game-planning__main">
+            <section class="dg-panel__section game-planning__picker">
+              <label class="dg-field"><span class="dg-field__label">현재 기획안</span><select id="activePlanSelect" class="dg-input"></select></label>
+              <div class="game-planning__picker-actions" role="group" aria-label="기획안 관리">
+                <button id="newPlanButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">새 기획안</button>
+                <button id="duplicatePlanButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">복제</button>
               </div>
-              <label><span>추진 메모</span><textarea id="planNotesInput" rows="3" maxlength="500" placeholder="건설 목적과 단계별 추진 사항을 기록하세요"></textarea></label>
-            </div>
-            <div class="planning-section-heading"><span aria-hidden="true">02</span><div><strong>예상 효과</strong><small>현재 설계에 반영된 비용과 운영 효과입니다.</small></div></div>
-            <div id="planSummary" class="plan-summary"></div>
-            <div class="planning-section-heading"><span aria-hidden="true">03</span><div><strong>포함 항목</strong><small>지도 도구로 추가한 노선과 시설을 관리합니다.</small></div></div>
-            <div id="planAssetList" class="plan-asset-list"></div>
-            <div class="planning-actions">
-              <button id="savePlanButton" class="planning-save-button" type="button">변경 저장</button>
-              <button id="convertPlanButton" type="button"><span aria-hidden="true">▶</span> 건설 검토</button>
-            </div>
+            </section>
+            <section class="dg-panel__section">
+              <h3 class="dg-panel__section-label">기본 정보</h3>
+              <div class="game-planning__fields">
+                <label class="dg-field"><span class="dg-field__label">기획안 이름</span><input id="planNameInput" class="dg-input" maxlength="32" autocomplete="off" /></label>
+                <div class="game-save-editor__pair">
+                  <label class="dg-field"><span class="dg-field__label">검토 상태</span><select id="planStatusSelect" class="dg-input">
+                    <option value="draft">초안</option><option value="review">검토 중</option>
+                    <option value="insufficient">자금 부족</option><option value="ready">건설 가능</option>
+                    <option value="partial">일부 건설</option><option value="completed">완공</option>
+                    <option value="on-hold">보류</option>
+                  </select></label>
+                  <label class="dg-field"><span class="dg-field__label">우선순위</span><select id="planPrioritySelect" class="dg-input">
+                    <option value="low">낮음</option><option value="normal">보통</option>
+                    <option value="high">높음</option><option value="critical">최우선</option>
+                  </select></label>
+                </div>
+                <label class="dg-field"><span class="dg-field__label">추진 메모</span><textarea id="planNotesInput" class="dg-input game-planning__notes" rows="3" maxlength="500" placeholder="건설 목적과 단계별 추진 사항"></textarea></label>
+                <button id="savePlanButton" class="dg-btn dg-btn--secondary dg-btn--compact game-planning__save" type="button">기본 정보 저장</button>
+              </div>
+            </section>
+            <section class="dg-panel__section">
+              <h3 class="dg-panel__section-label">예상 효과</h3>
+              <div id="planSummary"></div>
+            </section>
+            <section class="dg-panel__section">
+              <h3 class="dg-panel__section-label">포함 항목</h3>
+              <div id="planAssetList"></div>
+            </section>
+            <section class="dg-panel__section">
+              <button id="deletePlanButton" class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button">이 기획안 삭제…</button>
+            </section>
+          </div>
+          <section class="dg-panel__section game-planning__compare">
+            <h3 class="dg-panel__section-label">기획안 비교 <span class="game-inspector__section-meta">수요 순</span></h3>
+            <div id="planComparisonList" class="game-planning__compare-list"></div>
           </section>
-          <section class="plan-comparison">
-            <div class="section-title"><span>COMPARE</span><div><strong>기획안 비교</strong><small>수요와 비용을 한눈에 비교하세요.</small></div></div>
-            <div id="planComparisonList"></div>
-          </section>
+        </div>
+        <div class="dg-panel__actions">
+          <span class="game-inspector__note">지도에서 기획 도구로 노선과 시설을 추가합니다.</span>
+          <button id="convertPlanButton" class="dg-btn dg-btn--primary dg-panel__actions-push" type="button">건설 검토</button>
         </div>
       </section>
     </div>
 
-    <div id="planConversionDialog" class="dialog-backdrop" hidden>
-      <section class="plan-conversion-dialog" role="dialog" aria-modal="true" aria-labelledby="planConversionTitle">
-        <div class="dialog-heading plan-conversion-heading">
-          <div class="plan-conversion-heading-icon" aria-hidden="true">▣</div>
-          <div><span>BUILD FROM PLAN</span><h2 id="planConversionTitle">실제 건설 전환</h2><p id="planConversionPlanName">현재 기획안</p></div>
-          <button id="closePlanConversionButton" class="dialog-close" type="button" aria-label="실제 건설 전환 닫기">×</button>
-        </div>
-        <div class="plan-conversion-intro">
-          <div><strong>기획안을 실제 공사로 전환합니다</strong><span>선택하지 않은 항목은 기획안에 남아 나중에 이어서 건설할 수 있습니다.</span></div>
-          <div class="plan-conversion-balance"><span>현재 자금</span><strong id="planConversionCurrentCash">0억</strong></div>
-        </div>
-        <div class="plan-conversion-layout">
-          <section class="plan-conversion-selection">
-            <div class="plan-conversion-toolbar">
-              <div><span>BUILD SCOPE</span><strong>건설 범위 선택</strong></div>
-              <div>
-                <button id="selectAllPlanConversionButton" type="button">전체 선택</button>
-                <button id="clearPlanConversionButton" type="button">선택 해제</button>
-              </div>
-            </div>
-            <div id="planConversionItems" class="plan-conversion-items"></div>
+    <div id="planConversionDialog" class="dg-hud dg-scrim game-conversion" hidden>
+      <section class="dg-panel dg-panel--hazard dg-dialog" role="dialog" aria-modal="true" aria-labelledby="planConversionTitle">
+        <header class="dg-panel__header">
+          <h2 id="planConversionTitle" class="dg-panel__title">기획안 건설 전환</h2>
+          <div class="dg-panel__header-end"><button id="closePlanConversionButton" class="dg-icon-btn" type="button" aria-label="건설 전환 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <section class="dg-panel__section">
+            <p id="planConversionPlanName" class="game-conversion__plan">현재 기획안</p>
+            <div class="dg-row"><span class="dg-row__label">현재 자금</span><strong id="planConversionCurrentCash" class="dg-row__value">0억</strong></div>
+            <p class="game-inspector__note">선택하지 않은 항목은 기획안에 남아 나중에 이어서 건설할 수 있습니다.</p>
           </section>
-          <aside id="planConversionSummary" class="plan-conversion-summary"></aside>
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label game-conversion__scope">건설 범위
+              <span class="game-conversion__scope-actions">
+                <button id="selectAllPlanConversionButton" class="dg-btn dg-btn--quiet dg-btn--compact" type="button">전체 선택</button>
+                <button id="clearPlanConversionButton" class="dg-btn dg-btn--quiet dg-btn--compact" type="button">선택 해제</button>
+              </span>
+            </h3>
+            <div id="planConversionItems"></div>
+          </section>
+          <section id="planConversionSummary" class="dg-panel__section" aria-live="polite"></section>
         </div>
-        <div class="conversion-actions">
-          <button id="fundPlanWithLoanButton" type="button" hidden>대출 30,000억 받기</button>
-          <button id="cancelPlanConversionButton" type="button">취소</button>
-          <button id="confirmPlanConversionButton" class="action-button action-button--build" type="button"><span class="button-icon" aria-hidden="true">▶</span><span>선택 항목 건설</span></button>
+        <div class="dg-panel__actions">
+          <button id="cancelPlanConversionButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
+          <button id="fundPlanWithLoanButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button" hidden>대출 받기…</button>
+          <strong id="planConversionCost" class="game-review__cost dg-panel__actions-push">0억</strong>
+          <button id="confirmPlanConversionButton" class="dg-btn dg-btn--primary" type="button"><span>선택 항목 건설</span></button>
         </div>
       </section>
     </div>
@@ -7496,7 +7502,7 @@ function renderPlanningDialog() {
   const plan = getActivePlan(false);
   for (const control of [duplicatePlanButton, deletePlanButton, savePlanButton, convertPlanButton]) if (control) control.disabled = !plan;
   if (!plan) {
-    if (planSummary) planSummary.innerHTML = `<div class="planning-empty">새 계획을 만들어 미래 노선을 설계하세요.</div>`;
+    if (planSummary) planSummary.innerHTML = `<p class="game-inspector__note">새 기획안을 만들어 미래 노선을 설계하세요.</p>`;
     if (planAssetList) planAssetList.innerHTML = "";
     renderPlanComparison();
     return;
@@ -7506,14 +7512,15 @@ function renderPlanningDialog() {
   if (planPrioritySelect) planPrioritySelect.value = plan.priority;
   if (planNotesInput) planNotesInput.value = plan.notes;
   if (planSummary)
-    planSummary.innerHTML = `
-      <div class="plan-summary-primary"><span>예상 총비용</span><strong>${formatCost(plan.expectedTotalCost)}</strong></div>
-      <div><span>남은 건설비</span><strong>${formatCost(plan.remainingCost)}</strong></div>
-      <div><span>예상 수요</span><strong>${plan.expectedDemand.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>예상 수익</span><strong>${formatCost(plan.expectedRevenue)}/년</strong></div>
-      <div><span>공사 기간</span><strong>${plan.expectedConstructionDays > 0 ? formatConstructionDuration(plan.expectedConstructionDays) : "미정"}</strong></div>
-      <div><span>지형 난이도</span><strong>${formatPlanDifficulty(plan.terrainDifficulty)}</strong></div>
-      <div><span>환승 효과</span><strong>+${plan.transferEffect}</strong></div>`;
+    planSummary.innerHTML = metricRowsHtml([
+      { label: "예상 총비용", value: formatCost(plan.expectedTotalCost) },
+      { label: "남은 건설비", value: formatCost(plan.remainingCost) },
+      { label: "예상 수요", value: `${plan.expectedDemand.toLocaleString("ko-KR")}명` },
+      { label: "예상 수익", value: `${formatCost(plan.expectedRevenue)}/년` },
+      { label: "공사 기간", value: plan.expectedConstructionDays > 0 ? formatConstructionDuration(plan.expectedConstructionDays) : "미정" },
+      { label: "지형 난이도", value: formatPlanDifficulty(plan.terrainDifficulty) },
+      { label: "환승 효과", value: `+${plan.transferEffect}` },
+    ]);
   renderPlanAssets(plan);
   renderPlanComparison();
 }
@@ -7523,23 +7530,24 @@ function renderPlanAssets(plan: ConstructionPlan) {
   const routeItems = plan.routes
     .map((route) => {
       const completed = route.completedSegmentIds.length;
-      return `<article class="plan-asset-card" data-asset-kind="route">
-        <i style="--asset-color:${route.color}"></i>
-        <div class="plan-asset-copy"><small>노선</small><strong>${escapeHtml(route.name)}</strong><span>${completed}/${route.segments.length}구간 완공 · ${formatCost(route.expectedCost)} · 수요 ${route.expectedDemand.toLocaleString("ko-KR")}</span></div>
-        <div class="asset-actions">
-          <button type="button" data-plan-action="redraw-route" data-asset-id="${route.id}">경로 수정</button>
-          <button type="button" data-plan-action="duplicate-route" data-asset-id="${route.id}">복제</button>
-          <button type="button" data-plan-action="delete-route" data-asset-id="${route.id}">삭제</button>
+      return `<div class="game-plan-asset" data-asset-kind="route">
+        <div class="game-plan-asset__main">${lineMarkHtml(route, "sm", "plan")}<span class="game-route-item__text"><strong>${escapeHtml(route.name)}</strong><small>${completed}/${route.segments.length}구간 완공 · ${formatCost(route.expectedCost)} · 수요 ${route.expectedDemand.toLocaleString("ko-KR")}</small></span></div>
+        <div class="game-plan-asset__actions">
+          <button class="dg-btn dg-btn--quiet dg-btn--compact" type="button" data-plan-action="redraw-route" data-asset-id="${route.id}">경로 수정</button>
+          <button class="dg-btn dg-btn--quiet dg-btn--compact" type="button" data-plan-action="duplicate-route" data-asset-id="${route.id}">복제</button>
+          <button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-plan-action="delete-route" data-asset-id="${route.id}" aria-label="${escapeHtml(route.name)} 삭제">삭제</button>
         </div>
-      </article>`;
+      </div>`;
     })
     .join("");
+  const facilityRow = (kind: string, icon: string, label: string, name: string, meta: string, assetId: string) =>
+    `<div class="game-plan-asset" data-asset-kind="${kind}"><div class="game-plan-asset__main"><span class="game-plan-asset__icon" aria-hidden="true">${icon}</span><span class="game-route-item__text"><strong>${escapeHtml(name)}</strong><small>${label} · ${meta}</small></span></div><div class="game-plan-asset__actions"><button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-plan-action="delete-${kind}" data-asset-id="${assetId}" aria-label="${escapeHtml(name)} 삭제">삭제</button></div></div>`;
   const facilities = [
-    ...plan.stations.map((station) => `<article class="plan-asset-card facility" data-asset-kind="station"><div class="plan-asset-copy"><small>역</small><strong>${escapeHtml(station.name)}</strong><span>예상 수요 ${station.expectedDemand.toLocaleString("ko-KR")}${station.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-station" data-asset-id="${station.id}">삭제</button></article>`),
-    ...plan.depots.map((depot) => `<article class="plan-asset-card facility" data-asset-kind="depot"><div class="plan-asset-copy"><small>기지</small><strong>${escapeHtml(depot.name)}</strong><span>${depot.capacity}편성 · ${formatCost(depot.expectedCost)}${depot.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-depot" data-asset-id="${depot.id}">삭제</button></article>`),
-    ...plan.transfers.map((transfer) => `<article class="plan-asset-card facility" data-asset-kind="transfer"><div class="plan-asset-copy"><small>환승</small><strong>예정 환승 연결</strong><span>환승 효과 +${transfer.expectedEffect}${transfer.completed ? " · 완공" : ""}</span></div><button type="button" data-plan-action="delete-transfer" data-asset-id="${transfer.id}">삭제</button></article>`),
+    ...plan.stations.map((station) => facilityRow("station", "○", "역", station.name, `예상 수요 ${station.expectedDemand.toLocaleString("ko-KR")}${station.completed ? " · 완공" : ""}`, station.id)),
+    ...plan.depots.map((depot) => facilityRow("depot", "▥", "기지", depot.name, `${depot.capacity}편성 · ${formatCost(depot.expectedCost)}${depot.completed ? " · 완공" : ""}`, depot.id)),
+    ...plan.transfers.map((transfer) => facilityRow("transfer", "⇄", "환승", "예정 환승 연결", `환승 효과 +${transfer.expectedEffect}${transfer.completed ? " · 완공" : ""}`, transfer.id)),
   ].join("");
-  planAssetList.innerHTML = routeItems || facilities ? routeItems + facilities : `<div class="planning-empty">계획 모드에서 노선이나 시설을 추가하세요.</div>`;
+  planAssetList.innerHTML = routeItems || facilities ? routeItems + facilities : `<p class="game-inspector__note">기획 모드에서 지도에 노선이나 시설을 추가하세요.</p>`;
   planAssetList.querySelectorAll<HTMLButtonElement>("[data-plan-action]").forEach((button) => {
     button.addEventListener("click", () => handlePlanAssetAction(button.dataset.planAction ?? "", button.dataset.assetId ?? ""));
   });
@@ -7621,11 +7629,10 @@ function renderPlanComparison() {
     .filter((plan) => plan.cityId === metaState.current.cityId)
     .sort((a, b) => b.expectedDemand - a.expectedDemand)
     .map(
-      (plan) => `<button type="button" class="comparison-card status-${plan.status} ${plan.id === activePlanId ? "active" : ""}" data-plan-id="${plan.id}">
-        <span class="comparison-card-top"><em>${statusLabels[plan.status]}</em><b>${formatPriority(plan.priority)}</b></span>
-        <strong>${escapeHtml(plan.name)}</strong>
-        <small>노선 ${plan.routes.length} · 역 ${plan.stations.length} · 기지 ${plan.depots.length} · 환승 ${plan.transfers.length}</small>
-        <dl><div><dt>비용</dt><dd>${formatCost(plan.expectedTotalCost)}</dd></div><div><dt>수요</dt><dd>${plan.expectedDemand.toLocaleString("ko-KR")}</dd></div><div><dt>수익</dt><dd>${formatCost(plan.expectedRevenue)}/년</dd></div><div><dt>공기</dt><dd>${plan.expectedConstructionDays > 0 ? formatConstructionDuration(plan.expectedConstructionDays) : "미정"}</dd></div><div><dt>지형</dt><dd>${formatPlanDifficulty(plan.terrainDifficulty)}</dd></div><div><dt>환승</dt><dd>+${plan.transferEffect}</dd></div></dl>
+      (plan) => `<button type="button" class="game-plan-compare" aria-pressed="${plan.id === activePlanId}" data-plan-id="${plan.id}">
+        <span class="game-plan-compare__head"><strong>${escapeHtml(plan.name)}</strong><span class="dg-tag ${planStatusTagClass(plan.status)}">${statusLabels[plan.status]}</span></span>
+        <small>우선순위 ${formatPriority(plan.priority)} · 노선 ${plan.routes.length} · 역 ${plan.stations.length} · 기지 ${plan.depots.length} · 환승 ${plan.transfers.length}</small>
+        <span class="game-plan-compare__metrics"><span>비용 <b>${formatCost(plan.expectedTotalCost)}</b></span><span>수요 <b>${plan.expectedDemand.toLocaleString("ko-KR")}</b></span><span>수익 <b>${formatCost(plan.expectedRevenue)}/년</b></span><span>공기 <b>${plan.expectedConstructionDays > 0 ? formatConstructionDuration(plan.expectedConstructionDays) : "미정"}</b></span></span>
       </button>`,
     )
     .join("");
@@ -7636,6 +7643,14 @@ function renderPlanComparison() {
       requestUpdate("blueprint-preview");
     });
   });
+}
+
+function planStatusTagClass(status: PlanStatus) {
+  if (status === "ready" || status === "completed") return "dg-tag--ok";
+  if (status === "partial") return "dg-tag--build";
+  if (status === "insufficient") return "dg-tag--error";
+  if (status === "on-hold") return "dg-tag--paused";
+  return "dg-tag--plan";
 }
 
 function formatPlanDifficulty(value: number) {
@@ -7818,35 +7833,37 @@ function openPlanConversionDialog() {
     const routeLength = remainingSegments.reduce((sum, segment) => sum + segment.lengthKm, 0);
     const routeCost = remainingSegments.reduce((sum, segment) => sum + segment.constructionCost, 0);
     routeItems.push(`
-      <section class="plan-conversion-route" data-route-id="${route.id}" style="--conversion-route-color:${escapeHtml(route.color)}">
-        <label class="plan-conversion-route-toggle">
+      <div class="game-conversion__route" data-conversion-route="${route.id}">
+        <label class="game-conversion__item">
           <input type="checkbox" checked data-route-toggle="${route.id}" />
-          <i aria-hidden="true"></i>
-          <span><strong>${escapeHtml(route.name)}</strong><small>${remainingSegments.length}개 구간 · ${routeLength.toFixed(2)}km</small></span>
-          <em>${formatCost(routeCost)}</em>
+          ${lineMarkHtml(route, "sm", "plan")}
+          <span class="game-route-item__text"><strong>${escapeHtml(route.name)}</strong><small>${remainingSegments.length}개 구간 · ${routeLength.toFixed(2)}km</small></span>
+          <span class="game-conversion__cost">${formatCost(routeCost)}</span>
         </label>
-        <details>
-          <summary><span>구간별 선택</span><small>필요한 구간만 건설</small></summary>
-          <div class="plan-conversion-segments">`);
+        <details class="game-fold game-conversion__segments">
+          <summary class="game-fold__summary"><span class="game-inspector__muted">구간별 선택</span></summary>
+          <div>`);
     route.segments.forEach((segment, index) => {
       if (route.completedSegmentIds.includes(segment.id)) return;
-      routeItems.push(`<label><input type="checkbox" checked data-convert-kind="segment" data-route-id="${route.id}" data-asset-id="${segment.id}" /><span><strong>${index + 1}구간</strong><small>${segment.lengthKm.toFixed(2)}km</small></span><em>${formatCost(segment.constructionCost)}</em></label>`);
+      routeItems.push(`<label class="game-conversion__item"><input type="checkbox" checked data-convert-kind="segment" data-route-id="${route.id}" data-asset-id="${segment.id}" /><span class="game-route-item__text"><strong>${index + 1}구간</strong><small>${segment.lengthKm.toFixed(2)}km</small></span><span class="game-conversion__cost">${formatCost(segment.constructionCost)}</span></label>`);
     });
-    routeItems.push(`</div></details></section>`);
+    routeItems.push(`</div></details></div>`);
   }
+  const facilityItem = (kind: string, assetId: string, icon: string, name: string, meta: string, cost: number) =>
+    `<label class="game-conversion__item"><input type="checkbox" checked data-convert-kind="${kind}" data-asset-id="${assetId}" /><span class="game-plan-asset__icon" aria-hidden="true">${icon}</span><span class="game-route-item__text"><strong>${escapeHtml(name)}</strong><small>${meta}</small></span><span class="game-conversion__cost">${formatCost(cost)}</span></label>`;
   for (const station of plan.stations.filter((item) => !item.completed))
-    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="station" data-asset-id="${station.id}" /><i aria-hidden="true">●</i><span><strong>${escapeHtml(station.name)}</strong><small>역 건설 · 연결 노선 ${station.plannedRouteIds.length + station.actualRouteIds.length}개</small></span><em>${formatCost(180)}</em></label>`);
+    facilityItems.push(facilityItem("station", station.id, "○", station.name, `역 건설 · 연결 노선 ${station.plannedRouteIds.length + station.actualRouteIds.length}개`, 180));
   for (const depot of plan.depots.filter((item) => !item.completed))
-    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="depot" data-asset-id="${depot.id}" /><i aria-hidden="true">▥</i><span><strong>${escapeHtml(depot.name)}</strong><small>차량기지 · ${depot.capacity}편성 수용</small></span><em>${formatCost(depot.expectedCost)}</em></label>`);
+    facilityItems.push(facilityItem("depot", depot.id, "▥", depot.name, `차량기지 · ${depot.capacity}편성 수용`, depot.expectedCost));
   for (const transfer of plan.transfers.filter((item) => !item.completed))
-    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="transfer" data-asset-id="${transfer.id}" /><i aria-hidden="true">⇄</i><span><strong>환승 연결</strong><small>예상 환승 효과 +${transfer.expectedEffect}</small></span><em>${formatCost(40)}</em></label>`);
+    facilityItems.push(facilityItem("transfer", transfer.id, "⇄", "환승 연결", `예상 환승 효과 +${transfer.expectedEffect}`, 40));
   for (const connection of (plan.connections ?? []).filter((item) => item.status === "draft" || item.status === "approved"))
-    facilityItems.push(`<label class="plan-conversion-facility"><input type="checkbox" checked data-convert-kind="connection" data-asset-id="${connection.id}" /><i aria-hidden="true">↔</i><span><strong>${escapeHtml(connection.connectionType)}</strong><small>연결 설계 · ${formatConstructionDuration(connection.estimatedDuration)}</small></span><em>${formatCost(connection.estimatedCost)}</em></label>`);
+    facilityItems.push(facilityItem("connection", connection.id, "↔", connection.connectionType, `연결 설계 · ${formatConstructionDuration(connection.estimatedDuration)}`, connection.estimatedCost));
   const sections = [
-    routeItems.length > 0 ? `<section class="plan-conversion-group"><header><span>01</span><div><strong>노선과 구간</strong><small>전체 노선 또는 세부 구간을 선택합니다.</small></div></header>${routeItems.join("")}</section>` : "",
-    facilityItems.length > 0 ? `<section class="plan-conversion-group"><header><span>02</span><div><strong>역·차량기지·환승</strong><small>선택한 노선 구간과 연결되는 시설만 건설할 수 있습니다.</small></div></header><div class="plan-conversion-facilities">${facilityItems.join("")}</div></section>` : "",
+    routeItems.length > 0 ? `<h4 class="game-conversion__group">노선과 구간</h4>${routeItems.join("")}` : "",
+    facilityItems.length > 0 ? `<h4 class="game-conversion__group">역·차량기지·환승</h4><p class="game-inspector__note">선택한 노선 구간과 연결되는 시설만 건설할 수 있습니다.</p>${facilityItems.join("")}` : "",
   ].filter(Boolean);
-  planConversionItems.innerHTML = sections.join("") || `<div class="planning-empty">건설할 미완료 항목이 없습니다.</div>`;
+  planConversionItems.innerHTML = sections.join("") || `<p class="game-inspector__note">건설할 미완료 항목이 없습니다.</p>`;
   setText(planConversionPlanName, `${plan.name} · 남은 계획비 ${formatCost(plan.remainingCost)}`);
   setText(planConversionCurrentCash, formatCost(financeState.economy.cash));
   if (selectAllPlanConversionButton) selectAllPlanConversionButton.disabled = sections.length === 0;
@@ -7857,7 +7874,7 @@ function openPlanConversionDialog() {
 
 function handlePlanConversionSelectionChange(event: Event) {
   const input = event.target as HTMLInputElement;
-  const routeContainer = input.closest<HTMLElement>(".plan-conversion-route");
+  const routeContainer = input.closest<HTMLElement>("[data-conversion-route]");
   if (routeContainer) {
     const routeToggle = routeContainer.querySelector<HTMLInputElement>("input[data-route-toggle]");
     const segmentInputs = Array.from(routeContainer.querySelectorAll<HTMLInputElement>('input[data-convert-kind="segment"]'));
@@ -7952,37 +7969,32 @@ function renderPlanConversionSummary() {
     );
   const state = selection.length === 0 ? "empty" : invalidFacilities > 0 ? "invalid" : metaState.current.mode === "career" && shortfall > 0 ? "shortfall" : "ready";
   planConversionSummary.dataset.state = state;
-  const statusCopy =
+  const notice =
     state === "empty"
-      ? { kicker: "선택 필요", title: "건설 항목을 선택하세요", message: "왼쪽 목록에서 실제 공사로 전환할 항목을 선택하세요." }
+      ? { tone: "", lead: "선택 필요", message: "실제 공사로 전환할 항목을 선택하세요." }
       : state === "invalid"
-        ? { kicker: "연결 확인", title: `${invalidFacilities}개 시설을 건설할 수 없음`, message: "해당 시설과 연결되는 노선 구간을 함께 선택하세요." }
+        ? { tone: "dg-notice--danger", lead: "✕ 연결 확인", message: `${invalidFacilities}개 시설을 건설할 수 없습니다. 해당 시설과 연결되는 노선 구간을 함께 선택하세요.` }
         : state === "shortfall"
-          ? { kicker: "자금 부족", title: `${formatCost(shortfall)} 부족`, message: `현재 자금으로 저비용 구간 기준 최대 ${affordableSegments.count}개 구간을 건설할 수 있습니다.` }
-          : { kicker: "건설 가능", title: "선택 범위를 전환할 수 있습니다", message: "확정하면 선택 항목이 실제 건설 프로젝트로 등록됩니다." };
+          ? { tone: "dg-notice--danger", lead: `✕ ${formatCost(shortfall)} 부족`, message: `현재 자금으로 저비용 구간 기준 최대 ${affordableSegments.count}개 구간을 건설할 수 있습니다.` }
+          : { tone: "dg-notice--ok", lead: "✓ 건설 가능", message: "확정하면 선택 항목이 실제 건설 프로젝트로 등록됩니다." };
   planConversionSummary.innerHTML = `
-    <header class="conversion-summary-status"><span>${statusCopy.kicker}</span><strong>${statusCopy.title}</strong><p>${statusCopy.message}</p></header>
-    <div class="conversion-summary-cost">
-      <span>선택 공사비</span>
-      <strong>${formatCost(cost)}</strong>
-      <small>건설 후 ${formatSignedCost(financeState.economy.cash - cost)}</small>
-    </div>
-    <div class="conversion-summary-progress">
-      <div><span>선택 항목</span><strong>${selection.length}<small> / ${availableCount}</small></strong></div>
-      <progress max="${Math.max(1, availableCount)}" value="${selection.length}"></progress>
-    </div>
-    <dl class="conversion-summary-breakdown">
-      <div><dt>대상 노선</dt><dd>${routeCount}개</dd></div>
-      <div><dt>노선 구간</dt><dd>${segmentCount}개</dd></div>
-      <div><dt>역</dt><dd>${stationCount}개</dd></div>
-      <div><dt>차량기지</dt><dd>${depotCount}개</dd></div>
-      <div><dt>환승 연결</dt><dd>${transferCount}개</dd></div>
-      <div><dt>Connection projects</dt><dd>${connectionCount}</dd></div>
-    </dl>`;
+    <h3 class="dg-panel__section-label">선택 요약 <span class="game-inspector__section-meta">${selection.length} / ${availableCount}개 항목</span></h3>
+    <div class="dg-notice ${notice.tone}"><span class="dg-notice__lead">${notice.lead}</span><span>${notice.message}</span></div>
+    ${metricRowsHtml([
+      { label: "선택 공사비", value: formatCost(cost) },
+      { label: "건설 후 자금", value: formatSignedCost(financeState.economy.cash - cost), tone: financeState.economy.cash - cost < 0 ? "danger" : undefined },
+      { label: "대상 노선", value: `${routeCount}개` },
+      { label: "노선 구간", value: `${segmentCount}개` },
+      { label: "역", value: `${stationCount}개` },
+      { label: "차량기지", value: `${depotCount}개` },
+      { label: "환승 연결", value: `${transferCount}개` },
+      { label: "연결 공사", value: `${connectionCount}개` },
+    ])}`;
+  setText(planConversionDialog?.querySelector<HTMLElement>("#planConversionCost") ?? null, formatCost(cost));
   if (confirmPlanConversionButton)
     confirmPlanConversionButton.disabled = selection.length === 0 || invalidFacilities > 0 || (metaState.current.mode === "career" && shortfall > 0);
-  const confirmLabel = confirmPlanConversionButton?.querySelector("span:last-child");
-  if (confirmLabel) confirmLabel.textContent = selection.length > 0 ? `${selection.length}개 항목 건설 전환` : "건설 항목 선택 필요";
+  const confirmLabel = confirmPlanConversionButton?.querySelector("span");
+  if (confirmLabel) confirmLabel.textContent = selection.length > 0 ? `${selection.length}개 항목 건설` : "항목 선택 필요";
   if (fundPlanWithLoanButton) fundPlanWithLoanButton.hidden = metaState.current.mode !== "career" || shortfall <= 0;
 }
 
@@ -8008,8 +8020,11 @@ function isPlannedDepotBuildable(plan: ConstructionPlan, depot: PlannedDepot, se
 
 function fundPlanWithLoan() {
   if (metaState.current.mode !== "career") return;
-  takeLoan();
-  renderPlanConversionSummary();
+  openLoanDecision(() => {
+    updateEconomyHud();
+    setText(planConversionCurrentCash, formatCost(financeState.economy.cash));
+    renderPlanConversionSummary();
+  });
 }
 
 async function confirmPlanConversion() {
@@ -11940,22 +11955,28 @@ function closeInGameMenu() {
   if (inGameMenuDialog) inGameMenuDialog.hidden = true;
 }
 
+function openLoanDecision(afterLoan: () => void) {
+  const { cash, loanBalance } = financeState.economy;
+  openDecisionDialog(
+    `${formatCost(loanPrincipal)}을 대출할까요?`,
+    `자금 ${formatSignedCost(cash)} → ${formatSignedCost(cash + loanPrincipal)} · 대출 잔액 ${formatCost(loanBalance)} → ${formatCost(loanBalance + loanPrincipal)} · 연 이자 ${(currentLoanInterestRate() * 100).toFixed(1)}% · 월 상환 ${formatCost(loanMonthlyPayment)}`,
+    `${formatCost(loanPrincipal)} 대출`,
+    () => {
+      takeLoan();
+      afterLoan();
+    },
+    "build",
+  );
+}
+
 function openFinanceDialog() {
   if (!financeDialog) return;
   dialogManager.open("finance");
   if (dialogLoanButton) dialogManager.bind("finance", "loan", dialogLoanButton, "click", () => {
-    const { cash, loanBalance } = financeState.economy;
-    openDecisionDialog(
-      `${formatCost(loanPrincipal)}을 대출할까요?`,
-      `자금 ${formatSignedCost(cash)} → ${formatSignedCost(cash + loanPrincipal)} · 대출 잔액 ${formatCost(loanBalance)} → ${formatCost(loanBalance + loanPrincipal)} · 연 이자 ${(currentLoanInterestRate() * 100).toFixed(1)}% · 월 상환 ${formatCost(loanMonthlyPayment)}`,
-      `${formatCost(loanPrincipal)} 대출`,
-      () => {
-        takeLoan();
-        updateEconomyHud();
-        openFinanceDialog();
-      },
-      "build",
-    );
+    openLoanDecision(() => {
+      updateEconomyHud();
+      openFinanceDialog();
+    });
   });
   if (dialogRepayButton) dialogManager.bind("finance", "repay", dialogRepayButton, "click", () => {
     const payment = nextRepaymentAmount();

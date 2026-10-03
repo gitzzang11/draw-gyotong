@@ -429,6 +429,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | Inspector 마크업 | `src/ui/inspectorMarkup.ts`: 이스케이프, 노선 기호(글자 대비 자동 선택), 상태 태그, 지표 행(톤마다 ▲▼✕△ 표식 병행), 노선 행, 구획. 패널 템플릿은 HTML 조각이 아니라 구조화된 데이터를 받는다 |
 | 알림 묶음 | `game-notice-stack`(위쪽 가운데, 모드 배너 아래). 오류 배너 → 튜토리얼 → 토스트 순으로 겹치지 않게 쌓는다 |
 | 아래쪽 작업 막대 | `dg-plate game-bottom-bar`(실행 취소 묶음 오른쪽). 정차역 지도 편집의 정차·통과 수와 취소·적용, 철거 범위 조절 |
+| 기획 목록 | `dg-scrim game-planning` + `dg-panel dg-dialog dg-planning`(점선 구획). 넓은 가로 화면(760px 이상)은 편집·비교 2열, 좁으면 비교가 아래로. 포함 항목은 `game-plan-asset`(기획 노선 기호 `lineMarkHtml(..., "plan")`), 비교 카드는 `game-plan-compare[aria-pressed]` |
+| 기획안 건설 전환 | `dg-scrim game-conversion` + `dg-panel dg-panel--hazard dg-dialog`. 항목은 `game-conversion__item`(체크·이름·비용), 구간은 `details.game-fold`. 아래 작업 막대에 선택 공사비 Metric과 확정. 대출은 확인 대화상자를 거친다 |
 | 지도 객체 후보 선택 | `dg-scrim game-chooser` + `dg-panel dg-dialog`. 후보마다 종류 태그 또는 노선 기호를 붙인다 |
 | 노선 inspector | `game-inspector game-inspector--tall game-line-inspector`. 상단 띠는 노선 색(`--panel-band`). 접는 구획은 `details.game-fold`, 운행 계통 행은 `game-service-item[aria-pressed]`, 체크 항목은 `game-check` |
 | 건설·철거 검토 | `game-inspector game-review`, `data-review-mode`(공사: 빗금 띠, 기획: info 점선 띠)·`data-review-tool="eraser"`(위험 띠). 확정 버튼 왼쪽에 비용 Metric |
