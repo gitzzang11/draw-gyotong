@@ -791,87 +791,53 @@ if (!app) throw new Error("App root not found");
 
 app.innerHTML = `
   <main class="game-shell">
-    <section id="loadingScreen" class="loading-screen" aria-live="polite">
-      <img class="loading-art" src="/branding/metro-maker-app-icon.png" alt="Metro Maker" />
-      <span id="loadingStatus">관제 지도를 준비하고 있습니다</span>
-      <div class="loading-track"><i id="loadingProgress"></i></div>
+    <section id="loadingScreen" class="game-loading" aria-live="polite">
+      <div class="game-loading__sign">
+        <img class="game-loading__icon" src="/branding/metro-maker-app-icon.png" alt="" />
+        <strong class="game-loading__title">SEOUL METRO SIMULATOR</strong>
+      </div>
+      <span id="loadingStatus" class="game-loading__status">관제 지도를 준비하고 있습니다</span>
+      <span class="dg-meter game-loading__meter" aria-hidden="true"><span id="loadingProgress" class="dg-meter__fill" style="width:0%"></span></span>
     </section>
-    <section id="startScreen" class="start-screen" aria-label="game start">
-      <div class="start-panel">
-        <!-- Level 1: Hero Header & Title -->
-        <header class="start-head">
-          <div class="brand-title-group">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00F2FE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>
-            <h1 class="hero-title">SEOUL METRO SIMULATOR</h1>
-          </div>
-          <p class="hero-subtitle">수도권 도시 철도망 통합 관제 시스템</p>
-        </header>
-
-        <!-- Level 2: Primary Quick Action Hero Buttons -->
-        <div class="start-primary-actions">
-          <button id="continueButton" class="hero-action-btn continue-btn" type="button">
-            <div class="hero-btn-content">
-              <span class="hero-btn-icon">⚡</span>
-              <div class="hero-btn-text">
-                <strong>최근 슬롯 이어하기</strong>
-                <small>마지막 관제 지도로 즉시 접속합니다</small>
-              </div>
-            </div>
-          </button>
-          <button id="newGameButton" class="hero-action-btn newgame-btn" type="button">
-            <div class="hero-btn-content">
-              <span class="hero-btn-icon">✨</span>
-              <div class="hero-btn-text">
-                <strong>새 관제 세이브 생성</strong>
-                <small>아래 설정을 바탕으로 새로 구축합니다</small>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <!-- Level 3: New Game Configuration Panel -->
-        <section class="start-section-card setup-card">
-          <div class="section-card-header">
-            <span>CONFIG</span>
-            <h2>⚙️ 새 세이브 옵션 설정</h2>
-          </div>
-          <div class="setup-grid">
-            <section class="setup-city-field" aria-labelledby="cityPickerLabel">
-              <div class="setup-field-label"><span id="cityPickerLabel">도시 선택</span><small>운영할 도시를 선택하세요</small></div>
-              <select id="citySelect" class="city-native-select" aria-hidden="true" tabindex="-1"></select>
-              <div id="cityPicker" class="city-picker" role="radiogroup" aria-labelledby="cityPickerLabel"></div>
-            </section>
-            <section class="setup-choice-field" data-choice-input="modeSelect" aria-labelledby="modePickerLabel">
-              <div class="setup-field-label"><span id="modePickerLabel">게임 모드</span><small>운영 방식</small></div>
-              <select id="modeSelect" class="setup-native-select" aria-hidden="true" tabindex="-1"><option value="sandbox">샌드박스 (자금 무제한)</option><option value="career">커리어 (경영 도전)</option></select>
-              <div class="setup-choice-grid mode-choice-grid" role="radiogroup" aria-labelledby="modePickerLabel">
-                <button class="setup-choice-card" type="button" data-choice-value="sandbox" role="radio"><i aria-hidden="true">∞</i><span><strong>샌드박스</strong><small>자유 건설 · 자금 제한 없음</small></span></button>
-                <button class="setup-choice-card" type="button" data-choice-value="career" role="radio"><i aria-hidden="true">◆</i><span><strong>커리어</strong><small>자금 관리 · 도시 해금</small></span></button>
-              </div>
-            </section>
-            <section class="setup-choice-field" data-choice-input="difficultySelect" aria-labelledby="difficultyPickerLabel">
-              <div class="setup-field-label"><span id="difficultyPickerLabel">난이도</span><small>비용과 목표</small></div>
-              <select id="difficultySelect" class="setup-native-select" aria-hidden="true" tabindex="-1"><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
-              <div class="setup-choice-grid difficulty-choice-grid" role="radiogroup" aria-labelledby="difficultyPickerLabel">
-                <button class="setup-choice-card" type="button" data-choice-value="easy" role="radio"><span><strong>쉬움</strong><small>여유롭게 시작</small></span></button>
-                <button class="setup-choice-card" type="button" data-choice-value="normal" role="radio"><span><strong>보통</strong><small>표준 경영</small></span></button>
-                <button class="setup-choice-card" type="button" data-choice-value="hard" role="radio"><span><strong>어려움</strong><small>도전적인 운영</small></span></button>
-              </div>
-            </section>
-          </div>
-          <div class="setup-footer">
-            <label><span>세이브 이름</span><input id="slotNameInput" value="서울 1호 계획" maxlength="20" placeholder="슬롯 이름을 입력하세요" /></label>
-            <div class="city-note" id="cityNote">✨ 서울: 높은 수요, 강 많음</div>
-          </div>
+    <section id="startScreen" class="dg-workspace game-start" aria-labelledby="startTitle">
+      <header class="dg-workspace__bar game-start__bar">
+        <svg class="game-start__logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18 M3 12h18"/></svg>
+        <h1 id="startTitle" class="dg-workspace__title">SEOUL METRO SIMULATOR</h1>
+        <span class="game-workspace__sub game-optional">수도권 도시 철도망 통합 관제 시스템</span>
+      </header>
+      <div class="game-start__body">
+        <section class="game-start__col" aria-labelledby="startSavesLabel">
+          <button id="continueButton" class="dg-btn dg-btn--primary game-start__continue" type="button"><span>최근 세이브 이어하기</span><small>마지막으로 저장한 지도로 바로 돌아갑니다</small></button>
+          <h2 id="startSavesLabel" class="dg-panel__section-label">세이브</h2>
+          <div id="slotList" class="game-start__slots"></div>
         </section>
-
-        <!-- Level 4: Save Slots Archive Panel -->
-        <section class="start-section-card slots-card">
-          <div class="section-card-header">
-            <span>SAVED FILES</span>
-            <h2>📑 세이브 슬롯 아카이브</h2>
+        <section class="game-start__col game-start__setup" aria-labelledby="startNewLabel">
+          <h2 id="startNewLabel" class="dg-panel__section-label">새 게임</h2>
+          <div class="dg-field" role="group" aria-labelledby="cityPickerLabel">
+            <span id="cityPickerLabel" class="dg-field__label">도시</span>
+            <select id="citySelect" class="dg-hook" aria-hidden="true" tabindex="-1" hidden></select>
+            <div id="cityPicker" class="game-start__cities" role="radiogroup" aria-labelledby="cityPickerLabel"></div>
+            <p id="cityNote" class="game-inspector__note">서울: 높은 수요, 강 많음</p>
           </div>
-          <div class="slot-list" id="slotList"></div>
+          <div class="dg-field" data-choice-input="modeSelect">
+            <span id="modePickerLabel" class="dg-field__label">게임 모드</span>
+            <select id="modeSelect" class="dg-hook" aria-hidden="true" tabindex="-1" hidden><option value="sandbox">샌드박스 (자금 무제한)</option><option value="career">커리어 (경영 도전)</option></select>
+            <div class="dg-seg game-start__choice" role="radiogroup" aria-labelledby="modePickerLabel">
+              <button class="dg-seg__item" type="button" data-choice-value="sandbox" role="radio"><strong>샌드박스</strong><small>자유 건설 · 자금 제한 없음</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="career" role="radio"><strong>커리어</strong><small>자금 관리 · 도시 해금</small></button>
+            </div>
+          </div>
+          <div class="dg-field" data-choice-input="difficultySelect">
+            <span id="difficultyPickerLabel" class="dg-field__label">난이도</span>
+            <select id="difficultySelect" class="dg-hook" aria-hidden="true" tabindex="-1" hidden><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
+            <div class="dg-seg game-start__choice" role="radiogroup" aria-labelledby="difficultyPickerLabel">
+              <button class="dg-seg__item" type="button" data-choice-value="easy" role="radio"><strong>쉬움</strong><small>여유롭게 시작</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="normal" role="radio"><strong>보통</strong><small>표준 경영</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="hard" role="radio"><strong>어려움</strong><small>도전적인 운영</small></button>
+            </div>
+          </div>
+          <label class="dg-field"><span class="dg-field__label">세이브 이름</span><input id="slotNameInput" class="dg-input" value="서울 1호 계획" maxlength="20" placeholder="세이브 이름" autocomplete="off" /></label>
+          <button id="newGameButton" class="dg-btn dg-btn--primary game-start__new" type="button">새 게임 시작</button>
         </section>
       </div>
     </section>
@@ -2917,9 +2883,7 @@ function syncSetupChoice(input: HTMLSelectElement | null) {
   if (!input) return;
   document.querySelectorAll<HTMLElement>(`[data-choice-input="${input.id}"]`).forEach((field) => {
     field.querySelectorAll<HTMLButtonElement>("[data-choice-value]").forEach((button) => {
-      const selected = button.dataset.choiceValue === input.value;
-      button.classList.toggle("selected", selected);
-      button.setAttribute("aria-checked", String(selected));
+      button.setAttribute("aria-checked", String(button.dataset.choiceValue === input.value));
     });
   });
 }
@@ -8443,7 +8407,7 @@ function renderStartScreen() {
   renderCityOptions();
   if (!slotList) return;
   if (slotSummaries.length === 0) {
-    slotList.innerHTML = `<div class="empty-slot"><span>📭 저장된 세이브 슬롯이 없습니다</span><small>위 옵션에서 새 세이브를 생성하여 관제를 시작하세요.</small></div>`;
+    slotList.innerHTML = `<p class="game-news__empty"><strong>저장된 세이브가 없습니다</strong><span class="game-inspector__note">오른쪽에서 새 게임을 시작하세요.</span></p>`;
     if (continueButton) continueButton.disabled = true;
     return;
   }
@@ -8454,51 +8418,32 @@ function renderStartScreen() {
       const mode = slot.mode === "sandbox" ? "샌드박스" : "커리어";
       const diffLabel = difficultyConfigs[slot.difficulty]?.label || "보통";
       return `
-        <article class="slot-entry">
-          <button class="slot-card" data-slot-id="${slot.slotId}" type="button">
-            <div class="slot-card-main">
-              <div class="slot-title-row">
-                <strong class="slot-name">${escapeHtml(slot.slotName)}</strong>
-                <div class="slot-badges">
-                  <span class="slot-tag city-tag">${city.name}</span>
-                  <span class="slot-tag mode-tag">${mode}</span>
-                  <span class="slot-tag diff-tag">${diffLabel}</span>
-                  ${slot.bankrupt ? `<span class="slot-tag bankrupt-tag">파산</span>` : ""}
-                </div>
-              </div>
-              <div class="slot-meta-row">
-                <span>노선 ${slot.routeCount}개</span>
-                <span>역 ${slot.stationCount}개</span>
-                <span>⏱ ${formatPlayTime(slot.playTimeSeconds)}</span>
-              </div>
-            </div>
-            <div class="slot-card-finance">
-              <em class="slot-cash">${formatSignedCost(slot.cash)}</em>
-              <small class="slot-date">${formatDate(slot.updatedAt)} 저장</small>
-            </div>
+        <article class="game-slot">
+          <button class="game-slot__main" data-slot-id="${slot.slotId}" type="button">
+            <span class="game-slot__head"><strong>${escapeHtml(slot.slotName)}</strong><span class="game-slot__cash">${formatSignedCost(slot.cash)}</span></span>
+            <span class="game-slot__tags"><span class="dg-tag">${city.name}</span><span class="dg-tag">${mode}</span><span class="dg-tag">${diffLabel}</span>${slot.bankrupt ? `<span class="dg-tag dg-tag--error"><i class="dg-tag__icon" aria-hidden="true">✕</i>파산</span>` : ""}</span>
+            <small>노선 ${slot.routeCount}개 · 역 ${slot.stationCount}개 · 플레이 ${formatPlayTime(slot.playTimeSeconds)} · ${formatDate(slot.updatedAt)} 저장</small>
           </button>
-          <div class="slot-entry-actions">
-            <button class="slot-edit-button" data-edit-slot-id="${slot.slotId}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 수정`)}">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
-            </button>
-            <button class="slot-delete-button" data-delete-slot-id="${slot.slotId}" data-slot-name="${escapeHtml(slot.slotName)}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 삭제`)}">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-          </div>
+          <button class="dg-icon-btn" data-edit-slot-id="${slot.slotId}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 수정`)}">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 16 L4.5 12.5 L13 4 L16 7 L7.5 15.5 Z M11 6 L14 9"/></svg>
+          </button>
+          <button class="dg-icon-btn game-slot__delete" data-delete-slot-id="${slot.slotId}" data-slot-name="${escapeHtml(slot.slotName)}" type="button" aria-label="${escapeHtml(`${slot.slotName} 세이브 삭제`)}">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 6 H16 M8 6 V4 H12 V6 M6 6 L7 17 H13 L14 6"/></svg>
+          </button>
         </article>
       `;
     })
     .join("");
-  slotList.querySelectorAll<HTMLButtonElement>(".slot-card").forEach((button) => {
+  slotList.querySelectorAll<HTMLButtonElement>("[data-slot-id]").forEach((button) => {
     button.addEventListener("click", () => loadSlot(button.dataset.slotId || ""));
   });
-  slotList.querySelectorAll<HTMLButtonElement>(".slot-edit-button").forEach((button) => {
+  slotList.querySelectorAll<HTMLButtonElement>("[data-edit-slot-id]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       void openSaveEditor(button.dataset.editSlotId || "");
     });
   });
-  slotList.querySelectorAll<HTMLButtonElement>(".slot-delete-button").forEach((button) => {
+  slotList.querySelectorAll<HTMLButtonElement>("[data-delete-slot-id]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       requestSaveSlotDeletion(button.dataset.deleteSlotId || "", button.dataset.slotName || "이 세이브");
@@ -8661,11 +8606,11 @@ function renderCityOptions() {
     })
     .join("");
   citySelect.value = unlocked.includes(current) ? current : "seoul";
-  const cityPresentation: Record<CityId, { code: string; accent: string; landmark: string }> = {
-    seoul: { code: "SEO", accent: "#4ce0c3", landmark: "수도권" },
-    busan: { code: "BSN", accent: "#4f9bff", landmark: "해안 도시" },
-    daejeon: { code: "DJN", accent: "#f3ca52", landmark: "중부 거점" },
-    gwangju: { code: "GWJ", accent: "#c477ff", landmark: "남부 도시" },
+  const cityPresentation: Record<CityId, { code: string; landmark: string }> = {
+    seoul: { code: "SEO", landmark: "수도권" },
+    busan: { code: "BSN", landmark: "해안 도시" },
+    daejeon: { code: "DJN", landmark: "중부 거점" },
+    gwangju: { code: "GWJ", landmark: "남부 도시" },
   };
   if (cityPicker) {
     cityPicker.innerHTML = cityIds.map((cityId) => {
@@ -8675,11 +8620,9 @@ function renderCityOptions() {
       const selected = cityId === citySelect.value;
       const demand = city.demandMultiplier >= 1.2 ? "수요 높음" : city.demandMultiplier <= 0.85 ? "수요 낮음" : "수요 보통";
       const cost = city.constructionMultiplier > 1 ? "공사비 높음" : city.constructionMultiplier < 1 ? "공사비 절감" : "공사비 보통";
-      return `<button type="button" class="city-option-card${selected ? " selected" : ""}${locked ? " locked" : ""}" data-city-id="${cityId}" role="radio" aria-checked="${selected}" ${locked ? "disabled" : ""} style="--city-card-accent:${presentation.accent}">
-        <span class="city-option-mark">${presentation.code}</span>
-        <span class="city-option-main"><strong>${city.name}</strong><small>${presentation.landmark}</small></span>
-        <span class="city-option-stats"><em>${demand}</em><em>${cost}</em></span>
-        ${locked ? "<i class=\"city-option-lock\" aria-label=\"잠김\">🔒</i>" : "<i class=\"city-option-check\" aria-hidden=\"true\">✓</i>"}
+      return `<button type="button" class="game-city" data-city-id="${cityId}" role="radio" aria-checked="${selected}" ${locked ? "disabled" : ""}>
+        <span class="game-city__code" aria-hidden="true">${presentation.code}</span>
+        <span class="game-route-item__text"><strong>${city.name}${locked ? " · 잠김" : ""}</strong><small>${presentation.landmark} · ${demand} · ${cost}</small></span>
       </button>`;
     }).join("");
   }
@@ -8690,9 +8633,7 @@ function updateCityNote() {
   const cityId = ((citySelect?.value as CityId) || "seoul");
   setText(cityNote, `${cityConfigs[cityId].name}: ${cityConfigs[cityId].description}`);
   cityPicker?.querySelectorAll<HTMLButtonElement>("[data-city-id]").forEach((card) => {
-    const selected = card.dataset.cityId === cityId;
-    card.classList.toggle("selected", selected);
-    card.setAttribute("aria-checked", String(selected));
+    card.setAttribute("aria-checked", String(card.dataset.cityId === cityId));
   });
 }
 

@@ -446,9 +446,11 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 지도 컨트롤 | `dg-map-controls` (`--vertical`) |
 | tooltip | `dg-tooltip` |
 | 알림 | `dg-toast`, `dg-banner` (`--caution` / `--danger`), 패널 내 `dg-notice` (`--danger`) |
-| 다이얼로그 | `dg-scrim` + `dg-dialog dg-panel`. 층 순서는 HUD 1000 · 알림 1050 · (기존 시작 화면 1500) · 대화상자 2000 · 색 선택 2100 · 확인 2200 (`src/design/hud.css`) |
+| 다이얼로그 | `dg-scrim` + `dg-dialog dg-panel`. 층 순서는 HUD 1000 · 알림 1050 · 시작 화면 1500 · 대화상자 2000 · 색 선택 2100 · 확인 2200 (`src/design/hud.css`) |
 | 전체 화면 | `dg-workspace game-workspace`(z 1040: HUD 위, 알림·대화상자 아래), `__bar` `__title` `__body`. 제목 띠 오른쪽에 `[data-workspace-clock]`(게임 날짜·시각·재생 상태, `syncWorkspaceClocks`)과 닫기 |
 | 운영 현황·통계 | `game-stats`: 제목 띠 아래 `game-workspace__tabs`(`dg-seg`). 지표는 `dg-row` 2열(`game-stats__rows`), 증감은 ▲▼와 수치, 노선·역은 왼쪽 목록(`game-route-item[aria-pressed]`) + 오른쪽 상세, 지역 비교는 `dg-table`. 카드 격자 금지 |
+| 시작 화면 | `dg-workspace game-start`(z 1500, 세이브 관리 workspace). 왼쪽 열: 이어하기 주 버튼 + 세이브 목록(`game-slot`, 수정·삭제 아이콘), 오른쪽 열: 새 게임(도시 `game-city[role=radio]` 반전 코드 표지판, 모드·난이도 `dg-seg` 라디오, 이름, 오른쪽 아래 시작 버튼). 도시에는 노선 색 외 채도를 쓰지 않는다 |
+| 로딩 | `game-loading`(z 2500): 반전 표지판(아이콘·제목) + 상태 문장 + `dg-meter` |
 | 노선도 | `game-diagram`: 왼쪽 SVG 캔버스(배경은 노선도 렌더러 테마와 같은 값) + 오른쪽 설정 열(표시 노선·배경·표시 항목·재배치·내보내기·범례). 범례 기호는 렌더러와 같은 SVG 모양 |
 | 운영 분석 | `game-analysis`: 뉴스와 같은 집계 열(건전성 점수 + ● △ ✕ 상태 표식, 긴급 ! · 주의 △ · 참고 i 수) + `game-suggestion` 목록(원인·추천·효과·비용 `dl`). 긴급은 `dg-tag--error`와 위험색 구분선. 실행 버튼은 관련 화면으로 이동만 한다 |
 | 도시 뉴스 | `game-news`: 왼쪽 집계·보기 열, 오른쪽 `game-news-item` 목록(굵은 구분선, 카드 금지). 기회는 `dg-tag--ok` ▲, 도시 변화는 기본 태그 △, 종료는 `data-expired` |
