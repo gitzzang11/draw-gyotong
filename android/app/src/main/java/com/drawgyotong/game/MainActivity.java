@@ -44,6 +44,7 @@ public class MainActivity extends BridgeActivity {
     /**
      * 화면을 가장자리까지 쓰므로(decorFitsSystemWindows=false) 가상키보드가 올라와도 웹 화면 크기가 줄지 않는다.
      * 키보드 표시 여부와 높이(CSS px)를 웹에 "native-keyboard" 이벤트로 알려, 입력 미리보기를 키보드에 가리지 않는 곳에 띄운다.
+     * WebView 자신에게는 키보드가 없는 것처럼 전달해 화면이 줄거나 밀리지 않게 한다.
      */
     private void bridgeKeyboardInsets() {
         WebView webView = getBridge() != null ? getBridge().getWebView() : null;
@@ -57,7 +58,13 @@ public class MainActivity extends BridgeActivity {
                 "window.dispatchEvent(new CustomEvent('native-keyboard',{detail:{visible:" + visible + ",height:" + height + "}}))",
                 null
             );
-            return ViewCompat.onApplyWindowInsets(view, insets);
+            // WebView에는 키보드 영역을 숨긴다. 그대로 넘기면 WebView가 보이는 영역을 줄이고 입력칸 쪽으로 끌어올려
+            // 화면 전체 UI가 함께 밀린다. 키보드 높이는 위 이벤트로 웹에 따로 알린다.
+            WindowInsetsCompat withoutIme = new WindowInsetsCompat.Builder(insets)
+                .setInsets(WindowInsetsCompat.Type.ime(), Insets.NONE)
+                .setVisible(WindowInsetsCompat.Type.ime(), false)
+                .build();
+            return ViewCompat.onApplyWindowInsets(view, withoutIme);
         });
     }
 

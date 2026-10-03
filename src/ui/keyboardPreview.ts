@@ -6,7 +6,8 @@
  *
  * 키보드 감지:
  * - 안드로이드 앱: MainActivity가 보내는 "native-keyboard" 이벤트(표시 여부·높이 CSS px)
- * - 브라우저: visualViewport 높이가 평소보다 크게 줄었을 때
+ * - 브라우저: navigator.virtualKeyboard(키보드가 화면을 덮는 interactive-widget=overlays-content 설정), 없으면 visualViewport 높이 변화
+ * 키보드가 올라와도 화면을 줄이거나 밀어 올리지 않는다(index.html interactive-widget, capacitor SystemBars insetsHandling: disable).
  * 실제 입력은 원래 입력칸에서 일어나고, 미리보기는 보여 주기만 한다(aria-hidden).
  */
 
@@ -42,6 +43,8 @@ export function installKeyboardPreview(root: HTMLElement = document.body) {
 
   const keyboard = (): KeyboardState => {
     if (nativeKeyboard) return nativeKeyboard;
+    const virtual = (navigator as Navigator & { virtualKeyboard?: { boundingRect: DOMRect } }).virtualKeyboard;
+    if (virtual && virtual.boundingRect.height > 0) return { visible: true, height: Math.round(virtual.boundingRect.height) };
     const viewport = window.visualViewport;
     const height = viewport?.height ?? window.innerHeight;
     tallestViewport = Math.max(tallestViewport, height);
@@ -84,6 +87,11 @@ export function installKeyboardPreview(root: HTMLElement = document.body) {
     nativeKeyboard = detail && typeof detail.visible === "boolean" ? { visible: detail.visible, height: Math.max(0, Number(detail.height) || 0) } : null;
     render();
   });
+  const virtualKeyboard = (navigator as Navigator & { virtualKeyboard?: EventTarget & { overlaysContent: boolean } }).virtualKeyboard;
+  if (virtualKeyboard) {
+    virtualKeyboard.overlaysContent = true;
+    virtualKeyboard.addEventListener("geometrychange", render);
+  }
   window.visualViewport?.addEventListener("resize", render);
   window.visualViewport?.addEventListener("scroll", render);
   return preview;
