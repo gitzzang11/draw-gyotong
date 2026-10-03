@@ -15494,19 +15494,19 @@ function renderPopulationDensityCells() {
   const values = cells.map((cell) => cell.population).sort((left, right) => left - right);
   const upperBound = values[Math.floor((values.length - 1) * 0.9)] ?? 1;
   const ramp = populationDensityRamp();
+  // 격자 칸 크기의 사각형으로 칠한다. 원을 겹쳐 그리면 겹친 만큼 색이 쌓여 확대할수록 지도가 가려졌다.
+  // 확대(작은 격자)할수록 지도 세부가 중요하므로 조금 더 연하게 한다.
+  const zoomFade = resolution <= 100 ? 0.7 : resolution <= 250 ? 0.85 : 1;
   for (const cell of cells) {
     const density = Math.min(1, cell.population / Math.max(1, upperBound));
-    L.circle([cell.latitude, cell.longitude], {
+    // 인구 격자는 위경도 같은 각도 간격이라 칸 크기(도)를 그대로 쓴다.
+    const half = (cell.sizeDeg ?? resolution / 111_320) / 2;
+    L.rectangle([[cell.latitude - half, cell.longitude - half], [cell.latitude + half, cell.longitude + half]], {
       pane: "populationDensityPane",
-      radius: resolution * 1.05,
-      color: populationDensityColor(density, ramp),
-      weight: 0,
-      opacity: 0,
+      stroke: false,
       fillColor: populationDensityColor(density, ramp),
       // 밀도가 높을수록 진하게: 색과 불투명도를 함께 올린다.
-      fillOpacity: resolution === 100
-        ? 0.04 + Math.sqrt(density) * 0.22
-        : 0.05 + Math.sqrt(density) * 0.24,
+      fillOpacity: (0.06 + Math.sqrt(density) * 0.36) * zoomFade,
       interactive: false,
     }).addTo(populationDensityLayer);
   }

@@ -7,7 +7,8 @@ type PopulationZone = {
   populationDensitySource?: "worldpop-100m-2020";
 };
 
-export type PopulationCell = { latitude: number; longitude: number; population: number };
+/** sizeDeg: 칸 한 변의 크기(도). 위도·경도 모두 같은 각도 간격이다. */
+export type PopulationCell = { latitude: number; longitude: number; population: number; sizeDeg?: number };
 export type GeographicBounds = { north: number; south: number; west: number; east: number };
 export type PopulationResolution = 100 | 250 | 500 | 1000;
 
@@ -67,6 +68,7 @@ export function getRealPopulationCells(
         latitude: grid.north - (rowStart + grouping / 2) * cellSize,
         longitude: grid.west + (columnStart + grouping / 2) * cellSize,
         population,
+        sizeDeg: grouping * cellSize,
       });
     }
   }
