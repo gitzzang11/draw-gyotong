@@ -151,7 +151,7 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
   font: var(--type-micro);
   color: var(--text-2);
 }
-.game-density-legend i { height: 8px; background: linear-gradient(90deg, rgba(242, 190, 0, 0.08), var(--signal-caution) 60%, var(--signal-danger)); }
+.game-density-legend i { height: 8px; background: linear-gradient(90deg, transparent, var(--signal-caution) 40%, var(--signal-caution-text)); }
 
 /* ===== 선택 객체 inspector: 오른쪽 아래 (MOBILE_UX §7.1, §8) =====
    지도 컨트롤 아래에서 화면 아래 여백까지 쓴다. 본문만 스크롤하고 행동 막대는 고정한다. */
@@ -520,6 +520,17 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
   .game-stats__lead, .game-stats__rows, .game-stats__pair { grid-template-columns: 1fr; }
   .game-stats__split { grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-3); }
 }
+
+/* ===== 지도 바탕 (DESIGN_SYSTEM §3, §4.1, §9) =====
+   원본 타일(OSM·지형·철도 오버레이)은 타일 pane 하나에서 무채색화해 지도 층 토큰 범위에 맞춘다.
+   종이: 회색조 → 대비 축소 → 밝게 (바탕 ≈ --map-ground, 수면 ≈ --map-water)
+   먹: 회색조 → 반전 → 대비 축소 → 어둡게 (바탕 ≈ #17191C, 지명 ≈ --map-label)
+   벡터 레이어(노선·역·열차)는 다른 pane이라 영향받지 않는다. */
+.leaflet-container.map { background: var(--map-ground); font-family: var(--font-ui); }
+.leaflet-container.map .leaflet-tile-pane { filter: grayscale(1) sepia(.08) contrast(.62) brightness(1.14); }
+:root[data-theme="ink"] .leaflet-container.map .leaflet-tile-pane { filter: grayscale(1) invert(1) contrast(.6) brightness(.6); }
+.leaflet-container.map .leaflet-control-attribution { background: var(--surface-0); color: var(--text-2); font: var(--type-micro); }
+.leaflet-container.map .leaflet-control-attribution a { color: var(--text-1); }
 
 /* ===== 시작 화면 (세이브 관리 workspace) =====
    층: 시작 화면 1500 (대화상자 2000 아래, 세이브 수정·삭제 확인이 위에 뜬다) · 로딩 2500 */

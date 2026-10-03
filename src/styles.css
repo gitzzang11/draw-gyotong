@@ -307,12 +307,6 @@ tr:hover td {
 .map {
   position: absolute;
   inset: 0;
-  background: #080D14;
-}
-
-.leaflet-container {
-  background: #080D14 !important;
-  font-family: var(--font-family) !important;
 }
 
 /* ----------------------------------------------------
@@ -1051,19 +1045,6 @@ button:active,
   transform: translateY(0);
 }
 
-.map {
-  background: #080D14;
-}
-
-/* 플레이어 시설(노선·역·열차)이 배경 지도보다 우선 보이도록 타일 채도를 낮추고
-   밝기·대비를 소폭 조절한다. 타일 pane만 대상이라 벡터 오버레이는 영향받지 않는다. */
-.leaflet-tile-pane {
-  filter: saturate(0.74) brightness(0.94) contrast(0.96);
-}
-
-.leaflet-container {
-  background: #080D14 !important;
-}
 
 /* Shared panel surface: quiet separation from the map, no glass spectacle. */
 .menu-dialog {

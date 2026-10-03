@@ -133,19 +133,8 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   color: var(--color-text-muted) !important;
 }
 
-/* Map treatment keeps the original map layout and controls. */
-.map,
-.leaflet-container {
-  background: var(--color-map-void) !important;
-}
-
-.leaflet-tile-pane {
-  filter: none;
-}
-
 .leaflet-control-zoom,
 .leaflet-control-layers,
-.leaflet-control-attribution,
 .leaflet-bar {
   border: 1px solid var(--color-border-subtle) !important;
   border-radius: 8px !important;

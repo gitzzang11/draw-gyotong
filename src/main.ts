@@ -1723,9 +1723,14 @@ const railLayer = L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}
   keepBuffer: 2,
 });
 
+/** 현재 테마의 지도 토큰 색. 배경 레이어가 노선보다 눈에 띄지 않도록 지도 층 토큰만 쓴다 (DESIGN_SYSTEM §4.1). */
+function mapTokenColor(token: "--map-ground" | "--map-water" | "--map-green" | "--map-road" | "--map-label", fallback: string) {
+  return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || fallback;
+}
+
 const adminLayer = L.geoJSON(undefined, {
   interactive: false,
-  style: { color: "#4ce0c3", weight: 1.6, opacity: 0.85, fillOpacity: 0, dashArray: "5 6" },
+  style: () => ({ color: mapTokenColor("--map-label", "#7A7D80"), weight: 1.6, opacity: 0.85, fillOpacity: 0, dashArray: "5 6" }),
 });
 
 const landuseLayer = L.geoJSON(undefined, {
@@ -1734,11 +1739,13 @@ const landuseLayer = L.geoJSON(undefined, {
     const landuse = String(feature?.properties?.landuse ?? feature?.properties?.natural ?? feature?.properties?.waterway ?? "");
     const isWater = landuse === "water" || landuse === "river" || Boolean(feature?.properties?.waterway);
     const isMountain = landuse === "forest" || landuse === "wood";
+    // 종류는 지도 층 토큰의 명도 차와 선 굵기로 구분한다.
     return {
-      color: isWater ? "#4aaedb" : isMountain ? "#4f9b5c" : "#c9a64a",
+      color: isWater ? mapTokenColor("--map-water", "#C6D3D9") : isMountain ? mapTokenColor("--map-green", "#DDE2D2") : mapTokenColor("--map-label", "#7A7D80"),
+      fillColor: isWater ? mapTokenColor("--map-water", "#C6D3D9") : isMountain ? mapTokenColor("--map-green", "#DDE2D2") : mapTokenColor("--map-ground", "#ECE9E1"),
       weight: isWater ? 1.5 : 0.8,
-      opacity: isWater ? 0.72 : 0.45,
-      fillOpacity: isWater ? 0.16 : 0.2,
+      opacity: isWater ? 0.9 : 0.45,
+      fillOpacity: isWater ? 0.5 : 0.35,
     };
   },
 });
@@ -2957,7 +2964,11 @@ saveRouteSettingsButton?.addEventListener("click", saveRouteSettings);
 soundToggle?.addEventListener("change", () => updateSettings({ soundEnabled: Boolean(soundToggle.checked) }));
 hapticsToggle?.addEventListener("change", () => updateSettings({ hapticsEnabled: Boolean(hapticsToggle.checked) }));
 performanceSelect?.addEventListener("change", () => updateSettings({ performanceMode: performanceSelect.value === "battery" ? "battery" : "balanced" }));
-mapThemeSelect?.addEventListener("change", () => updateSettings({ mapTheme: normalizeMapTheme(mapThemeSelect.value) }));
+mapThemeSelect?.addEventListener("change", () => {
+  updateSettings({ mapTheme: normalizeMapTheme(mapThemeSelect.value) });
+  // 신호 토큰으로 칠하는 인구 밀도 레이어를 새 테마 색으로 다시 그린다.
+  updateDynamicLayers();
+});
 reducedMotionToggle?.addEventListener("change", () => updateSettings({ reducedMotion: Boolean(reducedMotionToggle.checked) }));
 sandboxConstructionTimeToggle?.addEventListener("change", () =>
   updateSettings({ sandboxConstructionTime: Boolean(sandboxConstructionTimeToggle.checked) }),
@@ -15291,15 +15302,16 @@ function renderPopulationDensityCells() {
   }, resolution);
   const values = cells.map((cell) => cell.population).sort((left, right) => left - right);
   const upperBound = values[Math.floor((values.length - 1) * 0.9)] ?? 1;
+  const ramp = populationDensityRamp();
   for (const cell of cells) {
     const density = Math.min(1, cell.population / Math.max(1, upperBound));
     L.circle([cell.latitude, cell.longitude], {
       pane: "populationDensityPane",
       radius: resolution * 1.05,
-      color: populationDensityColor(density),
+      color: populationDensityColor(density, ramp),
       weight: 0,
       opacity: 0,
-      fillColor: populationDensityColor(density),
+      fillColor: populationDensityColor(density, ramp),
       fillOpacity: resolution === 100
         ? 0.012 + Math.sqrt(density) * 0.1
         : 0.035 + Math.sqrt(density) * 0.17,
@@ -15315,18 +15327,27 @@ function populationResolutionForZoom(zoom: number) {
   return 1000;
 }
 
-function populationDensityColor(density: number) {
-  const stops: ReadonlyArray<readonly [number, number, number]> = [
-    [29, 78, 216], [6, 182, 212], [34, 197, 94], [250, 204, 21], [251, 146, 60], [244, 63, 94],
+/** 인구 밀도 색 범위. 범례(.game-density-legend)와 같은 호박색 한 계열(밝은 주의색 → 진한 주의 글자색)로 칠해 노선 색과 경쟁하지 않게 한다. */
+function populationDensityRamp(): [RgbTriplet, RgbTriplet] {
+  const style = getComputedStyle(document.documentElement);
+  return [
+    parseHexRgb(style.getPropertyValue("--signal-caution")) ?? [242, 190, 0],
+    parseHexRgb(style.getPropertyValue("--signal-caution-text")) ?? [138, 106, 0],
   ];
-  const clamped = Math.min(1, Math.max(0, density));
-  const scaled = clamped * (stops.length - 1);
-  const lowerIndex = Math.floor(scaled);
-  const upperIndex = Math.min(stops.length - 1, lowerIndex + 1);
-  const progress = scaled - lowerIndex;
-  const lower = stops[lowerIndex];
-  const upper = stops[upperIndex];
-  const channel = (index: number) => Math.round(lower[index] + (upper[index] - lower[index]) * progress);
+}
+
+type RgbTriplet = readonly [number, number, number];
+
+function parseHexRgb(value: string): RgbTriplet | null {
+  const match = /^#([0-9a-f]{6})$/i.exec(value.trim());
+  if (!match) return null;
+  const hex = Number.parseInt(match[1], 16);
+  return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
+}
+
+function populationDensityColor(density: number, [low, high]: [RgbTriplet, RgbTriplet]) {
+  const progress = Math.min(1, Math.max(0, density));
+  const channel = (index: number) => Math.round(low[index] + (high[index] - low[index]) * progress);
   return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
 }
 
@@ -15783,6 +15804,9 @@ function updateSettings(patch: Partial<GameSettings>) {
 
 function applyDocumentTheme() {
   applyMapTheme(document.documentElement, settings.mapTheme);
+  // 토큰 색을 읽는 지도 벡터 레이어를 새 테마로 다시 칠한다.
+  adminLayer.resetStyle();
+  landuseLayer.resetStyle();
   syncThemeColorMeta(document.querySelector<HTMLMetaElement>('meta[name="theme-color"]'), () => getComputedStyle(document.documentElement).getPropertyValue("--surface-0"));
 }
 
