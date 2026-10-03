@@ -517,7 +517,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    rule still carried the centered panel translate, which shifted it half a
    panel left even after right anchoring was applied. */
 
-.connection-dialog-header,
 .dialog-heading {
   border-color: var(--color-border-subtle) !important;
   border-radius: 0 !important;
@@ -569,9 +568,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   background: var(--color-surface-1) !important;
 }
 
-.connection-section,
-.connection-target-card,
-.connection-choice,
 .plan-conversion-intro,
 .plan-conversion-summary,
 .planning-form-card {
@@ -612,7 +608,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .dialog-backdrop > div > section,
 .settings-dialog,
 .planning-dialog,
-.merge-dialog,
 .plan-conversion-dialog,
 .train-manager-dialog,
 .construction-manager-dialog {
@@ -659,7 +654,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: inset 0 -3px 0 var(--color-accent) !important;
 }
 
-.connection-safety-note,
 .planning-editor,
 .plan-comparison,
 .plan-conversion-group {

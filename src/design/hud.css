@@ -387,6 +387,17 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-save-editor__form { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - var(--edge-inset-top) - var(--edge-inset-bottom) - var(--touch-min)); }
 .game-save-editor__pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 
+/* ===== 노선 연결 ===== */
+.game-connection { z-index: 2000; }
+.game-connection .dg-dialog { width: min(520px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-choice-list { margin: 0; padding: 0; border: 0; display: grid; }
+.game-choice { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); padding: 6px 0; border-top: var(--line-hair) solid var(--rule); cursor: pointer; }
+.game-choice:first-of-type { border-top: 0; }
+.game-choice input { width: 20px; height: 20px; margin: 0; accent-color: var(--text-1); flex: none; }
+.game-choice__icon { width: 20px; text-align: center; font-weight: 800; }
+.game-choice:has(input:checked) { font-weight: 800; }
+.game-connection__safety { padding: 0 var(--space-3); }
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 2000; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }

@@ -1624,50 +1624,33 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="mergeDialog" class="dialog-backdrop" hidden>
-      <section class="merge-dialog" role="dialog" aria-modal="true" aria-labelledby="mergeTitle">
-        <header class="connection-dialog-header">
-          <div class="connection-title-block">
-            <span class="connection-eyebrow"><i aria-hidden="true"></i> NETWORK LINK</span>
-            <h2 id="mergeTitle">노선 연결 설정</h2>
-            <p id="mergeDescription"></p>
-          </div>
-          <button id="closeMergeButton" class="dialog-close" type="button" aria-label="닫기">×</button>
+    <div id="mergeDialog" class="dg-hud dg-scrim game-connection" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="mergeTitle" aria-describedby="mergeDescription">
+        <header class="dg-panel__header">
+          <h2 id="mergeTitle" class="dg-panel__title">노선 연결</h2>
+          <div class="dg-panel__header-end"><button id="closeMergeButton" class="dg-icon-btn" type="button" aria-label="노선 연결 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
         </header>
-        <div class="connection-dialog-body">
-          <section class="connection-section" aria-labelledby="connectionTargetsTitle">
-            <div class="connection-section-heading">
-              <span>01</span>
-              <div><strong id="connectionTargetsTitle">연결 대상</strong><small>선택한 두 끝점과 공사 영향을 확인하세요.</small></div>
-            </div>
-            <div id="mergeConnectionSummary" class="connection-target-summary"></div>
+        <div class="dg-panel__body">
+          <section class="dg-panel__section" aria-labelledby="connectionTargetsTitle">
+            <h3 id="connectionTargetsTitle" class="dg-panel__section-label">연결 대상</h3>
+            <p id="mergeDescription" class="game-inspector__note"></p>
+            <div id="mergeConnectionSummary"></div>
           </section>
-          <section class="connection-section" aria-labelledby="connectionMethodTitle">
-            <div class="connection-section-heading">
-              <span>02</span>
-              <div><strong id="connectionMethodTitle">처리 방식</strong><small>실제 가능한 방식만 표시됩니다.</small></div>
-            </div>
-            <fieldset id="mergeChoiceList" class="connection-choice-list"><legend>연결 방식 선택</legend></fieldset>
+          <section class="dg-panel__section" aria-labelledby="connectionMethodTitle">
+            <h3 id="connectionMethodTitle" class="dg-panel__section-label">처리 방식<span class="game-inspector__section-meta">가능한 방식만 표시</span></h3>
+            <fieldset id="mergeChoiceList" class="game-choice-list"><legend class="dg-sr-only">연결 방식 선택</legend></fieldset>
           </section>
-          <section id="mergeLegacyFields" class="connection-section connection-result-settings">
-            <div class="connection-section-heading">
-              <span>03</span>
-              <div><strong>병합 결과</strong><small>병합 뒤 유지할 노선 정보를 선택하세요.</small></div>
-            </div>
-            <div class="connection-result-grid">
-              <label class="manager-field"><span>노선 이름</span><select id="mergeNameSelect"></select></label>
-              <label class="manager-field"><span>대표 색상</span><select id="mergeColorSelect"></select></label>
-            </div>
+          <section id="mergeLegacyFields" class="dg-panel__section game-save-editor__pair">
+            <label class="dg-field"><span class="dg-field__label">병합 후 이름</span><select id="mergeNameSelect" class="dg-input"></select></label>
+            <label class="dg-field"><span class="dg-field__label">병합 후 색</span><select id="mergeColorSelect" class="dg-input"></select></label>
           </section>
+          <p class="game-inspector__note game-connection__safety">✓ 확정하기 전에는 노선과 비용이 바뀌지 않습니다.</p>
         </div>
-        <footer class="connection-dialog-footer">
-          <div class="connection-safety-note"><i aria-hidden="true">✓</i><span>확정하기 전에는 노선과 비용이 변경되지 않습니다.</span></div>
-          <div class="dialog-actions connection-actions">
-            <button id="cancelMergeButton" class="connection-cancel" type="button">취소</button>
-            <button id="redesignMergeButton" class="connection-redesign" type="button">지점 다시 선택</button>
-            <button id="confirmMergeButton" class="primary connection-confirm" type="button">연결 확정</button>
-          </div>
-        </footer>
+        <div class="dg-panel__actions">
+          <button id="cancelMergeButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
+          <button id="redesignMergeButton" class="dg-btn dg-btn--quiet dg-btn--compact" type="button">지점 다시 선택</button>
+          <button id="confirmMergeButton" class="dg-btn dg-btn--primary dg-panel__actions-push" type="button">연결 확정</button>
+        </div>
       </section>
     </div>
 
@@ -13915,21 +13898,16 @@ function openMergeDialog(merge: PendingMerge) {
   );
   if (mergeConnectionSummary) {
     mergeConnectionSummary.innerHTML = `
-      <div class="connection-route-pair">
-        ${renderConnectionTargetCard(escapeHtml(first.name), escapeHtml(first.color), merge.first.atStart ? "시점" : "종점", "A")}
-        <div class="connection-bridge" aria-hidden="true"><i></i><span>연결</span><i></i></div>
-        ${renderConnectionTargetCard(escapeHtml(second.name), escapeHtml(second.color), merge.second.atStart ? "시점" : "종점", "B")}
-      </div>
-      <dl class="connection-impact-grid">
-        <div><dt>연결 거리</dt><dd>${merge.bridgeLengthKm.toFixed(2)}km</dd></div>
-        <div><dt>예상 비용</dt><dd>${formatCost(merge.bridgeCost)}</dd></div>
-        <div><dt>예상 공기</dt><dd>${formatConstructionDuration(Math.max(1, Math.round(merge.bridgeLengthKm * baseConstructionDaysPerKm)))}</dd></div>
-        <div class="${transferStationIds ? "available" : ""}"><dt>환승 연결</dt><dd>${transferStationIds ? "사용 가능" : "대상 역 없음"}</dd></div>
-      </dl>`;
+      ${renderConnectionTargetCard(escapeHtml(first.name), escapeHtml(first.color), merge.first.atStart ? "시점" : "종점", "A")}
+      ${renderConnectionTargetCard(escapeHtml(second.name), escapeHtml(second.color), merge.second.atStart ? "시점" : "종점", "B")}
+      <div class="dg-row"><span class="dg-row__label">연결 거리</span><span class="dg-row__value">${merge.bridgeLengthKm.toFixed(2)}km</span></div>
+      <div class="dg-row"><span class="dg-row__label">예상 비용</span><span class="dg-row__value dg-row__value--metric">${formatCost(merge.bridgeCost)}</span></div>
+      <div class="dg-row"><span class="dg-row__label">예상 공기</span><span class="dg-row__value">${formatConstructionDuration(Math.max(1, Math.round(merge.bridgeLengthKm * baseConstructionDaysPerKm)))}</span></div>
+      <div class="dg-row"><span class="dg-row__label">환승 연결</span><span class="dg-row__value${transferStationIds ? " dg-row__value--ok" : ""}">${transferStationIds ? "● 사용 가능" : "대상 역 없음"}</span></div>`;
   }
   if (mergeChoiceList) {
     mergeChoiceList.innerHTML = `
-      <legend>연결 방식</legend>
+      <legend class="dg-sr-only">연결 방식</legend>
       ${choiceModel.choices.map((choice) =>
         renderConnectionChoice(choice.id, escapeHtml(choice.title), escapeHtml(choice.description), choice.id === choiceModel.defaultChoice)
       ).join("")}`;
