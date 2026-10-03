@@ -7569,11 +7569,16 @@ function renderPlanningDialog() {
   const plan = getActivePlan(false);
   for (const control of [duplicatePlanButton, deletePlanButton, savePlanButton, convertPlanButton]) if (control) control.disabled = !plan;
   if (!plan) {
+    // 기획안이 없으면 이전 기획안의 입력값이 남지 않게 비우고 잠근다.
+    if (planNameInput) planNameInput.value = "";
+    if (planNotesInput) planNotesInput.value = "";
+    for (const control of [planNameInput, planStatusSelect, planPrioritySelect, planNotesInput]) if (control) control.disabled = true;
     if (planSummary) planSummary.innerHTML = `<p class="game-inspector__note">새 기획안을 만들어 미래 노선을 설계하세요.</p>`;
     if (planAssetList) planAssetList.innerHTML = "";
     renderPlanComparison();
     return;
   }
+  for (const control of [planNameInput, planStatusSelect, planPrioritySelect, planNotesInput]) if (control) control.disabled = false;
   if (planNameInput) planNameInput.value = plan.name;
   if (planStatusSelect) planStatusSelect.value = plan.status;
   if (planPrioritySelect) planPrioritySelect.value = plan.priority;
@@ -12072,6 +12077,7 @@ function openLoanDecision(afterLoan: () => void) {
       afterLoan();
     },
     "build",
+    "대출 확인",
   );
 }
 
@@ -12098,6 +12104,7 @@ function openFinanceDialog() {
         openFinanceDialog();
       },
       "build",
+      "상환 확인",
     );
   });
   updateEconomyHud();
@@ -13676,10 +13683,10 @@ function renderDeleteGuide() {
   }).addTo(editGuideLayer);
 }
 
-function openDecisionDialog(message: string, warning: string, confirmLabel: string, action: () => void, intent: "danger" | "build" = "danger") {
+function openDecisionDialog(message: string, warning: string, confirmLabel: string, action: () => void, intent: "danger" | "build" = "danger", title?: string) {
   if (!decisionDialog) return;
   decisionDialog.dataset.decisionIntent = intent;
-  setText(byId("decisionKicker"), intent === "build" ? "시설 확장 검토" : "작업 확인");
+  setText(byId("decisionKicker"), title ?? (intent === "build" ? "시설 확장 검토" : "작업 확인"));
   setText(decisionMessage, message);
   setText(decisionWarning, warning);
   if (decisionWarning) decisionWarning.hidden = !warning;

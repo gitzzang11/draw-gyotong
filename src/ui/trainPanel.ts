@@ -48,7 +48,7 @@ export class TrainPanel {
       ? `<p class="game-inspector__note">배치된 열차가 없습니다. 아래에서 새 편성을 들이세요.</p>`
       : view.fleets.map((fleet) => `
         <div class="game-fleet-row">
-          <span class="game-route-item__text"><strong>${escapeHtml(fleet.label)} · ${fleet.cars}량</strong><small>편성당 ${fleet.capacity.toLocaleString("ko-KR")}명 · 최고 ${fleet.speedKmh}km/h</small></span>
+          <span class="game-route-item__text"><strong>${escapeHtml(fleet.label)} · ${fleet.cars}량</strong><small>편성당 ${fleet.capacity.toLocaleString("ko-KR")}명 · 평균 ${fleet.speedKmh}km/h</small></span>
           <span class="dg-seg game-fleet-row__stepper" role="group" aria-label="${escapeHtml(fleet.label)} 편성 수">
             <button class="dg-seg__item" type="button" data-fleet-id="${escapeHtml(fleet.id)}" data-fleet-step="-1" aria-label="1편성 줄이기">−</button>
             <span class="game-fleet-row__count">${fleet.sets}편성</span>

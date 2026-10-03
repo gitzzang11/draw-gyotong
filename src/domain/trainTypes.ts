@@ -50,7 +50,7 @@ export function clampCars(type: TrainType, cars: number) {
   return Math.min(spec.maxCars, Math.max(spec.minCars, Math.round(Number.isFinite(cars) ? cars : spec.minCars)));
 }
 
-/** 차종 기본 편성 (범위 가운데에서 짝수 쪽) */
+/** 차종 기본 편성 (범위 가운데, 반올림) */
 export function defaultCars(type: TrainType) {
   const spec = trainCatalog[type];
   return clampCars(type, Math.round((spec.minCars + spec.maxCars) / 2));
