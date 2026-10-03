@@ -6,7 +6,8 @@ export type DiagramPoint = {
 export type MetroDiagramState = {
   autoPositions: Record<string, DiagramPoint>;
   manualPositions: Record<string, DiagramPoint>;
-  background: "dark" | "light" | "blueprint";
+  /** "theme"은 앱 지도 테마(종이/먹)를 따른다. 나머지는 플레이어가 고른 고정 배경. */
+  background: "theme" | "dark" | "light" | "blueprint";
   showStationNames: boolean;
   showCompanyInfo: boolean;
   selectedRouteId: string;
@@ -17,7 +18,7 @@ export type MetroDiagramState = {
 const defaultDiagramState: MetroDiagramState = {
   autoPositions: {},
   manualPositions: {},
-  background: "light",
+  background: "theme",
   showStationNames: true,
   showCompanyInfo: true,
   selectedRouteId: "all",
@@ -28,10 +29,10 @@ const defaultDiagramState: MetroDiagramState = {
 export function normalizeMetroDiagramState(state?: MetroDiagramState): MetroDiagramState {
   const usingPublicMapLayout = (state?.layoutVersion ?? 0) < defaultDiagramState.layoutVersion;
   const background: MetroDiagramState["background"] = usingPublicMapLayout
-    ? "light"
-    : state?.background === "dark" || state?.background === "blueprint"
+    ? defaultDiagramState.background
+    : state?.background === "dark" || state?.background === "blueprint" || state?.background === "light"
       ? state.background
-      : "light";
+      : defaultDiagramState.background;
   return {
     ...defaultDiagramState,
     ...(state ?? {}),

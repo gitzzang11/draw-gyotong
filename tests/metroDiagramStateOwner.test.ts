@@ -35,7 +35,7 @@ describe("MetroDiagramStateOwner", () => {
     expect(owner.current).toEqual({
       autoPositions: {},
       manualPositions: {},
-      background: "light",
+      background: "theme",
       showStationNames: false,
       showCompanyInfo: false,
       selectedRouteId: "route-2",

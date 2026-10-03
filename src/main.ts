@@ -139,6 +139,7 @@ import {
 } from "./simulation/finance/dailySettlement.ts";
 import { LoanStateOwner } from "./simulation/finance/loanStateOwner.ts";
 import { LayerManager } from "./map/layerManager.ts";
+import { mapPalette } from "./map/mapPalette.ts";
 import { LineRenderer, type LineRenderEntity } from "./map/lineRenderer.ts";
 import {
   StationRenderer,
@@ -1229,7 +1230,7 @@ app.innerHTML = `
         <aside class="game-diagram__side" aria-label="노선도 설정">
           <label class="dg-field"><span class="dg-field__label">표시 노선</span><select id="diagramRouteFilter" class="dg-input"></select></label>
           <label class="dg-field"><span class="dg-field__label">배경</span><select id="diagramBackgroundSelect" class="dg-input">
-            <option value="dark">어두운 바탕</option><option value="light">밝은 바탕</option><option value="blueprint">청사진</option>
+            <option value="theme">지도 테마 따름</option><option value="dark">어두운 바탕</option><option value="light">밝은 바탕</option><option value="blueprint">청사진</option>
           </select></label>
           <label class="game-check"><input id="diagramLabelsToggle" type="checkbox" checked /><span>역 이름</span></label>
           <label class="game-check"><input id="diagramCompanyToggle" type="checkbox" checked /><span>철도망 정보</span></label>
@@ -2939,7 +2940,8 @@ diagramRouteFilter?.addEventListener("change", () => {
   renderMetroDiagram();
 });
 diagramBackgroundSelect?.addEventListener("change", () => {
-  const background = ["light", "blueprint"].includes(diagramBackgroundSelect.value) ? (diagramBackgroundSelect.value as "light" | "blueprint") : "dark";
+  const value = diagramBackgroundSelect.value;
+  const background = value === "light" || value === "blueprint" || value === "dark" ? value : "theme";
   diagramStateOwner.setBackground(background);
   renderMetroDiagram();
 });
@@ -6618,7 +6620,7 @@ function renderMetroDiagram() {
       const pathData = points.slice(1).map((point, index) => octilinearDiagramPath(points[index], point, `${path.id}:${index}`)).join(" ");
       const start = points[0];
       return `<g class="diagram-route" data-route-id="${path.route.id}">
-        <path d="M ${roundSvg(start.x)} ${roundSvg(start.y)} ${pathData}" fill="none" stroke="#ffffff" stroke-width="${path.branch ? 18 : 21}" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M ${roundSvg(start.x)} ${roundSvg(start.y)} ${pathData}" fill="none" stroke="${diagramTheme().casing}" stroke-width="${path.branch ? 18 : 21}" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M ${roundSvg(start.x)} ${roundSvg(start.y)} ${pathData}" fill="none" stroke="${escapeHtml(path.route.color)}" stroke-width="${path.branch ? 10 : 12}" stroke-linecap="round" stroke-linejoin="round"/>
       </g>`;
     })
@@ -6631,7 +6633,7 @@ function renderMetroDiagram() {
       .map((node) => {
         const point = positions.get(node.id)!;
         const color = getRouteColor(node.routeIds[0]);
-        return `<rect class="diagram-terminal" x="${roundSvg(point.x - 8)}" y="${roundSvg(point.y - 8)}" width="16" height="16" rx="2" fill="#ffffff" stroke="${color}" stroke-width="5"/>`;
+        return `<rect class="diagram-terminal" x="${roundSvg(point.x - 8)}" y="${roundSvg(point.y - 8)}" width="16" height="16" rx="2" fill="${diagramTheme().surface}" stroke="${color}" stroke-width="5"/>`;
       })
       .join("") +
     visibleStationNodes.map((node) => renderDiagramStation(node, positions.get(node.id)!)).join("");
@@ -6662,11 +6664,16 @@ function renderDiagramBackground() {
 }
 
 function diagramTheme() {
+  if (diagramStateOwner.current.background === "theme") {
+    // 앱 테마를 따르는 인쇄 노선도: 바탕·글자·역 기호를 지도 팔레트에서 가져온다 (DESIGN_SYSTEM §3).
+    const palette = mapPalette();
+    return { background: palette.surface, surface: palette.surface, text: palette.ink, muted: palette.inkFaint, label: palette.surface, grid: palette.inkFaint, casing: palette.surface, symbolStroke: palette.ink };
+  }
   if (diagramStateOwner.current.background === "light")
-    return { background: "#ffffff", surface: "#ffffff", text: "#161616", muted: "#67727a", label: "rgba(255,255,255,.92)", grid: "rgba(28,51,65,.08)" };
+    return { background: "#ffffff", surface: "#ffffff", text: "#161616", muted: "#67727a", label: "rgba(255,255,255,.92)", grid: "rgba(28,51,65,.08)", casing: "#ffffff", symbolStroke: "#1b252b" };
   if (diagramStateOwner.current.background === "blueprint")
-    return { background: "#092d48", surface: "#e6f4ff", text: "#eef8ff", muted: "#9fc6dd", label: "rgba(9,45,72,.9)", grid: "rgba(158,208,235,.09)" };
-  return { background: "#071116", surface: "#f7fbfc", text: "#edf5f7", muted: "#8fa4ad", label: "rgba(7,17,22,.9)", grid: "rgba(255,255,255,.05)" };
+    return { background: "#092d48", surface: "#e6f4ff", text: "#eef8ff", muted: "#9fc6dd", label: "rgba(9,45,72,.9)", grid: "rgba(158,208,235,.09)", casing: "#ffffff", symbolStroke: "#1b252b" };
+  return { background: "#071116", surface: "#f7fbfc", text: "#edf5f7", muted: "#8fa4ad", label: "rgba(7,17,22,.9)", grid: "rgba(255,255,255,.05)", casing: "#ffffff", symbolStroke: "#1b252b" };
 }
 
 function renderDiagramStation(node: DiagramNodeInternal, point: DiagramPoint) {
@@ -6677,10 +6684,10 @@ function renderDiagramStation(node: DiagramNodeInternal, point: DiagramPoint) {
   const signalHeight = Math.max(30, 10 + signalColors.length * 11);
   const signalTop = point.y - signalHeight / 2;
   const ringMarkup = transfer
-    ? `<rect class="diagram-transfer-signal" x="${roundSvg(point.x - 11)}" y="${roundSvg(signalTop)}" width="22" height="${roundSvg(signalHeight)}" rx="11" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/>${signalColors.map((color, index) => `<circle cx="${roundSvg(point.x)}" cy="${roundSvg(signalTop + 10 + index * 11)}" r="4.2" fill="${color}" stroke="#ffffff" stroke-width="1.2"/>`).join("")}`
-    : `<circle cx="${roundSvg(point.x)}" cy="${roundSvg(point.y)}" r="9" fill="${theme.surface}" stroke="#1b252b" stroke-width="2.5"/>`;
+    ? `<rect class="diagram-transfer-signal" x="${roundSvg(point.x - 11)}" y="${roundSvg(signalTop)}" width="22" height="${roundSvg(signalHeight)}" rx="11" fill="${theme.surface}" stroke="${theme.symbolStroke}" stroke-width="2.5"/>${signalColors.map((color, index) => `<circle cx="${roundSvg(point.x)}" cy="${roundSvg(signalTop + 10 + index * 11)}" r="4.2" fill="${color}" stroke="${theme.surface}" stroke-width="1.2"/>`).join("")}`
+    : `<circle cx="${roundSvg(point.x)}" cy="${roundSvg(point.y)}" r="9" fill="${theme.surface}" stroke="${theme.symbolStroke}" stroke-width="2.5"/>`;
   const expressMarkup = node.express
-    ? `<path d="M ${roundSvg(point.x)} ${roundSvg(point.y - 6)} L ${roundSvg(point.x + 6)} ${roundSvg(point.y)} L ${roundSvg(point.x)} ${roundSvg(point.y + 6)} L ${roundSvg(point.x - 6)} ${roundSvg(point.y)} Z" fill="#1b252b"/>`
+    ? `<path d="M ${roundSvg(point.x)} ${roundSvg(point.y - 6)} L ${roundSvg(point.x + 6)} ${roundSvg(point.y)} L ${roundSvg(point.x)} ${roundSvg(point.y + 6)} L ${roundSvg(point.x - 6)} ${roundSvg(point.y)} Z" fill="${theme.symbolStroke}"/>`
     : "";
   const branchMarkup = node.branch
     ? `<rect x="${roundSvg(point.x - 25)}" y="${roundSvg(point.y - 25)}" width="50" height="50" rx="10" fill="none" stroke="${theme.muted}" stroke-width="2" stroke-dasharray="5 5"/>`
