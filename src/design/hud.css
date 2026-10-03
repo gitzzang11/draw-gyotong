@@ -127,6 +127,9 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
   top: calc(100% + var(--space-1));
   right: -1px;
   width: 220px;
+  /* .dg-panel의 max-height: 100%는 레이어 버튼(48px) 기준이 되어 상자가 잘린다. 화면 높이 기준으로 제한한다. */
+  max-height: calc(100dvh - var(--hud-top, 64px) - var(--edge-inset-bottom, 12px));
+  overflow-y: auto;
   border-top-width: var(--band);
   box-shadow: var(--overlay-shadow);
 }
