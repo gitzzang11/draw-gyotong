@@ -551,11 +551,7 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
     1px 1px 0 var(--surface-0), -1px -1px 0 var(--surface-0), 1px -1px 0 var(--surface-0), -1px 1px 0 var(--surface-0);
 }
 .leaflet-tooltip.station-map-label::before { display: none; }
-/* 역 누름·가리킴: 발광 대신 먹 고리 */
-.station-click-target:hover span,
-.station-click-target:focus span,
-.station-click-target.is-hovered span { background: transparent; box-shadow: inset 0 0 0 2px var(--text-1); transform: scale(.82); }
-.station-click-target.is-pressed span { background: transparent; box-shadow: inset 0 0 0 3px var(--text-1); transform: scale(.68); }
+/* 역 누름·가리킴: 발광 대신 확대 */
 .station-map-marker.is-hovered { stroke-width: 4px; transform: scale(1.3); }
 .station-map-marker.is-pressed { transform: scale(1.45); }
 

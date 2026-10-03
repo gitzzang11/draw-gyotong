@@ -118,20 +118,11 @@ button,
 }
 
 button svg,
-.ops-button svg,
-.tool-glyph {
+.ops-button svg {
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
   margin: 0 !important;
-}
-
-.compact-close {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 !important;
-  text-align: center !important;
 }
 
 button:hover,
@@ -159,13 +150,6 @@ button:disabled,
 }
 
 /* Specific button variants */
-.ops-button.primary {
-  background: linear-gradient(135deg, var(--c-secondary), var(--c-primary)) !important;
-  color: #07090E !important;
-  border: none !important;
-  font-weight: 800;
-  box-shadow: 0 4px 16px var(--c-primary-glow);
-}
 
 .ops-button.danger {
   background: linear-gradient(135deg, var(--c-danger), #B91C1C) !important;
@@ -331,26 +315,6 @@ tr:hover td {
    4. TOP COMMAND HUD HEADER BAR
 ---------------------------------------------------- */
 
-.hud-brand-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 8px 14px;
-  box-shadow: var(--shadow-lg);
-  right: 0;
-  background: var(--c-danger);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 1px 5px;
-  border-radius: var(--radius-full);
-}
-
 /* Custom operating services replace the legacy route-wide local/express
    switches. Preset labels remain available inside the service editor. */
 
@@ -366,31 +330,6 @@ tr:hover td {
 /* ----------------------------------------------------
    6. FLOATING CONTROL DOCK (BUILD PANEL)
 ---------------------------------------------------- */
-
-.hud-brand-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 8px 14px;
-  box-shadow: var(--shadow-lg);
-  font-size: 13px;
-  color: var(--c-text-main);
-  flex-shrink: 0;
-}
-
-.hud-live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--c-success);
-  box-shadow: 0 0 10px var(--c-success);
-  animation: live-pulse 2s infinite ease-in-out;
-}
 
 @keyframes live-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -420,15 +359,6 @@ tr:hover td {
 /* ----------------------------------------------------
    8. LEFT ROUTE DRAWER WINDOW
 ---------------------------------------------------- */
-
-.compact-close {
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  border-radius: var(--radius-full);
-  width: 32px;
-  height: 32px;
-  color: var(--c-text-muted);
-}
 
 /* ----------------------------------------------------
    9. ECONOMY & FARE PANEL
@@ -497,12 +427,6 @@ tr:hover td {
 /* ----------------------------------------------------
    14.5 CONSTRUCTION MANAGER DIALOG (.construction-manager-dialog)
 ---------------------------------------------------- */
-
-.conversion-help {
-  margin: 0;
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
 
 /* ----------------------------------------------------
    12. DECISION / CONFIRMATION MODAL
@@ -604,49 +528,6 @@ tr:hover td {
 
 
 /* Progress comparison bars */
-.stats-progress-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-}
-
-.stats-progress-item {
-  display: grid;
-  grid-template-columns: 80px 1fr 40px;
-  align-items: center;
-  gap: 8px;
-}
-
-.stats-progress-item span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.stats-progress-bar {
-  height: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.stats-progress-bar i {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--c-secondary), var(--c-cyan));
-  border-radius: var(--radius-full);
-}
-
-.stats-progress-val {
-  font-size: 12px;
-  font-weight: 800;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
 
 /* News Screen */
 
@@ -655,18 +536,6 @@ tr:hover td {
 /* ----------------------------------------------------
    17. CONSTRUCTION PREVIEW PANEL
 ---------------------------------------------------- */
-
-#toggleConstructionPreviewButton {
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #cbd5e1;
-  cursor: pointer;
-}
 
 /* ----------------------------------------------------
    18. TOAST & ERROR BANNER
@@ -702,28 +571,6 @@ tr:hover td {
 /* Common Drawer Backdrop & Panels */
 
 /* Headers */
-
-.compact-close {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 50% !important;
-  width: 30px !important;
-  height: 30px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: #94a3b8 !important;
-  font-size: 1.1rem !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  line-height: 1 !important;
-  padding: 0 !important;
-}
-
-.compact-close:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
-  color: #ffffff !important;
-}
 
 /* Left Route Window Specifics */
 
@@ -766,7 +613,6 @@ tr:hover td {
    ==================================================== */
 
 /* Standard Active Primary Tools (Blue Electric Gradient + Glow + White Text & Icons) */
-.tool-button.active,
 #reconnectTool.active {
   background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
   color: #ffffff !important;
@@ -784,48 +630,11 @@ tr:hover td {
 /* Active Workspace Tabs */
 
 /* Large HTML hit target above route SVG paths. */
-.station-click-target {
-  width: 64px !important;
-  height: 64px !important;
-  border: 0 !important;
-  background: transparent !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  touch-action: manipulation;
-}
-
-.station-click-target span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: transparent;
-  box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0);
-  transform: scale(.72);
-  transition: background-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
-}
 
 .station-map-marker {
   transform-box: fill-box;
   transform-origin: center;
   transition: filter 120ms ease, stroke-width 120ms ease, transform 120ms ease;
-}
-
-
-.depot-click-target {
-  width: 52px !important;
-  height: 52px !important;
-  border: 0 !important;
-  background: transparent !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-.depot-click-target span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
 }
 
 /* Current-system metro diagram */
@@ -842,10 +651,6 @@ tr:hover td {
 /* ====================================================
    ENHANCED TOP STATUS PILLS (CASH & SATISFACTION) HOVER
    ==================================================== */
-.hud-brand-pill {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  cursor: default;
-}
 
 /* 💵 자금 표시 바 호버 효과 (에메랄드 그린 빛 글루 + 2px 살짝 상승) */
 
@@ -856,12 +661,6 @@ tr:hover td {
 ---------------------------------------------------- */
 
 /* 기타 상단 바 (모드 전환 바, 게임 시간 바, 네트워크 표시 바) 호버 */
-.hud-brand-pill:hover {
-  background: rgba(0, 242, 254, 0.1) !important;
-  border-color: rgba(0, 242, 254, 0.35) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.22) !important;
-}
 
 /* ====================================================
    OPERATIONS INTELLIGENCE & STATISTICS SCREEN REDESIGN
@@ -875,16 +674,6 @@ tr:hover td {
 }
 
 /* Keep the refresh action clear of the absolute close control. */
-
-.service-operation-express > span {
-  color: #fde68a;
-}
-
-.service-operation-empty {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 11px;
-}
 
 /* ========================================================================
    MAP-FIRST UI REFRESH
@@ -937,8 +726,7 @@ textarea {
 }
 
 button,
-.ops-button,
-.compact-close {
+.ops-button {
   border-radius: var(--radius-md);
   box-shadow: none;
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
@@ -956,14 +744,6 @@ button:active,
 
 
 /* Shared panel surface: quiet separation from the map, no glass spectacle. */
-.menu-dialog {
-  background: rgba(15, 22, 29, 0.97) !important;
-  border: 1px solid var(--c-border) !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-lg) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
 
 /* ========================================================================
    START SCREEN
@@ -983,41 +763,6 @@ textarea:where(:not([class*="dg-"])) {
    MAP HUD
 ======================================================================== */
 
-.hud-brand-pill {
-  background: rgba(10, 15, 22, 0.88) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-}
-
-.hud-brand-pill {
-  min-height: 34px;
-  padding: 0 8px 0 10px;
-  border-radius: var(--radius-sm) !important;
-  font-size: 11px;
-  color: var(--c-text-main);
-}
-
-.region-select-chevron {
-  flex-shrink: 0;
-  color: var(--c-text-dim);
-  transition: color var(--press-transition);
-}
-
-.hud-brand-pill strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hud-live-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--c-primary);
-  box-shadow: 0 0 0 2px rgba(85, 217, 192, 0.15);
-}
-
 /* Minimum 44px touch target for touch screens */
 
 /* ========================================================================
@@ -1026,81 +771,9 @@ textarea:where(:not([class*="dg-"])) {
 
 /* 활성 도구는 배경 채움 + 강조 테두리 + 굵은 텍스트로 통일하므로 이전 인디케이터는 제거한다. */
 
-.hud.bottom-right {
-  position: fixed;
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(78px, calc(env(safe-area-inset-bottom) + 72px));
-  z-index: 1040;
-  display: grid;
-  justify-items: end;
-  gap: 4px;
-  max-width: min(460px, calc(100vw - 24px));
-  pointer-events: none;
-}
-
-.mode-pill,
-.hint-row {
-  max-width: 100%;
-  padding: 6px 10px;
-  color: var(--c-text-main);
-  background: rgba(11, 16, 22, 0.9);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
-  font-size: 11px;
-  line-height: 1.35;
-  text-align: right;
-}
-
-.mode-pill {
-  color: var(--c-primary);
-  font-weight: 900;
-}
-
-.hint-row {
-  color: var(--c-text-muted);
-  font-size: 10px;
-}
-
-.hint-row span + span::before {
-  content: " · ";
-  color: var(--c-text-dim);
-}
-
 /* Shared state badges: readable at a glance without turning every item into a chip. */
-.construction-status,
-.project-status,
-.status-badge {
-  border-radius: 4px !important;
-  box-shadow: none !important;
-}
 
 /* Mobile: retain touch targets while keeping every primary control reachable. */
-@media (max-width: 700px) {
-
-  .hud-brand-pill {
-    min-width: 0;
-    max-width: 76px;
-    padding: 0 8px 0 10px;
-  }
-
-  .hud-brand-pill strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .hud.bottom-right {
-    right: 12px;
-    bottom: max(76px, calc(env(safe-area-inset-bottom) + 70px));
-    max-width: calc(100vw - 24px);
-  }
-
-  .mode-pill,
-  .hint-row {
-    max-width: min(350px, calc(100vw - 24px));
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1178,11 +851,6 @@ button:where(:not([class*="dg-"])):active,
     padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   }
 
-  .dialog-backdrop .compact-close {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
   .dialog-backdrop button:not(.dialog-close):not(.compact-close) {
     min-height: 44px;
   }
@@ -1191,16 +859,6 @@ button:where(:not([class*="dg-"])):active,
 /* Safari does not always obey the manifest orientation before installation.
    Portrait remains playable, but its dock and context panels leave a larger
    vertical map area and don't overlap the browser gesture area. */
-@media (max-width: 700px) and (orientation: portrait) {
-
-  .hud.bottom-right {
-    bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
-  }
-
-  .hint-row {
-    display: none;
-  }
-}
 
 /* -------------------------------------------------------------------------
    ROUTE COLOR PICKER
@@ -1209,112 +867,6 @@ button:where(:not([class*="dg-"])):active,
    are immediate, while the last control still opens the platform picker for
    a custom line colour.
 ------------------------------------------------------------------------- */
-.mobile-color-picker {
-  display: grid;
-  gap: 9px;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.028);
-}
-
-.mobile-color-picker > span {
-  color: var(--c-text-muted);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.color-swatch-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 7px;
-}
-
-.color-swatch {
-  position: relative;
-  display: grid;
-  width: 100%;
-  min-width: 0;
-  min-height: 42px;
-  padding: 0;
-  place-items: center;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  background: var(--swatch-color, transparent) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-}
-
-.color-swatch[data-color-value="#e5484d"] { --swatch-color: #e5484d; }
-.color-swatch[data-color-value="#f59e0b"] { --swatch-color: #f59e0b; }
-.color-swatch[data-color-value="#f3ca52"] { --swatch-color: #f3ca52; }
-.color-swatch[data-color-value="#4ce0c3"] { --swatch-color: #4ce0c3; }
-.color-swatch[data-color-value="#22c55e"] { --swatch-color: #22c55e; }
-.color-swatch[data-color-value="#3b82f6"] { --swatch-color: #3b82f6; }
-.color-swatch[data-color-value="#7aa7ff"] { --swatch-color: #7aa7ff; }
-.color-swatch[data-color-value="#8b5cf6"] { --swatch-color: #8b5cf6; }
-.color-swatch[data-color-value="#c477ff"] { --swatch-color: #c477ff; }
-.color-swatch[data-color-value="#ec4899"] { --swatch-color: #ec4899; }
-.color-swatch[data-color-value="#64748b"] { --swatch-color: #64748b; }
-
-.color-swatch::after {
-  content: "";
-  width: 13px;
-  height: 7px;
-  border-bottom: 2px solid #fff;
-  border-left: 2px solid #fff;
-  opacity: 0;
-  transform: rotate(-45deg) translate(1px, -2px);
-}
-
-.color-swatch.selected {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px var(--swatch-color), 0 5px 12px color-mix(in srgb, var(--swatch-color) 40%, transparent);
-}
-
-.color-swatch.selected::after {
-  opacity: 1;
-}
-
-.custom-color-button {
-  display: flex;
-  grid-column: span 2;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 42px;
-  padding: 0 10px;
-  color: var(--c-text-muted);
-  border: 1px solid var(--c-border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.045);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.custom-color-button input[type="color"] {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-  border: 0 !important;
-  border-radius: 50%;
-  background: transparent !important;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.custom-color-button input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-.custom-color-button input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
-
-@media (pointer: coarse), (max-width: 700px) {
-  .color-swatch,
-  .custom-color-button {
-    min-height: 46px;
-  }
-}
 
 /* -------------------------------------------------------------------------
    CITY PICKER
@@ -1331,31 +883,6 @@ button:where(:not([class*="dg-"])):active,
    Map play benefits from more visible map area. Keep primary targets at 40px
    while reducing surrounding chrome, typography, and panel spacing.
 ------------------------------------------------------------------------- */
-@media (max-width: 700px) {
-
-  .hud.bottom-right {
-    bottom: max(62px, calc(env(safe-area-inset-bottom) + 56px));
-  }
-
-  .mode-pill,
-  .hint-row {
-    padding: 4px 8px;
-    font-size: 9px;
-  }
-
-  .hint-row {
-    font-size: 8px;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-
-  .hud-brand-pill {
-    min-height: 30px;
-    max-width: 64px;
-    font-size: 10px;
-  }
-}
 
 /* Compact trigger + custom colour bottom sheet. */
 
@@ -1378,33 +905,10 @@ button:where(:not([class*="dg-"])):active,
 /* Floating map windows header layout & minimizer button styling */
 
 /* 1:1 Aspect Ratio for Close Buttons */
-.compact-close {
-  width: 26px !important;
-  height: 26px !important;
-  min-width: 26px !important;
-  min-height: 26px !important;
-  max-width: 26px !important;
-  max-height: 26px !important;
-  aspect-ratio: 1 / 1 !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border-radius: 50% !important;
-  line-height: 1 !important;
-  font-size: 15px !important;
-  flex-shrink: 0 !important;
-  align-self: center !important;
-  box-sizing: border-box !important;
-}
 
 /* Minimized Header Summaries */
 
 /* Remove Inner Nested Scrolls (창 내부 이중 스크롤 제거) */
-.dialog-body {
-  max-height: none !important;
-  overflow: visible !important;
-}
 
 /* Single Scroll Container for Floating Windows */
 .dialog-backdrop > section,
@@ -1517,24 +1021,11 @@ button:where(:not([class*="dg-"])):active,
   .game-shell {
     --mobile-dock-height: 44px;
   }
-
-  .hud-brand-pill {
-    min-height: 28px;
-    max-width: 64px;
-    padding: 0 6px 0 8px;
-    font-size: 9px;
-  }
 }
 
 @media (max-width: 700px) and (orientation: landscape) {
   .game-shell {
     --mobile-dock-height: 38px;
-  }
-
-  .hud-brand-pill {
-    min-height: 24px;
-    max-width: 54px;
-    font-size: 8px;
   }
 }
 
@@ -1555,15 +1046,6 @@ button:where(:not([class*="dg-"])):active,
 
   /* Dialog close controls retain a real touch target even though the shared
      desktop shape rule sets their visual size to 26px. */
-  .dialog-backdrop .compact-close {
-    width: 44px !important;
-    height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    max-width: 44px !important;
-    max-height: 44px !important;
-    flex: 0 0 44px !important;
-  }
 
   /* Floating-window controls use a slightly shorter target so the compact
      minimized bar remains usable without becoming taller than the panel. */
