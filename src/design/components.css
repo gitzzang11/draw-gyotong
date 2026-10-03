@@ -309,6 +309,23 @@
   font: var(--type-body);
   color-scheme: var(--theme-color-scheme);
 }
+/*
+ * 글자 입력칸은 선택·입력을 허용한다. 게임 화면 전체(html·body)에 걸린 user-select: none이 입력칸까지 내려오면
+ * 모바일 웹뷰(안드로이드·iOS)에서 한글 조합(모아쓰기)이 깨진다. type 속성이 없는 입력칸도 포함한다.
+ */
+input:not([type]),
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="email"],
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
 .dg-input:focus-visible { outline: var(--line-emphasis) solid var(--focus); outline-offset: 2px; }
 .dg-field__error { font: var(--type-label); color: var(--signal-danger); }
 

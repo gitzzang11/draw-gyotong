@@ -2211,7 +2211,7 @@ function renderColorPicker() {
   if (colorHueRange) colorHueRange.value = String(colorPickerHsl.hue);
   if (colorSaturationRange) colorSaturationRange.value = String(colorPickerHsl.saturation);
   if (colorLightnessRange) colorLightnessRange.value = String(colorPickerHsl.lightness);
-  if (colorHexInput) colorHexInput.value = hex;
+  setEditableValue(colorHexInput, hex);
   setText(colorHueValue, `${colorPickerHsl.hue}°`);
   setText(colorSaturationValue, `${colorPickerHsl.saturation}%`);
   setText(colorLightnessValue, `${colorPickerHsl.lightness}%`);
@@ -7579,10 +7579,10 @@ function renderPlanningDialog() {
     return;
   }
   for (const control of [planNameInput, planStatusSelect, planPrioritySelect, planNotesInput]) if (control) control.disabled = false;
-  if (planNameInput) planNameInput.value = plan.name;
+  setEditableValue(planNameInput, plan.name);
   if (planStatusSelect) planStatusSelect.value = plan.status;
   if (planPrioritySelect) planPrioritySelect.value = plan.priority;
-  if (planNotesInput) planNotesInput.value = plan.notes;
+  setEditableValue(planNotesInput, plan.notes);
   if (planSummary)
     planSummary.innerHTML = metricRowsHtml([
       { label: "예상 총비용", value: formatCost(plan.expectedTotalCost) },
@@ -10510,6 +10510,15 @@ function updateNewsBadge() {
   newsButton?.classList.toggle("has-news", unread > 0);
 }
 
+/**
+ * 갱신 중에 입력칸 값을 다시 쓸 때 쓴다. 사용자가 그 칸에 입력 중(포커스)이면 건드리지 않는다.
+ * 입력 중에 값을 덮어쓰면 모바일 한글 조합(모아쓰기)이 끊긴다.
+ */
+function setEditableValue(input: HTMLInputElement | HTMLTextAreaElement | null | undefined, value: string) {
+  if (!input || document.activeElement === input || input.value === value) return;
+  input.value = value;
+}
+
 function getNetworkTitle() {
   return metaState.current.networkTitle?.trim() || `${cityConfigs[metaState.current.cityId].name} 철도망`;
 }
@@ -12873,7 +12882,7 @@ function openOperatingServiceEditor(serviceId?: string) {
     ? service.pathOptionId
     : options[0]?.id ?? "";
   operatingServicePathSelect.value = selectedOptionId;
-  if (operatingServiceNameInput) operatingServiceNameInput.value = service?.name ?? `${route.name} 계통 ${operationsState.services.filter((item) => item.ownerRouteId === route.id).length + 1}`;
+  setEditableValue(operatingServiceNameInput, service?.name ?? `${route.name} 계통 ${operationsState.services.filter((item) => item.ownerRouteId === route.id).length + 1}`);
   operatingServiceDraftPreset = service?.preset ?? "all";
   rightLineControlCard?.classList.add("service-mode");
   setText(lineManagerTitle, service ? "운행 계통 관리" : "운행 계통 추가");
@@ -16118,7 +16127,7 @@ function updateRouteSettingsCard(tool: ToolMode) {
     routeSettingsTarget?.style.setProperty("--target-route-color", "#64748b");
     routeSettingsTargetSwatch?.style.setProperty("--target-route-color", "#64748b");
   }
-  if (draftRouteNameInput) draftRouteNameInput.value = draftRouteName;
+  setEditableValue(draftRouteNameInput, draftRouteName);
   // 차종은 새 노선을 그릴 때만 고른다. 연장·분기·연결은 대상 노선 차종을 따른다.
   if (draftRouteTrainTypeField) draftRouteTrainTypeField.hidden = tool !== "route";
   if (draftRouteTrainTypeSelect) draftRouteTrainTypeSelect.value = draftRouteTrainType;
@@ -16151,7 +16160,7 @@ function showRouteSettingsTarget(
   if (activeTool === "extend" || activeTool === "route") {
     draftRouteName = route.name;
     selectedColor = route.color;
-    if (draftRouteNameInput) draftRouteNameInput.value = route.name;
+    setEditableValue(draftRouteNameInput, route.name);
     setColorPickerValue(draftRouteColorInput, route.color);
   }
 }

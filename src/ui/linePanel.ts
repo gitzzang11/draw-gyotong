@@ -50,13 +50,14 @@ export class LinePanel {
     if (element.color) element.color.style.background = view.color;
     // inspector 상단 띠를 노선 색으로 바꾼다(DESIGN_SYSTEM §12 Panels).
     element.color?.closest<HTMLElement>(".dg-panel")?.style.setProperty("--panel-band", view.color);
-    if (element.nameInput) element.nameInput.value = view.name;
+    // 입력 중인 칸은 덮어쓰지 않는다 (모바일 한글 조합 보호)
+    if (element.nameInput && document.activeElement !== element.nameInput) element.nameInput.value = view.name;
     if (element.colorInput) element.colorInput.value = view.color;
     if (element.visibilitySelect) element.visibilitySelect.value = view.visibility;
     if (element.localToggle) element.localToggle.checked = view.localService;
     if (element.expressToggle) element.expressToggle.checked = view.expressService;
     if (element.pausedToggle) element.pausedToggle.checked = view.paused;
-    if (element.fareInput) element.fareInput.value = view.fare;
+    if (element.fareInput && document.activeElement !== element.fareInput) element.fareInput.value = view.fare;
     if (element.autoFareButton) {
       element.autoFareButton.classList.toggle("active", view.autoFare);
       element.autoFareButton.textContent = view.autoFare ? "자동 요금 적용 중" : "수동 요금";
