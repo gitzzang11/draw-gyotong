@@ -534,7 +534,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   text-shadow: none !important;
 }
 
-.finance-stats-grid,
 .analysis-summary-grid,
 .news-summary {
   gap: 0 !important;
@@ -544,7 +543,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   background: transparent !important;
 }
 
-.finance-stats-grid > *,
 .analysis-summary-grid > *,
 .news-summary > * {
   border: 0 !important;
@@ -619,7 +617,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .dialog-backdrop > section,
 .dialog-backdrop > div > section,
 .settings-dialog,
-.finance-dialog,
 .planning-dialog,
 .save-editor-dialog,
 .merge-dialog,
@@ -671,8 +668,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: inset 0 -3px 0 var(--color-accent) !important;
 }
 
-.finance-section,
-.finance-card,
 .connection-safety-note,
 .planning-editor,
 .plan-comparison,

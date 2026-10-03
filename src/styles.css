@@ -1456,7 +1456,6 @@ tr:hover td {
 }
 
 .settings-dialog,
-.finance-dialog,
 .statistics-screen,
 .news-screen,
 .analysis-screen,
@@ -1501,7 +1500,6 @@ tr:hover td {
 }
 
 .settings-dialog,
-.finance-dialog,
 .statistics-screen,
 .news-screen,
 .analysis-screen,
@@ -1983,154 +1981,6 @@ tr:hover td {
 /* ----------------------------------------------------
    14. FINANCE DIALOG (.finance-dialog)
 ---------------------------------------------------- */
-.finance-dialog {
-  width: min(680px, 95vw);
-  max-height: 88dvh;
-  background: rgba(12, 17, 28, 0.95);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.88), 0 0 32px rgba(251, 191, 36, 0.15);
-  color: var(--c-text-main);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
-  animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.finance-dialog .dialog-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 12px;
-}
-
-.finance-dialog .dialog-heading span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-gold);
-  letter-spacing: 1px;
-  background: rgba(251, 191, 36, 0.15);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-}
-
-.finance-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-@media (max-width: 640px) {
-  .finance-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.finance-card {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.finance-card span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.finance-val {
-  font-size: 18px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: var(--c-text-main);
-}
-
-.finance-val.positive {
-  color: var(--c-mint);
-  text-shadow: 0 0 12px rgba(52, 211, 153, 0.3);
-}
-
-.finance-val.negative {
-  color: #FCA5A5;
-  text-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
-}
-
-.finance-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.finance-section h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-text-main);
-}
-
-.finance-desc {
-  margin: 0;
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
-
-.finance-actions-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.finance-btn {
-  padding: 14px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  font-weight: 800;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.finance-btn.loan-btn {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(59, 130, 246, 0.3)) !important;
-  border: 1px solid var(--c-primary) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.25);
-}
-
-.finance-btn.repay-btn {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3)) !important;
-  border: 1px solid var(--c-success) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
-}
-
-.finance-nav-btn {
-  width: 100%;
-  padding: 14px;
-  min-height: 48px;
-  background: linear-gradient(135deg, #7C3AED, var(--c-purple)) !important;
-  border: none !important;
-  border-radius: var(--radius-md);
-  color: #FFFFFF !important;
-  font-weight: 800;
-  font-size: 14px;
-  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.35);
-  cursor: pointer;
-}
 
 /* ----------------------------------------------------
    14.5 CONSTRUCTION MANAGER DIALOG (.construction-manager-dialog)
@@ -2434,41 +2284,6 @@ tr:hover td {
 /* ----------------------------------------------------
    14. FINANCE DIALOG
 ---------------------------------------------------- */
-.finance-dialog {
-  width: min(520px, 94vw);
-  max-height: 85dvh;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.finance-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.finance-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-}
-
-.finance-val {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.finance-btn {
-  flex: 1;
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-font-size: 12px;
-  color: var(--c-text-muted);
-}
 
 .plan-conversion-items {
   display: flex;
@@ -2513,42 +2328,6 @@ font-size: 12px;
 /* ----------------------------------------------------
    14. FINANCE DIALOG
 ---------------------------------------------------- */
-.finance-dialog {
-  width: min(520px, 94vw);
-  max-height: 85dvh;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.finance-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.finance-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-}
-
-.finance-val {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.finance-btn {
-  flex: 1;
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  font-weight: 700;
-  border: 1px solid var(--c-border);
-  background: rgba(255, 255, 255, 0.06);
-}
 
 /* ----------------------------------------------------
    15. STATION MANAGER DIALOG (.station-manager-dialog)
@@ -6363,73 +6142,6 @@ font-size: 12px;
   font-size: 11px;
 }
 
-.operating-forecast-card {
-  margin: 12px 0;
-  padding: 12px;
-  border: 1px solid rgba(76, 224, 195, 0.24);
-  border-radius: 12px;
-  background: rgba(7, 20, 25, 0.72);
-}
-
-.operating-forecast-card header,
-.operating-forecast-head,
-.operating-forecast-row {
-  display: grid;
-  grid-template-columns: minmax(92px, 1fr) minmax(72px, 0.8fr) minmax(72px, 0.8fr);
-  align-items: center;
-  gap: 8px;
-}
-
-.operating-forecast-card header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.operating-forecast-card header div {
-  display: grid;
-  gap: 2px;
-}
-
-.operating-forecast-card header span,
-.operating-forecast-card header small,
-.operating-forecast-head {
-  color: #8fa5ad;
-  font-size: 10px;
-}
-
-.operating-forecast-card header strong {
-  color: #e7f8f4;
-  font-size: 13px;
-}
-
-.operating-forecast-head {
-  padding: 0 8px 5px;
-  text-align: right;
-}
-
-.operating-forecast-head span:first-child,
-.operating-forecast-row > span {
-  text-align: left;
-}
-
-.operating-forecast-row {
-  padding: 7px 8px;
-  border-top: 1px solid rgba(143, 165, 173, 0.12);
-  color: #aebfc5;
-  font-size: 11px;
-  text-align: right;
-}
-
-.operating-forecast-row strong {
-  color: #d7e2e5;
-  font-size: 12px;
-}
-
-.operating-forecast-row strong[data-operating-forecast] {
-  color: #4ce0c3;
-}
-
 /* ========================================================================
    MAP-FIRST UI REFRESH
    A single visual layer for the game shell. Existing selectors and states
@@ -6521,7 +6233,6 @@ button:active,
 .analysis-screen,
 .statistics-screen,
 .train-manager-dialog,
-.finance-dialog,
 .settings-dialog,
 .satisfaction-dialog,
 .menu-dialog {
@@ -6966,7 +6677,6 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .dialog-backdrop > .settings-dialog,
-  .dialog-backdrop > .finance-dialog,
   .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .merge-dialog,
@@ -7565,7 +7275,6 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .dialog-backdrop > .settings-dialog,
-  .dialog-backdrop > .finance-dialog,
   .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .merge-dialog,
@@ -8306,152 +8015,6 @@ button:where(:not([class*="dg-"])):active,
     max-height: calc(100dvh - 12px) !important;
   }
 
-  .finance-dialog {
-    width: min(900px, calc(100vw - 16px)) !important;
-    max-height: min(90dvh, calc(100dvh - 12px)) !important;
-    padding: 16px !important;
-    gap: 12px;
-    display: grid;
-    grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-    align-items: start;
-    overflow-y: auto;
-    border-radius: 18px !important;
-  }
-
-  .finance-dialog > .dialog-heading,
-  .finance-dialog > .finance-stats-grid {
-    grid-column: 1 / -1;
-  }
-
-  .finance-dialog > #financeForecastContent {
-    grid-column: 1;
-    grid-row: 3 / span 2;
-    min-width: 0;
-    min-height: 0;
-  }
-
-  .finance-dialog > .finance-section:nth-last-child(2) {
-    grid-column: 2;
-    grid-row: 3;
-  }
-
-  .finance-dialog > .finance-section:last-child {
-    grid-column: 2;
-    grid-row: 4;
-  }
-
-  .finance-dialog .dialog-heading {
-    padding-bottom: 8px;
-  }
-
-  .finance-dialog .dialog-heading h2 {
-    font-size: clamp(18px, 2.2vw, 24px);
-  }
-
-  .finance-dialog .dialog-heading span {
-    font-size: 9px;
-  }
-
-  .finance-stats-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .finance-card {
-    min-width: 0;
-    gap: 4px;
-    padding: 10px;
-    border-radius: 12px;
-  }
-
-  .finance-card span {
-    overflow: hidden;
-    font-size: 9px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .finance-val {
-    overflow: hidden;
-    font-size: clamp(13px, 2vw, 18px);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .finance-section {
-    min-width: 0;
-    gap: 8px;
-    padding: 12px;
-    border-radius: 12px;
-  }
-
-  .finance-section h3 {
-    font-size: 13px;
-  }
-
-  .finance-desc {
-    font-size: 10px;
-    line-height: 1.35;
-  }
-
-  .finance-actions-row {
-    gap: 8px;
-  }
-
-  .finance-btn,
-  .finance-nav-btn {
-    min-height: 42px;
-    padding: 9px;
-    font-size: 11px;
-  }
-
-  .operating-forecast-card {
-    height: 100%;
-    margin: 0;
-    padding: 10px;
-    border-radius: 12px;
-  }
-
-  .operating-forecast-card header {
-    gap: 8px;
-    margin-bottom: 7px;
-  }
-
-  .operating-forecast-card header strong {
-    font-size: 11px;
-  }
-
-  .operating-forecast-card header small {
-    font-size: 8px;
-    text-align: right;
-  }
-
-  .operating-forecast-head,
-  .operating-forecast-row {
-    grid-template-columns: minmax(72px, 1fr) minmax(58px, 0.8fr) minmax(58px, 0.8fr);
-    gap: 5px;
-  }
-
-  .operating-forecast-head,
-  .operating-forecast-row {
-    padding-right: 5px;
-    padding-left: 5px;
-  }
-
-  .operating-forecast-head {
-    font-size: 8px;
-  }
-
-  .operating-forecast-row {
-    padding-top: 5px;
-    padding-bottom: 5px;
-    font-size: 9px;
-  }
-
-  .operating-forecast-row strong {
-    font-size: 10px;
-  }
-
   .satisfaction-dialog {
     width: min(1080px, calc(100vw - 16px)) !important;
     max-height: min(92dvh, calc(100dvh - 12px)) !important;
@@ -8489,109 +8052,9 @@ button:where(:not([class*="dg-"])):active,
     padding: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
   }
 
-  .finance-dialog,
   .satisfaction-dialog {
     width: calc(100vw - 8px) !important;
     max-height: calc(100dvh - 8px) !important;
-  }
-
-  .finance-dialog {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-    gap: 8px;
-    padding: 10px !important;
-  }
-
-  .finance-dialog .dialog-heading {
-    padding-bottom: 6px;
-  }
-
-  .finance-dialog .dialog-heading h2 {
-    font-size: 16px;
-  }
-
-  .finance-dialog .dialog-heading span {
-    padding: 2px 6px;
-    font-size: 8px;
-  }
-
-  .finance-stats-grid {
-    gap: 6px;
-  }
-
-  .finance-card {
-    padding: 8px 7px;
-  }
-
-  .finance-card span {
-    font-size: 8px;
-  }
-
-  .finance-val {
-    font-size: clamp(12px, 2.5vw, 15px);
-  }
-
-  .finance-section {
-    gap: 6px;
-    padding: 9px;
-  }
-
-  .finance-section h3 {
-    font-size: 11px;
-  }
-
-  .finance-desc {
-    font-size: 9px;
-  }
-
-  .finance-actions-row {
-    gap: 5px;
-  }
-
-  .finance-btn,
-  .finance-nav-btn {
-    min-height: 36px;
-    padding: 7px 5px;
-    font-size: 9px;
-  }
-
-  .operating-forecast-card {
-    padding: 8px;
-  }
-
-  .operating-forecast-card header {
-    display: grid;
-    gap: 2px;
-    margin-bottom: 5px;
-  }
-
-  .operating-forecast-card header small {
-    text-align: left;
-  }
-
-  .operating-forecast-head,
-  .operating-forecast-row {
-    grid-template-columns: minmax(58px, 1fr) minmax(44px, 0.8fr) minmax(44px, 0.8fr);
-    gap: 3px;
-  }
-
-  .operating-forecast-head,
-  .operating-forecast-row {
-    padding-right: 3px;
-    padding-left: 3px;
-  }
-
-  .operating-forecast-head {
-    font-size: 7px;
-  }
-
-  .operating-forecast-row {
-    padding-top: 4px;
-    padding-bottom: 4px;
-    font-size: 8px;
-  }
-
-  .operating-forecast-row strong {
-    font-size: 9px;
   }
 
   .satisfaction-dialog-header {
@@ -9567,7 +9030,6 @@ button:where(:not([class*="dg-"])):active,
    the lower edge look cropped. Keep one scroll owner on the dialog itself. */
 @media (max-width: 700px),
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .dialog-backdrop:has(> .finance-dialog),
   .dialog-backdrop:has(> .satisfaction-dialog) {
     align-items: center;
     padding: max(6px, env(safe-area-inset-top))
@@ -9576,7 +9038,6 @@ button:where(:not([class*="dg-"])):active,
       max(6px, env(safe-area-inset-left));
   }
 
-  .dialog-backdrop > .finance-dialog,
   .dialog-backdrop > .satisfaction-dialog {
     width: 100% !important;
     height: 100% !important;
@@ -9589,7 +9050,6 @@ button:where(:not([class*="dg-"])):active,
     border-radius: 16px !important;
   }
 
-  .finance-dialog > *,
   .satisfaction-dialog-header,
   .satisfaction-dialog-content,
   .satisfaction-dialog-content > * {

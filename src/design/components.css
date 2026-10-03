@@ -603,15 +603,17 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 }
 
 /* ===== Table (§12 Data rows and tables) ===== */
-.dg-table { width: 100%; border-collapse: collapse; font: var(--type-body); font-variant-numeric: tabular-nums; }
-.dg-table th {
+.dg-table { width: 100%; border-collapse: collapse; background: transparent; color: var(--text-1); font: var(--type-body); font-variant-numeric: tabular-nums; }
+.dg-table thead, .dg-table tbody, .dg-table tr { background: transparent; }
+.dg-table td, .dg-table th { background: transparent; color: inherit; }
+.dg-table thead th {
   padding: 6px var(--space-2);
   border-bottom: var(--line-emphasis) solid var(--text-1);
   font: var(--type-section);
   color: var(--text-2);
   text-align: left;
 }
-.dg-table td { padding: 6px var(--space-2); border-bottom: var(--line-hair) solid var(--rule); }
+.dg-table td, .dg-table tbody th { padding: 6px var(--space-2); border-bottom: var(--line-hair) solid var(--rule); text-align: left; }
 .dg-table .dg-num { text-align: right; }
 
 /* ===== Motion (§13) ===== */

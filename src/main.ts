@@ -1123,51 +1123,32 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="financeDialog" class="dialog-backdrop" hidden>
-      <section class="finance-dialog" role="dialog" aria-modal="true" aria-label="자금 및 재정 관리">
-        <div class="dialog-heading">
-          <div>
-            <span>FINANCIAL MANAGEMENT</span>
-            <h2>자금 및 재정 관리</h2>
-          </div>
-          <button id="closeFinanceButton" class="dialog-close" type="button" aria-label="재정 관리 닫기">×</button>
-        </div>
-
-        <div class="finance-stats-grid">
-          <div class="finance-card">
-            <span>보유 자금</span>
-            <strong id="financeCashReadout" class="finance-val positive">0 억</strong>
-          </div>
-          <div class="finance-card">
-            <span>오늘의 순수익</span>
-            <strong id="financeDailyNetReadout" class="finance-val">0 억</strong>
-          </div>
-          <div class="finance-card">
-            <span>대출 잔액</span>
-            <strong id="financeLoanReadout" class="finance-val negative">0 억</strong>
-          </div>
-          <div class="finance-card">
-            <span>일일 수송 수요</span>
-            <strong id="financeDemandReadout" class="finance-val">0 명</strong>
-          </div>
-        </div>
-        <div id="financeForecastContent"></div>
-
-        <div class="finance-section">
-          <h3>대출 및 금융 관리</h3>
-          <p class="finance-desc">사업 확장을 위해 금융 대출을 실행하거나 기존 대출금을 상환합니다.</p>
-          <div class="finance-actions-row">
-            <button id="dialogLoanButton" type="button" class="finance-btn loan-btn">💵 대출 받기 (+300억)</button>
-            <button id="dialogRepayButton" type="button" class="finance-btn repay-btn">🏦 대출 상환 (-300억)</button>
-          </div>
-        </div>
-
-        <div class="finance-section">
-          <h3>도시 노선 운영 현황</h3>
-          <p class="finance-desc">각 노선의 운행 상태, 승객 수송 통계, 운행 주기를 한눈에 확인합니다.</p>
-          <button id="openStatisticsFromFinanceButton" type="button" class="finance-nav-btn">
-            📊 노선별 운영 현황 보러가기
-          </button>
+    <div id="financeDialog" class="dg-hud dg-scrim game-finance" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="financeTitle">
+        <header class="dg-panel__header">
+          <h2 id="financeTitle" class="dg-panel__title">자금과 재정</h2>
+          <div class="dg-panel__header-end"><button id="closeFinanceButton" class="dg-icon-btn" type="button" aria-label="재정 관리 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">현황</h3>
+            <div class="dg-row"><span class="dg-row__label">보유 자금</span><strong id="financeCashReadout" class="dg-row__value dg-row__value--metric">0 억</strong></div>
+            <div class="dg-row"><span class="dg-row__label">오늘 순수익</span><strong id="financeDailyNetReadout" class="dg-row__value game-status-net">0 억</strong></div>
+            <div class="dg-row"><span class="dg-row__label">대출 잔액</span><strong id="financeLoanReadout" class="dg-row__value">0 억</strong></div>
+            <div class="dg-row"><span class="dg-row__label">일일 수송 수요</span><strong id="financeDemandReadout" class="dg-row__value">0 명</strong></div>
+          </section>
+          <div id="financeForecastContent"></div>
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">대출</h3>
+            <p id="financeLoanNote" class="game-inspector__note">사업 확장을 위해 대출을 받거나 기존 대출을 상환합니다. 실행 전에 금액과 실행 후 잔액을 확인합니다.</p>
+            <div class="game-finance__actions">
+              <button id="dialogLoanButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">대출 받기…</button>
+              <button id="dialogRepayButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">상환하기…</button>
+            </div>
+          </section>
+          <section class="dg-panel__section game-menu__links">
+            <button id="openStatisticsFromFinanceButton" class="dg-tool" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 17 H17 M6 14 V9 M10 14 V5 M14 14 V11"/></svg><span>노선별 운영 현황 보기</span></button>
+          </section>
         </div>
       </section>
     </div>
@@ -11850,19 +11831,34 @@ function calculateAutoFare() {
   return clampInteger(Math.round(target / 50) * 50, 1100, 2800);
 }
 
+/** 대출 한 건의 원금(억)과 월 상환액(억). 재정 화면의 확인 문구도 같은 값을 쓴다. */
+const loanPrincipal = 30000;
+const loanMonthlyPayment = 720;
+
+function currentLoanInterestRate() {
+  return 0.055 * difficultyConfigs[metaState.current.difficulty].loanInterestMultiplier;
+}
+
+/** 다음 상환 한 번에 갚을 금액. 갚을 수 없으면 0. */
+function nextRepaymentAmount() {
+  const firstLoan = loanState.firstOutstanding();
+  if (metaState.current.mode === "sandbox" || !firstLoan || financeState.economy.cash <= 0) return 0;
+  return Math.min(firstLoan.balance, Math.max(1000, Math.floor(financeState.economy.cash * 0.25)));
+}
+
 function takeLoan() {
   if (metaState.current.mode === "sandbox") {
     setText(facilityReadout, "샌드박스는 대출 불필요");
     return;
   }
   pushHistory();
-  const principal = 30000;
+  const principal = loanPrincipal;
   loanState.add({
     id: createId("loan"),
     principal,
     balance: principal,
-    interestRate: 0.055 * difficultyConfigs[metaState.current.difficulty].loanInterestMultiplier,
-    monthlyPayment: 720,
+    interestRate: currentLoanInterestRate(),
+    monthlyPayment: loanMonthlyPayment,
   });
   financeState.economy = { ...financeState.economy, cash: financeState.economy.cash + principal, loanBalance: financeState.economy.loanBalance + principal };
   redoStack = [];
@@ -11875,7 +11871,7 @@ function repayLoan() {
   const firstLoan = loanState.firstOutstanding();
   if (!firstLoan || financeState.economy.cash <= 0) return;
   pushHistory();
-  const payment = Math.min(firstLoan.balance, Math.max(1000, Math.floor(financeState.economy.cash * 0.25)));
+  const payment = nextRepaymentAmount();
   loanState.replace(
     loanState.current
       .map((loan) => (loan.id === firstLoan.id ? { ...loan, balance: loan.balance - payment } : loan))
@@ -11940,12 +11936,34 @@ function openFinanceDialog() {
   if (!financeDialog) return;
   dialogManager.open("finance");
   if (dialogLoanButton) dialogManager.bind("finance", "loan", dialogLoanButton, "click", () => {
-    takeLoan();
-    updateEconomyHud();
+    const { cash, loanBalance } = financeState.economy;
+    openDecisionDialog(
+      `${formatCost(loanPrincipal)}을 대출할까요?`,
+      `자금 ${formatSignedCost(cash)} → ${formatSignedCost(cash + loanPrincipal)} · 대출 잔액 ${formatCost(loanBalance)} → ${formatCost(loanBalance + loanPrincipal)} · 연 이자 ${(currentLoanInterestRate() * 100).toFixed(1)}% · 월 상환 ${formatCost(loanMonthlyPayment)}`,
+      `${formatCost(loanPrincipal)} 대출`,
+      () => {
+        takeLoan();
+        updateEconomyHud();
+        openFinanceDialog();
+      },
+      "build",
+    );
   });
   if (dialogRepayButton) dialogManager.bind("finance", "repay", dialogRepayButton, "click", () => {
-    repayLoan();
-    updateEconomyHud();
+    const payment = nextRepaymentAmount();
+    if (payment <= 0) return;
+    const { cash, loanBalance } = financeState.economy;
+    openDecisionDialog(
+      `대출 ${formatCost(payment)}을 상환할까요?`,
+      `자금 ${formatSignedCost(cash)} → ${formatSignedCost(cash - payment)} · 대출 잔액 ${formatCost(loanBalance)} → ${formatCost(Math.max(0, loanBalance - payment))}`,
+      `${formatCost(payment)} 상환`,
+      () => {
+        repayLoan();
+        updateEconomyHud();
+        openFinanceDialog();
+      },
+      "build",
+    );
   });
   updateEconomyHud();
   if (financeForecastContent) {
@@ -12114,6 +12132,13 @@ function updateEconomyHud() {
   financeDailyNetReadout?.classList.toggle("positive", dailyNet >= 0);
   setText(financeLoanReadout, formatSignedCost(financeState.economy.loanBalance));
   setText(financeDemandReadout, `${financeState.economy.demand.toLocaleString("ko-KR")} 명`);
+  const sandbox = metaState.current.mode === "sandbox";
+  const repayment = nextRepaymentAmount();
+  if (dialogLoanButton) dialogLoanButton.disabled = sandbox;
+  if (dialogRepayButton) dialogRepayButton.disabled = repayment <= 0;
+  setText(byId("financeLoanNote"), sandbox
+    ? "샌드박스에서는 대출이 필요하지 않습니다."
+    : `대출 1건 ${formatCost(loanPrincipal)} · 연 이자 ${(currentLoanInterestRate() * 100).toFixed(1)}%. ${repayment > 0 ? `다음 상환 ${formatCost(repayment)}.` : "상환할 대출이 없습니다."} 실행 전에 금액과 실행 후 잔액을 확인합니다.`);
   if (dialogFareInput && document.activeElement !== dialogFareInput) dialogFareInput.value = String(financeState.economy.fare);
   dialogAutoFareButton?.classList.toggle("active", financeState.economy.autoFare);
   dialogAutoFareButton?.setAttribute("aria-pressed", String(financeState.economy.autoFare));
@@ -12948,15 +12973,15 @@ function renderOperatingForecastComparison(forecast: DemandResponsiveForecast) {
     revenue: "운임 수익",
     netProfit: "순이익",
   };
-  return `<section class="operating-forecast-card" aria-label="운영 설정 예상 효과">
-    <header><div><span>OPERATING FORECAST</span><strong>운영 설정 예상 효과</strong></div><small>경로는 유지하고 수송력만 재계산</small></header>
-    <div class="operating-forecast-head"><span>지표</span><span>전일 확정</span><span>현재 예상</span></div>
-    ${(Object.keys(labels) as Array<keyof typeof labels>).map((metric) => `
-      <div class="operating-forecast-row">
-        <span>${labels[metric]}</span>
-        <strong>${operatingMetricText(metric, confirmedValues[metric])}</strong>
-        <strong data-operating-forecast="${metric}">${operatingMetricText(metric, forecastValues[metric])}</strong>
-      </div>`).join("")}
+  return `<section class="dg-panel__section" aria-label="운영 설정 예상 효과">
+    <h3 class="dg-panel__section-label">운영 예상 효과</h3>
+    <p class="game-inspector__note">경로는 유지하고 수송력만 다시 계산합니다.</p>
+    <table class="dg-table">
+      <thead><tr><th scope="col">지표</th><th scope="col" class="dg-num">전일 확정</th><th scope="col" class="dg-num">현재 예상</th></tr></thead>
+      <tbody>${(Object.keys(labels) as Array<keyof typeof labels>).map((metric) => `
+        <tr><th scope="row">${labels[metric]}</th><td class="dg-num">${operatingMetricText(metric, confirmedValues[metric])}</td><td class="dg-num" data-operating-forecast="${metric}">${operatingMetricText(metric, forecastValues[metric])}</td></tr>`).join("")}
+      </tbody>
+    </table>
   </section>`;
 }
 
