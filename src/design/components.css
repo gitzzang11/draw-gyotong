@@ -122,6 +122,8 @@
   cursor: pointer;
 }
 .dg-seg__item:last-child { border-right: 0; }
+/* 고를 수 없는 선택지: 흐린 글자 + 취소선 (색만으로 구분하지 않음) */
+.dg-seg__item:disabled { color: var(--text-3); text-decoration: line-through; cursor: not-allowed; }
 .dg-seg__item[aria-pressed="true"],
 .dg-seg__item[aria-checked="true"] {
   background: var(--invert-bg);

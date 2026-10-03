@@ -139,6 +139,7 @@ import {
 } from "./simulation/finance/dailySettlement.ts";
 import { LoanStateOwner } from "./simulation/finance/loanStateOwner.ts";
 import { LayerManager } from "./map/layerManager.ts";
+import { checkTrainRules, trainConstructionRules, turnAngles } from "./domain/trainConstructionRules.ts";
 import { clampCars, defaultCars, DEFAULT_TRAIN_TYPE, normalizeTrainType, roundCost, TRAIN_TYPES, trainCatalog, type TrainType } from "./domain/trainTypes.ts";
 import { mapPalette } from "./map/mapPalette.ts";
 import { LineRenderer, type LineRenderEntity } from "./map/lineRenderer.ts";
@@ -4476,6 +4477,8 @@ function renderConstructionPanel() {
 function renderRiverChoices() {
   if (!constructionDraft || !riverChoiceList) return;
   const crossings = constructionDraft.analysis.riverCrossings;
+  // 차종이 허용하지 않는 방식은 고를 수 없다 (트램: 지하 불가, GTX: 교량 불가).
+  const rule = constructionDraft.kind === "depot" ? null : trainConstructionRules[draftTrainType(constructionDraft.routeId ?? constructionDraft.plannedExtension?.routeId)];
   riverChoiceList.hidden = crossings.length === 0;
   riverChoiceList.innerHTML = crossings
     .map(
@@ -4483,8 +4486,8 @@ function renderRiverChoices() {
         <div class="dg-row">
           <span class="dg-row__label">강 통과 ${index + 1}</span>
           <div class="dg-seg" role="group" aria-label="강 통과 ${index + 1} 방식">
-            <button class="dg-seg__item" type="button" data-crossing-id="${crossing.id}" data-mode="bridge" aria-pressed="${crossing.mode === "bridge"}">교량</button>
-            <button class="dg-seg__item" type="button" data-crossing-id="${crossing.id}" data-mode="tunnel" aria-pressed="${crossing.mode === "tunnel"}">지하</button>
+            <button class="dg-seg__item" type="button" data-crossing-id="${crossing.id}" data-mode="bridge" aria-pressed="${crossing.mode === "bridge"}"${rule && !rule.allowBridge ? " disabled" : ""}>교량</button>
+            <button class="dg-seg__item" type="button" data-crossing-id="${crossing.id}" data-mode="tunnel" aria-pressed="${crossing.mode === "tunnel"}"${rule && !rule.allowTunnel ? " disabled" : ""}>지하</button>
           </div>
         </div>`,
     )
@@ -14759,6 +14762,9 @@ function analyzeConstruction(
 ): ConstructionAnalysis {
   const city = cityConfigs[metaState.current.cityId];
   const difficulty = difficultyConfigs[metaState.current.difficulty];
+  const trainType = kind === "depot" ? null : draftTrainType(routeId);
+  // 차종별 km당 공사비 배율 (트램 낮음 · GTX 대심도 높음)
+  const typeCost = trainType ? trainConstructionRules[trainType].costMultiplier : 1;
   const screenPoints = points.map((point) => map.latLngToContainerPoint(point));
   const crossings = detectRiverCrossings(screenPoints, previousChoices);
   const crossingIdsBySegment = new Map<number, string[]>();
@@ -14782,15 +14788,15 @@ function analyzeConstruction(
       lengthKm: Math.round(lengthKm * 1000) / 1000,
       mountainLengthKm: Math.round(mountainLengthKm * 1000) / 1000,
       riverCrossingIds: crossingIdsBySegment.get(index) ?? [],
-      baseCost: Math.round(lengthKm * baseCostPerKm * city.constructionMultiplier * difficulty.costMultiplier),
-      mountainCost: Math.round(mountainLengthKm * mountainCostPerKm * city.mountainMultiplier * difficulty.costMultiplier),
+      baseCost: Math.round(lengthKm * baseCostPerKm * city.constructionMultiplier * difficulty.costMultiplier * typeCost),
+      mountainCost: Math.round(mountainLengthKm * mountainCostPerKm * city.mountainMultiplier * difficulty.costMultiplier * typeCost),
     });
   }
   const lengthKm = segments.reduce((sum, segment) => sum + segment.lengthKm, 0);
   const baseCost = segments.reduce((sum, segment) => sum + segment.baseCost, 0);
   const mountainLengthKm = segments.reduce((sum, segment) => sum + segment.mountainLengthKm, 0);
   const mountainCost = segments.reduce((sum, segment) => sum + segment.mountainCost, 0);
-  const riverCost = crossings.reduce((sum, crossing) => sum + (crossing.mode ? getRiverCrossingCost(crossing.mode) : 0), 0);
+  const riverCost = Math.round(crossings.reduce((sum, crossing) => sum + (crossing.mode ? getRiverCrossingCost(crossing.mode) : 0), 0) * typeCost);
   const totalCost = baseCost + mountainCost + riverCost;
   const stationInstallCount = countStationsNearDraft(points, routeId);
   const depotConnected = isDraftDepotConnected(points, routeId);
@@ -14811,6 +14817,8 @@ function analyzeConstruction(
     crossings,
     depotConnected,
     stationInstallCount,
+    trainType,
+    screenPoints,
   });
   return {
     segments,
@@ -14875,8 +14883,21 @@ function collectConstructionWarnings(input: {
   crossings: RiverCrossingChoice[];
   depotConnected: boolean;
   stationInstallCount: number;
+  trainType?: TrainType | null;
+  screenPoints?: L.Point[];
 }) {
   const warnings: ConstructionWarning[] = [];
+  if (input.trainType) {
+    const spec = trainCatalog[input.trainType];
+    warnings.push({ code: "train-type", severity: "info", message: `${spec.label} 기준: ${trainConstructionRules[input.trainType].summary}` });
+    for (const violation of checkTrainRules({
+      trainType: input.trainType,
+      label: spec.label,
+      turnAnglesDeg: turnAngles(input.screenPoints ?? []),
+      stationSpacingsKm: nearestStationSpacingsKm(input.points, input.routeId),
+      crossingModes: input.crossings.map((crossing) => crossing.mode),
+    })) warnings.push(violation);
+  }
   if (input.kind !== "depot" && input.lengthKm * 1000 < 50)
     warnings.push({ code: "too-short", severity: "error", message: `구간 길이가 ${Math.round(input.lengthKm * 1000)}m입니다. 50m 이상이어야 합니다.` });
   else if (input.kind !== "depot" && input.lengthKm * 1000 < 180)
@@ -14891,7 +14912,7 @@ function collectConstructionWarnings(input: {
     warnings.push({ code: "self-intersection", severity: "warning", message: "노선이 비정상적으로 자기 교차합니다. 경로를 확인하세요." });
   if (input.points.some((point) => map.distance(point, L.latLng(cityConfigs[metaState.current.cityId].center)) > 65000))
     warnings.push({ code: "unsupported-area", severity: "error", message: "현재 도시의 지원 지도 영역 밖으로 나간 구간이 있습니다." });
-  if (hasShortStationSpacing(input.points, input.routeId))
+  if (!input.trainType && hasShortStationSpacing(input.points, input.routeId))
     warnings.push({ code: "station-spacing", severity: "warning", message: "일부 역 간격이 250m 미만입니다. 운행 효율이 낮아질 수 있습니다." });
   if ((input.kind === "edit" || input.kind === "repair") && countOrphanedStations(input.points, input.routeId) > 0)
     warnings.push({
@@ -14931,6 +14952,32 @@ function isDraftDepotConnected(points: LatLng[], routeId?: string) {
     const polygon = depot.polygon.map(([lat, lng]) => map.latLngToContainerPoint(L.latLng(lat, lng)));
     return routeTouchesDepotArea(draftRoute, polygon, 30 / metersPerPixel());
   });
+}
+
+/** 작도 중인 노선의 차종. 연장·편집은 대상 노선(실제·계획) 차종, 새 노선은 노선 설정에서 고른 차종. */
+function draftTrainType(routeId?: string): TrainType {
+  if (routeId) {
+    const actual = networkState.routes.find((route) => route.id === routeId);
+    if (actual) return routeTrainType(actual);
+    const planned = constructionState.plans.flatMap((plan) => plan.routes).find((route) => route.id === routeId);
+    if (planned) return normalizeTrainType(planned.trainType);
+  }
+  return draftRouteTrainType;
+}
+
+/** 노선 위(또는 작도 경로 가까이)의 역마다 가장 가까운 다른 역까지 거리(km). */
+function nearestStationSpacingsKm(points: LatLng[], routeId?: string) {
+  const relevant = networkState.stations.filter((station) => {
+    if (routeId && station.connectedRouteIds.includes(routeId)) return true;
+    return distanceToCoordinatesMeters(L.latLng(station.position[0], station.position[1]), points.map((point) => [point.lat, point.lng])) <= 55;
+  });
+  return relevant.map((station, index) => {
+    let nearest = Infinity;
+    relevant.forEach((other, otherIndex) => {
+      if (otherIndex !== index) nearest = Math.min(nearest, map.distance(L.latLng(station.position[0], station.position[1]), L.latLng(other.position[0], other.position[1])) / 1000);
+    });
+    return nearest;
+  }).filter(Number.isFinite);
 }
 
 function hasShortStationSpacing(points: LatLng[], routeId?: string) {
