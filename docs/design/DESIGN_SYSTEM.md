@@ -31,6 +31,7 @@
 
 - 테마는 `설정 → 화면 → 지도 테마`에서 전환한다. 기기 설정으로 저장하며 세이브 슬롯에 넣지 않는다.
 - 루트에 `data-theme="paper" | "ink"`를 두고 모든 색은 아래 토큰으로만 참조한다. 컴포넌트에 테마별 분기 색을 직접 쓰지 않는다.
+- 상태 표시줄 색(`meta[name=theme-color]`)은 테마를 적용할 때마다 현재 `--surface-0`으로 맞춘다(`syncThemeColorMeta`). `index.html`의 초기값은 종이 테마 `--surface-0`이다.
 - 전환은 즉시 적용하며 draft, 선택, 열린 표면, 지도 시야를 유지한다.
 - 지도 타일, 지형·철도 오버레이, 자동 노선도 SVG, 내보내기 이미지까지 같은 테마를 따른다.
 - 두 테마 모두 같은 형태 문법(반전, 상단 띠, 기호)을 쓴다. 테마는 명도만 바꾸고 언어를 바꾸지 않는다.
@@ -406,7 +407,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | `src/design/components.css` | `dg-` 접두사 기본 컴포넌트 |
 | `src/design/hud.css` | 게임 화면의 상시 HUD 위치와 화면 크기별 밀도 |
 | `src/legacy.css` | 기존 UI CSS(Leaflet 포함)를 `legacy` cascade layer로 묶는 진입점 |
-| `src/design/theme.ts` | 테마 목록, 기본값, 정규화, `data-theme` 적용 |
+| `src/design/theme.ts` | 테마 목록, 기본값, 정규화, `data-theme` 적용, 상태 표시줄 색 동기화 |
 | `tests/designTokens.test.ts` | §4 토큰 표와 `tokens.css` 값 일치, 두 테마 토큰 집합 일치 검증 |
 
 규칙:

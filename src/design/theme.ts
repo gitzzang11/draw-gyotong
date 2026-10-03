@@ -28,3 +28,13 @@ export function normalizeMapTheme(value: unknown): MapTheme {
 export function applyMapTheme(root: Pick<HTMLElement, "dataset">, theme: MapTheme): void {
   if (root.dataset.theme !== theme) root.dataset.theme = theme;
 }
+
+/**
+ * 상태 표시줄 색(`<meta name="theme-color">`)을 현재 테마의 기본 바탕(`--surface-0`)에 맞춘다.
+ * 테마를 적용한 뒤 호출한다. 읽은 값이 비어 있으면 그대로 둔다.
+ */
+export function syncThemeColorMeta(meta: { content: string } | null, readSurfaceColor: () => string): void {
+  if (!meta) return;
+  const color = readSurfaceColor().trim();
+  if (color && meta.content !== color) meta.content = color;
+}

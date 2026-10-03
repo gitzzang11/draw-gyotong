@@ -4,7 +4,7 @@ import "./design/tokens.css";
 import "./design/components.css";
 import "./design/hud.css";
 import { lineMarkHtml, metricRowsHtml } from "./ui/inspectorMarkup.ts";
-import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, type MapTheme } from "./design/theme.ts";
+import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThemeColorMeta, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
@@ -2419,7 +2419,7 @@ let selectedStatisticsRouteId = "";
 let selectedStatisticsStationId = "";
 let autoSaveTimer = 0;
 let settings: GameSettings = loadSettings();
-applyMapTheme(document.documentElement, settings.mapTheme);
+applyDocumentTheme();
 let audioContext: AudioContext | null = null;
 let toastTimer = 0;
 let trainInteractionLockedUntil = 0;
@@ -15781,8 +15781,13 @@ function updateSettings(patch: Partial<GameSettings>) {
   playFeedback("select");
 }
 
-function applySettingsToUi() {
+function applyDocumentTheme() {
   applyMapTheme(document.documentElement, settings.mapTheme);
+  syncThemeColorMeta(document.querySelector<HTMLMetaElement>('meta[name="theme-color"]'), () => getComputedStyle(document.documentElement).getPropertyValue("--surface-0"));
+}
+
+function applySettingsToUi() {
+  applyDocumentTheme();
   document.body.dataset.performance = settings.performanceMode;
   document.body.classList.toggle("reduced-motion", settings.reducedMotion);
   if (soundToggle) soundToggle.checked = settings.soundEnabled;

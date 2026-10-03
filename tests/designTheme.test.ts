@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyMapTheme, DEFAULT_MAP_THEME, isMapTheme, MAP_THEMES, normalizeMapTheme } from "../src/design/theme";
+import { applyMapTheme, DEFAULT_MAP_THEME, isMapTheme, MAP_THEMES, normalizeMapTheme, syncThemeColorMeta } from "../src/design/theme";
 
 describe("map theme", () => {
   it("defaults to the paper theme", () => {
@@ -23,5 +23,16 @@ describe("map theme", () => {
     expect(root.dataset).toEqual({ performance: "battery", theme: "ink" });
     applyMapTheme(root, "paper");
     expect(root.dataset.theme).toBe("paper");
+  });
+});
+
+describe("status bar theme colour", () => {
+  it("follows the current surface token", () => {
+    const meta = { content: "#081117" };
+    syncThemeColorMeta(meta, () => " #FBFAF6 ");
+    expect(meta.content).toBe("#FBFAF6");
+    syncThemeColorMeta(meta, () => "");
+    expect(meta.content).toBe("#FBFAF6");
+    expect(() => syncThemeColorMeta(null, () => "#121416")).not.toThrow();
   });
 });
