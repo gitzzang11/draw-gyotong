@@ -1723,14 +1723,17 @@ const railLayer = L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}
   keepBuffer: 2,
 });
 
-/** 현재 테마의 지도 토큰 색. 배경 레이어가 노선보다 눈에 띄지 않도록 지도 층 토큰만 쓴다 (DESIGN_SYSTEM §4.1). */
-function mapTokenColor(token: "--map-ground" | "--map-water" | "--map-green" | "--map-road" | "--map-label", fallback: string) {
+/**
+ * 현재 테마의 색 토큰 값. 지도 위 배경 레이어는 지도 층 토큰(§4.1)만, 편집 안내·경고는 신호 토큰(§4.3)만 쓴다.
+ * 노선 색 외에는 이 함수로 칠해 테마를 따르게 한다.
+ */
+function themeTokenColor(token: `--${string}`, fallback: string) {
   return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || fallback;
 }
 
 const adminLayer = L.geoJSON(undefined, {
   interactive: false,
-  style: () => ({ color: mapTokenColor("--map-label", "#7A7D80"), weight: 1.6, opacity: 0.85, fillOpacity: 0, dashArray: "5 6" }),
+  style: () => ({ color: themeTokenColor("--map-label", "#7A7D80"), weight: 1.6, opacity: 0.85, fillOpacity: 0, dashArray: "5 6" }),
 });
 
 const landuseLayer = L.geoJSON(undefined, {
@@ -1741,8 +1744,8 @@ const landuseLayer = L.geoJSON(undefined, {
     const isMountain = landuse === "forest" || landuse === "wood";
     // 종류는 지도 층 토큰의 명도 차와 선 굵기로 구분한다.
     return {
-      color: isWater ? mapTokenColor("--map-water", "#C6D3D9") : isMountain ? mapTokenColor("--map-green", "#DDE2D2") : mapTokenColor("--map-label", "#7A7D80"),
-      fillColor: isWater ? mapTokenColor("--map-water", "#C6D3D9") : isMountain ? mapTokenColor("--map-green", "#DDE2D2") : mapTokenColor("--map-ground", "#ECE9E1"),
+      color: isWater ? themeTokenColor("--map-water", "#C6D3D9") : isMountain ? themeTokenColor("--map-green", "#DDE2D2") : themeTokenColor("--map-label", "#7A7D80"),
+      fillColor: isWater ? themeTokenColor("--map-water", "#C6D3D9") : isMountain ? themeTokenColor("--map-green", "#DDE2D2") : themeTokenColor("--map-ground", "#ECE9E1"),
       weight: isWater ? 1.5 : 0.8,
       opacity: isWater ? 0.9 : 0.45,
       fillOpacity: isWater ? 0.5 : 0.35,
@@ -3564,8 +3567,8 @@ function onPointerDown(event: PointerEvent) {
     previewPolyline = L.polyline(rawDrawPoints.map((screenPoint) => map.containerPointToLatLng(screenPoint)), routeStyle(color, 7, 0.92)).addTo(previewLayer);
   } else {
     previewPolygon = L.polygon([map.containerPointToLatLng(point)], {
-      color: "#f3ca52",
-      fillColor: "#f3ca52",
+      color: themeTokenColor("--signal-caution", "#F2BE00"),
+      fillColor: themeTokenColor("--signal-caution", "#F2BE00"),
       fillOpacity: 0.2,
       weight: 2,
       interactive: false,
@@ -3740,7 +3743,7 @@ function beginEraserStroke(event: PointerEvent, point: L.Point) {
   captureDrawingPointer(event.pointerId);
   mapLayers.clear("construction-preview");
   previewPolyline = L.polyline([map.containerPointToLatLng(point)], {
-    color: "#ff6b6b",
+    color: themeTokenColor("--signal-danger", "#C8242C"),
     weight: eraserRadiusPx * 2,
     opacity: 0.52,
     dashArray: "2 8",
@@ -13248,9 +13251,9 @@ function renderEditHandles() {
     const endpoint = index === 0 || index === route.coordinates.length - 1;
     L.circleMarker(L.latLng(coordinate[0], coordinate[1]), {
       radius: endpoint ? 10 : 7,
-      color: "#071116",
+      color: themeTokenColor("--text-1", "#15171A"),
       weight: 3,
-      fillColor: endpoint ? "#ffffff" : "#4ce0c3",
+      fillColor: endpoint ? themeTokenColor("--surface-0", "#FBFAF6") : themeTokenColor("--signal-info", "#1D5FC2"),
       fillOpacity: 1,
       interactive: false,
     }).addTo(editGuideLayer);
@@ -13542,9 +13545,9 @@ function renderDeleteGuide() {
   const coordinate = route.coordinates[deleteAnchor.coordinateIndex];
   L.circleMarker(L.latLng(coordinate[0], coordinate[1]), {
     radius: 11,
-    color: "#ffffff",
+    color: themeTokenColor("--surface-0", "#FBFAF6"),
     weight: 3,
-    fillColor: "#ff5d5d",
+    fillColor: themeTokenColor("--signal-danger", "#C8242C"),
     fillOpacity: 1,
     interactive: false,
   }).addTo(editGuideLayer);
@@ -13853,7 +13856,7 @@ function renderMergeGuide() {
     radius: 12,
     color: "#ffffff",
     weight: 3,
-    fillColor: planningMode ? "#d5dee3" : "#f3ca52",
+    fillColor: planningMode ? themeTokenColor("--signal-info", "#1D5FC2") : themeTokenColor("--signal-caution", "#F2BE00"),
     fillOpacity: 1,
     dashArray: planningMode ? "3 2" : undefined,
     interactive: false,
@@ -14503,9 +14506,10 @@ function renderRepairGuide() {
     for (const gapIndex of route.disabledSegments ?? []) {
       const start = L.latLng(route.coordinates[gapIndex][0], route.coordinates[gapIndex][1]);
       const end = L.latLng(route.coordinates[gapIndex + 1][0], route.coordinates[gapIndex + 1][1]);
-      L.polyline([start, end], { color: "#ff5d5d", weight: 2, opacity: 0.9, dashArray: "4 5", interactive: false }).addTo(repairGuideLayer);
+      const danger = themeTokenColor("--signal-danger", "#C8242C");
+      L.polyline([start, end], { color: danger, weight: 2, opacity: 0.9, dashArray: "4 5", interactive: false }).addTo(repairGuideLayer);
       for (const endpoint of [start, end]) {
-        L.circleMarker(endpoint, { radius: 9, color: "#ffffff", weight: 2, fillColor: "#ff5d5d", fillOpacity: 1, interactive: false }).addTo(repairGuideLayer);
+        L.circleMarker(endpoint, { radius: 9, color: themeTokenColor("--surface-0", "#FBFAF6"), weight: 2, fillColor: danger, fillOpacity: 1, interactive: false }).addTo(repairGuideLayer);
       }
     }
   }
@@ -14594,7 +14598,7 @@ function renderDepotConnectionGuide() {
   }
   for (const route of networkState.routes) {
     L.polyline(route.coordinates.map(([lat, lng]) => L.latLng(lat, lng)), {
-      color: "#4ce0c3",
+      color: themeTokenColor("--signal-ok", "#1D7F47"),
       weight: 18,
       opacity: 0.22,
       lineCap: "round",
@@ -14608,7 +14612,8 @@ function updateDepotPreviewConnection(points: L.Point[]) {
   if (!previewPolygon) return;
   const polygon = closeLatLngRing(points.map((point) => map.containerPointToLatLng(point)));
   const connected = findRoutesNearPolygon(polygon, 30).length > 0;
-  previewPolygon.setStyle({ color: connected ? "#4ce0c3" : "#25d0d6", fillColor: connected ? "#4ce0c3" : "#25d0d6" });
+  const depotColor = connected ? themeTokenColor("--signal-ok", "#1D7F47") : themeTokenColor("--signal-info", "#1D5FC2");
+  previewPolygon.setStyle({ color: depotColor, fillColor: depotColor });
   setText(facilityReadout, connected ? "노선 연결 가능" : "단독 차량기지로 건설 가능");
 }
 
@@ -14918,10 +14923,14 @@ function renderConstructionDraftMap() {
     { points, color, weight: 7, opacity: 0.82, dashArray: "12 9" },
   );
   for (const segment of constructionDraft.analysis.segments.filter((item) => item.mountainLengthKm > 0)) {
-    entity.lines.push({ points: segment.coordinates, color: "#ff9f43", weight: 9, opacity: 0.9, dashArray: "5 5" });
+    entity.lines.push({ points: segment.coordinates, color: themeTokenColor("--signal-caution", "#F2BE00"), weight: 9, opacity: 0.9, dashArray: "5 5" });
   }
   for (const crossing of constructionDraft.analysis.riverCrossings) {
-    const colorForCrossing = crossing.mode === "bridge" ? "#f3ca52" : crossing.mode === "tunnel" ? "#7aa7ff" : "#ff5d5d";
+    const colorForCrossing = crossing.mode === "bridge"
+      ? themeTokenColor("--signal-caution", "#F2BE00")
+      : crossing.mode === "tunnel"
+        ? themeTokenColor("--signal-info", "#1D5FC2")
+        : themeTokenColor("--signal-danger", "#C8242C");
     entity.markers.push({ position: crossing.position, color: colorForCrossing });
   }
   constructionRenderer.reconcileDrafts([entity]);

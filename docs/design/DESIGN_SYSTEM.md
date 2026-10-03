@@ -260,6 +260,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - 지형·철도 오버레이도 같은 무채색 처리를 따른다. 다른 레이어가 노선 색보다 눈에 띄면 안 된다.
 - 구현: 타일 pane 하나에 CSS 필터를 건다(종이 `grayscale(1) sepia(.08) contrast(.62) brightness(1.14)`, 먹 `grayscale(1) invert(1) contrast(.6) brightness(.6)`). 지형·철도 타일도 같은 pane이라 함께 처리된다(`src/design/hud.css` 지도 바탕).
 - 벡터 배경 레이어(행정 경계, 토지 이용)는 지도 층 토큰을 읽어 칠하고 테마를 바꾸면 `resetStyle()`로 다시 칠한다. 인구 밀도는 호박색 한 계열(`--signal-caution` → `--signal-caution-text`)과 불투명도로 표현하고 범례도 같은 범위를 쓴다.
+- 지도 위 편집 안내(편집 점, 삭제 기준점, 철거 범위, 끊긴 구간, 기지 연결, 산악 구간·교량·터널 표시)는 `themeTokenColor`로 신호 토큰을 읽어 칠한다: 위험·철거 `--signal-danger`, 공사·지형 비용 `--signal-caution`, 편집 점·터널·기획 `--signal-info`, 연결 가능 `--signal-ok`. 노선 색 외의 고정 색을 새로 쓰지 않는다.
 - 노선은 굵은 실선 + 바탕색 casing으로 그린다. 선택되지 않은 노선끼리 발광하거나 그림자를 갖지 않는다.
 
 ### 역 기호
