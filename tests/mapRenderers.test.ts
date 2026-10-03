@@ -92,6 +92,24 @@ function line(overrides: Partial<LineRenderEntity> = {}): LineRenderEntity {
 }
 
 describe("incremental map renderers (mocked Leaflet; no DOM)", () => {
+  it("escapes untrusted station and blueprint names in Leaflet tooltip HTML", () => {
+    const name = '<img src=x onerror="window.pwned=1"> & 역';
+    const stations = L.layerGroup();
+    new StationRenderer(stations).reconcileEntities([{
+      id: "unsafe-station", name, position: [37.5, 127], color: "#ff0000",
+      selected: false, express: false, transfer: false, operational: true, showLabel: true,
+    }], []);
+    const blueprints = L.layerGroup();
+    new BlueprintRenderer(blueprints).reconcileEntities([{
+      id: "unsafe-blueprint", name, kind: "station", points: [[37.5, 127]],
+      color: "#ff0000", selected: false, canDelete: true, valid: true,
+    }]);
+    for (const group of [stations, blueprints]) {
+      const tooltip = (group.getLayers()[0] as L.Layer & { tooltip: string }).tooltip;
+      expect(tooltip).not.toContain("<img");
+      expect(tooltip).toContain("&lt;img src=x onerror=&quot;window.pwned=1&quot;&gt; &amp; 역");
+    }
+  });
   it("creates each managed group once and toggles visibility without duplication", () => {
     const attached = new Set<unknown>();
     const map = {

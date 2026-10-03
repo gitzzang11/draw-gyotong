@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { EntityRenderer } from "./entityRenderer";
+import { escapeTooltipText } from "./tooltipText";
 
 export type BlueprintKind = "route" | "transfer" | "station" | "depot";
 
@@ -89,7 +90,7 @@ export class BlueprintRenderer {
       });
     }
     if (entity.canDelete && entity.name) {
-      layer.bindTooltip(`${entity.name} · 계획에서 삭제`, { direction: "top", interactive: false });
+      layer.bindTooltip(escapeTooltipText(`${entity.name} · 계획에서 삭제`), { direction: "top", interactive: false });
     } else {
       layer.unbindTooltip();
     }

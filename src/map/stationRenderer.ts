@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { EntityRenderer } from "./entityRenderer";
+import { escapeTooltipText } from "./tooltipText";
 
 export interface StationRenderEntity {
   id: string;
@@ -80,7 +81,7 @@ export class StationRenderer {
       className: "station-map-marker",
     });
     if (entity.showLabel) {
-      marker.bindTooltip(entity.name, {
+      marker.bindTooltip(escapeTooltipText(entity.name), {
         permanent: true,
         direction: "top",
         offset: [0, -8],

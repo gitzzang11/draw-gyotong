@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { SaveFacade } from "../src/storage/saveFacade.ts";
+import { SaveFacade, type SaveSlotGateway } from "../src/storage/saveFacade.ts";
 import { SaveSlotService } from "../src/storage/saveSlotService.ts";
 import { migrateSaveStateRecord } from "../src/storage/migrations.ts";
 import type { SaveSlotRepository } from "../src/storage/storageTypes.ts";
@@ -37,7 +37,199 @@ function save(value: number): Save {
   return { meta: { slotId: "slot-1", updatedAt: value }, value };
 }
 
+function delayedStorage(options: { failWrite?: boolean; failRemove?: boolean; delayCreate?: boolean } = {}) {
+  const records = new Map<string, Save>([
+    ["slot-1", save(1)], ["slot-2", { meta: { slotId: "slot-2", updatedAt: 1 }, value: 1 }],
+  ]);
+  let current = save(2);
+  let releaseWrite!: () => void;
+  let notifyWriteStarted!: () => void;
+  let notifyCreateStarted!: () => void;
+  const gate = new Promise<void>((resolve) => { releaseWrite = resolve; });
+  const writeStarted = new Promise<void>((resolve) => { notifyWriteStarted = resolve; });
+  const createStarted = new Promise<void>((resolve) => { notifyCreateStarted = resolve; });
+  const gateway: SaveSlotGateway<Save> = {
+    create: async (value) => {
+      if (options.delayCreate) { notifyCreateStarted(); await gate; }
+      records.set(value.meta.slotId, structuredClone(value));
+      return value;
+    },
+    update: async (value) => {
+      notifyWriteStarted();
+      await gate;
+      if (options.failWrite) throw new Error("write failed");
+      records.set(value.meta.slotId, structuredClone(value));
+      return value;
+    },
+    load: async (id) => records.get(id) ?? null,
+    list: async () => [...records.values()],
+    remove: async (id) => {
+      if (options.failRemove) throw new Error("delete failed");
+      records.delete(id);
+    },
+  };
+  const facade = new SaveFacade<Save>({ capture: () => structuredClone(current), service: () => gateway, delayMs: 100 });
+  return { facade, records, releaseWrite, writeStarted, createStarted, setCurrent: (value: Save) => { current = value; } };
+}
+
 describe("SaveFacade", () => {
+  it.each(["update", "flush"] as const)("a late create cannot enable %s after deletion has been requested", async (operation) => {
+    const { facade, records, releaseWrite: finishCreate, createStarted } = delayedStorage({ delayCreate: true });
+    records.delete("slot-1");
+    const creating = facade.create(save(1));
+    await createStarted;
+    const deleting = facade.remove("slot-1");
+    finishCreate();
+    await Promise.all([creating, deleting]);
+
+    const attemptedWrite = operation === "update" ? facade.update(save(3)) : facade.flush();
+
+    await expect(attemptedWrite).rejects.toThrow(/삭제/);
+    expect(records.has("slot-1")).toBe(false);
+    expect(await facade.load("slot-1")).toBeNull();
+  });
+
+  it("a late create cannot enable scheduled requests that resurrect a deleted slot", async () => {
+    vi.useFakeTimers();
+    try {
+      const { facade, records, releaseWrite: finishCreate, createStarted } = delayedStorage({ delayCreate: true });
+      records.delete("slot-1");
+      const creating = facade.create(save(1));
+      await createStarted;
+      const deleting = facade.remove("slot-1");
+      finishCreate();
+      await Promise.all([creating, deleting]);
+
+      facade.request();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(records.has("slot-1")).toBe(false);
+      expect(await facade.load("slot-1")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("allows an explicit new create after deletion and then accepts normal writes", async () => {
+    const { facade, records, releaseWrite } = delayedStorage();
+    releaseWrite();
+    await facade.remove("slot-1");
+    expect(records.has("slot-1")).toBe(false);
+
+    await facade.create(save(10));
+    expect(await facade.load("slot-1")).toEqual(save(10));
+    await facade.update(save(11));
+    expect(await facade.load("slot-1")).toEqual(save(11));
+  });
+
+  it("does not resurrect a slot when an in-flight flush finishes after deletion is requested", async () => {
+    const { facade, records, releaseWrite, writeStarted } = delayedStorage();
+    const saving = facade.flush();
+    await writeStarted;
+
+    const deleting = facade.remove("slot-1");
+    releaseWrite();
+    await Promise.all([saving, deleting]);
+
+    expect(await facade.load("slot-1")).toBeNull();
+    expect(records.has("slot-1")).toBe(false);
+    expect(await facade.list()).toEqual([{ meta: { slotId: "slot-2", updatedAt: 1 }, value: 1 }]);
+  });
+
+  it("keeps the deleted slot absent when another request is queued during its in-flight write", async () => {
+    const { facade, records, releaseWrite, writeStarted, setCurrent } = delayedStorage();
+    const saving = facade.flush();
+    await writeStarted;
+    setCurrent(save(3));
+    facade.request();
+
+    const deleting = facade.remove("slot-1");
+    releaseWrite();
+    await Promise.all([saving, deleting]);
+
+    expect(records.has("slot-1")).toBe(false);
+    expect(await facade.load("slot-1")).toBeNull();
+  });
+
+  it("does not run a pending scheduled write that would recreate a deleted slot", async () => {
+    vi.useFakeTimers();
+    try {
+      const { facade, records, releaseWrite } = delayedStorage();
+      releaseWrite();
+      facade.request();
+      await facade.remove("slot-1");
+
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(records.has("slot-1")).toBe(false);
+      expect(await facade.load("slot-1")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("preserves a pending scheduled save of another slot when deleting the old slot", async () => {
+    vi.useFakeTimers();
+    try {
+      const { facade, records, releaseWrite, setCurrent } = delayedStorage();
+      releaseWrite();
+      const latest = { meta: { slotId: "slot-2", updatedAt: 3 }, value: 3 };
+      setCurrent(latest);
+      facade.request();
+      await facade.remove("slot-1");
+
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(records.has("slot-1")).toBe(false);
+      expect(await facade.load("slot-2")).toEqual(latest);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not cancel or erase an in-flight write of another slot", async () => {
+    const { facade, releaseWrite, writeStarted } = delayedStorage();
+    const saving = facade.flush();
+    await writeStarted;
+
+    const deleting = facade.remove("slot-2");
+    releaseWrite();
+    await Promise.all([saving, deleting]);
+
+    expect(await facade.load("slot-1")).toEqual(save(2));
+    expect(await facade.load("slot-2")).toBeNull();
+  });
+
+  it("still deletes a slot when the preceding in-flight write fails", async () => {
+    const { facade, releaseWrite, writeStarted } = delayedStorage({ failWrite: true });
+    const saving = facade.flush();
+    const savedResult = saving.then(() => "saved", (error: Error) => error.message);
+    await writeStarted;
+
+    const deleting = facade.remove("slot-1");
+    releaseWrite();
+    await deleting;
+
+    expect(await savedResult).toBe("write failed");
+    expect(await facade.load("slot-1")).toBeNull();
+  });
+
+  it("preserves a slot and allows later writes when deletion fails", async () => {
+    const { facade, releaseWrite, writeStarted, setCurrent } = delayedStorage({ failRemove: true });
+    const saving = facade.flush();
+    await writeStarted;
+    const deleting = facade.remove("slot-1");
+    const deletedResult = deleting.then(() => "deleted", (error: Error) => error.message);
+    releaseWrite();
+    await saving;
+
+    expect(await deletedResult).toBe("delete failed");
+    expect(await facade.load("slot-1")).toEqual(save(2));
+    setCurrent(save(3));
+    await facade.flush();
+    expect(await facade.load("slot-1")).toEqual(save(3));
+  });
+
   it("is initialized before the map-ready bootstrap can enumerate save slots", () => {
     const mainSource = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
     expect(mainSource.indexOf("const saveFacade = new SaveFacade")).toBeGreaterThan(-1);

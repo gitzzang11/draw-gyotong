@@ -362,6 +362,32 @@
     transform: none !important;
   }
 
+  #inGameMenuDialog #menuOpenSettingsButton {
+    min-height: 48px !important;
+    padding: 0 10px !important;
+    gap: 8px !important;
+    border-color: var(--mobile-menu-border-strong) !important;
+    background: var(--mobile-menu-surface) !important;
+    color: var(--mobile-menu-text) !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+
+  #inGameMenuDialog #menuOpenSettingsButton .menu-action-icon {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    display: grid !important;
+    place-items: center;
+    color: var(--mobile-menu-accent-strong) !important;
+  }
+
+  #inGameMenuDialog #menuOpenSettingsButton:active {
+    border-color: var(--mobile-menu-accent) !important;
+    background: var(--mobile-menu-surface-active) !important;
+    color: var(--mobile-menu-accent-strong) !important;
+  }
+
   #inGameMenuDialog .menu-settings-btn:active,
   #inGameMenuDialog .menu-footer-btn:active {
     border-color: var(--mobile-menu-border-strong) !important;
@@ -483,7 +509,7 @@
 
   #inGameMenuDialog .menu-settings-btn,
   #inGameMenuDialog .menu-footer-btn {
-    min-height: 40px !important;
+    min-height: 44px !important;
   }
 }
 

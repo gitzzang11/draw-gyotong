@@ -112,7 +112,7 @@ export class DirtyUpdateScheduler {
   }
 
   consume(): UpdateDomain[] {
-    if (this.flushing) return [];
+    if (this.flushing || this.dirty.size === 0) return [];
     this.flushing = true;
     const result = orderedDomains.filter((domain) => this.dirty.has(domain));
     this.dirty.clear();

@@ -77,6 +77,54 @@ describe("partial update dependencies", () => {
     scheduler.finishFlush();
   });
 
+  it("does not enter a flush when consuming an idle scheduler", () => {
+    const scheduler = new DirtyUpdateScheduler();
+
+    expect(scheduler.consume()).toEqual([]);
+    expect(scheduler.isFlushing).toBe(false);
+    expect(scheduler.hasPending).toBe(false);
+    expect(scheduler.snapshot().executed).toEqual({});
+  });
+
+  it("renders viewport domains after an empty consume without needing finishFlush", () => {
+    const scheduler = new DirtyUpdateScheduler();
+    expect(scheduler.consume()).toEqual([]);
+
+    scheduler.mark("viewport");
+
+    expect(scheduler.hasPending).toBe(true);
+    expect(scheduler.consume()).toEqual(["map-stations", "map-trains", "map-lod"]);
+    expect(scheduler.isFlushing).toBe(true);
+    scheduler.finishFlush();
+    expect(scheduler.isFlushing).toBe(false);
+    expect(scheduler.hasPending).toBe(false);
+  });
+
+  it("keeps an active flush locked during reentrant consume and executes deferred work after finishFlush", () => {
+    const scheduler = new DirtyUpdateScheduler();
+    scheduler.mark("clock");
+    expect(scheduler.consume()).toEqual(["map-trains", "hud-clock"]);
+
+    expect(scheduler.consume()).toEqual([]);
+    expect(scheduler.isFlushing).toBe(true);
+    scheduler.mark("viewport");
+    expect(scheduler.hasPending).toBe(true);
+    expect(scheduler.has("map-stations")).toBe(true);
+    expect(scheduler.consume()).toEqual([]);
+    expect(scheduler.isFlushing).toBe(true);
+    expect(scheduler.snapshot().executed["map-stations"]).toBeUndefined();
+
+    scheduler.finishFlush();
+    expect(scheduler.isFlushing).toBe(false);
+    expect(scheduler.hasPending).toBe(true);
+    expect(scheduler.consume()).toEqual(["map-stations", "map-trains", "map-lod"]);
+    expect(scheduler.isFlushing).toBe(true);
+    scheduler.finishFlush();
+    expect(scheduler.isFlushing).toBe(false);
+    expect(scheduler.hasPending).toBe(false);
+    expect(scheduler.snapshot().executed).toEqual({ "map-trains": 2, "hud-clock": 1, "map-stations": 1, "map-lod": 1 });
+  });
+
   it("keeps selection, mode, and construction progress isolated", () => {
     expect(domainsForUpdate("selection")).toEqual(["map-selection", "hud-status", "active-panel"]);
     expect(domainsForUpdate("mode")).toEqual(["map-selection", "hud-status", "active-panel", "workflow"]);

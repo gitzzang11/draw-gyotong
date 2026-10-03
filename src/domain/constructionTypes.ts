@@ -100,5 +100,6 @@ export interface ConstructionProject {
   startedDay: number; durationDays: number; elapsedDays: number; expectedCompletionDay: number;
   baseCost: number; additionalCost: number; delayDays: number; events: ConstructionProjectEvent[];
   sourcePlanId?: string; openedAtDay?: number; pendingExtension?: LineExtensionPayload;
+  pendingPlanAddition?: { route: PlannedRoute; segmentIds: string[] };
   dependsOnProjectId?: string; blueprintId?: string; junctionBlueprint?: JunctionBlueprint;
 }

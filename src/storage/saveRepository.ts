@@ -52,6 +52,7 @@ export class SaveRepository<T> {
   cancel() {
     if (this.timer !== undefined) this.clearTimer(this.timer);
     this.timer = undefined;
+    this.saveAgain = false;
   }
 
   private setTimer(callback: () => void, delayMs: number) {

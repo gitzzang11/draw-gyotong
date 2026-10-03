@@ -11,6 +11,7 @@ export interface SaveSlotGateway<T extends SaveSlotRecord> {
 
 export interface SaveFacadeOptions<T extends SaveSlotRecord> {
   capture(): T;
+  currentSlotId?(): string | undefined;
   service(): SaveSlotGateway<T>;
   prepareForScheduledSave?(): void;
   delayMs?: number;
@@ -24,12 +25,15 @@ export interface SaveFacadeOptions<T extends SaveSlotRecord> {
  */
 export class SaveFacade<T extends SaveSlotRecord> {
   private readonly repository: SaveRepository<T>;
+  private readonly slotWrites = new Map<string, Promise<void>>();
+  private readonly deletedSlots = new Set<string>();
+  private readonly slotGenerations = new Map<string, number>();
 
   constructor(private readonly options: SaveFacadeOptions<T>) {
     this.repository = new SaveRepository({
       capture: options.capture,
       write: async (state) => {
-        await this.options.service().update(state);
+        await this.update(state);
       },
       delayMs: options.delayMs,
       onError: options.onError,
@@ -37,16 +41,19 @@ export class SaveFacade<T extends SaveSlotRecord> {
   }
 
   request(): void {
+    if (this.currentSlotDeleted()) return;
     this.options.prepareForScheduledSave?.();
     this.repository.request();
   }
 
   requestImmediate(): void {
+    if (this.currentSlotDeleted()) return;
     this.options.prepareForScheduledSave?.();
     this.repository.requestImmediate();
   }
 
   flush(): Promise<void> {
+    if (this.currentSlotDeleted()) return Promise.reject(new Error("삭제 중이거나 삭제된 세이브에는 저장할 수 없습니다."));
     return this.repository.flush();
   }
 
@@ -55,22 +62,68 @@ export class SaveFacade<T extends SaveSlotRecord> {
   }
 
   create(value: T): Promise<T> {
-    return this.options.service().create(value);
+    const slotId = this.slotId(value);
+    const generation = this.slotGenerations.get(slotId) ?? 0;
+    return this.enqueue(slotId, async () => {
+      const result = await this.options.service().create(value);
+      if (generation === (this.slotGenerations.get(slotId) ?? 0)) this.deletedSlots.delete(slotId);
+      return result;
+    });
   }
 
   update(value: T): Promise<T> {
-    return this.options.service().update(value);
+    const slotId = this.slotId(value);
+    if (this.deletedSlots.has(slotId)) return Promise.reject(new Error("삭제 중이거나 삭제된 세이브에는 저장할 수 없습니다."));
+    return this.enqueue(slotId, async () => {
+      if (this.deletedSlots.has(slotId)) throw new Error("삭제 중이거나 삭제된 세이브에는 저장할 수 없습니다.");
+      return this.options.service().update(value);
+    });
   }
 
-  load(slotId: string): Promise<T | null> {
-    return this.options.service().load(slotId);
+  async load(slotId: string): Promise<T | null> {
+    if (this.deletedSlots.has(slotId)) return null;
+    const value = await this.options.service().load(slotId);
+    return this.deletedSlots.has(slotId) ? null : value;
   }
 
-  list(): Promise<T[]> {
-    return this.options.service().list();
+  async list(): Promise<T[]> {
+    return (await this.options.service().list()).filter((value) => !this.deletedSlots.has(this.slotId(value)));
   }
 
   remove(slotId: string): Promise<void> {
-    return this.options.service().remove(slotId);
+    const alreadyDeleted = this.deletedSlots.has(slotId);
+    const generation = (this.slotGenerations.get(slotId) ?? 0) + 1;
+    this.slotGenerations.set(slotId, generation);
+    this.deletedSlots.add(slotId);
+    if (this.currentSlotId() === slotId) this.repository.cancel();
+    return this.enqueue(slotId, () => this.options.service().remove(slotId)).catch((error) => {
+      if (!alreadyDeleted && this.slotGenerations.get(slotId) === generation) this.deletedSlots.delete(slotId);
+      throw error;
+    });
+  }
+
+  private slotId(value: T): string {
+    const slotId = value.meta?.slotId;
+    if (!slotId) throw new Error("Save slot metadata is missing");
+    return slotId;
+  }
+
+  private currentSlotDeleted(): boolean {
+    if (this.deletedSlots.size === 0) return false;
+    const slotId = this.currentSlotId();
+    return Boolean(slotId && this.deletedSlots.has(slotId));
+  }
+
+  private currentSlotId(): string | undefined {
+    return this.options.currentSlotId ? this.options.currentSlotId() : this.options.capture().meta?.slotId;
+  }
+
+  private enqueue<R>(slotId: string, operation: () => Promise<R>): Promise<R> {
+    const result = (this.slotWrites.get(slotId) ?? Promise.resolve()).then(operation);
+    // A failed write must not prevent the following delete or retry.
+    const settled = result.then(() => undefined, () => undefined);
+    this.slotWrites.set(slotId, settled);
+    void settled.then(() => { if (this.slotWrites.get(slotId) === settled) this.slotWrites.delete(slotId); });
+    return result;
   }
 }
