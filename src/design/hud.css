@@ -17,6 +17,9 @@
 :root { --hud-bottom-clear: calc(var(--edge-inset-bottom) + var(--plate-height) + 2px + var(--hud-gap)); }
 body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--rail-width-compact) + var(--hud-gap)); }
 
+/* 화면 배치 클래스가 display를 지정해도 hidden 속성은 항상 숨긴다. */
+:where([class^="game-"], [class*=" game-"])[hidden] { display: none !important; }
+
 .dg-hud {
   z-index: 1000;
   color-scheme: var(--theme-color-scheme);
@@ -334,6 +337,17 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-setting-row__text small { font: var(--type-label); font-weight: 600; color: var(--text-2); }
 .game-setting-row__check { width: 22px; height: 22px; margin: 0 var(--space-2) 0 0; accent-color: var(--text-1); flex: none; }
 .game-setting-row__select { width: auto; min-width: 104px; }
+
+/* ===== 시스템 메뉴 ===== */
+.game-menu { z-index: 1150; }
+.game-menu .dg-dialog { width: min(480px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-menu__save { display: grid; gap: var(--space-2); }
+.game-menu__tabs { display: grid; grid-template-columns: 1fr 1fr; }
+.game-menu__pane { display: grid; gap: var(--space-2); }
+.game-menu__links { padding: 0; }
+.game-slot-item { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); padding: 6px 0; border-top: var(--line-hair) solid var(--rule); }
+.game-slot-item:first-child { border-top: 0; }
+.game-slot-item .game-route-item__text { flex: 1; }
 
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 1100; }

@@ -1663,47 +1663,35 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="inGameMenuDialog" class="dialog-backdrop" hidden>
-      <section class="ingame-menu-dialog" role="dialog" aria-modal="true" aria-labelledby="ingameMenuTitle">
-        <div class="dialog-heading">
-          <div><span>SYSTEM MENU</span><h2 id="ingameMenuTitle">시스템 메뉴</h2></div>
-          <button id="closeInGameMenuButton" class="dialog-close" type="button" aria-label="닫기">×</button>
+    <div id="inGameMenuDialog" class="dg-hud dg-scrim game-menu" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="ingameMenuTitle">
+        <header class="dg-panel__header">
+          <h2 id="ingameMenuTitle" class="dg-panel__title">메뉴</h2>
+          <div class="dg-panel__header-end"><button id="closeInGameMenuButton" class="dg-icon-btn" type="button" aria-label="메뉴 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <section class="dg-panel__section game-menu__save">
+            <div class="dg-seg game-menu__tabs" role="group" aria-label="저장과 불러오기">
+              <button id="menuSaveTabButton" class="dg-seg__item" type="button" aria-pressed="true">저장</button>
+              <button id="menuLoadTabButton" class="dg-seg__item" type="button" aria-pressed="false">불러오기</button>
+            </div>
+            <div id="menuSaveTabContent" class="game-menu__pane">
+              <p id="menuSaveStatusReadout" class="game-inspector__note">현재 슬롯에 진행 상황을 저장합니다</p>
+              <button id="menuQuickSaveButton" class="dg-btn dg-btn--primary" type="button">지금 저장</button>
+            </div>
+            <div id="menuLoadTabContent" class="game-menu__pane" hidden>
+              <p class="game-inspector__note">불러올 슬롯을 고르세요. 이름과 마지막 저장 시각을 확인하세요.</p>
+              <div id="menuSlotList" class="game-route-list"></div>
+            </div>
+          </section>
+          <section class="dg-panel__section game-menu__links">
+            <button id="menuOpenHelpButton" class="dg-tool" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15"/><path d="M7.5 7.5 A2.5 2.5 0 1 1 10 10 V11.5 M10 14 V14.5"/></svg><span>도움말 · 튜토리얼</span></button>
+            <button id="menuOpenSettingsButton" class="dg-tool" type="button" aria-haspopup="dialog"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.03a1.7 1.7 0 0 0-1.87.34l-.06.06h-3.4l-.03-.08a1.7 1.7 0 0 0-1.29-1.1 1.7 1.7 0 0 0-.58 0 1.7 1.7 0 0 0-1.3 1.1l-.02.08H6.07l-.06-.06a1.7 1.7 0 0 0-1.88-.34l-.07.03-1.7-2.94.06-.06A1.7 1.7 0 0 0 2.76 15l-.03-.08v-3.4l.08-.03a1.7 1.7 0 0 0 1.1-1.29 1.7 1.7 0 0 0 0-.58 1.7 1.7 0 0 0-1.1-1.3l-.08-.02V4.9l.06-.06a1.7 1.7 0 0 0 .34-1.88l-.03-.07 2.94-1.7.06.06a1.7 1.7 0 0 0 1.88.34l.08-.03h3.4l.03.08a1.7 1.7 0 0 0 1.29 1.1 1.7 1.7 0 0 0 .58 0 1.7 1.7 0 0 0 1.3-1.1l.02-.08h3.4l.06.06a1.7 1.7 0 0 0 1.88.34l.07-.03 1.7 2.94-.06.06A1.7 1.7 0 0 0 21.24 7l.03.08v3.4l-.08.03a1.7 1.7 0 0 0-1.1 1.29 1.7 1.7 0 0 0 0 .58 1.7 1.7 0 0 0 1.1 1.3l.08.02v1.3Z"/></svg><span>환경 설정</span></button>
+          </section>
         </div>
-
-        <div class="ingame-menu-body">
-          <!-- Horizontal Save / Load Pill Box -->
-          <div class="save-load-horizontal-box">
-            <button id="menuSaveTabButton" class="save-load-tab-btn active" type="button"><span class="menu-action-icon" aria-hidden="true">💾</span>저장</button>
-            <button id="menuLoadTabButton" class="save-load-tab-btn" type="button"><span class="menu-action-icon" aria-hidden="true">📂</span>불러오기</button>
-          </div>
-
-          <div id="menuSaveTabContent" class="save-tab-pane">
-            <div class="menu-save-info">
-              <span class="save-title">💾 진행 상황 저장</span>
-              <span class="save-sub" id="menuSaveStatusReadout">현재 슬롯에 진행 상황을 저장합니다</span>
-            </div>
-            <button id="menuQuickSaveButton" class="menu-primary-save-btn" type="button"><span class="menu-action-icon" aria-hidden="true">💾</span>저장하기</button>
-          </div>
-
-          <div id="menuLoadTabContent" class="save-tab-pane" hidden>
-            <div class="menu-save-info">
-              <span class="save-title">📂 저장된 슬롯 목록</span>
-              <span class="save-sub">불러올 저장 슬롯을 선택하세요</span>
-            </div>
-            <div id="menuSlotList" class="menu-slot-list"></div>
-          </div>
-
-          <div class="menu-secondary-actions">
-            <button id="menuOpenHelpButton" class="menu-settings-btn" type="button"><span class="menu-action-icon" aria-hidden="true">?</span><span>도움말 · 튜토리얼</span></button>
-            <button id="menuOpenSettingsButton" class="menu-settings-btn" type="button" aria-haspopup="dialog">
-              <span class="menu-action-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.03a1.7 1.7 0 0 0-1.87.34l-.06.06h-3.4l-.03-.08a1.7 1.7 0 0 0-1.29-1.1 1.7 1.7 0 0 0-.58 0 1.7 1.7 0 0 0-1.3 1.1l-.02.08H6.07l-.06-.06a1.7 1.7 0 0 0-1.88-.34l-.07.03-1.7-2.94.06-.06A1.7 1.7 0 0 0 2.76 15l-.03-.08v-3.4l.08-.03a1.7 1.7 0 0 0 1.1-1.29 1.7 1.7 0 0 0 0-.58 1.7 1.7 0 0 0-1.1-1.3l-.08-.02V4.9l.06-.06a1.7 1.7 0 0 0 .34-1.88l-.03-.07 2.94-1.7.06.06a1.7 1.7 0 0 0 1.88.34l.08-.03h3.4l.03.08a1.7 1.7 0 0 0 1.29 1.1 1.7 1.7 0 0 0 .58 0 1.7 1.7 0 0 0 1.3-1.1l.02-.08h3.4l.06.06a1.7 1.7 0 0 0 1.88.34l.07-.03 1.7 2.94-.06.06A1.7 1.7 0 0 0 21.24 7l.03.08v3.4l-.08.03a1.7 1.7 0 0 0-1.1 1.29 1.7 1.7 0 0 0 0 .58 1.7 1.7 0 0 0 1.1 1.3l.08.02v1.3Z"/></svg></span><span>환경 설정</span>
-            </button>
-          </div>
-
-          <div class="menu-footer-row">
-            <button id="menuReturnTitleButton" class="menu-footer-btn title-btn" type="button"><span class="menu-action-icon" aria-hidden="true">⌂</span>메인 화면으로</button>
-            <button id="menuResumeGameButton" class="menu-footer-btn resume-btn" type="button"><span class="menu-action-icon" aria-hidden="true">▶</span>게임 계속하기</button>
-          </div>
+        <div class="dg-panel__actions">
+          <button id="menuReturnTitleButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">메인 화면으로</button>
+          <button id="menuResumeGameButton" class="dg-btn dg-btn--primary dg-panel__actions-push" type="button">게임 계속하기</button>
         </div>
       </section>
     </div>
@@ -11900,8 +11888,8 @@ function repayLoan() {
 }
 
 function switchInGameMenuTab(tab: "save" | "load") {
-  if (menuSaveTabButton) menuSaveTabButton.classList.toggle("active", tab === "save");
-  if (menuLoadTabButton) menuLoadTabButton.classList.toggle("active", tab === "load");
+  menuSaveTabButton?.setAttribute("aria-pressed", String(tab === "save"));
+  menuLoadTabButton?.setAttribute("aria-pressed", String(tab === "load"));
   if (menuSaveTabContent) menuSaveTabContent.hidden = tab !== "save";
   if (menuLoadTabContent) menuLoadTabContent.hidden = tab !== "load";
   if (tab === "load") renderInGameSlotList();
@@ -11911,22 +11899,19 @@ function renderInGameSlotList() {
   if (!menuSlotList) return;
   menuSlotList.innerHTML = "";
   if (slotSummaries.length === 0) {
-    menuSlotList.innerHTML = `<div class="menu-slot-empty">저장된 슬롯이 없습니다</div>`;
+    menuSlotList.innerHTML = `<p class="game-inspector__note">저장된 슬롯이 없습니다.</p>`;
     return;
   }
   slotSummaries.forEach((slot) => {
     const isCurrent = isActiveSaveSlot(slot.slotId);
     const item = document.createElement("div");
-    item.className = `menu-slot-item ${isCurrent ? "active-slot" : ""}`;
+    item.className = "game-slot-item";
     const dateStr = new Date(slot.updatedAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
     item.innerHTML = `
-      <div class="slot-item-info">
-        <strong>${slot.slotName} ${isCurrent ? "(현재 슬롯)" : ""}</strong>
-        <span>${dateStr} • 노선 ${slot.routeCount}개 • ${slot.stationCount}개 역</span>
-      </div>
-      <button class="slot-item-load-btn" type="button">불러오기</button>
+      <span class="game-route-item__text"><strong>${escapeHtml(slot.slotName)}${isCurrent ? " · 현재 슬롯" : ""}</strong><small>마지막 저장 ${dateStr} · 노선 ${slot.routeCount}개 · 역 ${slot.stationCount}개</small></span>
+      <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-slot-load>불러오기</button>
     `;
-    item.querySelector(".slot-item-load-btn")?.addEventListener("click", () => {
+    item.querySelector("[data-slot-load]")?.addEventListener("click", () => {
       closeInGameMenu();
       loadSlot(slot.slotId);
       showToast(`${slot.slotName} 슬롯을 불러왔습니다!`);

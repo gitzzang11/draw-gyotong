@@ -121,7 +121,6 @@ button,
 button svg,
 .ops-button svg,
 .action-button svg,
-.menu-action-icon,
 .button-icon,
 .tool-glyph {
   display: inline-block;
@@ -1461,8 +1460,7 @@ tr:hover td {
 .statistics-screen,
 .news-screen,
 .analysis-screen,
-.diagram-screen,
-.ingame-menu-dialog {
+.diagram-screen {
   background: var(--c-bg-glass);
   backdrop-filter: var(--glass-blur-dense);
   -webkit-backdrop-filter: var(--glass-blur-dense);
@@ -1476,52 +1474,10 @@ tr:hover td {
 /* ----------------------------------------------------
    11. IN-GAME SYSTEM MENU DIALOG (.ingame-menu-dialog)
 ---------------------------------------------------- */
-.ingame-menu-dialog {
-  width: min(500px, 94vw);
-  max-height: 88dvh;
-  background: rgba(12, 17, 28, 0.94);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid var(--c-border-light);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  color: var(--c-text-main);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
 
 @keyframes modal-pop {
   0% { opacity: 0; transform: scale(0.94) translateY(10px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.ingame-menu-dialog .dialog-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 12px;
-}
-
-.ingame-menu-dialog .dialog-heading span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-primary);
-  letter-spacing: 1px;
-  background: rgba(0, 242, 254, 0.1);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.ingame-menu-dialog .dialog-heading h2 {
-  margin: 4px 0 0 0;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--c-text-main);
 }
 
 .dialog-close {
@@ -1544,234 +1500,12 @@ tr:hover td {
   border-color: var(--c-danger);
 }
 
-.ingame-menu-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.save-load-horizontal-box {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 4px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--c-border);
-}
-
-.save-load-tab-btn {
-  background: transparent;
-  border: none;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  color: var(--c-text-muted);
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 44px;
-}
-
-.save-load-tab-btn.active {
-  background: linear-gradient(135deg, var(--c-secondary), var(--c-primary));
-  color: #07090E;
-  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.3);
-}
-
-.save-tab-pane {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.menu-save-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.save-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--c-text-main);
-}
-
-.save-sub {
-  font-size: 12px;
-  color: var(--c-text-muted);
-}
-
-.menu-primary-save-btn {
-  background: linear-gradient(135deg, var(--c-primary), #00B4D8);
-  color: #07090E;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 14px;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 48px;
-  box-shadow: 0 4px 20px var(--c-primary-glow);
-  transition: all 0.2s ease;
-}
-
-.menu-primary-save-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px var(--c-primary-glow);
-}
-
-.menu-slot-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.menu-slot-empty {
-  text-align: center;
-  padding: 20px;
-  color: var(--c-text-muted);
-  font-size: 13px;
-}
-
-.menu-slot-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.2s ease;
-}
-
-.menu-slot-item.active-slot {
-  border-color: var(--c-primary);
-  background: rgba(0, 242, 254, 0.08);
-}
-
-.slot-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.slot-item-info strong {
-  font-size: 13px;
-  color: var(--c-text-main);
-}
-
-.slot-item-info span {
-  font-size: 11px;
-  color: var(--c-text-dim);
-}
-
-.slot-item-load-btn {
-  background: rgba(99, 102, 241, 0.2);
-  border: 1px solid var(--c-secondary);
-  color: #A5B4FC;
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  min-height: 38px;
-  transition: all 0.2s ease;
-}
-
-.slot-item-load-btn:hover {
-  background: var(--c-secondary);
-  color: #fff;
-}
-
-.menu-secondary-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.menu-settings-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  color: var(--c-text-main);
-  font-weight: 700;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  min-height: 46px;
-  transition: all 0.2s ease;
-}
-
-.menu-settings-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: var(--c-border-light);
-}
-
-.menu-footer-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.menu-footer-btn {
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.menu-footer-btn.title-btn {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #FCA5A5;
-}
-
-.menu-footer-btn.title-btn:hover {
-  background: var(--c-danger);
-  color: #fff;
-}
-
-.menu-footer-btn.resume-btn {
-  background: linear-gradient(135deg, var(--c-secondary), var(--c-accent));
-  border: none;
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
-}
-
 .settings-dialog,
 .finance-dialog,
 .statistics-screen,
 .news-screen,
 .analysis-screen,
 .diagram-screen,
-.ingame-menu-dialog,
 .planning-dialog,
 .plan-conversion-dialog {
   background: var(--c-bg-glass);
@@ -2681,11 +2415,6 @@ tr:hover td {
   gap: 10px;
 }
 
-.menu-footer-btn.resume-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-}
-
 /* ----------------------------------------------------
    12. DECISION / CONFIRMATION MODAL
 ---------------------------------------------------- */
@@ -2763,11 +2492,6 @@ font-size: 12px;
 .conversion-actions {
   display: flex;
   gap: 10px;
-}
-
-.menu-footer-btn.resume-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
 }
 
 /* ----------------------------------------------------
@@ -7247,8 +6971,7 @@ button:where(:not([class*="dg-"])):active,
   .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .merge-dialog,
   .dialog-backdrop > .planning-dialog,
-  .dialog-backdrop > .plan-conversion-dialog,
-  .dialog-backdrop > .ingame-menu-dialog {
+  .dialog-backdrop > .plan-conversion-dialog {
     width: min(100%, 680px) !important;
     max-height: min(88dvh, 680px) !important;
     margin: 0;
@@ -7847,8 +7570,7 @@ button:where(:not([class*="dg-"])):active,
   .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .merge-dialog,
   .dialog-backdrop > .planning-dialog,
-  .dialog-backdrop > .plan-conversion-dialog,
-  .dialog-backdrop > .ingame-menu-dialog {
+  .dialog-backdrop > .plan-conversion-dialog {
     max-height: min(84dvh, 620px) !important;
   }
 }
@@ -9791,8 +9513,7 @@ button:where(:not([class*="dg-"])):active,
   .plan-asset-list,
   #planComparisonList,
   .plan-conversion-items,
-  .connection-dialog-body,
-  .menu-slot-list {
+  .connection-dialog-body {
     flex: 0 0 auto !important;
     min-height: auto !important;
     height: auto !important;
