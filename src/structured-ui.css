@@ -622,7 +622,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .settings-dialog,
 .finance-dialog,
 .planning-dialog,
-.decision-dialog,
 .save-editor-dialog,
 .merge-dialog,
 .plan-conversion-dialog,
@@ -638,42 +637,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: var(--shadow-lg) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-}
-
-#decisionDialog[data-decision-intent="build"] #decisionSaveDraftButton[hidden] {
-  display: none !important;
-}
-
-#decisionDialog[data-decision-intent="build"] .decision-dialog {
-  border-radius: 6px !important;
-}
-
-#decisionDialog[data-decision-intent="build"] .decision-btn,
-#decisionDialog[data-decision-intent="build"] .decision-warning {
-  border-radius: 4px !important;
-}
-
-#decisionDialog[data-decision-intent="build"] .decision-kicker {
-  color: var(--color-accent) !important;
-}
-
-#decisionDialog[data-decision-intent="build"] .decision-btn.confirm-btn {
-  background: var(--color-accent) !important;
-  color: var(--color-map-void) !important;
-  border-color: var(--color-accent) !important;
-  box-shadow: none !important;
-}
-
-#decisionDialog[data-decision-intent="build"] .decision-icon-badge,
-#decisionDialog[data-decision-intent="build"] .decision-warning {
-  background: var(--color-surface-1) !important;
-  color: var(--color-text-primary) !important;
-  border-color: var(--color-border-subtle) !important;
-  box-shadow: none !important;
-}
-
-#decisionDialog[data-decision-intent="build"] .decision-icon-badge svg {
-  stroke: var(--color-accent);
 }
 
 .settings-tabs,
@@ -718,7 +681,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .finance-section,
 .finance-card,
 .setting-row,
-.decision-warning,
 .connection-safety-note,
 .planning-editor,
 .plan-comparison,

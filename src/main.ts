@@ -1528,24 +1528,23 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="decisionDialog" class="dialog-backdrop" hidden>
-      <section class="decision-dialog" role="alertdialog" aria-modal="true" aria-labelledby="decisionTitle">
-        <div class="decision-dialog-header">
-          <div class="decision-icon-badge">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <!-- 확인 대화상자: 대상·영향을 보이고 결과를 버튼에 쓴다 (DESIGN_SYSTEM §12 Dialogs) -->
+    <div id="decisionDialog" class="dg-hud dg-scrim game-decision" hidden>
+      <section class="dg-panel dg-dialog" role="alertdialog" aria-modal="true" aria-labelledby="decisionTitle" aria-describedby="decisionMessage decisionWarning">
+        <header class="dg-panel__header">
+          <h2 id="decisionTitle" class="dg-panel__title"><span id="decisionKicker">작업 확인</span></h2>
+          <div class="dg-panel__header-end"><button id="closeDecisionButton" class="dg-icon-btn" type="button" aria-label="확인 창 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <div class="dg-panel__section game-decision__body">
+            <p id="decisionMessage" class="game-decision__message"></p>
+            <div id="decisionWarning" class="dg-notice game-decision__warning" hidden></div>
           </div>
-          <div>
-            <span class="decision-kicker">WARNING ACTION</span>
-            <h2 id="decisionTitle">작업 확인</h2>
-          </div>
-          <button id="closeDecisionButton" class="dialog-close" type="button" aria-label="확인 창 닫기">×</button>
         </div>
-        <p id="decisionMessage" class="decision-message-body"></p>
-        <div class="decision-warning" id="decisionWarning" hidden></div>
-        <div class="dialog-actions decision-actions">
-          <button id="decisionCancelButton" class="decision-btn cancel-btn" type="button">취소</button>
-          <button id="decisionSaveDraftButton" class="decision-btn" type="button" hidden>임시 저장 후 변경</button>
-          <button id="decisionConfirmButton" class="decision-btn confirm-btn" type="button">확인</button>
+        <div class="dg-panel__actions">
+          <button id="decisionCancelButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
+          <button id="decisionSaveDraftButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button" hidden>임시 저장 후 변경</button>
+          <button id="decisionConfirmButton" class="dg-btn dg-btn--primary dg-panel__actions-push game-decision__confirm" type="button">확인</button>
         </div>
       </section>
     </div>
@@ -13512,7 +13511,7 @@ function renderDeleteGuide() {
 function openDecisionDialog(message: string, warning: string, confirmLabel: string, action: () => void, intent: "danger" | "build" = "danger") {
   if (!decisionDialog) return;
   decisionDialog.dataset.decisionIntent = intent;
-  setText(decisionDialog.querySelector<HTMLElement>(".decision-kicker"), intent === "build" ? "시설 확장 검토" : "작업 확인");
+  setText(byId("decisionKicker"), intent === "build" ? "시설 확장 검토" : "작업 확인");
   setText(decisionMessage, message);
   setText(decisionWarning, warning);
   if (decisionWarning) decisionWarning.hidden = !warning;

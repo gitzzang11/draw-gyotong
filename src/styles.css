@@ -1462,7 +1462,6 @@ tr:hover td {
 .news-screen,
 .analysis-screen,
 .diagram-screen,
-.decision-dialog,
 .ingame-menu-dialog {
   background: var(--c-bg-glass);
   backdrop-filter: var(--glass-blur-dense);
@@ -1772,7 +1771,6 @@ tr:hover td {
 .news-screen,
 .analysis-screen,
 .diagram-screen,
-.decision-dialog,
 .ingame-menu-dialog,
 .planning-dialog,
 .plan-conversion-dialog {
@@ -2691,96 +2689,6 @@ tr:hover td {
 /* ----------------------------------------------------
    12. DECISION / CONFIRMATION MODAL
 ---------------------------------------------------- */
-.decision-dialog {
-  width: min(460px, 94vw);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 30px rgba(239, 68, 68, 0.2);
-  animation: modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.decision-dialog-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 12px;
-}
-
-.decision-icon-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.decision-kicker {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-danger);
-  letter-spacing: 1px;
-}
-
-#decisionTitle {
-  margin: 2px 0 0 0;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.decision-message-body {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--c-text-main);
-  font-weight: 600;
-}
-
-.decision-warning {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  font-size: 12px;
-  color: #FCA5A5;
-  line-height: 1.4;
-}
-
-.decision-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.decision-btn {
-  flex: 1;
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  font-weight: 800;
-  font-size: 14px;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-}
-
-.decision-btn.cancel-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--c-border);
-  color: var(--c-text-main);
-}
-
-.decision-btn.confirm-btn {
-  background: linear-gradient(135deg, var(--c-danger), #B91C1C);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-}
 
 /* ----------------------------------------------------
    13. SETTINGS DIALOG
@@ -2886,96 +2794,6 @@ font-size: 12px;
 /* ----------------------------------------------------
    12. DECISION / CONFIRMATION MODAL
 ---------------------------------------------------- */
-.decision-dialog {
-  width: min(460px, 94vw);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  border-color: rgba(239, 68, 68, 0.4);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 30px rgba(239, 68, 68, 0.2);
-  animation: modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.decision-dialog-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 12px;
-}
-
-.decision-icon-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-
-.decision-kicker {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-danger);
-  letter-spacing: 1px;
-}
-
-#decisionTitle {
-  margin: 2px 0 0 0;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.decision-message-body {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--c-text-main);
-  font-weight: 600;
-}
-
-.decision-warning {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  font-size: 12px;
-  color: #FCA5A5;
-  line-height: 1.4;
-}
-
-.decision-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.decision-btn {
-  flex: 1;
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  font-weight: 800;
-  font-size: 14px;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s ease;
-}
-
-.decision-btn.cancel-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--c-border);
-  color: var(--c-text-main);
-}
-
-.decision-btn.confirm-btn {
-  background: linear-gradient(135deg, var(--c-danger), #B91C1C);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
-}
 
 /* ----------------------------------------------------
    13. SETTINGS DIALOG
@@ -7303,7 +7121,6 @@ textarea:where(:not([class*="dg-"])) {
 .dialog-heading,
 .satisfaction-dialog-header,
 .connection-dialog-header,
-.decision-dialog-header,
 .diagram-header,
 .analysis-header,
 .statistics-header,
@@ -7322,8 +7139,7 @@ textarea:where(:not([class*="dg-"])) {
 
 .dialog-heading > .dialog-close,
 .satisfaction-dialog-header > .dialog-close,
-.connection-dialog-header > .dialog-close,
-.decision-dialog-header > .dialog-close {
+.connection-dialog-header > .dialog-close {
   position: absolute;
   top: 50%;
   right: 0;
@@ -7332,8 +7148,7 @@ textarea:where(:not([class*="dg-"])) {
 }
 
 .satisfaction-dialog-header,
-.connection-dialog-header,
-.decision-dialog-header {
+.connection-dialog-header {
   padding-right: 52px;
   box-sizing: border-box;
 }
@@ -7361,22 +7176,16 @@ textarea:where(:not([class*="dg-"])) {
   z-index: 3;
 }
 
-.decision-dialog-header {
-  align-items: center;
-}
-
 @media (max-width: 700px) {
   .dialog-heading,
   .satisfaction-dialog-header,
-  .connection-dialog-header,
-  .decision-dialog-header {
+  .connection-dialog-header {
     padding-right: 48px;
   }
 
   .dialog-heading > .dialog-close,
   .satisfaction-dialog-header > .dialog-close,
-  .connection-dialog-header > .dialog-close,
-  .decision-dialog-header > .dialog-close {
+  .connection-dialog-header > .dialog-close {
     right: 0;
   }
 
@@ -7478,7 +7287,6 @@ button:where(:not([class*="dg-"])):active,
   .dialog-backdrop > .finance-dialog,
   .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .satisfaction-dialog,
-  .dialog-backdrop > .decision-dialog,
   .dialog-backdrop > .merge-dialog,
   .dialog-backdrop > .planning-dialog,
   .dialog-backdrop > .plan-conversion-dialog,
@@ -8079,7 +7887,6 @@ button:where(:not([class*="dg-"])):active,
   .dialog-backdrop > .finance-dialog,
   .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .satisfaction-dialog,
-  .dialog-backdrop > .decision-dialog,
   .dialog-backdrop > .merge-dialog,
   .dialog-backdrop > .planning-dialog,
   .dialog-backdrop > .plan-conversion-dialog,
