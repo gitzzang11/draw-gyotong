@@ -114,6 +114,7 @@
   padding: 0 10px;
   border: 0;
   border-right: var(--line-strong) solid var(--text-1);
+  border-radius: 0;
   background: var(--surface-0);
   color: var(--text-1);
   font: var(--type-body);

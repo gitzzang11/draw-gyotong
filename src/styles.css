@@ -883,7 +883,6 @@ tr:hover td {
   display: none !important;
 }
 
-.statistics-screen,
 .analysis-screen,
 .diagram-screen {
   background: var(--c-bg-glass);
@@ -905,7 +904,6 @@ tr:hover td {
   100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.statistics-screen,
 .analysis-screen,
 .diagram-screen {
   background: var(--c-bg-glass);
@@ -981,57 +979,6 @@ tr:hover td {
 /* Metrics Grid */
 
 /* Station Sections (Routes & Transfers) */
-
-.connected-route-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.connected-route-chips span {
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--entity-color, var(--c-border));
-  color: var(--c-text-main);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-}
-
-.connected-route-chips span::before {
-  content: "";
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--entity-color, var(--c-cyan));
-  box-shadow: 0 0 8px var(--entity-color, var(--c-cyan));
-}
-
-.connected-route-chips em {
-  font-style: normal;
-  font-size: 12px;
-  color: var(--c-text-dim);
-}
-
-.connected-route-chips span {
-  display: inline-grid;
-  grid-template-columns: auto;
-  gap: 1px;
-}
-
-.connected-route-chips span b {
-  font: inherit;
-}
-
-.connected-route-chips span small {
-  color: var(--c-text-dim);
-  font-size: 10px;
-}
 
 /* Map train silhouette icon */
 .train-icon {
@@ -1123,8 +1070,7 @@ tr:hover td {
    16. FULL SCREEN WINDOWS — STATISTICS / OPERATIONS
 ---------------------------------------------------- */
 .diagram-screen,
-.analysis-screen,
-.statistics-screen {
+.analysis-screen {
   position: absolute;
   inset: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   z-index: 1400;
@@ -1135,606 +1081,39 @@ tr:hover td {
 }
 
 .diagram-screen[hidden],
-.analysis-screen[hidden],
-.statistics-screen[hidden] {
+.analysis-screen[hidden] {
   display: none !important;
 }
 
 /* ── Statistics Screen ── */
-.statistics-screen {
-  background: rgba(8, 11, 18, 0.97);
-  border: 1px solid rgba(0, 242, 254, 0.2);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 32px 80px rgba(0, 0, 0, 0.9);
-}
-
-.statistics-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  flex-shrink: 0;
-}
-
-.statistics-title span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-cyan);
-  letter-spacing: 1.5px;
-  background: rgba(0, 242, 254, 0.12);
-  border: 1px solid rgba(0, 242, 254, 0.3);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  display: inline-block;
-  margin-bottom: 4px;
-}
-
-.statistics-title h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--c-cyan), #FFFFFF);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.statistics-title strong {
-  font-size: 13px;
-  color: var(--c-text-muted);
-}
-
-.statistics-title p {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: var(--c-text-dim);
-}
-
-.statistics-title-editor {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.statistics-title-editor label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.statistics-title-editor input {
-  min-width: 200px;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: var(--radius-md) !important;
-  color: var(--c-text-main) !important;
-  padding: 6px 10px !important;
-  font-size: 12px !important;
-  min-height: 36px !important;
-}
-
-#saveNetworkTitleButton {
-  padding: 8px 16px;
-  min-height: 36px;
-  background: rgba(0, 242, 254, 0.15) !important;
-  border: 1px solid var(--c-cyan) !important;
-  color: var(--c-cyan) !important;
-  border-radius: var(--radius-md) !important;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.statistics-close {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-full);
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-  color: var(--c-text-muted);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.statistics-close:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--c-text-main);
-}
 
 /* Tab Nav */
-.statistics-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 10px 24px;
-  background: rgba(0, 0, 0, 0.25);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  flex-shrink: 0;
-  overflow-x: auto;
-}
-
-.statistics-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.statistics-tabs button {
-  padding: 8px 18px;
-  min-height: 36px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-  background: transparent;
-  border: 1px solid transparent;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.statistics-tabs button:hover {
-  color: var(--c-text-main);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.statistics-tabs button.active,
-.statistics-tabs button[aria-pressed="true"] {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(99, 102, 241, 0.25)) !important;
-  border-color: var(--c-cyan) !important;
-  color: var(--c-cyan) !important;
-  box-shadow: 0 0 12px rgba(0, 242, 254, 0.2);
-}
 
 /* Content Area */
-.statistics-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.statistics-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.statistics-content::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.statistics-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
 
 /* Page Layouts */
-.statistics-page {
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
 
 /* Hero KPI Banner */
-.statistics-hero {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(99, 102, 241, 0.12));
-  border: 1px solid rgba(0, 242, 254, 0.25);
-  border-radius: var(--radius-xl);
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.statistics-hero span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-  display: block;
-  margin-bottom: 4px;
-}
-
-.statistics-hero strong {
-  font-size: 28px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  display: block;
-}
-
-.statistics-hero strong.positive { color: var(--c-mint); text-shadow: 0 0 16px rgba(52, 211, 153, 0.4); }
-.statistics-hero strong.negative { color: #FCA5A5; text-shadow: 0 0 16px rgba(239, 68, 68, 0.4); }
-
-.statistics-hero em {
-  font-style: normal;
-  font-size: 12px;
-  color: var(--c-text-muted);
-  margin-top: 4px;
-  display: block;
-}
 
 /* Section heading */
-.statistics-section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.statistics-section-heading span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-purple);
-  letter-spacing: 1px;
-  background: rgba(168, 85, 247, 0.1);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  display: block;
-  margin-bottom: 4px;
-}
-
-.statistics-section-heading h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.statistics-section-heading em {
-  font-style: normal;
-  font-size: 11px;
-  color: var(--c-text-muted);
-}
 
 /* Metric Cards Grid */
-.statistics-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-.statistics-metric-grid.compact {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-@media (max-width: 700px) {
-  .statistics-metric-grid { grid-template-columns: repeat(2, 1fr); }
-  .statistics-metric-grid.compact { grid-template-columns: repeat(2, 1fr); }
-}
 
 /* Individual Metric Card */
-.statistics-metric {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.statistics-metric:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-.statistics-metric > span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.statistics-metric > span small {
-  font-size: 9px;
-  color: var(--c-gold);
-  margin-left: 4px;
-  font-weight: 800;
-}
-
-.statistics-metric > strong {
-  font-size: 18px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: var(--c-text-main);
-}
-
-.statistics-metric > em.positive { color: var(--c-mint); font-style: normal; font-size: 11px; font-weight: 800; }
-.statistics-metric > em.negative { color: #FCA5A5; font-style: normal; font-size: 11px; font-weight: 800; }
-.statistics-metric > em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--c-text-dim); }
 
 /* Progress Comparison Section */
-.statistics-progress {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.statistics-progress > div {
-  display: grid;
-  grid-template-columns: 80px 1fr 44px;
-  align-items: center;
-  gap: 10px;
-}
-
-.statistics-progress > div > span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.statistics-progress > div > i {
-  display: block;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-  font-style: normal;
-}
-
-.statistics-progress > div > i > b {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, var(--c-secondary), var(--c-cyan));
-  border-radius: var(--radius-full);
-  font-style: normal;
-  font-weight: normal;
-}
-
-.statistics-progress > div > strong {
-  font-size: 12px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--c-text-main);
-}
 
 /* Stats Split Layout (routes / stations) */
-.statistics-split {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 16px;
-  height: 100%;
-  padding: 20px 24px;
-}
-
-@media (max-width: 768px) {
-  .statistics-split {
-    grid-template-columns: 1fr;
-  }
-}
-
-.statistics-entity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 10px;
-}
-
-.statistics-entity-list::-webkit-scrollbar { width: 4px; }
-.statistics-entity-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
-
-.statistics-entity-list button {
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.18s ease;
-}
-
-.statistics-entity-list button:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: var(--c-border);
-}
-
-.statistics-entity-list button.active {
-  background: rgba(0, 242, 254, 0.08) !important;
-  border-color: var(--c-cyan) !important;
-  box-shadow: 0 0 10px rgba(0, 242, 254, 0.12);
-}
-
-.statistics-entity-list button i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--entity-color, var(--c-cyan));
-  flex-shrink: 0;
-  box-shadow: 0 0 6px var(--entity-color, var(--c-cyan));
-}
-
-.statistics-entity-list button span {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
-}
-
-.statistics-entity-list button strong {
-  font-size: 13px;
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.statistics-entity-list button em {
-  font-style: normal;
-  font-size: 11px;
-  color: var(--c-text-muted);
-  white-space: nowrap;
-}
 
 /* Detail Panel */
-.statistics-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.statistics-detail header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.statistics-detail header span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-purple);
-  letter-spacing: 1px;
-  display: block;
-  margin-bottom: 2px;
-}
-
-.statistics-detail header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.statistics-detail header button {
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  min-height: 36px;
-  background: rgba(0, 242, 254, 0.12) !important;
-  border: 1px solid rgba(0, 242, 254, 0.3) !important;
-  color: var(--c-cyan) !important;
-  border-radius: var(--radius-md) !important;
-  cursor: pointer;
-}
 
 /* Progress Comparison bars */
-.statistics-details summary {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-  cursor: pointer;
-  padding: 8px 0;
-  list-style: none;
-}
-
-.statistics-details summary::-webkit-details-marker { display: none; }
 
 /* Save info section dl */
-.save-information dl {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-}
-
-.save-information dl div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.save-information dt {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.save-information dd {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 800;
-}
 
 /* Mini Trend Chart — matches renderMiniTrend() HTML */
-.mini-trend {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.mini-trend > span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-dim);
-}
-
-.mini-trend > div {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 40px;
-}
-
-.mini-trend > div > i {
-  display: block;
-  width: 6px;
-  border-radius: 3px 3px 0 0;
-  background: rgba(0, 242, 254, 0.42);
-  min-height: 3px;
-  font-style: normal;
-}
-
-.mini-trend.empty {
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.mini-trend.empty > strong {
-  font-size: 12px;
-  color: var(--c-text-dim);
-}
 
 /* Statistics Empty State */
-.statistics-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 220px;
-  padding: 40px 24px;
-  text-align: center;
-  color: var(--c-text-muted);
-}
-
-.statistics-empty > strong {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--c-text-main);
-}
-
-.statistics-empty > span {
-  font-size: 13px;
-  line-height: 1.6;
-}
 
 
 /* Progress comparison bars */
@@ -2281,8 +1660,7 @@ tr:hover td {
 /* ====================================================
    OPERATIONS INTELLIGENCE & STATISTICS SCREEN REDESIGN
    ==================================================== */
-.analysis-screen,
-.statistics-screen {
+.analysis-screen {
   background: rgba(8, 12, 22, 0.97) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
@@ -2292,16 +1670,14 @@ tr:hover td {
   overflow: hidden;
 }
 
-.analysis-header,
-.statistics-header {
+.analysis-header {
   padding: 18px 26px !important;
   background: rgba(5, 8, 15, 0.6) !important;
   border-bottom: 1px solid rgba(0, 242, 254, 0.2) !important;
   backdrop-filter: blur(12px) !important;
 }
 
-.analysis-heading span,
-.statistics-title span {
+.analysis-heading span {
   font-size: 10px !important;
   font-weight: 900 !important;
   color: var(--c-primary, #00f2fe) !important;
@@ -2313,8 +1689,7 @@ tr:hover td {
   box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
 }
 
-.analysis-heading h2,
-.statistics-title h2 {
+.analysis-heading h2 {
   margin: 4px 0 0 !important;
   font-size: 24px !important;
   font-weight: 900 !important;
@@ -2323,8 +1698,7 @@ tr:hover td {
   -webkit-text-fill-color: transparent !important;
 }
 
-.analysis-heading p,
-.statistics-title p {
+.analysis-heading p {
   color: rgba(255, 255, 255, 0.7) !important;
   font-size: 12px !important;
 }
@@ -2433,8 +1807,7 @@ tr:hover td {
   transform: translateY(-1px);
 }
 
-.analysis-close,
-.statistics-close {
+.analysis-close {
   background: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 50% !important;
@@ -2443,8 +1816,7 @@ tr:hover td {
   transition: all 0.2s ease !important;
 }
 
-.analysis-close:hover,
-.statistics-close:hover {
+.analysis-close:hover {
   background: rgba(239, 68, 68, 0.8) !important;
   color: #ffffff !important;
   border-color: #ef4444 !important;
@@ -3070,7 +2442,6 @@ button:active,
 /* Shared panel surface: quiet separation from the map, no glass spectacle. */
 .start-panel,
 .analysis-screen,
-.statistics-screen,
 .menu-dialog {
   background: rgba(15, 22, 29, 0.97) !important;
   border: 1px solid var(--c-border) !important;
@@ -3348,20 +2719,17 @@ textarea:where(:not([class*="dg-"])) {
    Keep every dismiss action in the same, predictable top-right position.
 ------------------------------------------------------------------------- */
 .diagram-header,
-.analysis-header,
-.statistics-header {
+.analysis-header {
   position: relative;
 }
 
 .diagram-header,
-.analysis-header,
-.statistics-header {
+.analysis-header {
   padding-right: 76px !important;
 }
 
 .diagram-header .diagram-close,
-.analysis-header .analysis-close,
-.statistics-header .statistics-close {
+.analysis-header .analysis-close {
   position: absolute;
   top: 50%;
   right: 16px;
@@ -3372,14 +2740,12 @@ textarea:where(:not([class*="dg-"])) {
 @media (max-width: 700px) {
 
   .diagram-header,
-  .analysis-header,
-  .statistics-header {
+  .analysis-header {
     padding-right: 64px !important;
   }
 
   .diagram-header .diagram-close,
-  .analysis-header .analysis-close,
-  .statistics-header .statistics-close {
+  .analysis-header .analysis-close {
     right: 12px;
   }
 }
@@ -4561,8 +3927,7 @@ button:where(:not([class*="dg-"])):active,
    internal headers still provide safe-area padding where the device needs it,
    while the workspace surface itself no longer leaves a frame around the map. */
 .diagram-screen,
-.analysis-screen,
-.statistics-screen {
+.analysis-screen {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -4645,15 +4010,13 @@ button:where(:not([class*="dg-"])):active,
    the same rounded-square language, including full-screen workspaces and
    dialog-backed floating panels. */
 .diagram-screen .diagram-close,
-.analysis-screen .analysis-close,
-.statistics-screen .statistics-close {
+.analysis-screen .analysis-close {
   border-radius: 10px !important;
   box-sizing: border-box !important;
 }
 
 .diagram-screen .diagram-close,
-.analysis-screen .analysis-close,
-.statistics-screen .statistics-close {
+.analysis-screen .analysis-close {
   aspect-ratio: 1 / 1 !important;
   display: inline-grid !important;
   place-items: center !important;
@@ -4706,8 +4069,7 @@ button:where(:not([class*="dg-"])):active,
      desktop shape rule sets their visual size to 26px. */
   .dialog-backdrop .compact-close,
   .diagram-screen .diagram-close,
-  .analysis-screen .analysis-close,
-  .statistics-screen .statistics-close {
+  .analysis-screen .analysis-close {
     width: 44px !important;
     height: 44px !important;
     min-width: 44px !important;
@@ -4787,7 +4149,6 @@ button:where(:not([class*="dg-"])):active,
 
   /* Full-screen report headers collapse before their actions run out of
      horizontal space. Their content areas already have independent scroll. */
-  .statistics-header,
   .analysis-screen .analysis-header,
   .diagram-header {
     min-width: 0;
@@ -4796,54 +4157,13 @@ button:where(:not([class*="dg-"])):active,
     padding: 8px 60px 8px 10px !important;
   }
 
-  .statistics-title,
   .analysis-heading,
   .diagram-brand {
     min-width: 0;
   }
 
-  .statistics-title h2 {
-    overflow: hidden;
-    font-size: 16px !important;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .statistics-title p,
   .analysis-heading p {
     display: none;
-  }
-
-  .statistics-title-editor {
-    min-width: 0;
-    gap: 4px;
-  }
-
-  .statistics-title-editor label {
-    min-width: 0;
-  }
-
-  .statistics-title-editor input {
-    width: clamp(110px, 20vw, 180px);
-    min-width: 0 !important;
-    min-height: 36px !important;
-  }
-
-  #saveNetworkTitleButton {
-    min-height: 36px;
-    padding: 0 9px;
-    white-space: nowrap;
-  }
-
-  .statistics-tabs {
-    gap: 3px;
-    padding: 6px 10px;
-  }
-
-  .statistics-tabs button {
-    min-height: 36px;
-    padding: 0 12px;
-    white-space: nowrap;
   }
 
   .analysis-screen .analysis-header {
@@ -4919,8 +4239,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .diagram-header .diagram-close,
-  .analysis-header .analysis-close,
-  .statistics-header .statistics-close {
+  .analysis-header .analysis-close {
     top: 50%;
     right: 8px;
   }
@@ -5002,8 +4321,7 @@ button:where(:not([class*="dg-"])):active,
 
   /* Full-screen reports keep their header in place and use one content
      scroller instead of separate left/right panel scrollbars. */
-  .analysis-body,
-  .statistics-content {
+  .analysis-body {
     overflow-y: auto !important;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
@@ -5015,9 +4333,7 @@ button:where(:not([class*="dg-"])):active,
      the panel's scrollable remainder. */
 
   .analysis-summary,
-  .analysis-report,
-  .statistics-entity-list,
-  .statistics-detail {
+  .analysis-report {
     min-height: auto !important;
     height: auto !important;
     max-height: none !important;

@@ -577,8 +577,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   -webkit-backdrop-filter: none !important;
 }
 
-.settings-tabs,
-.statistics-tabs {
+.settings-tabs {
   gap: 0 !important;
   overflow: hidden;
   border: 1px solid var(--color-border-subtle) !important;
@@ -586,8 +585,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   background: var(--color-surface-0) !important;
 }
 
-.settings-tabs button,
-.statistics-tabs button {
+.settings-tabs button {
   border: 0 !important;
   border-right: 1px solid var(--color-border-subtle) !important;
   border-radius: 0 !important;
@@ -597,14 +595,11 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   transform: none !important;
 }
 
-.settings-tabs button:last-child,
-.statistics-tabs button:last-child {
+.settings-tabs button:last-child {
   border-right: 0 !important;
 }
 
-.settings-tabs button.active,
-.statistics-tabs button.active,
-.statistics-tabs button[aria-pressed="true"] {
+.settings-tabs button.active {
   border-color: var(--color-accent) !important;
   background: var(--color-accent-dim) !important;
   color: var(--color-accent-strong) !important;
@@ -652,15 +647,13 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    -------------------------------------------------------------------------- */
 
 .diagram-screen,
-.analysis-screen,
-.statistics-screen {
+.analysis-screen {
   background: var(--color-map-void) !important;
   color: var(--color-text-primary) !important;
 }
 
 .diagram-header,
-.analysis-header,
-.statistics-header {
+.analysis-header {
   border-color: var(--color-border-strong) !important;
   border-radius: 0 !important;
   background: var(--color-surface-0) !important;
@@ -672,13 +665,10 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .analysis-score-card,
 .analysis-section,
 .analysis-card,
-.statistics-hero,
-.statistics-page > section,
 .statistics-metric-card,
 .news-item,
 .diagram-help,
 .diagram-legend,
-.save-information,
 .statistics-detail-panel {
   border-color: var(--color-border-subtle) !important;
   border-radius: 4px !important;
@@ -705,16 +695,13 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    -------------------------------------------------------------------------- */
 
 .analysis-heading,
-.statistics-title,
 .diagram-brand,
 .analysis-header-actions,
-.statistics-title-editor,
 .diagram-controls {
   min-width: 0 !important;
 }
 
-.analysis-header-actions,
-.statistics-title-editor {
+.analysis-header-actions {
   position: static !important;
   max-width: 100% !important;
 }
@@ -726,14 +713,12 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 body .game-shell .analysis-screen > .analysis-header > .analysis-header-actions,
-body .game-shell .statistics-screen > .statistics-header > .statistics-title-editor,
 body .game-shell .diagram-screen > .diagram-header > .diagram-controls {
   position: static !important;
 }
 
 body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
-body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton,
-body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton {
+body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton {
   position: absolute !important;
   top: max(14px, env(safe-area-inset-top)) !important;
   right: max(16px, env(safe-area-inset-right)) !important;
@@ -755,8 +740,7 @@ body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton 
   }
 
   body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
-  body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton,
-  body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton {
+  body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton {
     top: max(8px, env(safe-area-inset-top)) !important;
     right: max(8px, env(safe-area-inset-right)) !important;
   }
@@ -764,7 +748,6 @@ body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton 
 
 .analysis-principle,
 .analysis-empty,
-.statistics-empty,
 .diagram-empty {
   border-color: var(--color-border-subtle) !important;
   border-radius: 4px !important;
@@ -775,15 +758,13 @@ body .game-shell .statistics-screen > .statistics-header #closeStatisticsButton 
 
 /* Feedback surfaces */
 
-.analysis-progress,
-.statistics-progress {
+.analysis-progress {
   border-radius: 2px !important;
   background: var(--color-surface-2) !important;
   box-shadow: none !important;
 }
 
-.analysis-progress > i,
-.statistics-progress > i {
+.analysis-progress > i {
   border-radius: 2px !important;
   background: var(--color-accent) !important;
   box-shadow: none !important;

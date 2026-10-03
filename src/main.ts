@@ -1348,26 +1348,30 @@ app.innerHTML = `
       <div id="depotManagerContent" class="game-inspector__content"></div>
     </aside>
 
-    <section id="statisticsScreen" class="statistics-screen" hidden aria-label="운영 현황 및 통계">
-      <header class="statistics-header">
-        <div class="statistics-title">
-          <span>NETWORK STATUS</span>
-          <div><h2 id="statisticsNetworkTitle">서울 철도망</h2><strong id="statisticsCityLabel">서울</strong></div>
-          <p id="statisticsSaveMeta">샌드박스 · 보통 · 플레이 0분</p>
-        </div>
-        <div class="statistics-title-editor">
-          <label><span>철도망 제목</span><input id="networkTitleInput" maxlength="40" placeholder="입력하지 않으면 도시 이름 사용" /></label>
-          <button id="saveNetworkTitleButton" type="button">제목 저장</button>
-          <button id="closeStatisticsButton" class="statistics-close" type="button" aria-label="운영 현황 닫기">×</button>
-        </div>
+    <section id="statisticsScreen" class="dg-workspace game-workspace game-stats" hidden aria-labelledby="statisticsNetworkTitle">
+      <header class="dg-workspace__bar">
+        <h2 id="statisticsNetworkTitle" class="dg-workspace__title game-workspace__title">서울 철도망</h2>
+        <span id="statisticsCityLabel" class="game-workspace__sub">서울</span>
+        <span class="game-workspace__clock" data-workspace-clock></span>
+        <button id="closeStatisticsButton" class="dg-icon-btn" type="button" aria-label="운영 현황 닫고 지도로"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button>
       </header>
-      <nav class="statistics-tabs" aria-label="통계 범위">
-        <button class="active" type="button" data-statistics-tab="overview" aria-pressed="true">전체 현황</button>
-        <button type="button" data-statistics-tab="routes" aria-pressed="false">노선</button>
-        <button type="button" data-statistics-tab="stations" aria-pressed="false">역</button>
-        <button type="button" data-statistics-tab="city" aria-pressed="false">도시</button>
-      </nav>
-      <div id="statisticsContent" class="statistics-content"></div>
+      <nav class="game-workspace__tabs" aria-label="통계 범위"><div class="dg-seg">
+        <button class="dg-seg__item" type="button" data-statistics-tab="overview" aria-pressed="true">전체 현황</button>
+        <button class="dg-seg__item" type="button" data-statistics-tab="routes" aria-pressed="false">노선</button>
+        <button class="dg-seg__item" type="button" data-statistics-tab="stations" aria-pressed="false">역</button>
+        <button class="dg-seg__item" type="button" data-statistics-tab="city" aria-pressed="false">도시</button>
+      </div></nav>
+      <div class="dg-workspace__body">
+        <div id="statisticsContent"></div>
+        <details class="game-fold game-stats__identity">
+          <summary class="game-fold__summary"><span class="dg-panel__section-label">철도망 제목</span></summary>
+          <p id="statisticsSaveMeta" class="game-inspector__note">샌드박스 · 보통 · 플레이 0분</p>
+          <div class="game-stats__title-editor">
+            <label class="dg-field"><span class="dg-field__label">철도망 제목</span><input id="networkTitleInput" class="dg-input" maxlength="40" placeholder="비우면 도시 이름 사용" autocomplete="off" /></label>
+            <button id="saveNetworkTitleButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">제목 저장</button>
+          </div>
+        </details>
+      </div>
     </section>
 
     <section id="newsScreen" class="dg-workspace game-workspace game-news" hidden aria-labelledby="newsTitle">
@@ -10868,9 +10872,9 @@ function renderStatisticsScreen() {
   if (networkTitleInput && document.activeElement !== networkTitleInput) networkTitleInput.value = metaState.current.networkTitle ?? "";
   statisticsTabs.forEach((button) => {
     const active = button.dataset.statisticsTab === activeStatisticsTab;
-    button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  syncWorkspaceClocks();
   if (!operationsPanel) return;
   const html =
     activeStatisticsTab === "routes"
@@ -10892,7 +10896,8 @@ function renderOverviewStatistics() {
   const latest = financeState.statistics.dailyRecords.at(-1);
   const passengerChange = latest && previous && previous.passengers > 0 ? (latest.passengers / previous.passengers - 1) * 100 : null;
   const profitChange = latest && previous && Math.abs(previous.revenue - previous.expenses) > 0 ? ((latest.revenue - latest.expenses) / Math.abs(previous.revenue - previous.expenses) - 1) * 100 : null;
-  const cards = [
+  const dailyNet = finances.dailyRevenue - finances.dailyExpenses;
+  const rows = [
     ["현재 자금", formatSignedCost(financeState.economy.cash), null],
     ["총자산", formatCost(finances.assets), null],
     ["총부채", formatCost(finances.liabilities), null],
@@ -10901,21 +10906,27 @@ function renderOverviewStatistics() {
     ["일간 지출", formatCost(finances.dailyExpenses), null],
     ["월간 수익", formatCost(finances.monthlyRevenue), null],
     ["월간 지출", formatCost(finances.monthlyExpenses), null],
-    ["순이익", formatSignedCost(finances.dailyRevenue - finances.dailyExpenses), profitChange],
+    ["순이익", formatSignedCost(dailyNet), profitChange],
     ["누적 승객", `${financeState.statistics.totalPassengers.toLocaleString("ko-KR")}명`, passengerChange],
     ["시민 만족도", `${financeState.economy.satisfaction}점`, null],
     ["대중교통 이용률", `${Math.round(finances.transitShare * 100)}%`, null],
   ] as Array<[string, string, number | null]>;
-  return `<div class="statistics-page">
-    <section class="statistics-hero">
-      <div><span>오늘의 순이익</span><strong class="${finances.dailyRevenue - finances.dailyExpenses >= 0 ? "positive" : "negative"}">${formatSignedCost(finances.dailyRevenue - finances.dailyExpenses)}</strong><em>수익 ${formatCost(finances.dailyRevenue)} · 지출 ${formatCost(finances.dailyExpenses)}</em></div>
-      ${renderMiniTrend(financeState.statistics.dailyRecords.slice(-14).map((item) => item.revenue - item.expenses), "최근 순이익")}
+  return `<div class="game-stats__page">
+    <section class="game-stats__lead">
+      <div class="game-stats__lead-figure">
+        <span class="dg-panel__section-label">오늘의 순이익</span>
+        <strong class="game-stats__big${dailyNet < 0 ? " dg-row__value--danger" : ""}">${dailyNet < 0 ? "▼ " : ""}${formatSignedCost(dailyNet)}</strong>
+        <span class="game-inspector__note">수익 ${formatCost(finances.dailyRevenue)} · 지출 ${formatCost(finances.dailyExpenses)}</span>
+      </div>
+      ${renderMiniTrend(financeState.statistics.dailyRecords.slice(-14).map((item) => item.revenue - item.expenses), "최근 14일 순이익")}
     </section>
-    <section><div class="statistics-section-heading"><div><span>FINANCE & RIDERSHIP</span><h3>운영 핵심 지표</h3></div><em>최근 변화가 있는 값만 증감률을 표시합니다</em></div>
-      <div class="statistics-metric-grid">${cards.map(([label, value, change]) => renderMetricCard(label, value, change)).join("")}</div>
+    <section class="game-stats__section">
+      <h3 class="dg-panel__section-label">운영 핵심 지표 <span class="game-inspector__section-meta">최근 변화가 있는 값만 증감률 표시</span></h3>
+      <div class="game-stats__rows">${rows.map(([label, value, change]) => renderMetricCard(label, value, change)).join("")}</div>
     </section>
-    <details class="statistics-details"><summary>철도망 규모 자세히 보기</summary>
-      <div class="statistics-metric-grid compact">
+    <details class="game-fold game-stats__section">
+      <summary class="game-fold__summary"><span class="dg-panel__section-label">철도망 규모</span></summary>
+      <div class="game-stats__rows">
         ${renderMetricCard("보유 열차", `${totalSets}편성`, null)}
         ${renderMetricCard("총 노선 길이", `${totalLength.toFixed(1)}km`, null)}
         ${renderMetricCard("노선", `${networkState.routes.length}개`, null)}
@@ -10924,16 +10935,16 @@ function renderOverviewStatistics() {
         ${renderMetricCard("차량기지", `${networkState.depots.length}개`, null)}
       </div>
     </details>
-    <section class="save-information">
-      <div class="statistics-section-heading"><div><span>SAVE INFORMATION</span><h3>세이브 정보</h3></div></div>
-      <dl>
-        <div><dt>세이브 이름</dt><dd>${escapeHtml(metaState.current.slotName)}</dd></div>
-        <div><dt>게임 설정</dt><dd>${metaState.current.mode === "sandbox" ? "샌드박스" : "커리어"} · ${difficultyConfigs[metaState.current.difficulty].label}</dd></div>
-        <div><dt>현재 도시</dt><dd>${cityConfigs[metaState.current.cityId].name}</dd></div>
-        <div><dt>생성 날짜</dt><dd>${formatDate(metaState.current.createdAt)}</dd></div>
-        <div><dt>마지막 플레이</dt><dd>${formatDate(metaState.current.updatedAt, true)}</dd></div>
-        <div><dt>플레이 시간</dt><dd>${formatPlayTime(metaState.current.playTimeSeconds ?? 0)}</dd></div>
-      </dl>
+    <section class="game-stats__section">
+      <h3 class="dg-panel__section-label">세이브 정보</h3>
+      <div class="game-stats__rows">
+        ${renderMetricCard("세이브 이름", metaState.current.slotName, null)}
+        ${renderMetricCard("게임 설정", `${metaState.current.mode === "sandbox" ? "샌드박스" : "커리어"} · ${difficultyConfigs[metaState.current.difficulty].label}`, null)}
+        ${renderMetricCard("현재 도시", cityConfigs[metaState.current.cityId].name, null)}
+        ${renderMetricCard("생성 날짜", formatDate(metaState.current.createdAt), null)}
+        ${renderMetricCard("마지막 플레이", formatDate(metaState.current.updatedAt, true), null)}
+        ${renderMetricCard("플레이 시간", formatPlayTime(metaState.current.playTimeSeconds ?? 0), null)}
+      </div>
     </section>
   </div>`;
 }
@@ -10943,15 +10954,15 @@ function renderRouteStatistics() {
   if (!networkState.routes.some((route) => route.id === selectedStatisticsRouteId)) selectedStatisticsRouteId = networkState.routes[0].id;
   const routeStats = networkState.routes.map(calculateRouteStatistics);
   const selected = routeStats.find((item) => item.route.id === selectedStatisticsRouteId)!;
-  return `<div class="statistics-split">
-    <aside class="statistics-entity-list">
-      ${routeStats.map((item) => `<button type="button" data-stat-route="${item.route.id}" class="${item.route.id === selected.route.id ? "active" : ""}">
-        <i style="--entity-color:${escapeHtml(item.route.color)}"></i><span><strong>${escapeHtml(item.route.name)}</strong><em>${item.passengers.toLocaleString("ko-KR")}명 · ${formatSignedCost(item.netProfit)}</em></span>
+  return `<div class="game-stats__split">
+    <nav class="game-stats__list" aria-label="노선 목록">
+      ${routeStats.map((item) => `<button type="button" class="game-route-item" data-stat-route="${item.route.id}" aria-pressed="${item.route.id === selected.route.id}">
+        ${lineMarkHtml(item.route, "sm")}<span class="game-route-item__text"><strong>${escapeHtml(item.route.name)}</strong><small>${item.passengers.toLocaleString("ko-KR")}명 · ${formatSignedCost(item.netProfit)}</small></span>
       </button>`).join("")}
-    </aside>
-    <article class="statistics-detail">
-      <header><div><span>ROUTE DETAIL</span><h3>${escapeHtml(selected.route.name)}</h3></div><button type="button" data-focus-route="${selected.route.id}">지도에서 보기</button></header>
-      <div class="statistics-metric-grid compact">
+    </nav>
+    <article class="game-stats__detail">
+      <header class="game-stats__detail-head">${lineMarkHtml(selected.route, "lg")}<h3>${escapeHtml(selected.route.name)}</h3><button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-focus-route="${selected.route.id}">지도에서 보기</button></header>
+      <div class="game-stats__rows">
         ${renderMetricCard("승객 수", `${selected.passengers.toLocaleString("ko-KR")}명`, null)}
         ${renderMetricCard("운임 수익", formatCost(selected.fareRevenue), null)}
         ${renderMetricCard("유지비", formatCost(selected.maintenance), null)}
@@ -10981,15 +10992,15 @@ function renderStationStatistics() {
   const selected = ranked.find((item) => item.station.id === selectedStatisticsStationId)!;
   const maxHourly = Math.max(1, ...selected.hourly.map((item) => item.passengers));
   const trendLabel = selected.trend === "rising" ? "상승" : selected.trend === "falling" ? "하락" : "유지";
-  return `<div class="statistics-split">
-    <aside class="statistics-entity-list">
-      ${ranked.map((item) => `<button type="button" data-stat-station="${item.station.id}" class="${item.station.id === selected.station.id ? "active" : ""}">
-        <span><strong>${escapeHtml(item.station.name)}</strong><em>${item.boardings.toLocaleString("ko-KR")}명 · ${item.station.connectedRouteIds.length}개 노선</em></span>
+  return `<div class="game-stats__split">
+    <nav class="game-stats__list" aria-label="역 목록 (승하차 순)">
+      ${ranked.map((item, index) => `<button type="button" class="game-route-item" data-stat-station="${item.station.id}" aria-pressed="${item.station.id === selected.station.id}">
+        <span class="game-stats__rank" aria-hidden="true">${index + 1}</span><span class="game-route-item__text"><strong>${escapeHtml(item.station.name)}</strong><small>${item.boardings.toLocaleString("ko-KR")}명 · ${item.station.connectedRouteIds.length}개 노선</small></span>
       </button>`).join("")}
-    </aside>
-    <article class="statistics-detail">
-      <header><div><span>STATION DETAIL</span><h3>${escapeHtml(selected.station.name)}</h3></div><button type="button" data-focus-station="${selected.station.id}">지도에서 보기</button></header>
-      <div class="statistics-metric-grid compact">
+    </nav>
+    <article class="game-stats__detail">
+      <header class="game-stats__detail-head"><h3>${escapeHtml(selected.station.name)}</h3><button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-focus-station="${selected.station.id}">지도에서 보기</button></header>
+      <div class="game-stats__rows">
         ${renderMetricCard("승하차 인원", `${selected.boardings.toLocaleString("ko-KR")}명`, null)}
         ${renderMetricCard("환승 인원", `${selected.transferPassengers.toLocaleString("ko-KR")}명`, null)}
         ${renderMetricCard("혼잡도", `${Math.round(selected.crowding * 100)}%`, null)}
@@ -11001,13 +11012,17 @@ function renderStationStatistics() {
         ${renderMetricCard("전일 대비", `${selected.growth >= 0 ? "+" : ""}${(selected.growth * 100).toFixed(1)}%`, selected.growth * 100)}
         ${renderMetricCard("현재 추세", trendLabel, selected.growth * 100)}
       </div>
-      <section class="hourly-chart"><div class="statistics-section-heading"><div><span>HOURLY USE</span><h3>시간대별 이용량</h3></div><em>현재 일 수요 기반 추정</em></div>
-        <div>${selected.hourly.map((item) => `<i style="height:${Math.max(3, (item.passengers / maxHourly) * 100)}%" title="${item.hour}시 ${item.passengers.toLocaleString("ko-KR")}명"><span>${item.hour % 3 === 0 ? item.hour : ""}</span></i>`).join("")}</div>
+      <section class="game-stats__section">
+        <h3 class="dg-panel__section-label">시간대별 이용량 <span class="game-inspector__section-meta">현재 일 수요 기반 추정</span></h3>
+        <div class="game-stats__hourly" role="img" aria-label="시간대별 이용량 막대 그래프">${selected.hourly.map((item) => `<i style="height:${Math.max(3, (item.passengers / maxHourly) * 100)}%" title="${item.hour}시 ${item.passengers.toLocaleString("ko-KR")}명"><span>${item.hour % 3 === 0 ? item.hour : ""}</span></i>`).join("")}</div>
       </section>
-      <div class="connected-route-chips">${selected.station.connectedRouteIds.map((id) => {
-        const route = networkState.routes.find((item) => item.id === id);
-        return route ? `<button type="button" data-focus-route="${route.id}" style="--entity-color:${escapeHtml(route.color)}">${escapeHtml(route.name)}</button>` : "";
-      }).join("")}</div>
+      <section class="game-stats__section">
+        <h3 class="dg-panel__section-label">연결 노선</h3>
+        <div class="game-stats__chips">${selected.station.connectedRouteIds.map((id) => {
+          const route = networkState.routes.find((item) => item.id === id);
+          return route ? `<button class="dg-btn dg-btn--quiet dg-btn--compact" type="button" data-focus-route="${route.id}">${lineMarkHtml(route, "sm")}${escapeHtml(route.name)}</button>` : "";
+        }).join("")}</div>
+      </section>
     </article>
   </div>`;
 }
@@ -11040,28 +11055,38 @@ function renderCityStatistics() {
     .slice(0, 4);
   const plannedCoverage = constructionState.plans.flatMap((plan) => plan.stations.filter((station) => !station.completed).map((station) => ({ ...station, planName: plan.name }))).slice(0, 4);
   const unlocked = metaState.current.unlockedCityIds.length;
-  return `<div class="statistics-page">
-    <section class="city-stat-hero">
-      <div><span>${escapeHtml(city.name)} 실제 철도 이용객</span><strong>${networkRealized.toLocaleString("ko-KR")}</strong><em>고정 지역 잠재 수요 ${networkPotential.toLocaleString("ko-KR")}명</em></div>
-      <div class="statistics-metric-grid compact">
+  return `<div class="game-stats__page">
+    <section class="game-stats__lead">
+      <div class="game-stats__lead-figure">
+        <span class="dg-panel__section-label">${escapeHtml(city.name)} 실제 철도 이용객</span>
+        <strong class="game-stats__big">${networkRealized.toLocaleString("ko-KR")}명</strong>
+        <span class="game-inspector__note">고정 지역 잠재 수요 ${networkPotential.toLocaleString("ko-KR")}명</span>
+      </div>
+      <div class="game-stats__rows game-stats__rows--single">
         ${renderMetricCard("대중교통 이용률", `${Math.round(finances.transitShare * 100)}%`, null)}
         ${renderMetricCard("시민 만족도", `${financeState.economy.satisfaction}점`, null)}
         ${renderMetricCard("철도 이용 전환율", `${Math.round(captureRate * 100)}%`, null, true)}
         ${renderMetricCard("해금 진행도", `${unlocked}/${Object.keys(cityConfigs).length}`, null)}
       </div>
     </section>
-    <section><div class="statistics-section-heading"><div><span>REGIONAL DEMAND</span><h3>지역별 수요 변화</h3></div><em>최근 7일 기준</em></div>
-      <div class="region-grid">${regions.map((region) => {
-        const change = region.previous > 0 ? (region.current / region.previous - 1) * 100 : 0;
-        return `<article><span>${region.label}</span><strong>${region.current.toLocaleString("ko-KR")}</strong><em class="${change >= 0 ? "positive" : "negative"}">${change >= 0 ? "+" : ""}${change.toFixed(1)}%</em></article>`;
-      }).join("")}</div>
+    <section class="game-stats__section">
+      <h3 class="dg-panel__section-label">지역별 수요 변화 <span class="game-inspector__section-meta">최근 7일 기준</span></h3>
+      <table class="dg-table">
+        <thead><tr><th scope="col">지역</th><th scope="col" class="dg-num">역 수요</th><th scope="col" class="dg-num">7일 변화</th></tr></thead>
+        <tbody>${regions.map((region) => {
+          const change = region.previous > 0 ? (region.current / region.previous - 1) * 100 : 0;
+          return `<tr><th scope="row">${region.label}</th><td class="dg-num">${region.current.toLocaleString("ko-KR")}</td><td class="dg-num ${change >= 0 ? "dg-row__value--ok" : "dg-row__value--danger"}">${change >= 0 ? "▲ +" : "▼ "}${change.toFixed(1)}%</td></tr>`;
+        }).join("")}</tbody>
+      </table>
     </section>
-    <div class="city-detail-grid">
-      <section><div class="statistics-section-heading"><div><span>CONGESTION</span><h3>혼잡 지역</h3></div></div>
-        <div class="statistics-ranked-list">${congested.length > 0 ? congested.map((item) => `<button type="button" data-focus-station="${item.station.id}"><strong>${escapeHtml(item.station.name)}</strong><span>혼잡 ${Math.round(item.crowding * 100)}%</span></button>`).join("") : `<p>현재 뚜렷한 혼잡 지역이 없습니다.</p>`}</div>
+    <div class="game-stats__pair">
+      <section class="game-stats__section">
+        <h3 class="dg-panel__section-label">혼잡 지역</h3>
+        ${congested.length > 0 ? congested.map((item) => `<button type="button" class="game-route-item" data-focus-station="${item.station.id}"><span class="game-route-item__text"><strong>${escapeHtml(item.station.name)}</strong><small>✕ 혼잡 ${Math.round(item.crowding * 100)}%</small></span></button>`).join("") : `<p class="game-inspector__note">현재 뚜렷한 혼잡 지역이 없습니다.</p>`}
       </section>
-      <section><div class="statistics-section-heading"><div><span>PLANNED COVERAGE</span><h3>계획 노선 서비스 후보</h3></div></div>
-        <div class="statistics-ranked-list">${plannedCoverage.length > 0 ? plannedCoverage.map((item) => `<button type="button" data-open-plan="${item.planName}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.planName)} · 예상 이용 수요 ${item.expectedDemand.toLocaleString("ko-KR")}</span></button>`).join("") : `<p>현재 계획된 서비스 후보가 없습니다.</p>`}</div>
+      <section class="game-stats__section">
+        <h3 class="dg-panel__section-label">계획 노선 서비스 후보</h3>
+        ${plannedCoverage.length > 0 ? plannedCoverage.map((item) => `<button type="button" class="game-route-item" data-open-plan="${escapeHtml(item.planName)}"><span class="game-route-item__text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.planName)} · 예상 이용 수요 ${item.expectedDemand.toLocaleString("ko-KR")}</small></span></button>`).join("") : `<p class="game-inspector__note">현재 계획된 서비스 후보가 없습니다.</p>`}
       </section>
     </div>
   </div>`;
@@ -11094,30 +11119,31 @@ function handleStatisticsClick(event: Event) {
   }
 }
 
+/** 통계 지표 한 행. 증감은 색과 함께 ▲▼ 모양과 수치로 표시한다. */
 function renderMetricCard(label: string, value: string, change: number | null, estimated = false) {
   const changeMarkup =
     change === null || !Number.isFinite(change)
       ? ""
       : Math.abs(change) < 0.05
-        ? `<em>변화 없음</em>`
-      : `<em class="${change >= 0 ? "positive" : "negative"}">${change >= 0 ? "▲" : "▼"} ${Math.abs(change).toFixed(1)}%</em>`;
-  return `<article class="statistics-metric"><span>${escapeHtml(label)}${estimated ? `<small>추정</small>` : ""}</span><strong>${escapeHtml(value)}</strong>${changeMarkup}</article>`;
+        ? `<small class="game-stats__change">변화 없음</small>`
+        : `<small class="game-stats__change ${change >= 0 ? "dg-row__value--ok" : "dg-row__value--danger"}">${change >= 0 ? "▲" : "▼"} ${Math.abs(change).toFixed(1)}%</small>`;
+  return `<div class="dg-row"><span class="dg-row__label">${escapeHtml(label)}${estimated ? ` <small class="game-inspector__muted">추정</small>` : ""}</span><span class="dg-row__value">${escapeHtml(value)}${changeMarkup}</span></div>`;
 }
 
 function renderMiniTrend(values: number[], label: string) {
-  if (values.length < 2) return `<div class="mini-trend empty"><span>${escapeHtml(label)}</span><strong>추세 수집 중</strong></div>`;
+  if (values.length < 2) return `<div class="game-stats__trend" data-empty="true"><span class="dg-panel__section-label">${escapeHtml(label)}</span><span class="game-inspector__note">추세 수집 중</span></div>`;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(1, max - min);
-  return `<div class="mini-trend"><span>${escapeHtml(label)}</span><div>${values.map((value) => `<i style="height:${12 + ((value - min) / range) * 88}%"></i>`).join("")}</div></div>`;
+  return `<div class="game-stats__trend"><span class="dg-panel__section-label">${escapeHtml(label)}</span><div class="game-stats__trend-bars" role="img" aria-label="${escapeHtml(label)} 막대 그래프">${values.map((value) => `<i style="height:${12 + ((value - min) / range) * 88}%" data-negative="${value < 0}"></i>`).join("")}</div></div>`;
 }
 
 function renderProgressComparison(items: Array<[string, number, number]>) {
-  return `<section class="statistics-progress">${items.map(([label, value, max]) => `<div><span>${escapeHtml(label)}</span><i><b style="width:${Math.min(100, Math.max(0, (value / max) * 100))}%"></b></i><strong>${Math.round(value * 100)}%</strong></div>`).join("")}</section>`;
+  return `<section class="game-stats__section">${items.map(([label, value, max]) => `<div class="dg-row dg-row--meter"><span class="dg-row__label">${escapeHtml(label)}</span><span class="dg-meter"><span class="dg-meter__fill${value > max ? " dg-meter__fill--over" : ""}" style="width:${Math.min(100, Math.max(0, (value / max) * 100))}%"></span></span><span class="dg-row__value">${Math.round(value * 100)}%</span></div>`).join("")}</section>`;
 }
 
 function renderStatisticsEmpty(title: string, message: string) {
-  return `<div class="statistics-empty"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div>`;
+  return `<div class="game-stats__empty"><strong>${escapeHtml(title)}</strong><span class="game-inspector__note">${escapeHtml(message)}</span></div>`;
 }
 
 function interpolateAlongRoute(points: LatLng[], progress: number) {
