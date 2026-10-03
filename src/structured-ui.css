@@ -347,21 +347,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   font-weight: 800;
 }
 
-.operating-service-map-edit-button {
-  width: 100%;
-  min-height: 40px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 5px;
-  background: var(--color-surface-1);
-  color: var(--color-text-primary);
-}
-
-.operating-service-map-edit-button[aria-pressed="true"] {
-  border-color: var(--color-accent);
-  background: var(--color-accent-dim);
-  color: var(--color-accent-strong);
-}
-
 @media (max-width: 700px),
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   .operating-service-map-edit-bar {
@@ -486,7 +471,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .section-card-header > span,
 .left-route-sub,
-.right-line-sub,
 .dialog-heading > div > span,
 .section-title > span {
   color: var(--color-accent) !important;
@@ -612,7 +596,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    -------------------------------------------------------------------------- */
 
 .left-route-window,
-.right-line-control-card,
 .tutorial-panel {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
@@ -628,7 +611,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    panel left even after right anchoring was applied. */
 
 .left-route-header,
-.right-line-header,
 .satisfaction-dialog-header,
 .save-editor-header,
 .connection-dialog-header,
@@ -642,14 +624,12 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .left-route-title,
-.right-line-title,
 .dialog-heading h2 {
   color: var(--color-text-primary) !important;
   text-shadow: none !important;
 }
 
 .left-route-summary,
-.line-metrics-grid,
 .finance-stats-grid,
 .analysis-summary-grid,
 .news-summary {
@@ -661,7 +641,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .left-route-summary > *,
-.line-metrics-grid > *,
 .finance-stats-grid > *,
 .analysis-summary-grid > *,
 .news-summary > * {
@@ -674,7 +653,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .left-route-item,
-.operating-service-card,
 .plan-asset-card,
 .construction-project-card,
 .analysis-card,
@@ -689,24 +667,18 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .left-route-item:hover,
-.operating-service-card:hover,
 .analysis-card:hover,
 .news-card:hover,
 .news-item:hover {
   background: var(--color-surface-1) !important;
 }
 
-.left-route-item.selected-route-item,
-.operating-service-card.selected,
-.operating-service-card.active {
+.left-route-item.selected-route-item {
   border-color: var(--color-accent) !important;
   background: var(--color-accent-dim) !important;
   box-shadow: inset 3px 0 0 var(--color-accent) !important;
 }
 
-.line-identity-card,
-.right-line-action-box,
-.manager-summary,
 .connection-section,
 .connection-target-card,
 .connection-choice,
@@ -721,14 +693,12 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.right-line-body,
 .left-route-list,
 .train-manager-content,
 .satisfaction-dialog-content {
   background: var(--color-surface-0) !important;
 }
 
-.right-line-footer,
 .left-route-footer,
 .planning-actions,
 .conversion-actions,
@@ -844,8 +814,7 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
 
 .settings-tabs,
 .statistics-tabs,
-.save-load-horizontal-box,
-.operating-service-presets {
+.save-load-horizontal-box {
   gap: 0 !important;
   overflow: hidden;
   border: 1px solid var(--color-border-subtle) !important;
@@ -855,8 +824,7 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
 
 .settings-tabs button,
 .statistics-tabs button,
-.save-load-tab-btn,
-.operating-service-presets button {
+.save-load-tab-btn {
   border: 0 !important;
   border-right: 1px solid var(--color-border-subtle) !important;
   border-radius: 0 !important;
@@ -868,16 +836,14 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
 
 .settings-tabs button:last-child,
 .statistics-tabs button:last-child,
-.save-load-tab-btn:last-child,
-.operating-service-presets button:last-child {
+.save-load-tab-btn:last-child {
   border-right: 0 !important;
 }
 
 .settings-tabs button.active,
 .statistics-tabs button.active,
 .statistics-tabs button[aria-pressed="true"],
-.save-load-tab-btn.active,
-.operating-service-presets button.active {
+.save-load-tab-btn.active {
   border-color: var(--color-accent) !important;
   background: var(--color-accent-dim) !important;
   color: var(--color-accent-strong) !important;
@@ -906,7 +872,6 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
 
 .menu-primary-save-btn,
 .menu-footer-btn.resume-btn,
-.right-line-save-btn,
 .planning-save-button,
 .action-button--build,
 .dialog-actions .primary,
@@ -935,7 +900,6 @@ body .game-shell .left-route-window .left-route-action-btn:active {
 }
 
 .menu-footer-btn.title-btn,
-.right-line-delete-btn,
 .planning-delete-button,
 .danger {
   border-color: color-mix(in srgb, var(--color-danger) 48%, var(--color-border-subtle)) !important;

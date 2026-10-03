@@ -771,116 +771,6 @@ tr:hover td {
 
 /* Custom operating services replace the legacy route-wide local/express
    switches. Preset labels remain available inside the service editor. */
-.manager-toggles label:has(#localServiceToggle),
-.manager-toggles label:has(#expressServiceToggle) {
-  display: none !important;
-}
-
-.operating-service-section {
-  border: 1px solid rgba(107, 222, 202, 0.2);
-  border-radius: 14px;
-  background: rgba(5, 18, 28, 0.62);
-  overflow: hidden;
-}
-
-.operating-service-section > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 42px;
-  padding: 0 13px;
-  color: #dffbf6;
-  cursor: pointer;
-  list-style: none;
-}
-
-.operating-service-section > summary::-webkit-details-marker { display: none; }
-.operating-service-section > summary strong { color: #55e3ca; font-size: 0.78rem; }
-.operating-service-list { display: grid; gap: 7px; padding: 0 9px 9px; }
-
-.operating-service-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 52px;
-  padding: 8px 10px;
-  border: 1px solid rgba(139, 168, 188, 0.2);
-  border-radius: 11px;
-  color: #dce9f1;
-  background: rgba(18, 32, 44, 0.78);
-  text-align: left;
-}
-
-.operating-service-card.selected {
-  border-color: #55e3ca;
-  background: linear-gradient(120deg, rgba(47, 204, 178, 0.2), rgba(17, 37, 48, 0.88));
-  box-shadow: inset 3px 0 #55e3ca;
-}
-
-.operating-service-card > span { display: grid; gap: 3px; min-width: 0; }
-.operating-service-card > span:last-child { text-align: right; }
-.operating-service-card strong,
-.operating-service-card b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.operating-service-card small { color: #91a7b5; font-size: 0.68rem; }
-.operating-service-empty { display: grid; gap: 4px; padding: 14px 10px; color: #9db0bc; text-align: center; }
-.operating-service-empty strong { color: #d9e7ec; font-size: 0.82rem; }
-.operating-service-empty span { font-size: 0.7rem; }
-
-.add-operating-service-button {
-  width: calc(100% - 18px);
-  min-height: 40px;
-  margin: 0 9px 9px;
-  border: 1px dashed rgba(85, 227, 202, 0.5);
-  border-radius: 10px;
-  color: #65ead2;
-  background: rgba(30, 173, 151, 0.09);
-}
-
-.operating-service-editor { display: grid; gap: 10px; padding: 11px; border-top: 1px solid rgba(107, 222, 202, 0.17); }
-.operating-service-editor[hidden] { display: none; }
-.operating-service-editor-head,
-.operating-service-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.operating-service-editor-head button { width: 30px; height: 30px; border-radius: 9px; }
-.operating-service-editor > label { display: grid; gap: 5px; color: #a9bac4; font-size: 0.72rem; }
-.operating-service-editor input,
-.operating-service-editor select { width: 100%; min-width: 0; min-height: 38px; box-sizing: border-box; }
-.operating-service-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
-.operating-service-presets button { min-width: 0; min-height: 36px; padding: 5px; font-size: 0.68rem; border-radius: 9px; }
-.operating-service-presets button.active { color: #052820; border-color: #55e3ca; background: #55e3ca; }
-.operating-service-field-label { display: block; margin-bottom: 6px; color: #a9bac4; font-size: 0.72rem; }
-.operating-service-stop-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; max-height: 180px; overflow-y: auto; }
-.operating-service-stop-list label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 7px; align-items: center; padding: 7px; border-radius: 8px; background: rgba(20, 35, 46, 0.84); }
-.operating-service-stop-list label input { grid-row: 1 / span 2; width: 16px; min-height: 16px; }
-.operating-service-stop-list label i { display: none; }
-.operating-service-stop-list label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; }
-.operating-service-stop-list label small { color: #8297a5; font-size: 0.62rem; }
-.operating-service-editor-actions button { min-height: 38px; padding: 0 13px; border-radius: 9px; }
-.operating-service-editor-actions .primary { margin-left: auto; color: #052820; background: #55e3ca; }
-.operating-service-editor-actions .danger { color: #ff8f9b; border-color: rgba(255, 96, 112, 0.42); background: rgba(126, 25, 39, 0.24); }
-
-.right-line-control-card.service-mode .right-line-body > .line-metrics-grid,
-.right-line-control-card.service-mode .right-line-body > .manager-field,
-.right-line-control-card.service-mode .right-line-body > .manager-toggles,
-.right-line-control-card.service-mode .right-line-body > .manager-summary,
-.right-line-control-card.service-mode > .right-line-footer {
-  display: none !important;
-}
-
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .operating-service-section > summary { min-height: 36px; padding-inline: 10px; }
-  .operating-service-card { min-height: 44px; padding: 6px 8px; }
-  .operating-service-editor { gap: 7px; padding: 8px; }
-  .operating-service-editor input,
-  .operating-service-editor select { min-height: 34px; }
-  .operating-service-presets button { min-height: 32px; font-size: 0.62rem; }
-  .operating-service-stop-list { max-height: 118px; }
-  .operating-service-stop-list label { padding: 5px 6px; }
-  .add-operating-service-button { min-height: 34px; }
-}
 
 /* ----------------------------------------------------
    5. WORKSPACE MODE CONTEXT TOOL FILTERING
@@ -5100,8 +4990,7 @@ font-size: 12px;
 }
 
 /* Common Drawer Backdrop & Panels */
-.left-route-window,
-.right-line-control-card {
+.left-route-window {
   position: absolute !important;
   top: max(68px, env(safe-area-inset-top)) !important;
   bottom: var(--hud-bottom-clear) !important;
@@ -5128,19 +5017,12 @@ font-size: 12px;
   animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.right-line-control-card {
-  right: max(16px, env(safe-area-inset-right)) !important;
-  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.left-route-window[hidden],
-.right-line-control-card[hidden] {
+.left-route-window[hidden] {
   display: none !important;
 }
 
 /* Headers */
-.left-route-header,
-.right-line-header {
+.left-route-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -5148,15 +5030,13 @@ font-size: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-.left-route-title-group,
-.right-line-title-group {
+.left-route-title-group {
   display: flex !important;
   flex-direction: column !important;
   gap: 2px !important;
 }
 
-.left-route-sub,
-.right-line-sub {
+.left-route-sub {
   font-size: 0.68rem !important;
   font-weight: 800 !important;
   color: #94a3b8 !important;
@@ -5164,8 +5044,7 @@ font-size: 12px;
   text-transform: uppercase !important;
 }
 
-.left-route-title,
-.right-line-title {
+.left-route-title {
   margin: 0 !important;
   font-size: 1.1rem !important;
   font-weight: 800 !important;
@@ -5233,25 +5112,21 @@ font-size: 12px;
   padding-right: 4px !important;
 }
 
-.left-route-list::-webkit-scrollbar,
-.right-line-body::-webkit-scrollbar {
+.left-route-list::-webkit-scrollbar {
   width: 5px !important;
 }
 
-.left-route-list::-webkit-scrollbar-track,
-.right-line-body::-webkit-scrollbar-track {
+.left-route-list::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.03) !important;
   border-radius: 4px !important;
 }
 
-.left-route-list::-webkit-scrollbar-thumb,
-.right-line-body::-webkit-scrollbar-thumb {
+.left-route-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18) !important;
   border-radius: 4px !important;
 }
 
-.left-route-list::-webkit-scrollbar-thumb:hover,
-.right-line-body::-webkit-scrollbar-thumb:hover {
+.left-route-list::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35) !important;
 }
 
@@ -5360,479 +5235,26 @@ font-size: 12px;
 }
 
 /* Right Line Control Card Specifics */
-.right-line-body {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  padding-right: 4px !important;
-  box-sizing: border-box !important;
-}
 
 /* Line Identity Badge Header inside Card */
-.line-identity-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  padding: 10px 12px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.selected-line-badge-dot {
-  width: 16px !important;
-  height: 16px !important;
-  border-radius: 50% !important;
-  background: #3b82f6;
-  flex-shrink: 0 !important;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5) !important;
-}
-
-.line-identity-text {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-  overflow: hidden !important;
-}
-
-.line-identity-text strong {
-  font-size: 0.92rem !important;
-  font-weight: 800 !important;
-  color: #f1f5f9 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.line-identity-text span {
-  font-size: 0.74rem !important;
-  color: #94a3b8 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
 
 /* Real-time Operation Metrics Grid */
-.line-metrics-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 6px !important;
-}
-
-.metric-chip {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 10px !important;
-  padding: 8px 4px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-  gap: 2px !important;
-}
-
-.metric-chip span {
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
-  color: #94a3b8 !important;
-}
-
-.metric-chip strong {
-  font-size: 0.92rem !important;
-  font-weight: 800 !important;
-  color: #38bdf8 !important;
-}
 
 /* Manager Field Form */
-.right-line-control-card .manager-field {
-  display: grid !important;
-  grid-template-columns: 84px 1fr !important;
-  align-items: center !important;
-  gap: 8px !important;
-  margin-top: 4px !important;
-  font-size: 0.78rem !important;
-  color: #94a3b8 !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .manager-field input,
-.right-line-control-card .manager-field select {
-  width: 100% !important;
-  min-height: 36px !important;
-  height: 36px !important;
-  padding: 0 10px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 8px !important;
-  color: #f1f5f9 !important;
-  font-size: 0.82rem !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .line-fare-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .line-fare-wrap input {
-  flex: 1 !important;
-  width: auto !important;
-  min-width: 0 !important;
-}
-
-.right-line-control-card .line-fare-wrap .ops-button {
-  white-space: nowrap !important;
-  padding: 6px 10px !important;
-  font-size: 0.75rem !important;
-  border-radius: 8px !important;
-  height: 36px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  color: #94a3b8 !important;
-  cursor: pointer !important;
-}
-
-.right-line-control-card .line-fare-wrap .ops-button.active {
-  background: #3b82f6 !important;
-  border-color: #3b82f6 !important;
-  color: #ffffff !important;
-}
 
 /* Service Toggles */
-.right-line-control-card .manager-toggles {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 6px !important;
-  margin-top: 6px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .manager-toggles label {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  min-height: 42px !important;
-  padding: 6px 4px !important;
-  border-radius: 8px !important;
-  font-size: 0.74rem !important;
-  color: #94a3b8 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .manager-toggles label:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f1f5f9 !important;
-}
-
-.right-line-control-card .manager-toggles input {
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-  accent-color: #3b82f6 !important;
-}
-
-.right-line-control-card .manager-summary {
-  margin-top: 6px !important;
-  padding: 8px 10px !important;
-  font-size: 0.75rem !important;
-  color: #64748b !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 8px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
 
 /* Open Train Manager Button */
-.right-line-action-box {
-  margin-top: 4px !important;
-}
-
-.open-train-manager-btn {
-  width: 100% !important;
-  background: rgba(59, 130, 246, 0.15) !important;
-  border: 1px solid #3b82f6 !important;
-  color: #60a5fa !important;
-  border-radius: 10px !important;
-  padding: 10px !important;
-  font-size: 0.85rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-}
-
-.open-train-manager-btn:hover {
-  background: #3b82f6 !important;
-  color: #ffffff !important;
-  transform: translateY(-1px) !important;
-}
 
 /* Right Line Footer Actions */
-.right-line-footer {
-  display: grid !important;
-  grid-template-columns: 1fr 1.2fr !important;
-  gap: 8px !important;
-  padding-top: 8px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.right-line-delete-btn {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
-  color: #fca5a5 !important;
-  border-radius: 10px !important;
-  padding: 9px 8px !important;
-  font-size: 0.82rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-}
-
-.right-line-delete-btn:hover {
-  background: #ef4444 !important;
-  color: #ffffff !important;
-}
-
-.right-line-save-btn {
-  background: #34d399 !important;
-  color: #0f172a !important;
-  border: none !important;
-  border-radius: 10px !important;
-  padding: 9px 8px !important;
-  font-size: 0.85rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  gap: 2px !important;
-}
-
-.metric-chip span {
-  font-size: 0.68rem !important;
-  font-weight: 700 !important;
-  color: #94a3b8 !important;
-}
-
-.metric-chip strong {
-  font-size: 0.92rem !important;
-  font-weight: 800 !important;
-  color: #38bdf8 !important;
-}
 
 /* Manager Field Form */
-.right-line-control-card .manager-field {
-  display: grid !important;
-  grid-template-columns: 84px 1fr !important;
-  align-items: center !important;
-  gap: 8px !important;
-  margin-top: 4px !important;
-  font-size: 0.78rem !important;
-  color: #94a3b8 !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .manager-field input,
-.right-line-control-card .manager-field select {
-  width: 100% !important;
-  min-height: 36px !important;
-  height: 36px !important;
-  padding: 0 10px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 8px !important;
-  color: #f1f5f9 !important;
-  font-size: 0.82rem !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .line-fare-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .line-fare-wrap input {
-  flex: 1 !important;
-  width: auto !important;
-  min-width: 0 !important;
-}
-
-.right-line-control-card .line-fare-wrap .ops-button {
-  white-space: nowrap !important;
-  padding: 6px 10px !important;
-  font-size: 0.75rem !important;
-  border-radius: 8px !important;
-  height: 36px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  color: #94a3b8 !important;
-  cursor: pointer !important;
-}
-
-.right-line-control-card .line-fare-wrap .ops-button.active {
-  background: #3b82f6 !important;
-  border-color: #3b82f6 !important;
-  color: #ffffff !important;
-}
 
 /* Service Toggles */
-.right-line-control-card .manager-toggles {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 6px !important;
-  margin-top: 6px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .manager-toggles label {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  min-height: 42px !important;
-  padding: 6px 4px !important;
-  border-radius: 8px !important;
-  font-size: 0.74rem !important;
-  color: #94a3b8 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  box-sizing: border-box !important;
-}
-
-.right-line-control-card .manager-toggles label:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f1f5f9 !important;
-}
-
-.right-line-control-card .manager-toggles input {
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-  accent-color: #3b82f6 !important;
-}
-
-.right-line-control-card .manager-summary {
-  margin-top: 6px !important;
-  padding: 8px 10px !important;
-  font-size: 0.75rem !important;
-  color: #64748b !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 8px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
 
 /* Open Train Manager Button */
-.right-line-action-box {
-  margin-top: 4px !important;
-}
-
-.open-train-manager-btn {
-  width: 100% !important;
-  background: rgba(59, 130, 246, 0.15) !important;
-  border: 1px solid #3b82f6 !important;
-  color: #60a5fa !important;
-  border-radius: 10px !important;
-  padding: 10px !important;
-  font-size: 0.85rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-}
-
-.open-train-manager-btn:hover {
-  background: #3b82f6 !important;
-  color: #ffffff !important;
-  transform: translateY(-1px) !important;
-}
 
 /* Right Line Footer Actions */
-.right-line-footer {
-  display: grid !important;
-  grid-template-columns: 1fr 1.2fr !important;
-  gap: 8px !important;
-  padding-top: 8px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.right-line-delete-btn {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
-  color: #fca5a5 !important;
-  border-radius: 10px !important;
-  padding: 9px 8px !important;
-  font-size: 0.82rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-}
-
-.right-line-delete-btn:hover {
-  background: #ef4444 !important;
-  color: #ffffff !important;
-}
-
-.right-line-save-btn {
-  background: #34d399 !important;
-  color: #0f172a !important;
-  border: none !important;
-  border-radius: 10px !important;
-  padding: 9px 8px !important;
-  font-size: 0.85rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-}
-
-.right-line-save-btn:hover {
-  filter: brightness(1.15) !important;
-  transform: translateY(-1px) !important;
-}
 
 /* ----------------------------------------------------
    18. ROUTE CHOICE DIALOG (.route-choice-dialog)
@@ -8506,7 +7928,6 @@ textarea:where(:not([class*="dg-"])) {
 ------------------------------------------------------------------------- */
 .dialog-heading,
 .left-route-header,
-.right-line-header,
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header,
@@ -8528,7 +7949,6 @@ textarea:where(:not([class*="dg-"])) {
 
 .dialog-heading > .dialog-close,
 .left-route-header > .dialog-close,
-.right-line-header > .dialog-close,
 .satisfaction-dialog-header > .dialog-close,
 .connection-dialog-header > .dialog-close,
 .decision-dialog-header > .dialog-close {
@@ -8540,7 +7960,6 @@ textarea:where(:not([class*="dg-"])) {
 }
 
 .left-route-header,
-.right-line-header,
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header {
@@ -8588,7 +8007,6 @@ textarea:where(:not([class*="dg-"])) {
 @media (max-width: 700px) {
   .dialog-heading,
   .left-route-header,
-  .right-line-header,
   .satisfaction-dialog-header,
   .connection-dialog-header,
   .decision-dialog-header {
@@ -8597,7 +8015,6 @@ textarea:where(:not([class*="dg-"])) {
 
   .dialog-heading > .dialog-close,
   .left-route-header > .dialog-close,
-  .right-line-header > .dialog-close,
   .satisfaction-dialog-header > .dialog-close,
   .connection-dialog-header > .dialog-close,
   .decision-dialog-header > .dialog-close {
@@ -8849,10 +8266,6 @@ button:where(:not([class*="dg-"])):active,
 
 .custom-color-button input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .custom-color-button input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
-
-.right-line-control-card .mobile-color-picker {
-  margin-top: 2px;
-}
 
 @media (pointer: coarse), (max-width: 700px) {
   .color-swatch,
@@ -9341,56 +8754,6 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Compact trigger + custom colour bottom sheet. */
-.route-color-field {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.route-color-field > span {
-  color: var(--c-text-muted);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.route-color-field > input[type="color"] {
-  display: none !important;
-}
-
-.route-color-trigger {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 34px;
-  padding: 5px 8px;
-  color: var(--c-text-main);
-  border: 1px solid var(--c-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 10px;
-  font-weight: 800;
-  text-align: left;
-}
-
-.route-color-trigger > i {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  border-radius: 6px;
-  background: var(--selected-route-color, #4ce0c3);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--selected-route-color, #4ce0c3) 24%, transparent);
-}
-
-.route-color-trigger > b {
-  color: var(--c-text-dim);
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1;
-}
 
 .color-picker-backdrop {
   z-index: 1800;
@@ -9551,10 +8914,6 @@ button:where(:not([class*="dg-"])):active,
 }
 
 @media (max-width: 700px) {
-  .route-color-trigger {
-    min-height: 32px;
-    padding: 4px 7px;
-  }
 
   .color-picker-backdrop {
     align-items: end;
@@ -9586,8 +8945,7 @@ button:where(:not([class*="dg-"])):active,
     --mobile-dock-height: 52px;
   }
 
-  .left-route-window,
-  .right-line-control-card {
+  .left-route-window {
     position: fixed !important;
     top: auto !important;
     right: max(5px, env(safe-area-inset-right)) !important;
@@ -9604,8 +8962,7 @@ button:where(:not([class*="dg-"])):active,
     -webkit-overflow-scrolling: touch;
   }
 
-  .left-route-window::before,
-  .right-line-control-card::before {
+  .left-route-window::before {
     display: block;
     width: 32px;
     height: 3px;
@@ -9615,38 +8972,19 @@ button:where(:not([class*="dg-"])):active,
     background: rgba(255, 255, 255, 0.24);
   }
 
-  .left-route-window,
-  .right-line-control-card {
+  .left-route-window {
     display: flex;
     flex-direction: column;
   }
 
-  .left-route-header,
-  .right-line-header {
+  .left-route-header {
     min-height: 32px;
   }
 
-  .left-route-list,
-  .right-line-body {
+  .left-route-list {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-  }
-
-  .right-line-control-card {
-    max-height: min(64dvh, 480px) !important;
-  }
-
-  .right-line-control-card .right-line-body {
-    padding-right: 1px;
-  }
-
-  .right-line-control-card .right-line-footer {
-    position: sticky;
-    bottom: -11px;
-    padding-top: 8px;
-    padding-bottom: max(1px, env(safe-area-inset-bottom));
-    background: #0f161d;
   }
 
   .toast {
@@ -9657,8 +8995,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 @media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window,
-  .right-line-control-card {
+  .left-route-window {
     right: max(4px, env(safe-area-inset-right)) !important;
     bottom: var(--hud-bottom-clear) !important;
     left: var(--hud-left-clear) !important;
@@ -9666,8 +9003,7 @@ button:where(:not([class*="dg-"])):active,
     padding: 8px !important;
   }
 
-  .left-route-window::before,
-  .right-line-control-card::before {
+  .left-route-window::before {
     margin-bottom: 6px;
   }
 }
@@ -9682,8 +9018,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Floating map windows header layout & minimizer button styling */
-.left-route-header,
-.right-line-header {
+.left-route-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -9760,7 +9095,6 @@ button:where(:not([class*="dg-"])):active,
 
 /* Single Scroll Container for Floating Windows */
 .left-route-window,
-.right-line-control-card,
 .dialog-backdrop > section,
 .dialog-backdrop > div > section {
   overflow-y: auto !important;
@@ -9769,8 +9103,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Minimized Floating Window Layout */
-.left-route-window.is-minimized,
-.right-line-control-card.is-minimized {
+.left-route-window.is-minimized {
   width: auto !important;
   min-width: 210px !important;
   max-width: min(340px, calc(100vw - 16px)) !important;
@@ -9780,8 +9113,7 @@ button:where(:not([class*="dg-"])):active,
   overflow: hidden !important;
 }
 
-.left-route-window.is-minimized > :not(.left-route-header),
-.right-line-control-card.is-minimized > :not(.right-line-header) {
+.left-route-window.is-minimized > :not(.left-route-header) {
   display: none !important;
 }
 
@@ -9791,11 +9123,6 @@ button:where(:not([class*="dg-"])):active,
   .left-route-window {
     width: min(218px, calc(100vw - 8px)) !important;
     max-height: min(38dvh, 210px) !important;
-  }
-
-  .right-line-control-card {
-    width: min(232px, calc(100vw - 8px)) !important;
-    max-height: min(40dvh, 220px) !important;
   }
 }
 
@@ -10233,8 +9560,7 @@ button:where(:not([class*="dg-"])):active,
   margin-left: auto !important;
 }
 
-.left-route-header,
-.right-line-header {
+.left-route-header {
   padding-right: 0 !important;
 }
 
@@ -10246,8 +9572,7 @@ button:where(:not([class*="dg-"])):active,
   transform: none !important;
 }
 
-.left-route-window.is-minimized > .left-route-header,
-.right-line-control-card.is-minimized > .right-line-header {
+.left-route-window.is-minimized > .left-route-header {
   position: relative !important;
   display: flex !important;
   flex-direction: row !important;
@@ -10260,8 +9585,7 @@ button:where(:not([class*="dg-"])):active,
   box-sizing: border-box !important;
 }
 
-.left-route-window.is-minimized > .left-route-header > .floating-window-actions,
-.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions {
+.left-route-window.is-minimized > .left-route-header > .floating-window-actions {
   position: absolute !important;
   top: 50% !important;
   right: 0 !important;
@@ -10273,8 +9597,7 @@ button:where(:not([class*="dg-"])):active,
   transform: scale(0.94);
 }
 
-.left-route-window.is-minimized .floating-minimize-button:active,
-.right-line-control-card.is-minimized .floating-minimize-button:active {
+.left-route-window.is-minimized .floating-minimize-button:active {
   transform: translateY(-50%) scale(0.94);
 }
 
@@ -11022,18 +10345,14 @@ button:where(:not([class*="dg-"])):active,
 /* Minimized controls: keep hover, keyboard-focus, active and pressed states
    visible on every compact window, not just on the route-list window. */
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close {
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease,
     color 140ms ease, filter 140ms ease, transform 100ms ease;
 }
 
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"] {
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--minimized-accent-strong) 82%, #ffffff) !important;
   color: #d9fff8 !important;
   background: color-mix(in srgb, var(--minimized-accent-strong) 26%, rgba(8, 20, 28, 0.9)) !important;
@@ -11042,8 +10361,7 @@ button:where(:not([class*="dg-"])):active,
   filter: brightness(1.08);
 }
 
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:hover,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:hover {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:hover {
   border-color: rgba(251, 113, 133, 0.82) !important;
   color: #ffe4e8 !important;
   background: rgba(251, 113, 133, 0.22) !important;
@@ -11052,17 +10370,13 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:active,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:active,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:active,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:active {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:active {
   transform: scale(0.92);
   filter: brightness(1.16);
 }
 
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:focus-visible,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:focus-visible {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--minimized-accent-strong) 86%, #ffffff);
   outline-offset: 2px;
 }
@@ -11146,8 +10460,7 @@ button:where(:not([class*="dg-"])):active,
    Apply the route-list status-bar language consistently to every floating
    window that supports minimization.
 ------------------------------------------------------------------------- */
-.left-route-window.is-minimized,
-.right-line-control-card.is-minimized {
+.left-route-window.is-minimized {
   --minimized-accent: #38bdf8;
   --minimized-accent-strong: #4ce0c3;
   position: absolute !important;
@@ -11164,13 +10477,11 @@ button:where(:not([class*="dg-"])):active,
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48), 0 0 22px color-mix(in srgb, var(--minimized-accent) 14%, transparent) !important;
 }
 
-.left-route-window.is-minimized::before,
-.right-line-control-card.is-minimized::before {
+.left-route-window.is-minimized::before {
   display: none !important;
 }
 
-.left-route-window.is-minimized::after,
-.right-line-control-card.is-minimized::after {
+.left-route-window.is-minimized::after {
   position: absolute;
   top: 10px;
   bottom: 10px;
@@ -11182,8 +10493,7 @@ button:where(:not([class*="dg-"])):active,
   box-shadow: 0 0 12px color-mix(in srgb, var(--minimized-accent) 55%, transparent);
 }
 
-.left-route-window.is-minimized > .left-route-header,
-.right-line-control-card.is-minimized > .right-line-header {
+.left-route-window.is-minimized > .left-route-header {
   min-height: 38px !important;
   display: flex !important;
   align-items: center !important;
@@ -11193,8 +10503,7 @@ button:where(:not([class*="dg-"])):active,
   border-bottom: 0 !important;
 }
 
-.left-route-window.is-minimized .left-route-title-group,
-.right-line-control-card.is-minimized .right-line-title-group {
+.left-route-window.is-minimized .left-route-title-group {
   min-width: 0;
   display: grid !important;
   grid-template-columns: auto minmax(0, 1fr);
@@ -11203,8 +10512,7 @@ button:where(:not([class*="dg-"])):active,
   flex: 1 1 auto;
 }
 
-.left-route-window.is-minimized .left-route-sub,
-.right-line-control-card.is-minimized .right-line-sub {
+.left-route-window.is-minimized .left-route-sub {
   display: inline-flex !important;
   align-items: center;
   width: fit-content;
@@ -11221,8 +10529,7 @@ button:where(:not([class*="dg-"])):active,
   white-space: nowrap;
 }
 
-.left-route-window.is-minimized .left-route-title,
-.right-line-control-card.is-minimized .right-line-title {
+.left-route-window.is-minimized .left-route-title {
   min-width: 0;
   overflow: hidden;
   color: #f7fcff !important;
@@ -11234,8 +10541,7 @@ button:where(:not([class*="dg-"])):active,
   white-space: nowrap;
 }
 
-.left-route-window.is-minimized > .left-route-header > .floating-window-actions,
-.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions {
+.left-route-window.is-minimized > .left-route-header > .floating-window-actions {
   position: static !important;
   top: auto !important;
   right: auto !important;
@@ -11248,9 +10554,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close {
   width: 30px !important;
   height: 30px !important;
   min-width: 30px !important;
@@ -11265,15 +10569,13 @@ button:where(:not([class*="dg-"])):active,
   font-size: 15px !important;
 }
 
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button {
+.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button {
   border: 1px solid color-mix(in srgb, var(--minimized-accent-strong) 42%, transparent) !important;
   color: var(--minimized-accent-strong) !important;
   background: color-mix(in srgb, var(--minimized-accent-strong) 12%, transparent) !important;
 }
 
-.left-route-window.is-minimized .floating-window-actions > .dialog-close,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close {
   border: 1px solid rgba(251, 113, 133, 0.32) !important;
   color: #fda4af !important;
   background: rgba(251, 113, 133, 0.08) !important;
@@ -11286,14 +10588,7 @@ button:where(:not([class*="dg-"])):active,
     right: auto !important;
   }
 
-  .right-line-control-card.is-minimized {
-    position: fixed !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
-    left: auto !important;
-  }
-
-  .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized {
+  .left-route-window.is-minimized {
     bottom: var(--hud-bottom-clear) !important;
     width: min(252px, calc(100vw - 16px)) !important;
     max-width: calc(100vw - 16px) !important;
@@ -11303,27 +10598,22 @@ button:where(:not([class*="dg-"])):active,
     border-radius: 14px !important;
   }
 
-  .left-route-window.is-minimized > .left-route-header,
-  .right-line-control-card.is-minimized > .right-line-header {
+  .left-route-window.is-minimized > .left-route-header {
     min-height: 36px !important;
     gap: 8px !important;
   }
 
-  .left-route-window.is-minimized .left-route-sub,
-  .right-line-control-card.is-minimized .right-line-sub {
+  .left-route-window.is-minimized .left-route-sub {
     padding: 3px 5px;
     font-size: 7px !important;
   }
 
-  .left-route-window.is-minimized .left-route-title,
-  .right-line-control-card.is-minimized .right-line-title {
+  .left-route-window.is-minimized .left-route-title {
     font-size: 13px !important;
   }
 
   .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-  .left-route-window.is-minimized .floating-window-actions > .dialog-close,
-  .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-  .right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
+  .left-route-window.is-minimized .floating-window-actions > .dialog-close {
     width: 28px !important;
     height: 28px !important;
     min-width: 28px !important;
@@ -11334,8 +10624,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 @media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized {
+  .left-route-window.is-minimized {
     bottom: var(--hud-bottom-clear) !important;
     width: min(260px, calc(100vw - 16px)) !important;
     height: 48px !important;
@@ -11368,9 +10657,7 @@ button:where(:not([class*="dg-"])):active,
 
 /* Keep every action in a minimized bar on the same visual shape. */
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
+.left-route-window.is-minimized .floating-window-actions > .dialog-close {
   border-radius: 10px !important;
   box-sizing: border-box !important;
 }
@@ -11380,8 +10667,6 @@ button:where(:not([class*="dg-"])):active,
    dialog-backed floating panels. */
 .left-route-window .floating-minimize-button,
 .left-route-window .dialog-close,
-.right-line-control-card .floating-minimize-button,
-.right-line-control-card .dialog-close,
 .dialog-backdrop .dialog-close,
 .diagram-screen .diagram-close,
 .analysis-screen .analysis-close,
@@ -11467,9 +10752,7 @@ button:where(:not([class*="dg-"])):active,
   /* Floating-window controls use a slightly shorter target so the compact
      minimized bar remains usable without becoming taller than the panel. */
   .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  .left-route-window .floating-minimize-button,
-  .right-line-control-card .floating-minimize-button {
+  .left-route-window .floating-minimize-button {
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
@@ -11479,33 +10762,28 @@ button:where(:not([class*="dg-"])):active,
     flex: 0 0 36px !important;
   }
 
-  .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized {
+  .left-route-window.is-minimized {
     height: 60px !important;
     max-height: 60px !important;
   }
 
   /* Restore a single intentional scroll owner for long floating panels. */
-  .left-route-window,
-  .right-line-control-card {
+  .left-route-window {
     min-height: 0 !important;
   }
 
-  .left-route-window,
-  .right-line-control-card {
+  .left-route-window {
     overflow: hidden !important;
   }
 
-  .left-route-list,
-  .right-line-body {
+  .left-route-list {
     min-height: 0 !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
-  .left-route-list,
-  .right-line-body {
+  .left-route-list {
     flex: 1 1 auto !important;
   }
 }
@@ -11833,8 +11111,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   /* Floating tools stay above the dock and each list owns its own scroll. */
-  .left-route-window,
-  .right-line-control-card {
+  .left-route-window {
     position: fixed !important;
     top: auto !important;
     bottom: var(--hud-bottom-clear) !important;
@@ -11849,18 +11126,7 @@ button:where(:not([class*="dg-"])):active,
     max-height: min(56dvh, 300px) !important;
   }
 
-  .right-line-control-card {
-    left: auto !important;
-    right: max(4px, env(safe-area-inset-right)) !important;
-  }
-
-  .right-line-control-card {
-    width: min(280px, calc(100vw - 8px)) !important;
-    max-height: min(58dvh, 310px) !important;
-  }
-
-  .left-route-header,
-  .right-line-header {
+  .left-route-header {
     flex: 0 0 auto;
   }
 
@@ -12177,7 +11443,6 @@ body .game-shell button:is(
 @media (max-width: 700px),
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   .left-route-window:not(.is-minimized),
-  .right-line-control-card:not(.is-minimized),
   .dialog-backdrop > section,
   .dialog-backdrop > div > section {
     overflow-x: hidden !important;
@@ -12188,7 +11453,6 @@ body .game-shell button:is(
   }
 
   .left-route-list,
-  .right-line-body,
   .satisfaction-dialog-content,
   .construction-project-list,
   .plan-conversion-layout,

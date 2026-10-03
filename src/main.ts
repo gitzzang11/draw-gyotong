@@ -1449,81 +1449,72 @@ app.innerHTML = `
       </section>
     </div>
 
-    <section id="rightLineControlCard" class="right-line-control-card" hidden aria-label="노선 관리 카드">
-      <div class="right-line-header">
-        <div class="right-line-title-group">
-          <span class="right-line-sub">LINE CONTROL</span>
-          <h3 id="lineManagerTitle" class="right-line-title">노선 관리</h3>
-        </div>
-        <button id="closeLineManagerButton" class="dialog-close compact-close" type="button" aria-label="닫기">×</button>
-      </div>
+    <!-- 노선 inspector: 오른쪽 아래 (MOBILE_UX §7.1, §7.4) -->
+    <aside id="rightLineControlCard" class="dg-hud dg-panel game-inspector game-inspector--tall game-line-inspector" hidden aria-labelledby="selectedLineTitle">
+      <header class="dg-panel__header">
+        <span id="selectedLineColor" class="game-color-swatch game-line-inspector__swatch" aria-hidden="true"></span>
+        <h2 id="selectedLineTitle" class="dg-panel__title">노선 선택</h2>
+        <div class="dg-panel__header-end"><button id="closeLineManagerButton" class="dg-icon-btn" type="button" aria-label="노선 정보 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+      </header>
+      <div class="game-inspector__content">
+        <div class="dg-panel__body">
+          <section id="selectedLineBadgeHeader" class="dg-panel__section">
+            <p id="lineManagerTitle" class="dg-panel__section-label">노선 관리</p>
+            <p id="selectedLineMeta" class="game-inspector__note">지도를 눌러 노선을 선택하세요</p>
+            <div class="dg-row"><span class="dg-row__label">배차 간격</span><span id="headwayReadout" class="dg-row__value">-</span></div>
+            <div class="dg-row"><span class="dg-row__label">혼잡</span><span id="crowdingReadout" class="dg-row__value">-</span></div>
+            <div class="dg-row"><span class="dg-row__label">평균 대기</span><span id="waitReadout" class="dg-row__value">-</span></div>
+            <p id="lineManagerSummary" class="game-inspector__note"></p>
+          </section>
 
-      <div class="right-line-body">
-        <!-- Floating Line Badge Card (선택 노선 정보 카드) -->
-        <div id="selectedLineBadgeHeader" class="line-identity-card">
-          <span id="selectedLineColor" class="selected-line-badge-dot"></span>
-          <div class="line-identity-text">
-            <strong id="selectedLineTitle">노선 선택</strong>
-            <span id="selectedLineMeta">지도를 눌러 노선을 선택하세요</span>
-          </div>
-        </div>
-
-        <div class="line-metrics-grid" aria-label="노선 운행 상태">
-          <div class="metric-chip"><span>배차</span><strong id="headwayReadout">-</strong></div>
-          <div class="metric-chip"><span>혼잡</span><strong id="crowdingReadout">-</strong></div>
-          <div class="metric-chip"><span>대기</span><strong id="waitReadout">-</strong></div>
-        </div>
-        <label class="manager-field"><span>노선 이름</span><input id="lineNameInput" maxlength="28" /></label>
-        <div class="manager-field route-color-field" data-color-input="lineColorInput">
-          <span>노선 색상</span>
-          <input id="lineColorInput" type="color" tabindex="-1" aria-hidden="true" />
-          <button type="button" class="route-color-trigger" data-open-color-picker="lineColorInput"><i aria-hidden="true"></i><span>색상 조절</span><b aria-hidden="true">›</b></button>
-        </div>
-        <label class="manager-field"><span>공개 상태</span><select id="lineVisibilitySelect"><option value="public">공개 노선</option><option value="planning">계획 노선</option></select></label>
-        <label class="manager-field"><span>기본 요금 설정</span>
-          <div class="line-fare-wrap">
-            <input id="lineFareInput" type="number" min="900" max="4200" step="50" value="1450" /> 원
-            <button id="lineAutoFareButton" type="button" class="ops-button active">자동 요금</button>
-          </div>
-        </label>
-        <div class="manager-toggles">
-          <label><input id="localServiceToggle" type="checkbox" /><span>일반 운행</span></label>
-          <label><input id="expressServiceToggle" type="checkbox" /><span>급행 운행</span></label>
-          <label><input id="operationPausedToggle" type="checkbox" /><span>운행 일시중지</span></label>
-        </div>
-        <div class="manager-summary" id="lineManagerSummary"></div>
-
-        <details id="operatingServiceSection" class="operating-service-section" open>
-          <summary><span>운행 계통</span><strong id="operatingServiceCount">0개</strong></summary>
-          <div id="operatingServiceList" class="operating-service-list"></div>
-          <button id="addOperatingServiceButton" type="button" class="add-operating-service-button">＋ 운행 계통 추가</button>
-          <form id="operatingServiceEditor" class="operating-service-editor" hidden>
-            <div class="operating-service-editor-head"><strong id="operatingServiceEditorTitle">새 운행 계통</strong><button id="cancelOperatingServiceButton" type="button" aria-label="계통 편집 닫기">×</button></div>
-            <label><span>계통 이름</span><input id="operatingServiceNameInput" maxlength="28" required /></label>
-            <label><span>운행 경로 · 분기 방향</span><select id="operatingServicePathSelect"></select></label>
-            <div class="operating-service-presets" aria-label="정차 프리셋">
-              <button type="button" data-service-preset="all">일반 · 전 역</button>
-              <button type="button" data-service-preset="transfer">급행 · 환승역</button>
-              <button type="button" data-service-preset="terminal">직행 · 양 끝역</button>
+          <details id="operatingServiceSection" class="dg-panel__section game-fold" open>
+            <summary class="game-fold__summary"><span class="dg-panel__section-label">운행 계통</span><span id="operatingServiceCount" class="game-inspector__section-meta">0개</span></summary>
+            <div id="operatingServiceList" class="game-service-list"></div>
+            <button id="addOperatingServiceButton" class="dg-btn dg-btn--secondary dg-btn--compact game-fold__action" type="button">＋ 운행 계통 추가</button>
+            <form id="operatingServiceEditor" class="game-service-editor" hidden>
+              <div class="game-service-editor__head"><strong id="operatingServiceEditorTitle">새 운행 계통</strong><button id="cancelOperatingServiceButton" class="dg-icon-btn" type="button" aria-label="계통 편집 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+              <label class="dg-field"><span class="dg-field__label">계통 이름</span><input id="operatingServiceNameInput" class="dg-input" maxlength="28" required /></label>
+              <label class="dg-field"><span class="dg-field__label">운행 경로 · 분기 방향</span><select id="operatingServicePathSelect" class="dg-input"></select></label>
+              <div class="dg-field"><span class="dg-field__label">정차 방식</span>
+                <div class="dg-seg game-service-presets" role="group" aria-label="정차 프리셋">
+                  <button class="dg-seg__item" type="button" data-service-preset="all" aria-pressed="false">일반 · 전 역</button>
+                  <button class="dg-seg__item" type="button" data-service-preset="transfer" aria-pressed="false">급행 · 환승역</button>
+                  <button class="dg-seg__item" type="button" data-service-preset="terminal" aria-pressed="false">직행 · 양 끝역</button>
+                </div>
+              </div>
+              <button id="editOperatingServiceStopsOnMapButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button" aria-pressed="false">⌖ 지도에서 정차역 설정</button>
+              <div class="dg-field"><span class="dg-field__label">정차역</span><div id="operatingServiceStopList" class="game-stop-list"></div></div>
+              <div class="game-service-editor__actions"><button id="deleteOperatingServiceButton" class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" hidden>계통 삭제</button><button class="dg-btn dg-btn--primary dg-btn--compact" type="submit">계통 저장</button></div>
+            </form>
+            <div id="operatingServiceTrainAction" class="game-fold__action" hidden>
+              <button id="openTrainManagerFromLineCardButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">열차 운행·편성 관리</button>
             </div>
-            <button id="editOperatingServiceStopsOnMapButton" class="operating-service-map-edit-button" type="button" aria-pressed="false">⌖ 지도에서 정차역 설정</button>
-            <div><span class="operating-service-field-label">정차역</span><div id="operatingServiceStopList" class="operating-service-stop-list"></div></div>
-            <div class="operating-service-editor-actions"><button id="deleteOperatingServiceButton" type="button" class="danger" hidden>계통 삭제</button><button type="submit" class="primary">계통 저장</button></div>
-          </form>
-        </details>
+          </details>
 
-        <div id="operatingServiceTrainAction" class="right-line-action-box" hidden>
-          <button id="openTrainManagerFromLineCardButton" type="button" class="open-train-manager-btn">
-            🚆 열차 운행 및 편성 관리
-          </button>
+          <details class="dg-panel__section game-fold">
+            <summary class="game-fold__summary"><span class="dg-panel__section-label">노선 설정</span></summary>
+            <div class="game-fold__fields">
+              <label class="dg-field"><span class="dg-field__label">노선 이름</span><input id="lineNameInput" class="dg-input" maxlength="28" /></label>
+              <div class="dg-field game-color-field" data-color-input="lineColorInput">
+                <span class="dg-field__label">노선 색</span>
+                <input id="lineColorInput" type="color" tabindex="-1" aria-hidden="true" hidden />
+                <button type="button" class="dg-btn dg-btn--secondary dg-btn--compact game-color-trigger" data-open-color-picker="lineColorInput"><span class="game-color-swatch" aria-hidden="true"></span><span data-color-value>#000000</span><span class="game-color-trigger__action" aria-hidden="true">›</span><span class="dg-sr-only">색 바꾸기</span></button>
+              </div>
+              <label class="dg-field"><span class="dg-field__label">공개 상태</span><select id="lineVisibilitySelect" class="dg-input"><option value="public">공개 노선</option><option value="planning">계획 노선</option></select></label>
+              <div class="dg-field"><label class="dg-field__label" for="lineFareInput">기본 요금 (원)</label>
+                <span class="game-inspector__inline"><input id="lineFareInput" class="dg-input" type="number" min="900" max="4200" step="50" value="1450" /><button id="lineAutoFareButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">자동 요금</button></span>
+              </div>
+              <label class="game-check"><input id="operationPausedToggle" type="checkbox" /><span>운행 일시중지</span></label>
+              <span class="dg-hook" hidden><input id="localServiceToggle" type="checkbox" /><input id="expressServiceToggle" type="checkbox" /></span>
+            </div>
+          </details>
+        </div>
+        <div class="dg-panel__actions">
+          <button id="deleteLineManagerButton" class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button">노선·역 철거…</button>
+          <button id="saveLineManagerButton" class="dg-btn dg-btn--primary dg-panel__actions-push" type="button">변경 저장</button>
         </div>
       </div>
-
-      <div class="right-line-footer">
-        <button id="deleteLineManagerButton" class="right-line-delete-btn" type="button"><span class="button-icon" aria-hidden="true">⌫</span><span>노선·역 철거</span></button>
-        <button id="saveLineManagerButton" class="right-line-save-btn" type="button"><span class="button-icon" aria-hidden="true">✓</span><span>변경 저장</span></button>
-      </div>
-    </section>
+    </aside>
 
     <div id="trainManagerDialog" class="dialog-backdrop" hidden>
       <section class="train-manager-dialog settings-dialog" role="dialog" aria-modal="true" aria-labelledby="trainManagerTitle">
@@ -2200,7 +2191,6 @@ function addFloatingWindowMinimizer(
 }
 
 addFloatingWindowMinimizer(leftRouteWindow, ".left-route-header", "노선 목록");
-addFloatingWindowMinimizer(rightLineControlCard, ".right-line-header", "노선 제어");
 
 function syncColorPicker(input: HTMLInputElement | null) {
   if (!input) return;
@@ -12607,13 +12597,13 @@ function renderOperatingServiceList(routeId: string) {
   setText(operatingServiceCount, `${services.length}개`);
   if (!operatingServiceList) return;
   operatingServiceList.innerHTML = services.length === 0
-    ? `<div class="operating-service-empty"><strong>등록된 운행 계통이 없습니다</strong><span>경로와 정차역을 선택해 첫 계통을 추가하세요.</span></div>`
+    ? `<p class="game-inspector__note">등록된 운행 계통이 없습니다. 경로와 정차역을 선택해 첫 계통을 추가하세요.</p>`
     : services.map((service) => {
       const operation = getOperatingServiceOperation(service);
       const routeNames = service.routeIds.map((id) => networkState.routes.find((route) => route.id === id)?.name).filter(Boolean).join(" → ");
-      return `<button type="button" class="operating-service-card${service.id === selectedOperatingServiceId ? " selected" : ""}" data-operating-service-id="${service.id}">
-        <span><strong>${escapeHtml(service.name)}</strong><small>${escapeHtml(routeNames)}</small></span>
-        <span><b>${operation.trainSets}편성</b><small>${service.stopStationIds.length}개 정차 · ${operation.enabled ? `${operation.headwayMin.toFixed(1)}분` : "열차 없음"}</small></span>
+      return `<button type="button" class="game-service-item" data-operating-service-id="${service.id}" aria-pressed="${service.id === selectedOperatingServiceId}">
+        <span class="game-service-item__main"><strong>${escapeHtml(service.name)}</strong><small>${escapeHtml(routeNames)}</small></span>
+        <span class="game-service-item__meta"><b>${operation.trainSets}편성</b><small>${service.stopStationIds.length}개 정차 · ${operation.enabled ? `${operation.headwayMin.toFixed(1)}분` : "열차 없음"}</small></span>
       </button>`;
     }).join("");
   if (operatingServiceTrainAction) operatingServiceTrainAction.hidden = !selectedOperatingServiceId;
@@ -12755,7 +12745,7 @@ function currentOperatingServicePathOption() {
 function renderOperatingServiceStopChoices(selectedStopIds?: string[], changedStationId?: string) {
   const option = currentOperatingServicePathOption();
   if (!operatingServiceStopList || !option) {
-    if (operatingServiceStopList) operatingServiceStopList.innerHTML = `<span>선택 가능한 경로가 없습니다.</span>`;
+    if (operatingServiceStopList) operatingServiceStopList.innerHTML = `<p class="game-inspector__note">선택 가능한 경로가 없습니다.</p>`;
     return;
   }
   const transferIds = new Set(networkState.transfers.flatMap((transfer) => transfer.stationIds));
@@ -12764,7 +12754,7 @@ function renderOperatingServiceStopChoices(selectedStopIds?: string[], changedSt
   operatingServiceStopList.innerHTML = option.stationIds.map((stationId, index) => {
     const station = networkState.stations.find((item) => item.id === stationId);
     const terminal = index === 0 || index === option.stationIds.length - 1;
-    return `<label><input type="checkbox" value="${stationId}" ${stops.includes(stationId) || terminal ? "checked" : ""} ${terminal ? "disabled" : ""}/><i></i><span>${escapeHtml(station?.name ?? stationId)}</span><small>${terminal ? "기점·종점" : transferIds.has(stationId) ? "환승역" : "통과 가능"}</small></label>`;
+    return `<label class="game-check game-stop-item"><input type="checkbox" value="${stationId}" ${stops.includes(stationId) || terminal ? "checked" : ""} ${terminal ? "disabled" : ""}/><span>${escapeHtml(station?.name ?? stationId)}</span><small>${terminal ? "기점·종점 (필수)" : transferIds.has(stationId) ? "환승역" : "통과 가능"}</small></label>`;
   }).join("");
   updateOperatingServiceMapEditChrome(stops);
   const preview: OperatingService = {
@@ -12785,7 +12775,10 @@ function renderOperatingServiceStopChoices(selectedStopIds?: string[], changedSt
 
 function applyOperatingServicePreset(preset: StopPreset) {
   operatingServiceDraftPreset = preset;
-  operatingServiceEditor?.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => button.classList.toggle("active", button.dataset.servicePreset === preset));
+  operatingServiceEditor?.querySelectorAll<HTMLElement>("[data-service-preset]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.servicePreset === preset);
+    button.setAttribute("aria-pressed", String(button.dataset.servicePreset === preset));
+  });
   renderOperatingServiceStopChoices();
 }
 

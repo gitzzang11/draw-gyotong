@@ -47,6 +47,8 @@ export class LinePanel {
     if (element.title) element.title.textContent = view.name;
     if (element.meta) element.meta.textContent = view.meta;
     if (element.color) element.color.style.background = view.color;
+    // inspector 상단 띠를 노선 색으로 바꾼다(DESIGN_SYSTEM §12 Panels).
+    element.color?.closest<HTMLElement>(".dg-panel")?.style.setProperty("--panel-band", view.color);
     if (element.nameInput) element.nameInput.value = view.name;
     if (element.colorInput) element.colorInput.value = view.color;
     if (element.visibilitySelect) element.visibilitySelect.value = view.visibility;

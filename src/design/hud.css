@@ -175,6 +175,40 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-inspector__minus { color: var(--signal-danger); font-weight: 800; }
 .game-inspector__danger-action { display: flex; justify-content: flex-end; }
 
+/* ===== 노선 inspector ===== */
+/* 여러 설정을 조정하는 확장 inspector: 시간 정보판 아래까지 올라가고 지도 컨트롤은 뒤로 숨는다 (§9). */
+.game-inspector--tall { max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--edge-inset-bottom)); }
+.game-line-inspector__swatch { width: 20px; height: 20px; }
+.game-fold > .game-fold__summary { display: flex; align-items: center; min-height: var(--touch-min); list-style: none; cursor: pointer; }
+.game-fold > .game-fold__summary::-webkit-details-marker { display: none; }
+.game-fold > .game-fold__summary::after { content: "▾"; margin-left: auto; color: var(--text-2); }
+.game-fold:not([open]) > .game-fold__summary::after { content: "▸"; }
+.game-fold > .game-fold__summary .dg-panel__section-label { margin: 0; }
+.game-fold__action { margin-top: var(--space-2); }
+.game-fold__fields { display: grid; gap: var(--space-2); padding-bottom: var(--space-1); }
+.game-service-list { display: grid; }
+.game-service-item {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--touch-min);
+  padding: 6px var(--space-2); border: 0; border-top: var(--line-hair) solid var(--rule); border-radius: 0;
+  background: transparent; color: var(--text-1); font: var(--type-body); text-align: left; cursor: pointer;
+}
+.game-service-item:first-child { border-top: 0; }
+.game-service-item[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+.game-service-item__main, .game-service-item__meta { display: grid; min-width: 0; }
+.game-service-item__meta { margin-left: auto; text-align: right; }
+.game-service-item small { font: var(--type-label); font-weight: 600; opacity: .8; }
+.game-service-editor { display: grid; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-2); border: var(--line-hair) solid var(--edge); background: var(--surface-1); }
+.game-service-editor__head { display: flex; align-items: center; justify-content: space-between; }
+.game-service-editor__actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+.game-service-presets { display: grid; grid-template-columns: repeat(3, 1fr); }
+.game-service-presets .dg-seg__item { min-width: 0; padding: 0 4px; font-size: 12px; }
+.game-stop-list { display: grid; max-height: 176px; overflow-y: auto; border: var(--line-hair) solid var(--rule); background: var(--surface-0); }
+.game-check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); font: var(--type-body); cursor: pointer; }
+.game-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--text-1); flex: none; }
+.game-stop-item { padding: 0 var(--space-2); border-top: var(--line-hair) solid var(--rule); }
+.game-stop-item:first-child { border-top: 0; }
+.game-stop-item small { margin-left: auto; font: var(--type-label); color: var(--text-2); }
+
 /* ===== 건설·철거 검토 (DESIGN_SYSTEM §8 모드별 재질) ===== */
 .game-review[data-review-mode="construction"] { border-top-color: transparent; }
 .game-review[data-review-mode="construction"]::before {
