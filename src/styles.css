@@ -186,11 +186,11 @@ button:disabled,
 }
 
 /* Inputs & Selects */
-input[type="text"],
-input[type="number"],
-input[type="search"],
-select,
-textarea {
+input:where(:not([class*="dg-"]))[type="text"],
+input:where(:not([class*="dg-"]))[type="number"],
+input:where(:not([class*="dg-"]))[type="search"],
+select:where(:not([class*="dg-"])),
+textarea:where(:not([class*="dg-"])) {
   background: rgba(15, 23, 42, 0.8) !important;
   border: 1px solid var(--c-border) !important;
   color: var(--c-text-main) !important;
@@ -200,7 +200,7 @@ textarea {
   cursor: text;
 }
 
-select {
+select:where(:not([class*="dg-"])) {
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -210,14 +210,14 @@ select {
   padding-right: 32px !important;
 }
 
-select option {
+select:where(:not([class*="dg-"])) option {
   background: #121927 !important;
   color: #F8FAFC !important;
   padding: 8px;
 }
 
 /* Range Sliders */
-input[type="range"] {
+input:where(:not([class*="dg-"]))[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   background: rgba(255, 255, 255, 0.12) !important;
@@ -246,7 +246,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 /* Checkboxes */
-input[type="checkbox"] {
+input:where(:not([class*="dg-"]))[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: var(--c-primary);
@@ -1875,7 +1875,14 @@ tr:hover td {
   display: none !important;
 }
 
-.settings-dialog, .finance-dialog, .station-manager-dialog, .statistics-screen, .news-screen, .analysis-screen, .diagram-screen, .decision-dialog, .ingame-menu-dialog {
+.settings-dialog,
+.finance-dialog,
+.statistics-screen,
+.news-screen,
+.analysis-screen,
+.diagram-screen,
+.decision-dialog,
+.ingame-menu-dialog {
   background: var(--c-bg-glass);
   backdrop-filter: var(--glass-blur-dense);
   -webkit-backdrop-filter: var(--glass-blur-dense);
@@ -2178,7 +2185,16 @@ tr:hover td {
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
 }
 
-.settings-dialog, .finance-dialog, .station-manager-dialog, .statistics-screen, .news-screen, .analysis-screen, .diagram-screen, .decision-dialog, .ingame-menu-dialog, .planning-dialog, .plan-conversion-dialog {
+.settings-dialog,
+.finance-dialog,
+.statistics-screen,
+.news-screen,
+.analysis-screen,
+.diagram-screen,
+.decision-dialog,
+.ingame-menu-dialog,
+.planning-dialog,
+.plan-conversion-dialog {
   background: var(--c-bg-glass);
   backdrop-filter: var(--glass-blur-dense);
   -webkit-backdrop-filter: var(--glass-blur-dense);
@@ -3456,53 +3472,6 @@ font-size: 12px;
 /* ----------------------------------------------------
    15. STATION MANAGER DIALOG (.station-manager-dialog)
 ---------------------------------------------------- */
-.station-manager-dialog {
-  width: min(560px, 94vw);
-  max-height: 88dvh;
-  background: rgba(10, 15, 25, 0.95);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid rgba(52, 211, 153, 0.35);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.88), 0 0 32px rgba(52, 211, 153, 0.15);
-  color: var(--c-text-main);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-y: auto;
-  animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.station-manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 14px;
-}
-
-.station-manager-header span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-mint);
-  letter-spacing: 1.2px;
-  background: rgba(52, 211, 153, 0.15);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  display: inline-block;
-  margin-bottom: 4px;
-}
-
-.station-manager-header h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--c-mint), #ffffff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
 
 /* ----------------------------------------------------
    FULL SCREEN WINDOW — CITY NEWSWIRE (.news-screen)
@@ -3847,293 +3816,11 @@ font-size: 12px;
   line-height: 1.6;
 }
 
-
-.station-manager-header span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-mint);
-  letter-spacing: 1.2px;
-  background: rgba(52, 211, 153, 0.15);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  display: inline-block;
-  margin-bottom: 4px;
-}
-
-.station-manager-header h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--c-mint), #ffffff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.station-manager-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 /* Identity & Station Name Editor */
-.station-manager-identity {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  flex-wrap: wrap;
-}
-
-.station-manager-identity label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 180px;
-}
-
-.station-manager-identity label span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.station-manager-identity input {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: var(--radius-md) !important;
-  color: var(--c-text-main) !important;
-  padding: 8px 12px !important;
-  font-size: 14px !important;
-  font-weight: 800 !important;
-  min-height: 40px !important;
-  transition: all 0.2s ease;
-}
-
-.station-manager-identity input:focus {
-  border-color: var(--c-mint) !important;
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.3) !important;
-}
-
-.station-manager-identity button[data-station-manager-action="save-name"] {
-  padding: 8px 16px;
-  min-height: 40px;
-  background: rgba(52, 211, 153, 0.15) !important;
-  border: 1px solid var(--c-mint) !important;
-  color: var(--c-mint) !important;
-  border-radius: var(--radius-md) !important;
-  font-weight: 800;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.station-manager-identity button[data-station-manager-action="save-name"]:hover {
-  background: rgba(52, 211, 153, 0.3) !important;
-  box-shadow: 0 0 14px rgba(52, 211, 153, 0.4);
-}
-
-.station-status {
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  white-space: nowrap;
-}
-
-.station-status.operational {
-  background: rgba(52, 211, 153, 0.15);
-  border: 1px solid rgba(52, 211, 153, 0.4);
-  color: var(--c-mint);
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);
-}
-
-.station-status.operational::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--c-mint);
-  box-shadow: 0 0 8px var(--c-mint);
-}
-
-.station-status.building {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: var(--c-gold);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
-}
-
-.station-status.building::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--c-gold);
-  box-shadow: 0 0 8px var(--c-gold);
-}
-
-.manager-danger-zone {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 13px 14px;
-  border: 1px solid rgba(248, 113, 113, 0.28);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(127, 29, 29, 0.18), rgba(69, 10, 10, 0.08));
-}
-
-.manager-danger-zone > div {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.manager-danger-zone strong {
-  color: #fecaca;
-  font-size: 12px;
-}
-
-.manager-danger-zone span {
-  color: #a8b3c2;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.manager-danger-zone button,
-.manager-delete-button {
-  flex: 0 0 auto;
-  min-height: 40px;
-  padding: 8px 14px;
-  border: 1px solid rgba(248, 113, 113, 0.58) !important;
-  border-radius: var(--radius-md) !important;
-  background: rgba(220, 38, 38, 0.16) !important;
-  color: #fca5a5 !important;
-  font-size: 12px;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.manager-danger-zone button:hover,
-.manager-delete-button:hover {
-  background: rgba(220, 38, 38, 0.28) !important;
-  color: #fee2e2 !important;
-}
-
-.depot-manager-actions {
-  display: grid;
-  grid-template-columns: 1.35fr 1fr;
-  gap: 10px;
-}
-
-@media (max-width: 540px) {
-  .manager-danger-zone {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .manager-danger-zone button,
-  .depot-manager-actions {
-    width: 100%;
-  }
-}
 
 /* Metrics Grid */
-.station-manager-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-@media (max-width: 540px) {
-  .station-manager-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.station-manager-metrics > div {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: border-color 0.2s ease;
-}
-
-.station-manager-metrics > div:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.station-manager-metrics span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.station-manager-metrics strong {
-  font-size: 18px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: var(--c-text-main);
-}
-
-.station-manager-metrics strong.up {
-  color: var(--c-mint);
-  text-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
-}
-
-.station-manager-metrics strong.down {
-  color: #FCA5A5;
-  text-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
-}
 
 /* Station Sections (Routes & Transfers) */
-.station-manager-section {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.station-manager-section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.station-manager-section-heading span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-purple);
-  letter-spacing: 1px;
-  background: rgba(168, 85, 247, 0.12);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-}
-
-.station-manager-section-heading strong {
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--c-text-main);
-}
 
 .connected-route-chips {
   display: flex;
@@ -4171,14 +3858,6 @@ font-size: 12px;
   color: var(--c-text-dim);
 }
 
-.station-manager-transfer p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--c-text-muted);
-  line-height: 1.5;
-  font-weight: 600;
-}
-
 .connected-route-chips span {
   display: inline-grid;
   grid-template-columns: auto;
@@ -4192,54 +3871,6 @@ font-size: 12px;
 .connected-route-chips span small {
   color: var(--c-text-dim);
   font-size: 10px;
-}
-
-.transfer-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.transfer-detail-grid > div {
-  display: grid;
-  gap: 3px;
-  padding: 9px 10px;
-  border: 1px solid rgba(76, 224, 195, 0.16);
-  border-radius: 10px;
-  background: rgba(5, 18, 27, 0.5);
-}
-
-.transfer-detail-grid span {
-  color: var(--c-text-dim);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.transfer-detail-grid strong {
-  color: var(--c-text);
-  font-size: 13px;
-}
-
-.transfer-pair-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 9px;
-}
-
-.transfer-pair-list span {
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: rgba(76, 224, 195, 0.1);
-  color: var(--c-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.station-manager-transfer .transfer-integrity-warning {
-  margin-top: 8px;
-  color: #ffadad;
 }
 
 .merge-dialog {
@@ -4815,152 +4446,6 @@ font-size: 12px;
 /* ----------------------------------------------------
    DEPOT MANAGER DIALOG (.depot-manager-dialog)
 ---------------------------------------------------- */
-.depot-manager-dialog {
-  width: min(540px, 94vw);
-  max-height: 88dvh;
-  background: rgba(14, 18, 28, 0.95);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.88), 0 0 32px rgba(245, 158, 11, 0.15);
-  color: var(--c-text-main);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-y: auto;
-  animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.depot-manager-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 14px;
-}
-
-.depot-manager-header span {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--c-gold);
-  letter-spacing: 1.2px;
-  background: rgba(245, 158, 11, 0.15);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  display: inline-block;
-  margin-bottom: 4px;
-}
-
-.depot-manager-header h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--c-gold), #ffffff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.depot-manager-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.depot-manager-hero {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.12));
-}
-
-.depot-manager-symbol {
-  display: grid !important;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border-radius: var(--radius-md);
-  color: #071017 !important;
-  background: linear-gradient(135deg, var(--c-gold), var(--c-amber));
-  font-size: 26px !important;
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
-  flex-shrink: 0;
-}
-
-.depot-manager-hero span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.depot-manager-hero strong {
-  display: block;
-  margin-top: 2px;
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--c-text-main);
-}
-
-.depot-manager-hero em {
-  display: block;
-  margin-top: 4px;
-  color: var(--c-text-dim);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 600;
-}
-
-.depot-manager-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.depot-manager-metrics > div {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.depot-manager-metrics span {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-}
-
-.depot-manager-metrics strong {
-  font-size: 18px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  color: var(--c-text-main);
-}
-
-.depot-manager-section {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.depot-manager-section-heading {
-  display: flex;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
 
 /* ----------------------------------------------------
    16. FULL SCREEN WINDOWS — STATISTICS / OPERATIONS
@@ -9047,8 +8532,6 @@ button:active,
 .construction-preview-panel,
 .analysis-screen,
 .statistics-screen,
-.station-manager-dialog,
-.depot-manager-dialog,
 .train-manager-dialog,
 .finance-dialog,
 .settings-dialog,
@@ -9154,11 +8637,11 @@ button:active,
 
 .setup-grid select,
 .setup-grid input,
-input[type="text"],
-input[type="number"],
-input[type="search"],
-select,
-textarea {
+input:where(:not([class*="dg-"]))[type="text"],
+input:where(:not([class*="dg-"]))[type="number"],
+input:where(:not([class*="dg-"]))[type="search"],
+select:where(:not([class*="dg-"])),
+textarea:where(:not([class*="dg-"])) {
   background: #0c131a !important;
   border: 1px solid var(--c-border) !important;
   border-radius: var(--radius-sm) !important;
@@ -9408,7 +8891,6 @@ textarea {
 }
 
 /* Shared state badges: readable at a glance without turning every item into a chip. */
-.station-status,
 .slot-tag,
 .analysis-severity,
 .analysis-target,
@@ -9492,8 +8974,6 @@ textarea {
 .dialog-heading,
 .left-route-header,
 .right-line-header,
-.station-manager-header,
-.depot-manager-header,
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header,
@@ -9517,8 +8997,6 @@ textarea {
 .dialog-heading > .dialog-close,
 .left-route-header > .dialog-close,
 .right-line-header > .dialog-close,
-.station-manager-header > .dialog-close,
-.depot-manager-header > .dialog-close,
 .satisfaction-dialog-header > .dialog-close,
 .connection-dialog-header > .dialog-close,
 .decision-dialog-header > .dialog-close,
@@ -9532,8 +9010,6 @@ textarea {
 
 .left-route-header,
 .right-line-header,
-.station-manager-header,
-.depot-manager-header,
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header {
@@ -9615,8 +9091,6 @@ textarea {
   .dialog-heading,
   .left-route-header,
   .right-line-header,
-  .station-manager-header,
-  .depot-manager-header,
   .satisfaction-dialog-header,
   .connection-dialog-header,
   .decision-dialog-header {
@@ -9626,8 +9100,6 @@ textarea {
   .dialog-heading > .dialog-close,
   .left-route-header > .dialog-close,
   .right-line-header > .dialog-close,
-  .station-manager-header > .dialog-close,
-  .depot-manager-header > .dialog-close,
   .satisfaction-dialog-header > .dialog-close,
   .connection-dialog-header > .dialog-close,
   .decision-dialog-header > .dialog-close {
@@ -9661,7 +9133,7 @@ textarea {
 
 /* 눌림 피드백: 100~160ms의 짧은 scale 축소. 활성 상태와 혼동되지 않게 한다. */
 /* dg- 컴포넌트는 새 디자인 시스템의 피드백을 쓴다(src/design). */
-button:not([class*="dg-"]):active,
+button:where(:not([class*="dg-"])):active,
 .ops-button:active,
 .action-button:active {
   transform: scale(var(--press-scale)) !important;
@@ -9736,8 +9208,6 @@ button:not([class*="dg-"]):active,
 
   .dialog-backdrop > .settings-dialog,
   .dialog-backdrop > .finance-dialog,
-  .dialog-backdrop > .station-manager-dialog,
-  .dialog-backdrop > .depot-manager-dialog,
   .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .decision-dialog,
@@ -10355,8 +9825,6 @@ button:not([class*="dg-"]):active,
 
   .dialog-backdrop > .settings-dialog,
   .dialog-backdrop > .finance-dialog,
-  .dialog-backdrop > .station-manager-dialog,
-  .dialog-backdrop > .depot-manager-dialog,
   .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .decision-dialog,

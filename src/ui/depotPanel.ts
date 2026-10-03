@@ -1,4 +1,12 @@
 import { PanelManager } from "./panelManager";
+import {
+  escapeHtml,
+  metricRowsHtml,
+  routeRowsHtml,
+  sectionHtml,
+  statusTagHtml,
+  type InspectorRoute,
+} from "./inspectorMarkup";
 
 export interface DepotPanelView {
   entityId: string;
@@ -10,8 +18,7 @@ export interface DepotPanelView {
   assignedSets: number;
   availableSets: number;
   maintenance: string;
-  routeCount: number;
-  routesHtml: string;
+  routes: InspectorRoute[];
   maxLevel: number;
   expansionCost: string;
   expansionDisabled: boolean;
@@ -34,25 +41,23 @@ export class DepotPanel {
 
   renderView(view: DepotPanelView, onAction: (event: Event) => void) {
     this.render(view.entityId, view.title, `
-      <section class="depot-manager-hero">
-        <span class="depot-manager-symbol" aria-hidden="true">▥</span>
-        <div><span>차량기지 상태</span><strong>${view.operational ? "운영 중" : "공사·설치 중"}</strong><em>레벨 ${view.level} · 확장 상한 ${view.maxLevel} · ${view.area}ha</em></div>
-      </section>
-      <section class="depot-manager-metrics" aria-label="차량기지 운영 정보">
-        <div><span>수용 편성</span><strong>${view.capacity}편성</strong></div>
-        <div><span>연결 노선 열차</span><strong>${view.assignedSets}편성</strong></div>
-        <div><span>추가 수용 가능</span><strong>${view.availableSets}편성</strong></div>
-        <div><span>월 유지비</span><strong>${view.maintenance}</strong></div>
-      </section>
-      <section class="depot-manager-section">
-        <div class="depot-manager-section-heading"><span>연결 노선</span><strong>${view.routeCount}개</strong></div>
-        <div class="connected-route-chips">${view.routesHtml}</div>
-      </section>
-      <div class="depot-manager-actions">
-        <button class="depot-manager-expand" type="button" data-depot-manager-action="expand" aria-describedby="depotExpansionStatus" ${view.expansionDisabled ? "disabled" : ""}>확장 검토 · ${view.expansionCost}</button>
-        <button class="manager-delete-button" type="button" data-depot-manager-action="delete">차량기지 철거</button>
+      <div class="dg-panel__body">
+        <section class="dg-panel__section game-inspector__identity">
+          <div class="game-inspector__tags">${view.operational ? statusTagHtml("operational", "운영 중") : statusTagHtml("building", "공사·설치 중")}<span class="game-inspector__muted">레벨 ${view.level} / ${view.maxLevel} · ${escapeHtml(view.area)}ha</span></div>
+        </section>
+        ${sectionHtml("운영", metricRowsHtml([
+          { label: "수용 편성", value: `${view.capacity}편성` },
+          { label: "연결 노선 열차", value: `${view.assignedSets}편성` },
+          { label: "추가 수용 가능", value: `${view.availableSets}편성`, tone: view.availableSets === 0 ? "caution" : undefined },
+          { label: "월 유지비", value: view.maintenance },
+        ]))}
+        ${sectionHtml("연결 노선", routeRowsHtml(view.routes, "연결된 노선이 없습니다."), `${view.routes.length}개`)}
+        ${sectionHtml("확장", `<p id="depotExpansionStatus" class="game-inspector__note" role="status">${escapeHtml(view.expansionDescription)}</p>`)}
       </div>
-      <p id="depotExpansionStatus" role="status">${view.expansionDescription}</p>`, onAction);
+      <div class="dg-panel__actions">
+        <button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-depot-manager-action="delete">철거…</button>
+        <button class="dg-btn dg-btn--primary dg-panel__actions-push" type="button" data-depot-manager-action="expand" aria-describedby="depotExpansionStatus" ${view.expansionDisabled ? "disabled" : ""}>확장 검토<span class="dg-btn__cost">${escapeHtml(view.expansionCost)}</span></button>
+      </div>`, onAction);
   }
 
   close() { this.manager.close(this.kind); }

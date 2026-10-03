@@ -149,6 +149,31 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 }
 .game-density-legend i { height: 8px; background: linear-gradient(90deg, rgba(242, 190, 0, 0.08), var(--signal-caution) 60%, var(--signal-danger)); }
 
+/* ===== 선택 객체 inspector: 오른쪽 아래 (MOBILE_UX §7.1, §8) =====
+   지도 컨트롤 아래에서 화면 아래 여백까지 쓴다. 본문만 스크롤하고 행동 막대는 고정한다. */
+.game-inspector {
+  position: fixed;
+  right: var(--edge-inset-right);
+  bottom: var(--edge-inset-bottom);
+  width: min(316px, calc(100vw - var(--hud-left-clear) - var(--edge-inset-right)));
+  max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) * 2 - var(--plate-height) - 2px - var(--edge-inset-bottom));
+}
+.game-inspector .dg-panel__title { flex: 1; }
+.game-inspector__content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.game-inspector__identity { display: grid; gap: var(--space-2); }
+.game-inspector__tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.game-inspector__inline { display: flex; gap: var(--space-2); }
+.game-inspector__inline .dg-input { flex: 1; min-width: 0; }
+.game-inspector__section-meta { margin-left: 6px; font-weight: 700; color: var(--text-3); }
+.game-inspector__note { margin: 4px 0; font: var(--type-body); font-size: 13px; color: var(--text-2); }
+.game-inspector__muted { color: var(--text-2); font-weight: 600; }
+.game-inspector__route { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.game-inspector__list { margin: 4px 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.game-inspector__list li { display: flex; gap: 6px; align-items: baseline; min-height: 26px; }
+.game-inspector__plus { color: var(--signal-ok); font-weight: 800; }
+.game-inspector__minus { color: var(--signal-danger); font-weight: 800; }
+.game-inspector__danger-action { display: flex; justify-content: flex-end; }
+
 /* ===== 실행 취소·다시 실행: 왼쪽 아래 엄지 영역 ===== */
 .game-history-controls {
   position: fixed;

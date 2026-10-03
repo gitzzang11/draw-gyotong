@@ -133,16 +133,18 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 20px;
+  min-width: 20px;
   height: 20px;
+  padding: 0 3px;
+  white-space: nowrap;
   border-radius: var(--radius);
   background: var(--line-color);
   color: var(--on-line-light);
   font: 800 12px/1 var(--font-ui);
 }
 .dg-line-mark--on-dark { color: var(--on-line-dark); }
-.dg-line-mark--lg { width: 24px; height: 24px; font-size: 14px; }
-.dg-line-mark--sm { width: 16px; height: 16px; font-size: 10px; }
+.dg-line-mark--lg { min-width: 24px; height: 24px; font-size: 14px; }
+.dg-line-mark--sm { min-width: 16px; height: 16px; padding: 0 2px; font-size: 10px; }
 .dg-line-mark--plan {
   background: transparent;
   border: var(--line-emphasis) dashed var(--line-color);

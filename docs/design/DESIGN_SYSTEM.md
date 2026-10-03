@@ -414,7 +414,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - 새 UI는 `dg-` 클래스와 토큰만 사용한다. 기존 `--color-*`, `--c-*` 변수와 기존 클래스는 참조하지 않는다.
 - 색 토큰을 바꿀 때는 §4 표와 `tokens.css`를 함께 고친다. 테스트가 둘의 불일치를 막는다.
 - 컴포넌트는 요소 선택자에 전역 스타일을 주지 않는다. 화면 단위로 기존 마크업을 `dg-` 컴포넌트로 교체하고, 교체가 끝난 화면의 기존 CSS는 그때 제거한다.
-- 기존 CSS는 `legacy` layer 안에 있으므로 새 CSS의 보통 선언이 항상 이긴다. 단, layer 안의 `!important`는 밖의 `!important`보다 강하다. 기존 전역 `!important` 규칙이 `dg-` 요소에 걸리면 새 쪽에 `!important`를 더하지 말고 기존 규칙에서 `:not([class*="dg-"])`로 제외한다.
+- 기존 CSS는 `legacy` layer 안에 있으므로 새 CSS의 보통 선언이 항상 이긴다. 단, layer 안의 `!important`는 밖의 `!important`보다 강하다. 기존 전역 `!important` 규칙이 `dg-` 요소에 걸리면 새 쪽에 `!important`를 더하지 말고 기존 규칙에서 `:where(:not([class*="dg-"]))`로 제외한다(`:where`로 감싸 기존 규칙끼리의 우선순위를 바꾸지 않는다).
 - 새 마크업은 기존 클래스를 재사용하지 않는다. JS가 요소를 찾을 때는 id나 데이터 속성(`data-speed`, `data-layer`, `data-workspace-mode` 등)을 쓴다.
 
 | 문서 개념 | 클래스 |
@@ -426,6 +426,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 노선 기호 | `dg-line-mark` (`--line-color` 지정) + `--lg` / `--sm` / `--on-dark` / `--plan` / `--building` |
 | 상태 태그 | `dg-tag` + `--ok` / `--build` / `--plan` / `--paused` / `--error` / `--express`, `dg-tag__icon` |
 | 공사 빗금 | `dg-hazard`, 토큰 `--hazard-pattern` |
+| Inspector 마크업 | `src/ui/inspectorMarkup.ts`: 이스케이프, 노선 기호(글자 대비 자동 선택), 상태 태그, 지표 행(톤마다 ▲▼✕△ 표식 병행), 노선 행, 구획. 패널 템플릿은 HTML 조각이 아니라 구조화된 데이터를 받는다 |
+| 선택 객체 inspector | `dg-panel game-inspector` (비모달 `aside`, 오른쪽 아래). 빈 지도 탭과 닫기 버튼으로 닫는다 |
 | 안내판 패널 | `dg-panel` (`--panel-band` 지정, 공사 검토는 `--hazard`), `__header` `__icon` `__title` `__header-end` `__body` `__section` `__section-label` `__actions` `__actions-push` |
 | 기획 재질 | 상위 요소에 `dg-planning`, 레일은 `dg-rail--planning` |
 | 데이터 행 | `dg-row` (`--meter`), `__label` `__value` (`--metric` `--ok` `--caution` `--danger`), `dg-meter` `dg-meter__fill--over` |

@@ -112,18 +112,18 @@ button:active,
   transform: scale(0.98);
 }
 
-button:not([class*="dg-"]):focus-visible,
-input:not([class*="dg-"]):focus-visible,
-select:not([class*="dg-"]):focus-visible,
-textarea:focus-visible,
-[tabindex]:not([class*="dg-"]):focus-visible {
+button:where(:not([class*="dg-"])):focus-visible,
+input:where(:not([class*="dg-"])):focus-visible,
+select:where(:not([class*="dg-"])):focus-visible,
+textarea:where(:not([class*="dg-"])):focus-visible,
+[tabindex]:where(:not([class*="dg-"])):focus-visible {
   outline: 2px solid var(--color-accent-strong) !important;
   outline-offset: 2px;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-select,
-textarea {
+input:where(:not([class*="dg-"])):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+select:where(:not([class*="dg-"])),
+textarea:where(:not([class*="dg-"])) {
   border: 1px solid var(--color-border-subtle) !important;
   border-radius: 6px !important;
   background: var(--color-surface-1) !important;
@@ -131,8 +131,8 @@ textarea {
   box-shadow: none !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+input:where(:not([class*="dg-"]))::placeholder,
+textarea:where(:not([class*="dg-"]))::placeholder {
   color: var(--color-text-muted) !important;
 }
 
@@ -488,8 +488,6 @@ textarea::placeholder {
 .left-route-sub,
 .right-line-sub,
 .dialog-heading > div > span,
-.station-manager-header span,
-.depot-manager-header span,
 .section-title > span {
   color: var(--color-accent) !important;
   background: transparent !important;
@@ -635,8 +633,6 @@ textarea::placeholder {
 .right-line-header,
 .route-settings-card-heading,
 .construction-preview-header,
-.station-manager-header,
-.depot-manager-header,
 .satisfaction-dialog-header,
 .save-editor-header,
 .connection-dialog-header,
@@ -653,17 +649,13 @@ textarea::placeholder {
 .right-line-title,
 .route-settings-card-heading strong,
 .construction-preview-header strong,
-.dialog-heading h2,
-.station-manager-header h2,
-.depot-manager-header h2 {
+.dialog-heading h2 {
   color: var(--color-text-primary) !important;
   text-shadow: none !important;
 }
 
 .left-route-summary,
 .line-metrics-grid,
-.station-manager-metrics,
-.depot-manager-metrics,
 .finance-stats-grid,
 .analysis-summary-grid,
 .news-summary {
@@ -676,8 +668,6 @@ textarea::placeholder {
 
 .left-route-summary > *,
 .line-metrics-grid > *,
-.station-manager-metrics > *,
-.depot-manager-metrics > *,
 .finance-stats-grid > *,
 .analysis-summary-grid > *,
 .news-summary > * {
@@ -724,8 +714,6 @@ textarea::placeholder {
 .right-line-action-box,
 .manager-summary,
 .route-settings-target,
-.station-manager-identity,
-.depot-manager-hero,
 .connection-section,
 .connection-target-card,
 .connection-choice,
@@ -743,8 +731,6 @@ textarea::placeholder {
 
 .right-line-body,
 .left-route-list,
-.station-manager-content,
-.depot-manager-content,
 .train-manager-content,
 .satisfaction-dialog-content {
   background: var(--color-surface-0) !important;
@@ -1002,8 +988,6 @@ body .game-shell :is(
 .save-editor-dialog,
 .merge-dialog,
 .plan-conversion-dialog,
-.station-manager-dialog,
-.depot-manager-dialog,
 .satisfaction-dialog,
 .train-manager-dialog,
 .construction-manager-dialog,
@@ -1033,13 +1017,6 @@ body .game-shell :is(
 
 #decisionDialog[data-decision-intent="build"] .decision-kicker {
   color: var(--color-accent) !important;
-}
-
-#depotExpansionStatus {
-  margin: 8px 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  color: var(--color-text-secondary);
 }
 
 #decisionDialog[data-decision-intent="build"] .decision-btn.confirm-btn {
@@ -1155,7 +1132,6 @@ body .game-shell .left-route-window .left-route-action-btn:active {
 
 .menu-footer-btn.title-btn,
 .right-line-delete-btn,
-.manager-delete-button,
 .planning-delete-button,
 .danger {
   border-color: color-mix(in srgb, var(--color-danger) 48%, var(--color-border-subtle)) !important;
@@ -1319,69 +1295,6 @@ body .game-shell .news-screen > .news-header #closeNewsButton {
   right: max(16px, env(safe-area-inset-right)) !important;
   margin: 0 !important;
   transform: none !important;
-}
-
-body .game-shell :is(
-  .dialog-heading,
-  .left-route-header,
-  .right-line-header,
-  .station-manager-header,
-  .depot-manager-header,
-  .satisfaction-dialog-header,
-  .save-editor-header,
-  .color-picker-header,
-  .train-manager-header,
-  .ingame-menu-header,
-  .plan-conversion-heading,
-  .connection-dialog-header,
-  .decision-dialog-header,
-  .route-settings-card-heading
-) {
-  position: relative !important;
-  box-sizing: border-box !important;
-}
-
-body .game-shell :is(
-  .dialog-heading,
-  .left-route-header,
-  .right-line-header,
-  .station-manager-header,
-  .depot-manager-header,
-  .satisfaction-dialog-header,
-  .save-editor-header,
-  .color-picker-header,
-  .train-manager-header,
-  .ingame-menu-header,
-  .plan-conversion-heading,
-  .connection-dialog-header,
-  .decision-dialog-header,
-  .route-settings-card-heading
-) > .dialog-close {
-  position: absolute !important;
-  top: 50% !important;
-  right: 0 !important;
-  z-index: 4 !important;
-  margin: 0 !important;
-  transform: translateY(-50%) !important;
-}
-
-body .game-shell .dialog-backdrop :is(
-  .dialog-heading,
-  .planning-dialog-heading,
-  .station-manager-header,
-  .depot-manager-header,
-  .satisfaction-dialog-header,
-  .save-editor-header,
-  .color-picker-header,
-  .train-manager-header,
-  .ingame-menu-header,
-  .plan-conversion-heading,
-  .connection-dialog-header,
-  .decision-dialog-header
-) {
-  position: relative !important;
-  padding-right: max(64px, calc(env(safe-area-inset-right) + 56px)) !important;
-  box-sizing: border-box !important;
 }
 
 body .game-shell .dialog-backdrop .dialog-close {

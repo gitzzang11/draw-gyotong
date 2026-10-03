@@ -146,19 +146,24 @@ describe("UI runtime ownership", () => {
     panel.renderView({
       entityId: "station-1",
       title: "시청",
-      escapedName: "시청",
-      operational: true,
-      metricsHtml: "<div>혼잡도 35%</div>",
-      reasonsHtml: "<em>안정</em>",
-      routeCount: 2,
-      routesHtml: "<span>1호선</span><span>2호선</span>",
+      name: "시청<script>",
+      status: "operational",
+      statusLabel: "운영 중",
+      metrics: [{ label: "혼잡도", value: "35%" }],
+      reasons: [],
+      reasonsNote: "안정",
+      routes: [{ name: "1호선", color: "#2F5BB7" }, { name: "2호선", color: "#2E9E4F" }],
       transferKind: "환승역",
-      transferHtml: "<p>평균 환승시간 3.2분</p>",
+      transfer: { metrics: [{ label: "평균 환승시간", value: "3.2분" }], notes: [], pairs: ["1호선 ↔ 2호선"] },
       dangerTitle: "환승역 전체 철거",
       dangerDescription: "두 역을 함께 철거합니다.",
       dangerAction: "환승역 철거",
     }, vi.fn());
     expect(content.innerHTML).toContain("환승역");
-    expect(content.innerHTML).toContain("평균 환승시간 3.2분");
+    expect(content.innerHTML).toContain("평균 환승시간");
+    expect(content.innerHTML).toContain("3.2분");
+    expect(content.innerHTML).toContain("1호선 ↔ 2호선");
+    expect(content.innerHTML).toContain("시청&lt;script&gt;");
+    expect(content.innerHTML).not.toContain("<script>");
   });
 });

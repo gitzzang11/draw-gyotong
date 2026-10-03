@@ -1,18 +1,37 @@
 import { PanelManager } from "./panelManager";
+import {
+  escapeHtml,
+  lineMarkHtml,
+  metricRowsHtml,
+  routeRowsHtml,
+  sectionHtml,
+  statusTagHtml,
+  type InspectorMetric,
+  type InspectorRoute,
+  type InspectorStatus,
+} from "./inspectorMarkup";
+
+export interface StationPanelTransfer {
+  metrics: InspectorMetric[];
+  notes: string[];
+  pairs: string[];
+  warning?: string;
+}
 
 export interface StationPanelView {
   entityId: string;
   title: string;
-  escapedName: string;
+  name: string;
   editableName?: boolean;
-  operational: boolean;
-  statusLabel?: string;
-  metricsHtml: string;
-  reasonsHtml: string;
-  routeCount: number;
-  routesHtml: string;
+  status: InspectorStatus;
+  statusLabel: string;
+  metrics: InspectorMetric[];
+  reasons: Array<{ text: string; positive: boolean }>;
+  reasonsNote?: string;
+  routes: InspectorRoute[];
   transferKind: string;
-  transferHtml: string;
+  transfer?: StationPanelTransfer;
+  transferNote?: string;
   dangerTitle: string;
   dangerDescription: string;
   dangerAction: string;
@@ -35,29 +54,35 @@ export class StationPanel {
 
   renderView(view: StationPanelView, onAction: (event: Event) => void) {
     const editableName = view.editableName !== false;
+    const reasons = view.reasons.length > 0
+      ? `<ul class="game-inspector__list">${view.reasons.map((reason) => `<li><span class="${reason.positive ? "game-inspector__plus" : "game-inspector__minus"}" aria-hidden="true">${reason.positive ? "＋" : "－"}</span><span class="dg-sr-only">${reason.positive ? "증가 요인" : "감소 요인"}</span>${escapeHtml(reason.text)}</li>`).join("")}</ul>`
+      : "";
+    const transfer = view.transfer
+      ? `${metricRowsHtml(view.transfer.metrics)}
+        ${view.transfer.notes.map((note) => `<p class="game-inspector__note">${escapeHtml(note)}</p>`).join("")}
+        ${view.transfer.pairs.length > 0 ? `<ul class="game-inspector__list">${view.transfer.pairs.map((pair) => `<li>${escapeHtml(pair)}</li>`).join("")}</ul>` : ""}
+        ${view.transfer.warning ? `<div class="dg-notice"><span class="dg-notice__lead">△</span><span>${escapeHtml(view.transfer.warning)}</span></div>` : ""}`
+      : `<p class="game-inspector__note">${escapeHtml(view.transferNote ?? "")}</p>`;
     this.render(view.entityId, view.title, `
-      <section class="station-manager-identity">
-        <label><span>역 이름</span><input id="stationManagerName" value="${view.escapedName}" maxlength="32" ${editableName ? "" : "readonly aria-readonly=\"true\""} /></label>
-        ${editableName ? `<button type="button" data-station-manager-action="save-name">이름 저장</button>` : ""}
-        <span class="station-status ${view.operational ? "operational" : "building"}">${view.statusLabel ?? (view.operational ? "운영 중" : "공사·설치 중")}</span>
-      </section>
-      <section class="station-manager-metrics" aria-label="승객 통계">${view.metricsHtml}</section>
-      <section class="station-manager-section">
-        <div class="station-manager-section-heading"><span>수요 변화 주요 원인</span></div>
-        <div class="connected-route-chips">${view.reasonsHtml}</div>
-      </section>
-      <section class="station-manager-section">
-        <div class="station-manager-section-heading"><span>연결 노선</span><strong>${view.routeCount}개</strong></div>
-        <div class="connected-route-chips">${view.routesHtml}</div>
-      </section>
-      <section class="station-manager-section station-manager-transfer">
-        <div class="station-manager-section-heading"><span>환승 정보</span><strong>${view.transferKind}</strong></div>
-        ${view.transferHtml}
-      </section>
-      <section class="manager-danger-zone">
-        <div><strong>${view.dangerTitle}</strong><span>${view.dangerDescription}</span></div>
-        <button type="button" data-station-manager-action="${view.dangerActionId ?? "delete"}">${view.dangerAction}</button>
-      </section>`, onAction);
+      <div class="dg-panel__body">
+        <section class="dg-panel__section game-inspector__identity">
+          <div class="game-inspector__tags">${statusTagHtml(view.status, view.statusLabel)}${view.routes.map((route) => lineMarkHtml(route)).join("")}</div>
+          <label class="dg-field">
+            <span class="dg-field__label">역 이름</span>
+            <span class="game-inspector__inline">
+              <input id="stationManagerName" class="dg-input" value="${escapeHtml(view.name)}" maxlength="32" ${editableName ? "" : "readonly aria-readonly=\"true\""} />
+              ${editableName ? `<button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-station-manager-action="save-name">저장</button>` : ""}
+            </span>
+          </label>
+        </section>
+        ${sectionHtml("승객", metricRowsHtml(view.metrics))}
+        ${sectionHtml("수요 변화 원인", reasons || `<p class="game-inspector__note">${escapeHtml(view.reasonsNote ?? "")}</p>`)}
+        ${sectionHtml("연결 노선", routeRowsHtml(view.routes, "연결된 노선이 없습니다."), `${view.routes.length}개`)}
+        ${sectionHtml("환승", transfer, view.transferKind)}
+        ${sectionHtml(view.dangerTitle, `
+          <p class="game-inspector__note">${escapeHtml(view.dangerDescription)}</p>
+          <div class="game-inspector__danger-action"><button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-station-manager-action="${view.dangerActionId ?? "delete"}">${escapeHtml(view.dangerAction)}…</button></div>`)}
+      </div>`, onAction);
   }
 
   close() { this.manager.close(this.kind); }

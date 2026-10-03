@@ -1284,25 +1284,24 @@ app.innerHTML = `
     </section>
 
 
-    <div id="stationManagerDialog" class="dialog-backdrop" hidden>
-      <section class="station-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="stationManagerTitle">
-        <header class="station-manager-header">
-          <div><span>STATION MANAGEMENT</span><h2 id="stationManagerTitle">역 관리</h2></div>
-          <button id="closeStationManagerButton" class="dialog-close" type="button" aria-label="역 관리 닫기">×</button>
-        </header>
-        <div id="stationManagerContent" class="station-manager-content"></div>
-      </section>
-    </div>
+    <!-- 선택 객체 inspector: 오른쪽 아래, 지도와 함께 쓰는 비모달 표면 (MOBILE_UX §7.1, §8) -->
+    <aside id="stationManagerDialog" class="dg-hud dg-panel game-inspector" hidden aria-labelledby="stationManagerTitle">
+      <header class="dg-panel__header">
+        <svg class="dg-panel__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2" fill="currentColor"/></svg>
+        <h2 id="stationManagerTitle" class="dg-panel__title">역</h2>
+        <div class="dg-panel__header-end"><button id="closeStationManagerButton" class="dg-icon-btn" type="button" aria-label="역 정보 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+      </header>
+      <div id="stationManagerContent" class="game-inspector__content"></div>
+    </aside>
 
-    <div id="depotManagerDialog" class="dialog-backdrop" hidden>
-      <section class="depot-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="depotManagerTitle">
-        <header class="depot-manager-header">
-          <div><span>DEPOT MANAGEMENT</span><h2 id="depotManagerTitle">차량기지 관리</h2></div>
-          <button id="closeDepotManagerButton" class="dialog-close" type="button" aria-label="차량기지 관리 닫기">×</button>
-        </header>
-        <div id="depotManagerContent" class="depot-manager-content"></div>
-      </section>
-    </div>
+    <aside id="depotManagerDialog" class="dg-hud dg-panel game-inspector" hidden aria-labelledby="depotManagerTitle">
+      <header class="dg-panel__header">
+        <svg class="dg-panel__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter" aria-hidden="true"><path d="M3 17 V8 L10 3 L17 8 V17 Z M7 17 V11 H13 V17"/></svg>
+        <h2 id="depotManagerTitle" class="dg-panel__title">차량기지</h2>
+        <div class="dg-panel__header-end"><button id="closeDepotManagerButton" class="dg-icon-btn" type="button" aria-label="차량기지 정보 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+      </header>
+      <div id="depotManagerContent" class="game-inspector__content"></div>
+    </aside>
 
     <section id="statisticsScreen" class="statistics-screen" hidden aria-label="운영 현황 및 통계">
       <header class="statistics-header">
@@ -2887,9 +2886,7 @@ statisticsButton?.addEventListener("click", openStatisticsScreen);
 closeStatisticsButton?.addEventListener("click", closeStatisticsScreen);
 
 closeStationManagerButton?.addEventListener("click", closeStationManager);
-if (stationManagerDialog) bindBackdropDismiss(stationManagerDialog, closeStationManager);
 closeDepotManagerButton?.addEventListener("click", closeDepotManager);
-if (depotManagerDialog) bindBackdropDismiss(depotManagerDialog, closeDepotManager);
 newsButton?.addEventListener("click", openNewsScreen);
 closeNewsButton?.addEventListener("click", closeNewsScreen);
 newsFilter?.addEventListener("change", renderNewsFeed);
@@ -3331,7 +3328,12 @@ function openMapTargetChoice(candidates: Array<MapHitCandidate & { score: number
 }
 
 const mapSelectionApplicationController = new MapSelectionApplicationController<RankedMapTarget>({
-  clearSelection: () => selectRoute(null),
+  // 빈 지도 탭은 선택을 해제하고 열린 inspector를 닫는다(MOBILE_UX §5, §7.1).
+  clearSelection: () => {
+    selectRoute(null);
+    closeStationManager();
+    closeDepotManager();
+  },
   openAlternatives: (candidates) => openMapTargetChoice(candidates),
   activateSelection: (selection) => {
     if (selection.data) activateMapSelection(selection.data as MapSelectionData);
@@ -10592,42 +10594,43 @@ function renderStationManager() {
   ].filter((entry, index, source) => source.findIndex((candidate) => candidate.reason === entry.reason) === index).slice(0, 3);
   const trend = statistics.growth > 0.003 ? "상승" : statistics.growth < -0.003 ? "하락" : "유지";
   const growth = statistics.growth >= 0.03 ? `+${Math.round(statistics.growth * 100)}%` : `${Math.round(statistics.growth * 100)}%`;
-  const metricsHtml = `
-      <div><span>일일 승하차</span><strong>${statistics.boardings.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>지역 잠재 수요</span><strong>${statistics.potentialDemand.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>실제 일간 이용객</span><strong>${combinedDemand.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>철도 이용 전환율</span><strong>${Math.round(captureRate * 100)}%</strong></div>
-      <div><span>환승 승객</span><strong>${statistics.transferPassengers.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>혼잡도</span><strong>${statistics.crowding > 0 ? `${Math.round(statistics.crowding * 100)}%` : "-"}</strong></div>
-      <div><span>평균 대기</span><strong>${statistics.waitMin > 0 ? `${statistics.waitMin.toFixed(1)}분` : "-"}</strong></div>
-      <div><span>전일 대비</span><strong class="${statistics.growth < 0 ? "down" : "up"}">${growth}</strong></div>
-      <div><span>현재 추세</span><strong class="${statistics.growth < 0 ? "down" : "up"}">${trend}</strong></div>`;
-  const transferHtml = transferInfo?.isTransfer ? `
-        <div class="transfer-detail-grid">
-          <div><span>평균 환승시간</span><strong>${transferInfo.transferTimeMin.toFixed(1)}분</strong></div>
-          <div><span>환승저항</span><strong>${formatTransferResistance(transferInfo.transferResistance)}</strong></div>
-          <div><span>일간 환승객</span><strong>${Math.round(transferInfo.transferPassengers).toLocaleString("ko-KR")}명</strong></div>
-          <div><span>환승 혼잡도</span><strong>${Math.round(transferInfo.transferCrowding * 100)}%</strong></div>
-        </div>
-        <p>${transferInfo.automatic === true ? "자동 생성 환승" : transferInfo.automatic === false ? "사용자 지정 환승" : "동일 역 노선 환승"} · ${formatTransferOperationalStatus(transferInfo.operationalStatus)}</p>
-        <div class="transfer-pair-list">${transferInfo.transferPairs.map(([firstId, secondId]) => {
-          const first = transferInfo.connectedLines.find((route) => route.id === firstId);
-          const second = transferInfo.connectedLines.find((route) => route.id === secondId);
-          return `<span>${escapeHtml(first?.name ?? firstId)} ↔ ${escapeHtml(second?.name ?? secondId)}</span>`;
-        }).join("")}</div>
-        ${transferInfo.integrityIssues.length > 0 ? `<p class="transfer-integrity-warning">연결 데이터 점검 필요 · ${transferInfo.integrityIssues.length}건</p>` : ""}
-      ` : "<p>현재 연결된 환승 시설이 없습니다.</p>";
   stationPanel.renderView({
     entityId: station.id,
     title: stationName,
-    escapedName: escapeHtml(stationName),
-    operational,
-    metricsHtml,
-    reasonsHtml: reasonEntries.length > 0 ? reasonEntries.map((entry) => `<span>${entry.positive ? "＋" : "－"} ${escapeHtml(entry.reason)}</span>`).join("") : "<em>서비스 조건이 안정적입니다.</em>",
-    routeCount: routesForStation.length,
-    routesHtml: routesForStation.length > 0 ? routesForStation.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}"><b>${escapeHtml(route.name)}</b><small>${formatTransferRouteStatus(route)}</small></span>`).join("") : "<em>연결된 노선이 없습니다.</em>",
+    name: stationName,
+    status: operational ? "operational" : "building",
+    statusLabel: operational ? "운영 중" : "공사·설치 중",
+    metrics: [
+      { label: "일일 승하차", value: `${statistics.boardings.toLocaleString("ko-KR")}명` },
+      { label: "지역 잠재 수요", value: `${statistics.potentialDemand.toLocaleString("ko-KR")}명` },
+      { label: "실제 일간 이용객", value: `${combinedDemand.toLocaleString("ko-KR")}명` },
+      { label: "철도 이용 전환율", value: `${Math.round(captureRate * 100)}%` },
+      { label: "환승 승객", value: `${statistics.transferPassengers.toLocaleString("ko-KR")}명` },
+      { label: "혼잡도", value: statistics.crowding > 0 ? `${Math.round(statistics.crowding * 100)}%` : "-" },
+      { label: "평균 대기", value: statistics.waitMin > 0 ? `${statistics.waitMin.toFixed(1)}분` : "-" },
+      { label: "전일 대비", value: growth, tone: statistics.growth < 0 ? "down" : "up" },
+      { label: "현재 추세", value: trend, tone: statistics.growth < 0 ? "down" : "up" },
+    ],
+    reasons: reasonEntries.map((entry) => ({ text: entry.reason, positive: entry.positive })),
+    reasonsNote: "서비스 조건이 안정적입니다.",
+    routes: routesForStation.map((route) => ({ name: route.name, color: route.color, status: formatTransferRouteStatus(route) })),
     transferKind: transferInfo?.isTransfer ? "환승역" : "일반역",
-    transferHtml,
+    transfer: transferInfo?.isTransfer ? {
+      metrics: [
+        { label: "평균 환승시간", value: `${transferInfo.transferTimeMin.toFixed(1)}분` },
+        { label: "환승저항", value: formatTransferResistance(transferInfo.transferResistance) },
+        { label: "일간 환승객", value: `${Math.round(transferInfo.transferPassengers).toLocaleString("ko-KR")}명` },
+        { label: "환승 혼잡도", value: `${Math.round(transferInfo.transferCrowding * 100)}%` },
+      ],
+      notes: [`${transferInfo.automatic === true ? "자동 생성 환승" : transferInfo.automatic === false ? "사용자 지정 환승" : "동일 역 노선 환승"} · ${formatTransferOperationalStatus(transferInfo.operationalStatus)}`],
+      pairs: transferInfo.transferPairs.map(([firstId, secondId]) => {
+        const first = transferInfo.connectedLines.find((route) => route.id === firstId);
+        const second = transferInfo.connectedLines.find((route) => route.id === secondId);
+        return `${first?.name ?? firstId} ↔ ${second?.name ?? secondId}`;
+      }),
+      warning: transferInfo.integrityIssues.length > 0 ? `연결 데이터 점검 필요 · ${transferInfo.integrityIssues.length}건` : undefined,
+    } : undefined,
+    transferNote: "현재 연결된 환승 시설이 없습니다.",
     dangerTitle: transfer ? "환승역 전체 철거" : "역 철거",
     dangerDescription: transfer ? `${members.length}개 노선 역을 하나의 환승역으로 함께 철거합니다.` : "이 역과 관련된 운행·환승 참조를 정리합니다.",
     dangerAction: transfer ? "환승역 철거" : "역 철거",
@@ -10649,27 +10652,26 @@ function renderPlannedStationManager() {
     .map((routeId) => networkState.routes.find((route) => route.id === routeId))
     .filter(Boolean) as RouteLine[];
   const transferCount = plan.transfers.filter((transfer) => !transfer.completed && transfer.stationIds.includes(station.id)).length;
-  const routeEntries = [
-    ...plannedRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}"><b>${escapeHtml(route.name)}</b><small>계획 노선</small></span>`),
-    ...actualRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}"><b>${escapeHtml(route.name)}</b><small>기존 노선</small></span>`),
-  ];
   stationPanel.renderView({
     entityId: `planned-station:${plan.id}:${station.id}`,
     title: station.name,
-    escapedName: escapeHtml(station.name),
+    name: station.name,
     editableName: false,
-    operational: false,
+    status: "planned",
     statusLabel: "계획 중",
-    metricsHtml: `
-      <div><span>역 상태</span><strong>계획 중</strong></div>
-      <div><span>예상 수요</span><strong>${station.expectedDemand.toLocaleString("ko-KR")}명</strong></div>
-      <div><span>계획 노선</span><strong>${plannedRoutes.length}개</strong></div>
-      <div><span>기존 연결 노선</span><strong>${actualRoutes.length}개</strong></div>`,
-    reasonsHtml: `<span>계획안 · ${escapeHtml(plan.name)}</span><em>운영 통계는 건설 후 생성됩니다.</em>`,
-    routeCount: plannedRoutes.length + actualRoutes.length,
-    routesHtml: routeEntries.join("") || "<em>연결된 노선이 없습니다.</em>",
+    metrics: [
+      { label: "예상 수요", value: `${station.expectedDemand.toLocaleString("ko-KR")}명` },
+      { label: "계획 노선", value: `${plannedRoutes.length}개` },
+      { label: "기존 연결 노선", value: `${actualRoutes.length}개` },
+    ],
+    reasons: [],
+    reasonsNote: `계획안 · ${plan.name}. 운영 통계는 건설 후 생성됩니다.`,
+    routes: [
+      ...plannedRoutes.map((route) => ({ name: route.name, color: route.color, status: "계획 노선" })),
+      ...actualRoutes.map((route) => ({ name: route.name, color: route.color, status: "기존 노선" })),
+    ],
     transferKind: transferCount > 0 ? "예정 환승" : "없음",
-    transferHtml: transferCount > 0 ? `<p>이 역을 포함한 환승 계획 ${transferCount}건</p>` : "<p>현재 연결된 환승 계획이 없습니다.</p>",
+    transferNote: transferCount > 0 ? `이 역을 포함한 환승 계획 ${transferCount}건` : "현재 연결된 환승 계획이 없습니다.",
     dangerTitle: "계획역 삭제",
     dangerDescription: "이 계획역만 삭제하며 연결된 계획 노선과 다른 시설은 유지합니다.",
     dangerAction: "계획역 삭제",
@@ -10803,8 +10805,7 @@ function renderDepotManager() {
     assignedSets,
     availableSets,
     maintenance: formatCost(depot.maintenanceCost),
-    routeCount: connectedRoutes.length,
-    routesHtml: connectedRoutes.length > 0 ? connectedRoutes.map((route) => `<span style="--entity-color:${escapeHtml(route.color)}">${escapeHtml(route.name)}</span>`).join("") : "<em>연결된 노선이 없습니다.</em>",
+    routes: connectedRoutes.map((route) => ({ name: route.name, color: route.color })),
     maxLevel: maxDepotLevel,
     expansionCost: formatCost(expansion.cost),
     expansionDisabled: Boolean(expansion.reason),
