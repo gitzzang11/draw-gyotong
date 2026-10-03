@@ -354,7 +354,8 @@
   cursor: pointer;
 }
 .dg-rail__mode:last-child { border-right: 0; }
-.dg-rail__mode[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+.dg-rail__mode[aria-pressed="true"],
+.dg-rail__mode[aria-selected="true"] { background: var(--invert-bg); color: var(--invert-fg); }
 
 .dg-tool {
   position: relative;

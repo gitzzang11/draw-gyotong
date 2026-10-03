@@ -186,6 +186,12 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 ### 상시 HUD
 
 - **Status strip**: 자금, 일일 손익, 날짜·시간, 배속, 핵심 경보를 한 줄로 압축한다. `--surface-0` 띠 + 하단 `1px --edge`. 항목 사이는 세로 구획선으로 나눈다.
+  - 순서: `자금·손익 | 만족도 | … | 날짜·시간 | 일시정지·배속 | 뉴스·도움말·메뉴`. 상세 표면이 있는 셀(자금 → 재정, 만족도 → 만족도 리포트)은 셀 전체가 버튼이다.
+  - 일일 손익은 `▲`/`▼`와 신호 색을, 만족도는 `●`(70 이상)·`△`(50 이상)·`✕`와 점수·문구를 함께 쓴다.
+  - 일시정지는 항상 보인다. 폭 `1000px` 미만에서는 배속을 `현재 배속 ▾` 버튼과 펼침 목록으로 줄이고, 그 이상에서는 세그먼트로 모두 펼친다.
+  - 글자 확대로 한 줄에 들어가지 않으면 잘리지 않고 두 줄로 내려간다. 아래 HUD는 실제 높이(`--hud-top`)를 기준으로 배치한다.
+  - 펼침 목록(배속, 레이어)은 바깥 탭과 Escape로 닫힌다.
+- **실행 취소·다시 실행**: 왼쪽 아래 엄지 영역의 작은 사각 버튼 묶음.
 - **Mode/tool rail**: 상단에 모드 전환(관리·기획·공사 세그먼트), 아래에 현재 모드 도구 목록. 활성 도구는 반전 행 + 왼쪽 `4px` 표시 막대(반전 바탕 위 `--invert-fg`) + 도구명 + `aria-pressed="true"`.
   - 정밀 지도 작업(draft 작도·편집) 중에는 compact rail(폭 `56`)로 줄인다. 상단에 현재 모드 반전 칸, 아래에 아이콘 + 짧은 도구명 세로 배치(행 높이 `44`). 모드 전환 세그먼트는 숨기고 현재 모드 칸을 눌러 펼친다.
 - **Context inspector**: 선택 객체의 안내판. 선택이 없으면 접힌다.
@@ -389,6 +395,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | --- | --- |
 | `src/design/tokens.css` | §4 색 토큰(종이·먹), 타이포·간격·형태·모션 토큰 |
 | `src/design/components.css` | `dg-` 접두사 기본 컴포넌트 |
+| `src/design/hud.css` | 게임 화면의 상시 HUD 위치와 화면 크기별 밀도 |
+| `src/legacy.css` | 기존 UI CSS(Leaflet 포함)를 `legacy` cascade layer로 묶는 진입점 |
 | `src/design/theme.ts` | 테마 목록, 기본값, 정규화, `data-theme` 적용 |
 | `tests/designTokens.test.ts` | §4 토큰 표와 `tokens.css` 값 일치, 두 테마 토큰 집합 일치 검증 |
 
@@ -397,6 +405,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - 새 UI는 `dg-` 클래스와 토큰만 사용한다. 기존 `--color-*`, `--c-*` 변수와 기존 클래스는 참조하지 않는다.
 - 색 토큰을 바꿀 때는 §4 표와 `tokens.css`를 함께 고친다. 테스트가 둘의 불일치를 막는다.
 - 컴포넌트는 요소 선택자에 전역 스타일을 주지 않는다. 화면 단위로 기존 마크업을 `dg-` 컴포넌트로 교체하고, 교체가 끝난 화면의 기존 CSS는 그때 제거한다.
+- 기존 CSS는 `legacy` layer 안에 있으므로 새 CSS의 보통 선언이 항상 이긴다. 단, layer 안의 `!important`는 밖의 `!important`보다 강하다. 기존 전역 `!important` 규칙이 `dg-` 요소에 걸리면 새 쪽에 `!important`를 더하지 말고 기존 규칙에서 `:not([class*="dg-"])`로 제외한다.
+- 새 마크업은 기존 클래스를 재사용하지 않는다. JS가 요소를 찾을 때는 id나 데이터 속성(`data-speed`, `data-layer`, `data-workspace-mode` 등)을 쓴다.
 
 | 문서 개념 | 클래스 |
 | --- | --- |

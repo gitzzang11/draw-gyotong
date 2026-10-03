@@ -122,12 +122,9 @@ button svg,
 .ops-button svg,
 .action-button svg,
 .primary-tool svg,
-.top-action-btn svg,
-.status-pill svg,
 .summary-chip svg,
 .menu-action-icon,
 .button-icon,
-.pill-icon,
 .tool-glyph {
   display: inline-block;
   vertical-align: middle;
@@ -135,8 +132,6 @@ button svg,
   margin: 0 !important;
 }
 
-.icon-only,
-.top-action-btn,
 .dialog-close,
 .compact-close {
   display: inline-flex !important;
@@ -754,22 +749,6 @@ tr:hover td {
 /* ----------------------------------------------------
    4. TOP COMMAND HUD HEADER BAR
 ---------------------------------------------------- */
-.hud.top-header-bar {
-  position: absolute;
-  top: max(8px, env(safe-area-inset-top));
-  left: max(8px, env(safe-area-inset-left));
-  right: max(8px, env(safe-area-inset-right));
-  z-index: 1000;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.hud.top-header-bar > * {
-  pointer-events: auto;
-}
 
 .hud-brand-pill {
   display: flex;
@@ -789,49 +768,6 @@ tr:hover td {
   font-weight: 800;
   padding: 1px 5px;
   border-radius: var(--radius-full);
-}
-
-.layer-menu summary {
-  list-style: none;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.layer-options {
-  position: absolute;
-  top: 48px;
-  right: 0;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 140px;
-}
-
-.layer-toggle {
-  background: transparent;
-  border: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  border-radius: var(--radius-md);
-  color: var(--c-text-muted);
-  font-size: 13px;
-  min-height: 44px;
-}
-
-.layer-toggle.active {
-  background: rgba(0, 242, 254, 0.1);
-  color: var(--c-primary);
 }
 
 /* Custom operating services replace the legacy route-wide local/express
@@ -946,29 +882,6 @@ html body[data-workspace-mode] #expressButton,
   .operating-service-stop-list { max-height: 118px; }
   .operating-service-stop-list label { padding: 5px 6px; }
   .add-operating-service-button { min-height: 34px; }
-}
-
-.layer-dot.population {
-  background: #fb7185;
-  box-shadow: 0 0 8px rgba(251, 113, 133, 0.65);
-}
-
-.population-density-legend {
-  display: grid;
-  grid-template-columns: auto minmax(68px, 1fr) auto;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 10px 3px;
-  color: var(--c-text-muted);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.population-density-legend i {
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #1d4ed8, #06b6d4, #22c55e, #facc15, #fb923c, #f43f5e);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
 /* ----------------------------------------------------
@@ -1170,167 +1083,7 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
-.top-status-pills {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 4px 6px;
-  box-shadow: var(--shadow-lg);
-  max-width: calc(100vw - 160px);
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-}
-
-.top-status-pills::-webkit-scrollbar {
-  display: none;
-}
-
-.workspace-mode-pill {
-  padding: 2px !important;
-  background: rgba(0, 0, 0, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-.workspace-mode-tabs {
-  display: flex;
-  gap: 2px;
-  background: transparent;
-  padding: 0;
-  border-radius: var(--radius-full);
-}
-
-.workspace-mode-tab {
-  background: transparent;
-  border: none;
-  color: var(--c-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  min-height: 28px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.workspace-mode-tab:hover {
-  color: var(--c-text-main);
-}
-
-.workspace-mode-tab[data-workspace-mode="management"].active {
-  background: linear-gradient(135deg, var(--c-azure), var(--c-cyan)) !important;
-  color: #07090E !important;
-  box-shadow: 0 0 14px var(--c-primary-glow) !important;
-}
-
-.workspace-mode-tab[data-workspace-mode="planning"].active {
-  background: linear-gradient(135deg, #7C3AED, var(--c-purple)) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 0 14px var(--c-purple-glow) !important;
-}
-
-.workspace-mode-tab[data-workspace-mode="construction"].active {
-  background: linear-gradient(135deg, var(--c-emerald), var(--c-mint)) !important;
-  color: #07090E !important;
-  box-shadow: 0 0 14px var(--c-success-glow) !important;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.cash-pill strong {
-  font-variant-numeric: tabular-nums;
-}
-
-.net-readout {
-  font-size: 10px;
-  padding: 2px 5px;
-  border-radius: var(--radius-full);
-}
-.net-readout.positive { background: rgba(16, 185, 129, 0.15); color: var(--c-success); }
-.net-readout.negative { background: rgba(239, 68, 68, 0.15); color: var(--c-danger); }
-
-.time-row {
-  display: flex;
-  gap: 2px;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 3px;
-  border-radius: var(--radius-md);
-}
-
-.time-button {
-  position: relative;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--c-text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 0 10px;
-  min-width: 40px;
-  min-height: var(--touch-target);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--press-transition), color var(--press-transition), border-color var(--press-transition);
-}
-
 /* 배속 값 사이의 구분선: 세그먼트 컨트롤임을 읽기 좋게 한다. */
-.time-button:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: -2px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 18px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.time-button.active {
-  background: rgba(0, 242, 254, 0.16);
-  color: var(--c-primary);
-  border-color: rgba(0, 242, 254, 0.45);
-  font-weight: 800;
-}
-
-.top-actions-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 4px;
-  box-shadow: var(--shadow-lg);
-  flex-shrink: 0;
-}
-
-.top-action-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  position: relative;
-}
 
 #newsBadge {
   position: absolute;
@@ -7880,21 +7633,8 @@ font-size: 12px;
 }
 
 /* Active Layer Toggles */
-.layer-toggle.active {
-  background: rgba(59, 130, 246, 0.2) !important;
-  color: #60a5fa !important;
-  border: 1px solid #3b82f6 !important;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.35) !important;
-  font-weight: 800 !important;
-}
 
 /* Active Workspace Tabs */
-.workspace-mode-tab.active {
-  background: #3b82f6 !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.5) !important;
-  font-weight: 800 !important;
-}
 
 /* Large HTML hit target above route SVG paths. */
 .station-click-target {
@@ -8248,110 +7988,18 @@ font-size: 12px;
 /* ====================================================
    UNIFIED TOP ACTION BUTTONS & LAYER MENU DESIGN
    ==================================================== */
-.layer-menu summary,
-.top-action-btn {
-  list-style: none;
-  width: 40px !important;
-  height: 40px !important;
-  display: grid !important;
-  place-items: center !important;
-  border-radius: var(--radius-full) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  cursor: pointer !important;
-  color: var(--c-text-muted, #a0aec0) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  position: relative !important;
-}
-
-.layer-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.layer-menu summary:hover,
-.top-action-btn:hover {
-  background: rgba(255, 255, 255, 0.16) !important;
-  color: var(--c-primary, #00f2fe) !important;
-  border-color: rgba(0, 242, 254, 0.4) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 14px rgba(0, 242, 254, 0.25) !important;
-}
-
-.layer-menu summary:hover svg,
-.top-action-btn:hover svg {
-  stroke: var(--c-primary, #00f2fe) !important;
-}
-
-.layer-menu summary:active,
-.top-action-btn:active {
-  transform: translateY(0) scale(0.96) !important;
-  box-shadow: 0 2px 6px rgba(0, 242, 254, 0.15) !important;
-}
-
-.layer-menu[open] summary {
-  background: rgba(0, 242, 254, 0.15) !important;
-  color: var(--c-primary, #00f2fe) !important;
-  border-color: var(--c-primary, #00f2fe) !important;
-  box-shadow: 0 0 12px rgba(0, 242, 254, 0.3) !important;
-}
 
 /* ====================================================
    ENHANCED TOP STATUS PILLS (CASH & SATISFACTION) HOVER
    ==================================================== */
-.status-pill,
 .hud-brand-pill {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: default;
 }
 
 /* 💵 자금 표시 바 호버 효과 (에메랄드 그린 빛 글루 + 2px 살짝 상승) */
-.status-pill.cash-pill {
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.status-pill.cash-pill:hover {
-  background: rgba(16, 185, 129, 0.16) !important;
-  border-color: rgba(52, 211, 153, 0.5) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 18px rgba(52, 211, 153, 0.35) !important;
-}
-
-.status-pill.cash-pill:hover #cashReadout {
-  color: #34d399 !important;
-  text-shadow: 0 0 10px rgba(52, 211, 153, 0.5) !important;
-}
 
 /* 😊 시민 만족도 표시 바 호버 효과 (골드 옐로우 빛 글루 + 2px 살짝 상승) */
-.status-pill.satisfaction-pill {
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: var(--c-text-main);
-  font: inherit;
-  cursor: pointer !important;
-  appearance: none;
-}
-
-.status-pill.satisfaction-pill:hover {
-  background: rgba(251, 191, 36, 0.16) !important;
-  border-color: rgba(251, 191, 36, 0.5) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 18px rgba(251, 191, 36, 0.35) !important;
-}
-
-.status-pill.satisfaction-pill:hover #satisfactionReadout {
-  color: #fbbf24 !important;
-  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5) !important;
-}
-
-.status-pill.satisfaction-pill:hover .satisfaction-icon {
-  transform: scale(1.18) rotate(6deg);
-  transition: transform 0.2s ease;
-}
-
-.status-pill.satisfaction-pill:focus-visible {
-  outline: 2px solid #fbbf24;
-  outline-offset: 2px;
-  background: rgba(251, 191, 36, 0.14) !important;
-}
 
 /* ----------------------------------------------------
    PASSENGER SATISFACTION REPORT
@@ -8758,50 +8406,11 @@ font-size: 12px;
 }
 
 /* 기타 상단 바 (모드 전환 바, 게임 시간 바, 네트워크 표시 바) 호버 */
-.status-pill.workspace-mode-pill:hover,
-.status-pill.clock-pill:hover,
-.status-pill.history-pill:hover,
 .hud-brand-pill:hover {
   background: rgba(0, 242, 254, 0.1) !important;
   border-color: rgba(0, 242, 254, 0.35) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 4px 16px rgba(0, 242, 254, 0.22) !important;
-}
-
-.layer-toggle {
-  background: transparent;
-  border: 1px solid transparent;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  color: var(--c-text-muted);
-  font-size: 13px;
-  min-height: 44px;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-}
-
-.layer-toggle:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: var(--c-text-main, #ffffff) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  transform: translateX(2px);
-}
-
-.layer-toggle.active {
-  background: rgba(0, 242, 254, 0.12);
-  color: var(--c-primary);
-  border-color: rgba(0, 242, 254, 0.25);
-}
-
-.layer-toggle.active:hover {
-  background: rgba(0, 242, 254, 0.22) !important;
-  color: #ffffff !important;
-  border-color: var(--c-primary) !important;
-  box-shadow: 0 2px 8px rgba(0, 242, 254, 0.2);
-  transform: translateX(2px);
 }
 
 /* ====================================================
@@ -9708,7 +9317,6 @@ button,
 .ops-button,
 .action-button,
 .primary-tool,
-.top-action-btn,
 .dialog-close,
 .compact-close {
   border-radius: var(--radius-md);
@@ -9719,16 +9327,14 @@ button,
 button:hover,
 .ops-button:hover,
 .action-button:hover,
-.primary-tool:hover,
-.top-action-btn:hover {
+.primary-tool:hover {
   transform: translateY(-1px);
 }
 
 button:active,
 .ops-button:active,
 .action-button:active,
-.primary-tool:active,
-.top-action-btn:active {
+.primary-tool:active {
   transform: translateY(0);
 }
 
@@ -9889,19 +9495,8 @@ textarea {
 /* ========================================================================
    MAP HUD
 ======================================================================== */
-.hud.top-header-bar {
-  top: max(6px, env(safe-area-inset-top));
-  left: max(6px, env(safe-area-inset-left));
-  right: max(6px, env(safe-area-inset-right));
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 6px;
-}
 
 .hud-brand-pill,
-.top-status-pills,
-.top-actions-row,
 .hud.build-panel {
   background: rgba(10, 15, 22, 0.88) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -9937,42 +9532,8 @@ textarea {
   box-shadow: 0 0 0 2px rgba(85, 217, 192, 0.15);
 }
 
-.top-status-pills {
-  justify-self: center;
-  max-width: 100%;
-  min-width: 0;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm) !important;
-  overflow-x: auto;
-  align-items: center;
-}
-
-.workspace-mode-pill,
-.status-pill {
-  border-radius: var(--radius-xs, 4px) !important;
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.workspace-mode-tab {
-  position: relative;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 4px !important;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-  font-weight: 700;
-  border: 1px solid transparent !important;
-  transition: all 0.15s ease;
-}
-
 /* Minimum 44px touch target for touch screens */
-.workspace-mode-tab::after,
-.primary-tool::after,
-.top-action-btn::after,
-.history-action::after {
+.primary-tool::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -9981,109 +9542,6 @@ textarea {
   min-width: 44px;
   min-height: 44px;
   pointer-events: auto;
-}
-
-.workspace-mode-tab:hover {
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.05) !important;
-}
-
-.workspace-mode-tab.active,
-.workspace-mode-tab[data-workspace-mode="management"].active {
-  background: rgba(85, 217, 192, 0.22) !important;
-  color: #55d9c0 !important;
-  border: 1px solid rgba(85, 217, 192, 0.6) !important;
-  box-shadow: 0 0 8px rgba(85, 217, 192, 0.25) !important;
-  font-weight: 800;
-  opacity: 1;
-}
-
-.workspace-mode-tab[data-workspace-mode="planning"].active {
-  background: rgba(184, 156, 255, 0.22) !important;
-  color: #b89cff !important;
-  border: 1px solid rgba(184, 156, 255, 0.6) !important;
-  box-shadow: 0 0 8px rgba(184, 156, 255, 0.25) !important;
-  font-weight: 800;
-  opacity: 1;
-}
-
-.workspace-mode-tab[data-workspace-mode="construction"].active {
-  background: rgba(246, 196, 83, 0.22) !important;
-  color: #f6c453 !important;
-  border: 1px solid rgba(246, 196, 83, 0.6) !important;
-  box-shadow: 0 0 8px rgba(246, 196, 83, 0.25) !important;
-  font-weight: 800;
-  opacity: 1;
-}
-
-.cash-pill,
-.satisfaction-pill,
-.history-pill,
-.clock-pill {
-  min-height: 32px;
-  padding: 0 6px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 0 !important;
-}
-
-.history-pill .history-action {
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
-  padding: 0;
-  border-radius: 4px;
-  background: transparent !important;
-  border: none !important;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.history-pill .history-action:hover {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-.cash-pill strong,
-.satisfaction-pill strong,
-.clock-pill strong,
-.time-readout-wrap span {
-  font-size: 11px;
-}
-
-.top-actions-row {
-  gap: 4px;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm) !important;
-  align-items: center;
-}
-
-.layer-menu summary,
-.top-action-btn {
-  position: relative;
-  width: 32px !important;
-  height: 32px !important;
-  min-height: 32px !important;
-  border-radius: 4px !important;
-  background: transparent !important;
-  border: 1px solid transparent !important;
-  color: rgba(255, 255, 255, 0.55) !important;
-}
-
-.layer-menu summary:hover,
-.top-action-btn:hover,
-.layer-menu[open] summary {
-  background: rgba(85, 217, 192, 0.12) !important;
-  border-color: rgba(85, 217, 192, 0.4) !important;
-  color: #55d9c0 !important;
-  box-shadow: none !important;
-}
-
-.layer-options {
-  top: 42px;
-  border-radius: var(--radius-md);
-  background: #111820;
-  border: 1px solid var(--c-border);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: none;
 }
 
 /* ========================================================================
@@ -10390,13 +9848,6 @@ textarea {
     top: max(196px, calc(env(safe-area-inset-top) + 188px));
   }
 
-  .hud.top-header-bar {
-    top: max(8px, env(safe-area-inset-top));
-    left: max(8px, env(safe-area-inset-left));
-    right: max(8px, env(safe-area-inset-right));
-    gap: 6px;
-  }
-
   .hud-brand-pill {
     min-width: 0;
     max-width: 76px;
@@ -10407,57 +9858,6 @@ textarea {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .top-status-pills {
-    width: 100%;
-    min-width: 0;
-    padding: 0;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    overflow: hidden;
-  }
-
-  .top-status-pills .cash-pill,
-  .top-status-pills .satisfaction-pill,
-  .top-status-pills .history-pill,
-  .top-status-pills .clock-pill {
-    display: none !important;
-  }
-
-  .workspace-mode-pill {
-    width: 100%;
-    border: 1px solid var(--c-border) !important;
-    background: rgba(11, 16, 22, 0.92) !important;
-  }
-
-  .workspace-mode-tabs {
-    width: 100%;
-  }
-
-  .workspace-mode-tab {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 0 6px;
-    font-size: 10px;
-  }
-
-  @media (max-width: 380px) {
-    .workspace-mode-tab > span {
-      display: none;
-    }
-  }
-
-  .top-actions-row {
-    gap: var(--touch-target-gap);
-    padding: 4px;
-  }
-
-  .layer-menu summary,
-  .top-action-btn {
-    width: var(--touch-target) !important;
-    height: var(--touch-target) !important;
   }
 
   .hud.build-panel {
@@ -10718,16 +10118,11 @@ textarea {
 ------------------------------------------------------------------------- */
 
 /* 눌림 피드백: 100~160ms의 짧은 scale 축소. 활성 상태와 혼동되지 않게 한다. */
-button:active,
+/* dg- 컴포넌트는 새 디자인 시스템의 피드백을 쓴다(src/design). */
+button:not([class*="dg-"]):active,
 .ops-button:active,
 .action-button:active,
-.primary-tool:active,
-.workspace-mode-tab:active,
-.time-button:active,
-.layer-toggle:active,
-.top-action-btn:active,
-.history-action:active,
-.layer-menu summary:active {
+.primary-tool:active {
   transform: scale(var(--press-scale)) !important;
   transition: transform var(--press-transition) !important;
 }
@@ -10738,12 +10133,8 @@ button:active,
   .ops-button:hover,
   .action-button:hover,
   .primary-tool:hover,
-  .top-action-btn:hover,
-  .history-action:hover,
-  .status-pill:hover,
   .slot-card:hover,
-  .hero-action-btn:hover,
-  .layer-menu summary:hover {
+  .hero-action-btn:hover {
     transform: none !important;
   }
 }
@@ -10799,7 +10190,6 @@ button:active,
     min-height: 36px;
   }
 
-  .layer-options,
   .left-route-list,
   .dialog-backdrop > section,
   .dialog-backdrop > div > section {
@@ -10811,25 +10201,6 @@ button:active,
 /* Keep the current budget visible on typical landscape phones while avoiding
    crowding on narrow portrait screens. The daily delta remains available in
    the finance panel. */
-@media (pointer: coarse) and (min-width: 501px) and (max-width: 700px) and (orientation: landscape) {
-  .top-status-pills .cash-pill {
-    display: inline-flex !important;
-    min-width: 0;
-    padding: 0 8px;
-  }
-
-  .top-status-pills .cash-pill .pill-icon,
-  .top-status-pills .cash-pill .net-readout {
-    display: none;
-  }
-
-  .top-status-pills .cash-pill #cashReadout {
-    overflow: hidden;
-    font-size: 11px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
 
 /* Modal content becomes a reachable bottom sheet instead of a centred card
    that can be hidden by the mobile browser chrome or software keyboard. */
@@ -10875,9 +10246,6 @@ button:active,
    Portrait remains playable, but its dock and context panels leave a larger
    vertical map area and don't overlap the browser gesture area. */
 @media (max-width: 700px) and (orientation: portrait) {
-  .hud.top-header-bar {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
 
   .hud.bottom-right {
     bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
@@ -11361,28 +10729,6 @@ button:active,
    while reducing surrounding chrome, typography, and panel spacing.
 ------------------------------------------------------------------------- */
 @media (max-width: 700px) {
-  .hud.top-header-bar {
-    gap: 5px;
-  }
-
-  .workspace-mode-tab {
-    min-height: 40px;
-    font-size: 9px;
-  }
-
-  .top-actions-row {
-    gap: 3px;
-    padding: 3px;
-  }
-
-  .layer-menu summary,
-  .top-action-btn,
-  .history-action {
-    width: 40px !important;
-    min-width: 40px !important;
-    height: 40px !important;
-    min-height: 40px !important;
-  }
 
   .hud.build-panel {
     bottom: max(6px, env(safe-area-inset-bottom));
@@ -11530,20 +10876,11 @@ button:active,
 }
 
 @media (max-width: 700px) and (orientation: landscape) {
-  .hud.top-header-bar {
-    top: max(4px, env(safe-area-inset-top));
-    left: max(4px, env(safe-area-inset-left));
-    right: max(4px, env(safe-area-inset-right));
-  }
 
   .hud-brand-pill {
     min-height: 30px;
     max-width: 64px;
     font-size: 10px;
-  }
-
-  .top-status-pills .cash-pill {
-    min-height: 30px;
   }
 
   .hud.build-panel {
@@ -11823,23 +11160,8 @@ button:active,
     --mobile-dock-height: 52px;
   }
 
-  .hud.top-header-bar {
-    z-index: 1100;
-  }
-
-  .top-status-pills {
-    scrollbar-width: none;
-  }
-
-  .top-status-pills::-webkit-scrollbar,
   .hud.build-panel::-webkit-scrollbar {
     display: none;
-  }
-
-  .layer-options {
-    right: 0;
-    max-height: min(260px, calc(100dvh - 70px));
-    overflow-y: auto;
   }
 
   .left-route-window,
@@ -11976,11 +11298,6 @@ button:active,
 }
 
 /* 실행 취소/다시 실행 버튼도 터치 영역을 확보한다. */
-.history-action {
-  width: var(--touch-target);
-  height: var(--touch-target);
-  border-radius: var(--radius-sm);
-}
 
 /* 열차 아이콘: 움직임 확인용으로 유지하되, 역(네트워크 구조)보다
    약간 낮은 시각적 무게를 준다. */
@@ -14349,42 +13666,11 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     --mobile-dock-height: 44px;
   }
 
-  .hud.top-header-bar {
-    gap: 3px;
-  }
-
   .hud-brand-pill {
     min-height: 28px;
     max-width: 64px;
     padding: 0 6px 0 8px;
     font-size: 9px;
-  }
-
-  .workspace-mode-tab {
-    min-height: 32px;
-    padding: 0 5px;
-    font-size: 8px;
-  }
-
-  .top-actions-row {
-    gap: 2px;
-    padding: 2px;
-  }
-
-  .layer-menu summary,
-  .top-action-btn,
-  .history-action {
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 34px !important;
-    min-height: 34px !important;
-  }
-
-  .top-status-pills .cash-pill,
-  .top-status-pills .satisfaction-pill,
-  .top-status-pills .history-pill,
-  .top-status-pills .clock-pill {
-    min-height: 28px;
   }
 
   .hud.build-panel {
@@ -14422,36 +13708,10 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     --mobile-dock-height: 38px;
   }
 
-  .hud.top-header-bar {
-    top: max(2px, env(safe-area-inset-top));
-    left: max(4px, env(safe-area-inset-left));
-    right: max(4px, env(safe-area-inset-right));
-  }
-
   .hud-brand-pill {
     min-height: 24px;
     max-width: 54px;
     font-size: 8px;
-  }
-
-  .workspace-mode-tab {
-    min-height: 28px;
-    padding: 0 4px;
-    font-size: 8px;
-  }
-
-  .top-actions-row {
-    gap: 1px;
-    padding: 1px;
-  }
-
-  .layer-menu summary,
-  .top-action-btn,
-  .history-action {
-    width: 30px !important;
-    min-width: 30px !important;
-    height: 30px !important;
-    min-height: 30px !important;
   }
 
   .hud.build-panel {
@@ -14494,10 +13754,7 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
    pseudo-elements into the neighbouring button's hit area. */
 @media (max-width: 700px),
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .workspace-mode-tab::after,
-  .primary-tool::after,
-  .top-action-btn::after,
-  .history-action::after {
+  .primary-tool::after {
     width: 100%;
     height: 100%;
     min-width: 0;
@@ -14505,92 +13762,8 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     pointer-events: none;
   }
 
-  .top-status-pills {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scrollbar-width: none;
-  }
-
-  .top-status-pills::-webkit-scrollbar {
-    display: none;
-  }
-
   /* Keep the important live state available in a compact, horizontally
      scrollable strip instead of removing it on narrow screens. */
-  .top-status-pills .cash-pill,
-  .top-status-pills .satisfaction-pill,
-  .top-status-pills .history-pill,
-  .top-status-pills .clock-pill {
-    display: inline-flex !important;
-    min-height: 28px;
-    flex: 0 0 auto;
-  }
-
-  .top-status-pills .cash-pill {
-    max-width: 118px;
-    padding: 0 6px;
-  }
-
-  .top-status-pills .cash-pill .pill-icon,
-  .top-status-pills .cash-pill .net-readout {
-    display: none;
-  }
-
-  .top-status-pills .cash-pill #cashReadout,
-  .top-status-pills .satisfaction-pill #satisfactionReadout {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 10px;
-  }
-
-  .top-status-pills .satisfaction-pill {
-    max-width: 126px;
-    padding: 0 6px;
-  }
-
-  .top-status-pills .satisfaction-pill .pill-icon {
-    flex: 0 0 auto;
-    font-size: 12px;
-  }
-
-  .top-status-pills .history-pill {
-    gap: 1px;
-    padding: 0 3px;
-  }
-
-  .top-status-pills .history-pill .history-action {
-    width: 32px !important;
-    min-width: 32px !important;
-    height: 32px !important;
-    min-height: 32px !important;
-  }
-
-  .top-status-pills .clock-pill {
-    gap: 3px;
-    padding: 0 4px;
-  }
-
-  .top-status-pills .clock-pill .time-readout-wrap span {
-    display: none;
-  }
-
-  .top-status-pills .clock-pill .time-readout-wrap strong {
-    font-size: 10px;
-    white-space: nowrap;
-  }
-
-  .top-status-pills .clock-pill .time-row {
-    gap: 1px;
-    padding: 2px;
-  }
-
-  .top-status-pills .clock-pill .time-button {
-    min-width: 30px;
-    min-height: 28px;
-    padding: 0 4px;
-    font-size: 9px;
-  }
 
   /* Dialog close controls retain a real touch target even though the shared
      desktop shape rule sets their visual size to 26px. */
@@ -14991,38 +14164,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 @media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   .game-shell {
     --mobile-dock-height: 38px;
-  }
-
-  .hud.top-header-bar {
-    top: max(2px, env(safe-area-inset-top));
-    left: max(4px, env(safe-area-inset-left));
-    right: max(4px, env(safe-area-inset-right));
-    gap: 3px;
-  }
-
-  .top-status-pills {
-    min-width: 0;
-    max-width: 100%;
-    padding: 1px 3px;
-  }
-
-  .workspace-mode-tab {
-    min-height: 28px;
-    padding: 0 5px;
-    font-size: 9px;
-  }
-
-  .top-actions-row {
-    gap: 3px;
-    padding: 2px;
-  }
-
-  .layer-menu summary,
-  .top-action-btn {
-    width: 36px !important;
-    min-width: 36px !important;
-    height: 36px !important;
-    min-height: 36px !important;
   }
 
   .hud.build-panel {

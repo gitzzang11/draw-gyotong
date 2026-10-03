@@ -1,0 +1,13 @@
+/*
+ * 기존 UI 스타일을 `legacy` cascade layer로 묶는다.
+ *
+ * layer 밖에 있는 새 디자인 시스템(src/design)의 보통 선언은 선택자 우선순위와
+ * 관계없이 이 layer를 이긴다. 그래서 dg- 컴포넌트가 기존 전역 규칙(button 등)에
+ * 흔들리지 않는다. 기존 파일 사이의 상대 순서는 그대로 유지한다.
+ *
+ * 화면 교체가 끝나는 대로 해당 기존 규칙을 지우고, 마지막에 이 파일을 제거한다.
+ */
+@import "leaflet/dist/leaflet.css" layer(legacy);
+@import "./styles.css" layer(legacy);
+@import "./structured-ui.css" layer(legacy);
+@import "./mobile-system-menu.css" layer(legacy);

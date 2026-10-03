@@ -1,0 +1,217 @@
+/*
+ * 게임 화면의 상시 HUD 배치
+ * 기준: docs/design/MOBILE_UX.md §3–§4, §10 / DESIGN_SYSTEM.md §9
+ *
+ * 컴포넌트 모양은 components.css가 정하고, 이 파일은 화면 위치와
+ * 화면 크기별 밀도만 정한다.
+ */
+
+:root {
+  --hud-strip-height: 40px;
+  --hud-top: calc(env(safe-area-inset-top) + var(--hud-strip-height));
+  --hud-gap: 8px;
+}
+
+.dg-hud {
+  z-index: 1000;
+  color-scheme: var(--theme-color-scheme);
+}
+
+/* ===== Status strip ===== */
+.game-status-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* --hud-top은 이 요소의 실제 높이에서 계산되므로 여기서 참조하지 않는다. */
+  min-height: calc(env(safe-area-inset-top) + var(--hud-strip-height));
+  padding-top: env(safe-area-inset-top);
+  /* 큰 글자 설정에서는 잘리지 않고 두 줄로 내려간다. 실제 높이는 main.ts가 --hud-top에 반영한다. */
+  flex-wrap: wrap;
+  transition: opacity var(--dur-fast) linear, transform var(--dur-panel) var(--ease-out);
+}
+
+.game-status-strip .dg-status-strip__cell { min-height: var(--hud-strip-height); }
+
+/* 셀 버튼: 탭하면 상세 표면을 연다 */
+.game-status-button {
+  margin: 0;
+  border: 0;
+  border-right: var(--line-hair) solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.game-status-button:active { background: var(--surface-2); }
+.game-status-button .dg-status-strip__key { pointer-events: none; }
+
+/* 일일 순수익: 부호를 색과 삼각형 모양으로 함께 표시 */
+.game-status-net { font-weight: 700; color: var(--signal-ok); }
+.game-status-net::before { content: "▲ "; font-size: 10px; }
+.game-status-net.negative { color: var(--signal-danger); }
+.game-status-net.negative::before { content: "▼ "; }
+
+/* 만족도 표식: ● 양호 · △ 주의 · ✕ 불만 */
+.game-satisfaction-mark { font-size: 12px; line-height: 1; color: var(--signal-ok); }
+.game-satisfaction-mark[data-level="caution"] { color: var(--signal-caution-text); }
+.game-satisfaction-mark[data-level="danger"] { color: var(--signal-danger); }
+
+.game-status-clock { gap: var(--space-2); }
+
+/* 배속: 일시정지는 항상, 배속 선택은 좁은 화면에서 펼침 목록 */
+.game-speed { padding: 0 var(--space-2); }
+.game-speed__seg { position: relative; overflow: visible; border-width: var(--line-hair); }
+.game-speed .dg-seg__item {
+  min-width: var(--touch-min);
+  min-height: 32px;
+  border-right-width: var(--line-hair);
+  font-variant-numeric: tabular-nums;
+}
+.game-speed__toggle { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 64px; }
+.game-speed__options {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: -1px;
+  display: none;
+  flex-direction: column;
+  min-width: 88px;
+  background: var(--surface-0);
+  border: var(--line-hair) solid var(--edge);
+  box-shadow: var(--overlay-shadow);
+}
+.game-speed__options[data-open="true"] { display: flex; }
+.game-speed__options .dg-seg__item {
+  min-height: var(--touch-min);
+  border-right: 0;
+  border-bottom: var(--line-hair) solid var(--rule);
+  text-align: left;
+  padding: 0 var(--space-3);
+}
+.game-speed__options .dg-seg__item:last-child { border-bottom: 0; }
+
+@media (min-width: 1000px) {
+  .game-speed__toggle { display: none; }
+  .game-speed__options,
+  .game-speed__options[data-open="true"] {
+    position: static;
+    display: contents;
+  }
+  .game-speed__options .dg-seg__item {
+    min-height: 32px;
+    padding: 0 10px;
+    border-bottom: 0;
+    border-right: var(--line-hair) solid var(--text-1);
+    text-align: center;
+  }
+  .game-speed__options .dg-seg__item:last-child { border-right: 0; }
+}
+
+/* 오른쪽 시스템 동작 */
+.game-status-strip .game-status-actions { gap: 0; padding: 0; border-right: 0; }
+.game-status-strip .dg-icon-btn { position: relative; height: var(--hud-strip-height); }
+.game-status-strip .dg-icon-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 calc(var(--hud-strip-height) - var(--touch-min)) 0;
+}
+.game-count-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: var(--radius);
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: 800 10px/16px var(--font-ui);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Mode rail ===== */
+.game-mode-rail {
+  position: fixed;
+  top: calc(var(--hud-top) + var(--hud-gap));
+  left: var(--edge-inset-left);
+  width: 132px;
+}
+.game-mode-rail .dg-rail__modes { border-bottom: 0; }
+.game-mode-rail .dg-rail__mode { min-height: var(--touch-min); }
+
+/* ===== Map controls ===== */
+.game-map-controls {
+  position: fixed;
+  top: calc(var(--hud-top) + var(--hud-gap));
+  right: var(--edge-inset-right);
+}
+.game-layer-menu { position: relative; }
+.game-layer-menu > summary { list-style: none; }
+.game-layer-menu > summary::-webkit-details-marker { display: none; }
+.game-layer-menu[open] > summary { background: var(--invert-bg); color: var(--invert-fg); }
+.game-layer-panel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: -1px;
+  width: 200px;
+  border-top-width: var(--band);
+  box-shadow: var(--overlay-shadow);
+}
+.game-layer-panel .dg-panel__section-label { padding: var(--space-2) var(--space-3) var(--space-1); margin: 0; }
+.game-layer-panel .dg-tool { border-top: var(--line-hair) solid var(--rule); border-bottom: 0; }
+.game-layer-sample { width: 18px; height: 0; flex: none; border-top: 4px solid var(--text-2); }
+.game-layer-sample--population { height: 12px; border: var(--line-hair) solid var(--text-2); background: linear-gradient(90deg, transparent, var(--signal-caution)); }
+.game-layer-toggle::after {
+  content: "끔";
+  margin-left: auto;
+  font: var(--type-label);
+  color: var(--text-3);
+}
+.game-layer-toggle[aria-pressed="true"]::after { content: "켬"; color: inherit; }
+.game-density-legend {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: var(--line-hair) solid var(--rule);
+  font: var(--type-micro);
+  color: var(--text-2);
+}
+.game-density-legend i { height: 8px; background: linear-gradient(90deg, rgba(242, 190, 0, 0.08), var(--signal-caution) 60%, var(--signal-danger)); }
+
+/* ===== History controls (엄지 영역) ===== */
+.game-history-controls {
+  position: fixed;
+  left: var(--edge-inset-left);
+  bottom: var(--edge-inset-bottom);
+  transition: opacity var(--dur-fast) linear, transform var(--dur-panel) var(--ease-out);
+}
+.game-history-controls .dg-icon-btn:disabled { color: var(--text-3); cursor: not-allowed; }
+
+/* ===== 노선 드래그 중 가장자리 HUD 후퇴 (MOBILE_UX §4) ===== */
+body.route-drawing-hud-proximity .game-status-strip {
+  opacity: var(--route-drawing-top-opacity, 1);
+  transform: translateY(var(--route-drawing-top-shift, 0px));
+}
+body.route-drawing-hud-proximity .game-history-controls {
+  opacity: var(--route-drawing-bottom-opacity, 1);
+  transform: translateY(var(--route-drawing-bottom-shift, 0px));
+}
+
+/* ===== 튜토리얼 강조 ===== */
+.dg-hud .tutorial-target,
+.dg-hud.tutorial-target {
+  outline: 3px solid var(--signal-caution);
+  outline-offset: -3px;
+}
+
+/* ===== 밀도: Compact landscape (640–719) ===== */
+@media (max-width: 719px) {
+  .game-status-strip .dg-status-strip__cell { padding: 0 var(--space-2); }
+  .game-status-optional-key { display: none; }
+  .game-status-strip .game-status-actions { padding: 0; }
+  .game-status-strip .dg-status-strip__metric { font-size: 14px; }
+}

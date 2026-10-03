@@ -1,10 +1,8 @@
 import L, { type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
-import "leaflet/dist/leaflet.css";
-import "./styles.css";
-import "./structured-ui.css";
-import "./mobile-system-menu.css";
+import "./legacy.css";
 import "./design/tokens.css";
 import "./design/components.css";
+import "./design/hud.css";
 import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
@@ -879,76 +877,84 @@ app.innerHTML = `
 
     <section id="map" class="map" aria-label="Korea city rail map"></section>
     
-    <!-- LEVEL 1: TOP EXECUTIVE COMMAND HUD -->
-    <header class="hud top-header-bar" aria-label="game status bar">
-      <div class="top-status-pills" aria-label="game metrics">
-        <div id="workspaceModeBar" class="status-pill workspace-mode-pill" aria-label="작업 모드">
-          <div class="workspace-mode-tabs" role="tablist" aria-label="상위 작업 모드">
-            <button class="workspace-mode-tab active" type="button" data-workspace-mode="management" role="tab" aria-label="관리 모드" title="관리 모드" aria-selected="true"><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></button>
-            <button class="workspace-mode-tab" type="button" data-workspace-mode="planning" role="tab" aria-label="기획 모드" title="기획 모드" aria-selected="false"><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></button>
-            <button class="workspace-mode-tab" type="button" data-workspace-mode="construction" role="tab" aria-label="공사 모드" title="공사 모드" aria-selected="false"><svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-1a8 8 0 0 1 16 0v1"/><path d="M2.5 16h19l-1.5 4H4z"/><path d="M12 7v8"/><path d="M8.5 10.5h7"/></svg></button>
-          </div>
-          <strong id="workspaceModeReadout" hidden>관리 모드</strong>
-        </div>
-
-        <div class="status-pill cash-pill" title="보유 자금 및 일일 순수익">
-          <span class="pill-icon">💵</span>
-          <strong id="cashReadout">999,999 억</strong>
-          <strong id="dailyNetReadout" class="net-readout negative">-4,500 억</strong>
-        </div>
-
-        <button id="satisfactionPill" class="status-pill satisfaction-pill" type="button" title="승객 만족도 상세 보기" aria-label="승객 만족도 상세 보기">
-          <span id="satisfactionIcon" class="pill-icon satisfaction-icon">😊</span>
-          <strong id="satisfactionReadout">94 - 매우좋음</strong>
-        </button>
-
-        <div class="status-pill history-pill" aria-label="작업 이력">
-          <button id="undoButton" class="history-action icon-only" type="button" aria-label="실행 취소" title="실행 취소"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg></button>
-          <button id="redoButton" class="history-action icon-only" type="button" aria-label="다시 실행" title="다시 실행"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg></button>
-        </div>
-
-        <div class="status-pill clock-pill" aria-label="게임 시간 및 배속">
-          <div class="time-readout-wrap">
-            <span id="gameDayReadout">4일차</span>
-            <strong id="gameClockReadout">오후 06:00</strong>
-          </div>
-          <div class="time-row" aria-label="time speed">
-            <button class="time-button active pause-button" data-speed="0" type="button" aria-label="일시정지">Ⅱ</button>
-            <button class="time-button" data-speed="2" type="button">x2</button>
-            <button class="time-button" data-speed="5" type="button">x5</button>
-            <button class="time-button" data-speed="10" type="button">x10</button>
-            <button class="time-button" data-speed="100" type="button">x100</button>
+    <!-- Status strip: 자금·손익·만족·시간·배속·경보 (docs/design/DESIGN_SYSTEM.md §9) -->
+    <header id="statusStrip" class="dg-hud dg-hud--top dg-status-strip game-status-strip" aria-label="운영 상태">
+      <button id="financeStatusButton" class="dg-status-strip__cell game-status-button game-status-finance" type="button" title="자금 및 재정 관리 열기" aria-haspopup="dialog">
+        <span class="dg-status-strip__key game-status-optional-key">자금</span>
+        <strong id="cashReadout" class="dg-status-strip__metric">0 억</strong>
+        <span class="dg-sr-only">일일 순수익</span>
+        <span id="dailyNetReadout" class="game-status-net">0 억</span>
+      </button>
+      <button id="satisfactionPill" class="dg-status-strip__cell game-status-button" type="button" title="승객 만족도 상세 보기" aria-label="승객 만족도 상세 보기">
+        <span id="satisfactionIcon" class="game-satisfaction-mark" aria-hidden="true">●</span>
+        <span class="dg-status-strip__key">만족</span>
+        <strong id="satisfactionReadout">-</strong>
+      </button>
+      <div class="dg-status-strip__spacer" aria-hidden="true"></div>
+      <div class="dg-status-strip__cell game-status-clock" aria-label="게임 시간">
+        <span id="gameDayReadout" class="dg-status-strip__key">1일차</span>
+        <strong id="gameClockReadout" class="dg-status-strip__metric">00:00</strong>
+      </div>
+      <div class="dg-status-strip__cell game-speed" role="group" aria-label="시간 배속">
+        <div class="dg-seg game-speed__seg">
+          <button class="dg-seg__item game-speed__pause" data-speed="0" type="button" aria-pressed="true" aria-label="일시정지">‖</button>
+          <button id="speedMenuButton" class="dg-seg__item game-speed__toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="speedOptions"><span id="speedMenuLabel">배속</span><span aria-hidden="true">▾</span></button>
+          <div id="speedOptions" class="game-speed__options" role="group" aria-label="배속 선택">
+            <button class="dg-seg__item" data-speed="2" type="button" aria-pressed="false">×2</button>
+            <button class="dg-seg__item" data-speed="5" type="button" aria-pressed="false">×5</button>
+            <button class="dg-seg__item" data-speed="10" type="button" aria-pressed="false">×10</button>
+            <button class="dg-seg__item" data-speed="100" type="button" aria-pressed="false">×100</button>
           </div>
         </div>
       </div>
-
-      <div class="top-actions-row">
-        <nav class="hud layer-panel" aria-label="map layers">
-          <details class="layer-menu">
-            <summary aria-label="지도 레이어" title="지도 레이어 설정">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            </summary>
-            <div class="layer-options">
-              <button class="layer-toggle active" data-layer="rail" aria-pressed="true"><span class="layer-dot rail"></span><span>기존 철도</span></button>
-              <button class="layer-toggle" data-layer="population" aria-pressed="false"><span class="layer-dot population"></span><span>인구 밀도</span></button>
-              <div class="population-density-legend" aria-label="인구 밀도 범례"><span>낮음</span><i></i><span>높음</span></div>
-            </div>
-          </details>
-        </nav>
-
-
-        <button id="helpButton" class="top-action-btn help-button" type="button" aria-label="도움말" title="도움말">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div class="dg-status-strip__cell game-status-actions">
+        <button id="newsButton" class="dg-icon-btn game-news-button" type="button" aria-label="도시 뉴스" title="도시 뉴스">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 15 H16 L14.5 12.5 V8.5 A4.5 4.5 0 0 0 5.5 8.5 V12.5 Z M8.5 17.5 H11.5"/></svg>
+          <span id="newsBadge" class="game-count-badge" hidden>0</span>
         </button>
-        <button id="newsButton" class="top-action-btn news-button" type="button" aria-label="도시 뉴스" title="도시 뉴스">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          <span id="newsBadge" hidden>0</span>
+        <button id="helpButton" class="dg-icon-btn" type="button" aria-label="도움말" title="도움말">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15"/><path d="M7.5 7.5 A2.5 2.5 0 1 1 10 10 V11.5 M10 14 V14.5"/></svg>
         </button>
-        <button id="menuButton" class="top-action-btn" type="button" aria-label="메뉴" title="메뉴">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        <button id="menuButton" class="dg-icon-btn" type="button" aria-label="메뉴" title="메뉴">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 5 H17 M3 10 H17 M3 15 H17"/></svg>
         </button>
       </div>
     </header>
+
+    <!-- Mode rail: 도구는 다음 단계에서 이 레일 아래로 옮긴다 -->
+    <nav id="workspaceModeBar" class="dg-hud dg-rail game-mode-rail" aria-label="작업 모드">
+      <div class="dg-rail__modes" role="tablist" aria-label="상위 작업 모드">
+        <button class="dg-rail__mode" type="button" data-workspace-mode="management" role="tab" aria-selected="true">관리</button>
+        <button class="dg-rail__mode" type="button" data-workspace-mode="planning" role="tab" aria-selected="false">기획</button>
+        <button class="dg-rail__mode" type="button" data-workspace-mode="construction" role="tab" aria-selected="false">공사</button>
+      </div>
+      <strong id="workspaceModeReadout" hidden>관리 모드</strong>
+    </nav>
+
+    <!-- Map controls -->
+    <div class="dg-hud dg-map-controls game-map-controls" aria-label="지도 컨트롤">
+      <details class="game-layer-menu">
+        <summary class="dg-icon-btn" aria-label="지도 레이어" title="지도 레이어">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter" aria-hidden="true"><path d="M10 3 L18 7 L10 11 L2 7 Z M2 11 L10 15 L18 11"/></svg>
+        </summary>
+        <div class="dg-panel game-layer-panel">
+          <p class="dg-panel__section-label">지도 레이어</p>
+          <button class="dg-tool game-layer-toggle" data-layer="rail" type="button" aria-pressed="true"><span class="game-layer-sample game-layer-sample--rail" aria-hidden="true"></span><span>기존 철도</span></button>
+          <button class="dg-tool game-layer-toggle" data-layer="population" type="button" aria-pressed="false"><span class="game-layer-sample game-layer-sample--population" aria-hidden="true"></span><span>인구 밀도</span></button>
+          <div class="game-density-legend" aria-label="인구 밀도 범례: 낮음에서 높음"><span>낮음</span><i aria-hidden="true"></i><span>높음</span></div>
+        </div>
+      </details>
+    </div>
+
+    <!-- History: 엄지 영역 -->
+    <div class="dg-hud dg-map-controls game-history-controls" role="group" aria-label="작업 이력">
+      <button id="undoButton" class="dg-icon-btn" type="button" aria-label="실행 취소" title="실행 취소">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M7 5 L3 9 L7 13 M3 9 H12 A4 4 0 0 1 12 17 H9"/></svg>
+      </button>
+      <button id="redoButton" class="dg-icon-btn" type="button" aria-label="다시 실행" title="다시 실행">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M13 5 L17 9 L13 13 M17 9 H8 A4 4 0 0 0 8 17 H11"/></svg>
+      </button>
+    </div>
 
     <!-- LEVEL 4: BOTTOM PRIMARY THUMB DOCK -->
     <section class="hud build-panel" aria-label="현재 모드 도구">
@@ -1852,7 +1858,7 @@ const satisfactionDialog = byId("satisfactionDialog");
 const closeSatisfactionButton = byId("closeSatisfactionButton");
 const satisfactionDialogContent = byId("satisfactionDialogContent");
 const demandReadout = byId("demandReadout");
-const cashPill = document.querySelector<HTMLElement>(".cash-pill");
+const cashPill = document.querySelector<HTMLButtonElement>("#financeStatusButton");
 const financeDialog = byId("financeDialog");
 const closeFinanceButton = byId("closeFinanceButton");
 const financeCashReadout = byId("financeCashReadout");
@@ -1965,9 +1971,12 @@ const statisticsButton = document.querySelector<HTMLButtonElement>("#statisticsB
 const newsButton = document.querySelector<HTMLButtonElement>("#newsButton");
 const newsBadge = byId("newsBadge");
 const guideButton = document.querySelector<HTMLButtonElement>("#guideButton");
-const timeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".time-button"));
+const timeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-speed]"));
+const speedMenuButton = document.querySelector<HTMLButtonElement>("#speedMenuButton");
+const speedMenuLabel = byId("speedMenuLabel");
+const speedOptions = byId("speedOptions");
 const workspaceModeReadout = byId("workspaceModeReadout");
-const workspaceModeTabs = Array.from(document.querySelectorAll<HTMLButtonElement>(".workspace-mode-tab"));
+const workspaceModeTabs = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-workspace-mode]"));
 const selectTool = document.querySelector<HTMLButtonElement>("#selectTool");
 const manageLineTool = document.querySelector<HTMLButtonElement>("#manageLineTool");
 const manageOperationsTool = document.querySelector<HTMLButtonElement>("#manageOperationsTool");
@@ -2113,7 +2122,7 @@ const selectAllPlanConversionButton = document.querySelector<HTMLButtonElement>(
 const clearPlanConversionButton = document.querySelector<HTMLButtonElement>("#clearPlanConversionButton");
 const fundPlanWithLoanButton = document.querySelector<HTMLButtonElement>("#fundPlanWithLoanButton");
 const confirmPlanConversionButton = document.querySelector<HTMLButtonElement>("#confirmPlanConversionButton");
-const layerButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".layer-toggle"));
+const layerButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-layer]"));
 const toolButtons = [selectTool, routeTool, extendTool, editTool, eraserTool, reconnectTool, branchTool, mergeTool, stationTool, transferTool, depotTool].filter(Boolean) as HTMLButtonElement[];
 const selectedLineColor = document.querySelector<HTMLButtonElement>("#selectedLineColor");
 const selectedLineTitle = byId("selectedLineTitle");
@@ -3023,11 +3032,36 @@ timeButtons.forEach((button) => {
     if (simSpeed === 0) gameLoopController.pause();
     else gameLoopController.resume();
     if (simSpeed > 0) recordTutorialSignal("timeStarted", false);
-    timeButtons.forEach((item) => item.classList.toggle("active", item === button));
+    syncSpeedControls();
+    setSpeedMenuOpen(false);
     setText(modeLabel, simSpeed === 0 ? "일시정지" : `운영 x${simSpeed}`);
     updateTutorialProgress();
     playFeedback("select");
   });
+});
+
+speedMenuButton?.addEventListener("click", () => setSpeedMenuOpen(speedMenuButton.getAttribute("aria-expanded") !== "true"));
+syncSpeedControls();
+// 상태 표시줄이 큰 글자로 두 줄이 되어도 레일·지도 컨트롤이 그 아래에 오도록 실제 높이를 반영한다.
+const statusStrip = byId("statusStrip");
+if (statusStrip && "ResizeObserver" in window) {
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty("--hud-top", `${Math.ceil(statusStrip.getBoundingClientRect().bottom)}px`);
+  }).observe(statusStrip);
+}
+document.addEventListener("pointerdown", (event) => {
+  if (speedMenuButton?.getAttribute("aria-expanded") === "true" && !(event.target as Element).closest(".game-speed")) setSpeedMenuOpen(false);
+  const layerMenu = document.querySelector<HTMLDetailsElement>(".game-layer-menu");
+  if (layerMenu?.open && !(event.target as Element).closest(".game-layer-menu")) layerMenu.open = false;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (speedMenuButton?.getAttribute("aria-expanded") === "true") {
+    setSpeedMenuOpen(false);
+    speedMenuButton.focus();
+  }
+  const layerMenu = document.querySelector<HTMLDetailsElement>(".game-layer-menu");
+  if (layerMenu?.open) layerMenu.open = false;
 });
 
 layerButtons.forEach((button) => {
@@ -3316,7 +3350,7 @@ function onPointerDown(event: PointerEvent) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   const pointerTarget = event.target as HTMLElement;
   if (operatingServiceMapEditActive && pointerTarget.closest(".operating-service-station-target")) return;
-  if (pointerTarget.closest(".hud, .route-sheet, .selected-line-panel, .right-line-control-card, .construction-preview-panel, .dialog-backdrop")) return;
+  if (pointerTarget.closest(".hud, .dg-hud, .route-sheet, .selected-line-panel, .right-line-control-card, .construction-preview-panel, .dialog-backdrop")) return;
   if (demolitionReview) return;
   if (event.pointerType === "touch" && activePointerId !== null && event.pointerId !== activePointerId) {
     cancelActiveDrawing();
@@ -8726,6 +8760,7 @@ function resetWorld() {
   simSpeed = 0;
   gameLoopController.setSpeed(0);
   gameLoopController.pause();
+  syncSpeedControls();
   simulationRuntimeState.reset(360);
 }
 
@@ -11762,7 +11797,7 @@ function updateCareerProgress(bankrupt: boolean) {
     simSpeed = 0;
     gameLoopController.setSpeed(0);
     gameLoopController.pause();
-    timeButtons.forEach((button) => button.classList.toggle("active", button.dataset.speed === "0"));
+    syncSpeedControls();
     setText(modeLabel, "파산");
   }
   metaState.patch({ unlockedCityIds: Array.from(unlocked), bankrupt });
@@ -12038,12 +12073,13 @@ function renderSatisfactionDialog() {
 function updateEconomyHud() {
   if (fareInput && document.activeElement !== fareInput) fareInput.value = String(financeState.economy.fare);
   const satisfactionLabel = financeState.economy.satisfaction >= 85 ? "매우 좋음" : financeState.economy.satisfaction >= 70 ? "안정" : financeState.economy.satisfaction >= 50 ? "주의" : "불만";
-  const satisfactionEmoji = financeState.economy.satisfaction >= 85 ? "😁" : financeState.economy.satisfaction >= 70 ? "😊" : financeState.economy.satisfaction >= 50 ? "😐" : "😡";
-  const satisfactionColor = financeState.economy.satisfaction >= 85 ? "#2ecc71" : financeState.economy.satisfaction >= 70 ? "#52d683" : financeState.economy.satisfaction >= 50 ? "#f3ca52" : "#ff5d5d";
-  hudRenderer.update("satisfaction", `${financeState.economy.satisfaction} - ${satisfactionLabel}`);
+  // 상태는 색과 함께 표식 모양(● △ ✕)과 문구로 구분한다.
+  const satisfactionLevel = financeState.economy.satisfaction >= 70 ? "ok" : financeState.economy.satisfaction >= 50 ? "caution" : "danger";
+  const satisfactionMark = satisfactionLevel === "ok" ? "●" : satisfactionLevel === "caution" ? "△" : "✕";
+  hudRenderer.update("satisfaction", `${financeState.economy.satisfaction} · ${satisfactionLabel}`);
   if (satisfactionIcon) {
-    hudRenderer.update("satisfactionIcon", satisfactionEmoji);
-    satisfactionIcon.style.backgroundColor = satisfactionColor;
+    hudRenderer.update("satisfactionIcon", satisfactionMark);
+    satisfactionIcon.dataset.level = satisfactionLevel;
   }
   hudRenderer.update("demand", financeState.economy.demand.toLocaleString("ko-KR"));
   const latestRecord = financeState.statistics.dailyRecords.at(-1);
@@ -15682,7 +15718,7 @@ function applyTutorialTarget(target: (typeof tutorialSteps)[number]["target"]) {
                 : target === "opening"
                   ? constructionManagerButton
                   : target === "speed"
-                    ? document.querySelector<HTMLElement>(".time-row")
+                    ? document.querySelector<HTMLElement>(".game-speed")
                     : statisticsButton;
   targetElement?.classList.add("tutorial-target");
   document.body.dataset.tutorialTarget = target;
@@ -15750,6 +15786,22 @@ function applySettingsToUi() {
     autoSaveIntervalSelect.value = String(settings.autoSaveIntervalSeconds);
     autoSaveIntervalSelect.disabled = !settings.autoSaveEnabled;
   }
+}
+
+/** 배속 버튼의 눌림 상태와 배속 메뉴 라벨을 현재 simSpeed에 맞춘다. */
+function syncSpeedControls() {
+  timeButtons.forEach((button) => {
+    const active = Number(button.dataset.speed ?? "0") === simSpeed;
+    button.setAttribute("aria-pressed", String(active));
+  });
+  setText(speedMenuLabel, simSpeed === 0 ? "배속" : `×${simSpeed}`);
+  speedMenuButton?.setAttribute("aria-label", simSpeed === 0 ? "배속 선택, 일시정지 중" : `배속 선택, 현재 ×${simSpeed}`);
+}
+
+function setSpeedMenuOpen(open: boolean) {
+  if (!speedMenuButton || !speedOptions) return;
+  speedMenuButton.setAttribute("aria-expanded", String(open));
+  speedOptions.dataset.open = String(open);
 }
 
 function openSettings() {
