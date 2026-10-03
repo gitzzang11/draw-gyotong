@@ -2648,6 +2648,10 @@ railModeNowButton?.addEventListener("click", () => {
   layoutRailTools();
 });
 compactRailQuery.addEventListener("change", () => syncRail());
+// 작도 시작(첫 터치)·끝을 레일 밀도에 바로 반영한다. 작도 처리기가 상태를 바꾼 뒤 확인한다.
+for (const type of ["pointerdown", "pointerup", "pointercancel"] as const) {
+  document.addEventListener(type, () => requestAnimationFrame(syncRailDensity), { capture: true, passive: true });
+}
 // compact 화면에서 검토 중에는 노선 설정을 머리글만 남기고, 필요할 때 펼친다.
 const routeSettingsExpandButton = document.querySelector<HTMLButtonElement>("#routeSettingsExpandButton");
 routeSettingsExpandButton?.addEventListener("click", () => {
@@ -8471,6 +8475,7 @@ function flushUpdates(selectedId?: string) {
     document.body.classList.toggle("has-network", networkState.routes.length > 0);
     document.body.classList.toggle("has-route-selection", Boolean(selectedRouteId));
     document.body.dataset.activeTool = activeTool;
+    syncRailDensity();
     if (domains.has("network")) refreshTransferMetrics();
     if (domains.has("demand") || domains.has("congestion")) measureTask("demand", ensureDemandSimulation);
     if (domains.has("network") || domains.has("routes") || domains.has("capacity")) updateOperationRouteOptions();
@@ -16045,9 +16050,32 @@ function applySettingsToUi() {
   }
 }
 
+/**
+ * 레일은 좁은 화면이거나, 지도에 실제로 작도를 시작해 확정·취소 전인 동안만 좁힌다.
+ * 도구를 고르기만 한 상태에서는 넓은 레일을 유지한다(DESIGN_SYSTEM §Tool rail).
+ */
+function railShouldBeCompact() {
+  if (compactRailQuery.matches) return true;
+  if (activeTool === "pan") return false;
+  return activePointerId !== null
+    || constructionDraft !== null
+    || routePlanningController.isInProgress
+    || activeExtension !== null
+    || activeBranch !== null
+    || activeRepair !== null
+    || activePlanningContinuation !== null
+    || activeHandleMove !== null;
+}
+
+/** 작도 상태가 바뀌어 레일 밀도가 달라질 때만 레일을 다시 배치한다. */
+function syncRailDensity() {
+  if (!workspaceModeBar) return;
+  if (workspaceModeBar.classList.contains("dg-rail--compact") !== railShouldBeCompact()) syncRail();
+}
+
 /** 레일 밀도, 도구 배치, 더보기 상태, 모드 배너를 현재 모드·도구에 맞춘다. */
 function syncRail() {
-  const compact = compactRailQuery.matches || activeTool !== "pan";
+  const compact = railShouldBeCompact();
   workspaceModeBar?.classList.toggle("dg-rail--compact", compact);
   workspaceModeBar?.classList.toggle("dg-rail--planning", workspaceMode === "planning");
   document.body.classList.toggle("game-rail-compact", compact);

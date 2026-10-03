@@ -22,6 +22,11 @@ export class RoutePlanningController<TToolChange> {
     return this.currentSession;
   }
 
+  /** 작도를 시작해 확정·취소 전인 상태(그리기·대상 선택·검토·확정 중) */
+  get isInProgress() {
+    return Boolean(this.currentSession && !inactiveStages.includes(this.currentSession.stage));
+  }
+
   get pendingToolChange() {
     return this.requestedToolChange;
   }
