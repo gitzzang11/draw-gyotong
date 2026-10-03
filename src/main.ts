@@ -1370,25 +1370,22 @@ app.innerHTML = `
       <div id="statisticsContent" class="statistics-content"></div>
     </section>
 
-    <section id="newsScreen" class="news-screen" hidden aria-label="도시 뉴스 및 이벤트">
-      <header class="news-header">
-        <div>
-          <span>CITY NEWSWIRE</span>
-          <h2>도시 뉴스 및 이벤트</h2>
-          <p>도시 변화가 수요와 비용에 미치는 영향을 확인하고 대응을 준비하세요.</p>
-        </div>
-        <div class="news-header-actions">
-          <label><span>보기</span><select id="newsFilter" aria-label="뉴스 필터"><option value="active">진행 중</option><option value="all">전체 기록</option></select></label>
-          <button id="closeNewsButton" class="news-close" type="button" aria-label="뉴스 닫기">×</button>
-        </div>
+    <section id="newsScreen" class="dg-workspace game-workspace game-news" hidden aria-labelledby="newsTitle">
+      <header class="dg-workspace__bar">
+        <h2 id="newsTitle" class="dg-workspace__title">도시 뉴스</h2>
+        <span class="game-workspace__clock" data-workspace-clock></span>
+        <button id="closeNewsButton" class="dg-icon-btn" type="button" aria-label="뉴스 닫고 지도로"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button>
       </header>
-      <div class="news-summary">
-        <div><span>진행 중</span><strong id="activeNewsCount">0</strong></div>
-        <div><span>수요 기회</span><strong id="opportunityNewsCount">0</strong></div>
-        <div><span>비용·운영 변화</span><strong id="changeNewsCount">0</strong></div>
-        <p>대응 버튼은 준비 화면으로 이동할 뿐, 자금이나 시설을 자동으로 변경하지 않습니다.</p>
+      <div class="dg-workspace__body game-news__body">
+        <aside class="game-news__aside">
+          <div class="dg-row"><span class="dg-row__label">진행 중</span><strong id="activeNewsCount" class="dg-row__value dg-row__value--metric">0</strong></div>
+          <div class="dg-row"><span class="dg-row__label">수요 기회</span><strong id="opportunityNewsCount" class="dg-row__value">0</strong></div>
+          <div class="dg-row"><span class="dg-row__label">비용·운영 변화</span><strong id="changeNewsCount" class="dg-row__value">0</strong></div>
+          <label class="dg-field"><span class="dg-field__label">보기</span><select id="newsFilter" class="dg-input"><option value="active">진행 중</option><option value="all">전체 기록</option></select></label>
+          <p class="game-inspector__note">대응 버튼은 준비 화면으로 이동할 뿐, 자금이나 시설을 자동으로 바꾸지 않습니다.</p>
+        </aside>
+        <div id="newsFeed" class="game-news__feed"></div>
       </div>
-      <div id="newsFeed" class="news-feed"></div>
     </section>
 
     <div id="constructionManagerDialog" class="dg-hud dg-scrim game-projects" hidden>
@@ -5016,7 +5013,7 @@ function renderConstructionProjectCard(project: ConstructionProject) {
     <div class="game-project__head"><span class="dg-tag ${statusTag}"><i class="dg-tag__icon" aria-hidden="true"></i>${labels[project.status]}</span><strong>${escapeHtml(project.name)}</strong><span class="dg-row__value">${Math.round(progress * 100)}%</span></div>
     <div class="dg-meter game-project__progress" role="progressbar" aria-label="공사 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress * 100)}"><span class="dg-meter__fill" style="width:${Math.round(progress * 100)}%"></span></div>
     <div class="dg-row"><span class="dg-row__label">공사 기간</span><span class="dg-row__value">${formatConstructionDuration(project.durationDays + project.delayDays)}</span></div>
-    <div class="dg-row"><span class="dg-row__label">완공 예정</span><span class="dg-row__value">게임 ${project.expectedCompletionDay}일차</span></div>
+    <div class="dg-row"><span class="dg-row__label">완공 예정</span><span class="dg-row__value">게임 ${project.expectedCompletionDay + 1}일차</span></div>
     <div class="dg-row"><span class="dg-row__label">사업비</span><span class="dg-row__value">${formatCost(project.baseCost + project.additionalCost)}</span></div>
     ${requirements.length > 0 ? `<h4 class="dg-panel__section-label">개통 조건</h4><div class="game-project__requirements">${requirements.map((item) => `<button class="game-route-item" type="button" data-project-action="${item.action}"><span class="${item.met ? "game-inspector__plus" : "game-inspector__minus"}" aria-hidden="true">${item.met ? "✓" : "!"}</span><span class="game-route-item__text"><strong>${item.label}</strong><small>${item.met ? "충족" : "미충족 · 눌러서 해결"}</small></span></button>`).join("")}</div>` : ""}
     ${eventMarkup}
@@ -10311,6 +10308,7 @@ function openNewsScreen() {
   requestStateSave();
   if (newsScreen) newsScreen.hidden = false;
   document.body.classList.add("news-open");
+  syncWorkspaceClocks();
 }
 
 function closeNewsScreen() {
@@ -10326,7 +10324,7 @@ function renderNewsFeed() {
   setText(changeNewsCount, String(active.filter((event) => event.tone === "change").length));
   const visible = (newsFilter?.value ?? "active") === "all" ? [...newsEventState.current] : active;
   if (visible.length === 0) {
-    newsFeed.innerHTML = `<div class="news-empty"><strong>현재 전해진 도시 뉴스가 없습니다</strong><span>게임 시간이 흐르면 지역 행사와 도시 변화가 이곳에 정리됩니다.</span></div>`;
+    newsFeed.innerHTML = `<p class="game-news__empty"><strong>전해진 도시 뉴스가 없습니다</strong><span class="game-inspector__note">게임 시간이 흐르면 지역 행사와 도시 변화가 이곳에 정리됩니다.</span></p>`;
     return;
   }
   newsFeed.innerHTML = visible
@@ -10346,19 +10344,24 @@ function renderNewsCard(event: NewsEvent) {
     demandPercent === 0 ? "" : `수요 ${demandPercent > 0 ? "+" : ""}${demandPercent}%`,
     costPercent === 0 ? "" : `운영비 +${costPercent}%`,
   ].filter(Boolean);
-  return `<article class="news-card ${event.tone} ${active ? "active" : "expired"}" data-news-id="${event.id}">
-    <header><div><span>${event.tone === "opportunity" ? "기회" : "도시 변화"}</span><strong>${escapeHtml(event.title)}</strong></div><em>${active ? `${remaining}일 남음` : "종료"}</em></header>
-    <p>${escapeHtml(event.summary)}</p>
-    <dl>
-      <div><dt>발생 지역</dt><dd>${escapeHtml(event.regionName)}</dd></div>
-      <div><dt>기간</dt><dd>게임 ${event.startedDay}일차부터 ${event.durationDays}일</dd></div>
-      <div><dt>영향</dt><dd>${impact.length > 0 ? impact.join(" · ") : "직접 비용 변화 없음"}</dd></div>
-      <div><dt>관련 교통망</dt><dd>${escapeHtml([...stationNames, ...routeNames].join(" · ") || "도시 전체")}</dd></div>
-    </dl>
-    <footer>
-      <button type="button" data-news-command="focus">지도에서 보기</button>
-      ${active ? `<button type="button" class="primary" data-news-command="respond">${event.responsePrepared ? "대응 준비됨" : escapeHtml(event.actionLabel)}</button>` : ""}
-    </footer>
+  const opportunity = event.tone === "opportunity";
+  return `<article class="game-news-item" data-news-id="${event.id}" data-expired="${!active}">
+    <header class="game-news-item__head">
+      <span class="dg-tag ${opportunity ? "dg-tag--ok" : ""}"><i class="dg-tag__icon" aria-hidden="true">${opportunity ? "▲" : "△"}</i>${opportunity ? "기회" : "도시 변화"}</span>
+      <h3>${escapeHtml(event.title)}</h3>
+      <span class="game-news-item__time">${active ? `${remaining}일 남음` : "종료"}</span>
+    </header>
+    <p class="game-news-item__summary">${escapeHtml(event.summary)}</p>
+    <div class="game-news-item__facts">
+      <div class="dg-row"><span class="dg-row__label">발생 지역</span><span class="dg-row__value">${escapeHtml(event.regionName)}</span></div>
+      <div class="dg-row"><span class="dg-row__label">기간</span><span class="dg-row__value">게임 ${event.startedDay + 1}일차부터 ${event.durationDays}일</span></div>
+      <div class="dg-row"><span class="dg-row__label">영향</span><span class="dg-row__value">${impact.length > 0 ? impact.join(" · ") : "직접 비용 변화 없음"}</span></div>
+      <div class="dg-row"><span class="dg-row__label">관련 교통망</span><span class="dg-row__value">${escapeHtml([...stationNames, ...routeNames].join(" · ") || "도시 전체")}</span></div>
+    </div>
+    <div class="game-news-item__actions">
+      <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-news-command="focus">지도에서 보기</button>
+      ${active ? `<button class="dg-btn dg-btn--primary dg-btn--compact" type="button" data-news-command="respond">${event.responsePrepared ? "대응 준비됨" : escapeHtml(event.actionLabel)}</button>` : ""}
+    </div>
   </article>`;
 }
 
@@ -12168,6 +12171,17 @@ function updateGameClockHud() {
     `${analysisStateOwner.current.dayIndex + 1}일차`,
     `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
   );
+  syncWorkspaceClocks();
+}
+
+/** 열린 전체 화면 제목 띠에 지도 HUD와 같은 시간·재생 상태를 적는다. */
+function syncWorkspaceClocks() {
+  const clocks = document.querySelectorAll<HTMLElement>(".dg-workspace:not([hidden]) [data-workspace-clock]");
+  if (clocks.length === 0) return;
+  const text = `${gameDayReadout?.textContent ?? ""} ${gameClockReadout?.textContent ?? ""} · ${simSpeed === 0 ? "‖ 정지" : `▶ ×${simSpeed}`}`;
+  clocks.forEach((clock) => {
+    if (clock.textContent !== text) clock.textContent = text;
+  });
 }
 
 function updateAutoFareButton() {
@@ -15863,6 +15877,7 @@ function placeModeBanner() {
 
 /** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */
 function syncSpeedControls() {
+  syncWorkspaceClocks();
   const paused = simSpeed === 0;
   const shownSpeed = paused ? lastRunningSpeed : simSpeed;
   if (pauseToggleButton) {

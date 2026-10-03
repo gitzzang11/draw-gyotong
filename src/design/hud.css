@@ -473,6 +473,34 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-conversion__segments { padding-left: 28px; }
 .game-conversion__segments > .game-fold__summary { min-height: 36px; }
 
+/* ===== 전체 화면 workspace 공통 (DESIGN_SYSTEM §12) =====
+   지도 HUD(1000)를 덮고 알림(1050)·대화상자(2000)보다 아래. */
+.game-workspace { z-index: 1040; }
+.game-workspace .dg-workspace__title { margin: 0; }
+.game-workspace__clock { margin-left: auto; font: var(--type-label); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: .9; }
+.game-workspace .dg-workspace__bar .dg-icon-btn { background: transparent; border-color: transparent; }
+
+/* ===== 도시 뉴스 ===== */
+.game-news__body { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; gap: var(--space-5); }
+.game-news__aside { position: sticky; top: 0; display: grid; gap: var(--space-2); }
+.game-news__feed { display: grid; max-width: 760px; }
+.game-news__empty { display: grid; gap: var(--space-1); margin: 0; }
+.game-news-item { padding: var(--space-3) 0; border-top: var(--line-strong) solid var(--text-1); }
+.game-news-item:first-child { padding-top: 0; border-top: 0; }
+.game-news-item[data-expired="true"] { color: var(--text-2); }
+.game-news-item__head { display: flex; align-items: center; gap: var(--space-2); }
+.game-news-item__head h3 { flex: 1; min-width: 0; margin: 0; font: var(--type-sign); }
+.game-news-item__time { font: var(--type-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.game-news-item__summary { margin: var(--space-1) 0 var(--space-2); }
+.game-news-item__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-4); }
+.game-news-item__actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-2); }
+@media (max-width: 719px) {
+  .game-news__body { grid-template-columns: 1fr; gap: var(--space-3); }
+  .game-news__aside { position: static; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--space-3); }
+  .game-news__aside > :not(.dg-row) { grid-column: 1 / -1; }
+  .game-news-item__facts { grid-template-columns: 1fr; }
+}
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 2000; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }

@@ -447,6 +447,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | tooltip | `dg-tooltip` |
 | 알림 | `dg-toast`, `dg-banner` (`--caution` / `--danger`), 패널 내 `dg-notice` (`--danger`) |
 | 다이얼로그 | `dg-scrim` + `dg-dialog dg-panel`. 층 순서는 HUD 1000 · 알림 1050 · (기존 시작 화면 1500) · 대화상자 2000 · 색 선택 2100 · 확인 2200 (`src/design/hud.css`) |
-| 전체 화면 | `dg-workspace`, `__bar` `__title` `__body` |
+| 전체 화면 | `dg-workspace game-workspace`(z 1040: HUD 위, 알림·대화상자 아래), `__bar` `__title` `__body`. 제목 띠 오른쪽에 `[data-workspace-clock]`(게임 날짜·시각·재생 상태, `syncWorkspaceClocks`)과 닫기 |
+| 도시 뉴스 | `game-news`: 왼쪽 집계·보기 열, 오른쪽 `game-news-item` 목록(굵은 구분선, 카드 금지). 기회는 `dg-tag--ok` ▲, 도시 변화는 기본 태그 △, 종료는 `data-expired` |
 | 표 | `dg-table`, 숫자 열 `dg-num` |
 | 패널 진입 | `dg-enter-edge` |
