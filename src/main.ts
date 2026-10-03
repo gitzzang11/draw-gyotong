@@ -1391,14 +1391,16 @@ app.innerHTML = `
       <div id="newsFeed" class="news-feed"></div>
     </section>
 
-    <div id="constructionManagerDialog" class="dialog-backdrop" hidden>
-      <section class="construction-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="constructionManagerTitle">
-        <div class="dialog-heading">
-          <div><span>CONSTRUCTION STATUS</span><h2 id="constructionManagerTitle">공사 및 개통 현황</h2></div>
-          <button id="closeConstructionManagerButton" class="dialog-close" type="button" aria-label="공사 현황 닫기">×</button>
+    <div id="constructionManagerDialog" class="dg-hud dg-scrim game-projects" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="constructionManagerTitle">
+        <header class="dg-panel__header">
+          <h2 id="constructionManagerTitle" class="dg-panel__title">공사·개통 현황</h2>
+          <div class="dg-panel__header-end"><button id="closeConstructionManagerButton" class="dg-icon-btn" type="button" aria-label="공사 현황 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <p class="dg-panel__section game-inspector__note">커리어 모드에서는 공사가 끝난 뒤 개통 조건을 확인합니다. 샌드박스 건설은 즉시 운영됩니다.</p>
+          <div id="constructionProjectList"></div>
         </div>
-        <p class="construction-manager-help">커리어 모드에서는 공사가 끝난 뒤 개통 조건을 확인합니다. 샌드박스 건설은 즉시 운영됩니다.</p>
-        <div id="constructionProjectList" class="construction-project-list"></div>
       </section>
     </div>
 
@@ -4978,7 +4980,7 @@ function renderConstructionManager() {
   if (!constructionProjectList) return;
   updateConstructionBadge();
   if (constructionState.projects.length === 0) {
-    constructionProjectList.innerHTML = `<div class="construction-project-empty"><strong>진행 중인 공사가 없습니다</strong><span>${metaState.current.mode === "sandbox" && !settings.sandboxConstructionTime ? "샌드박스 모드에서는 건설이 즉시 완료됩니다." : "건설을 확정하면 공사 일정이 이곳에 표시됩니다."}</span></div>`;
+    constructionProjectList.innerHTML = `<p class="dg-panel__section game-inspector__note"><strong>진행 중인 공사가 없습니다.</strong> <span>${metaState.current.mode === "sandbox" && !settings.sandboxConstructionTime ? "샌드박스 모드에서는 건설이 즉시 완료됩니다." : "건설을 확정하면 공사 일정이 이곳에 표시됩니다."}</span></p>`;
     return;
   }
   const statusOrder: Record<ConstructionProjectStatus, number> = { "opening-ready": 0, building: 1, scheduled: 2, planned: 3, operating: 4 };
@@ -5001,23 +5003,22 @@ function renderConstructionProjectCard(project: ConstructionProject) {
   const ready = requirements.length > 0 && requirements.every((item) => item.met);
   const eventMarkup =
     project.events.length > 0
-      ? `<div class="construction-events">${project.events.map((event) => `<span class="${event.applied ? "applied" : ""}">${escapeHtml(event.message)}</span>`).join("")}</div>`
+      ? `<ul class="game-inspector__list">${project.events.map((event) => `<li>${event.applied ? "✓ " : "△ "}${escapeHtml(event.message)}</li>`).join("")}</ul>`
       : "";
-  return `<article class="construction-project-card status-${project.status}" data-project-id="${project.id}">
-    <header><div><span>${labels[project.status]}</span><strong>${escapeHtml(project.name)}</strong></div><em>${Math.round(progress * 100)}%</em></header>
-    <div class="construction-progress"><i style="width:${Math.round(progress * 100)}%"></i></div>
-    <dl>
-      <div><dt>공사 기간</dt><dd>${formatConstructionDuration(project.durationDays + project.delayDays)}</dd></div>
-      <div><dt>완공 예정</dt><dd>게임 ${project.expectedCompletionDay}일차</dd></div>
-      <div><dt>사업비</dt><dd>${formatCost(project.baseCost + project.additionalCost)}</dd></div>
-    </dl>
-    ${requirements.length > 0 ? `<div class="opening-requirements">${requirements.map((item) => `<button type="button" data-project-action="${item.action}" class="${item.met ? "met" : ""}"><i>${item.met ? "✓" : "!"}</i><span>${item.label}</span></button>`).join("")}</div>` : ""}
+  const statusTag = project.status === "operating" ? "dg-tag--ok" : project.status === "planned" ? "dg-tag--plan" : project.status === "opening-ready" ? "dg-tag--express" : "dg-tag--build";
+  return `<section class="dg-panel__section game-project" data-project-id="${project.id}">
+    <div class="game-project__head"><span class="dg-tag ${statusTag}"><i class="dg-tag__icon" aria-hidden="true"></i>${labels[project.status]}</span><strong>${escapeHtml(project.name)}</strong><span class="dg-row__value">${Math.round(progress * 100)}%</span></div>
+    <div class="dg-meter game-project__progress" role="progressbar" aria-label="공사 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress * 100)}"><span class="dg-meter__fill" style="width:${Math.round(progress * 100)}%"></span></div>
+    <div class="dg-row"><span class="dg-row__label">공사 기간</span><span class="dg-row__value">${formatConstructionDuration(project.durationDays + project.delayDays)}</span></div>
+    <div class="dg-row"><span class="dg-row__label">완공 예정</span><span class="dg-row__value">게임 ${project.expectedCompletionDay}일차</span></div>
+    <div class="dg-row"><span class="dg-row__label">사업비</span><span class="dg-row__value">${formatCost(project.baseCost + project.additionalCost)}</span></div>
+    ${requirements.length > 0 ? `<h4 class="dg-panel__section-label">개통 조건</h4><div class="game-project__requirements">${requirements.map((item) => `<button class="game-route-item" type="button" data-project-action="${item.action}"><span class="${item.met ? "game-inspector__plus" : "game-inspector__minus"}" aria-hidden="true">${item.met ? "✓" : "!"}</span><span class="game-route-item__text"><strong>${item.label}</strong><small>${item.met ? "충족" : "미충족 · 눌러서 해결"}</small></span></button>`).join("")}</div>` : ""}
     ${eventMarkup}
-    <footer>
-      <button type="button" data-focus-project>지도에서 보기</button>
-      ${project.status === "opening-ready" ? `<button type="button" data-open-project class="primary" ${ready ? "" : "disabled"}>노선 개통</button>` : ""}
-    </footer>
-  </article>`;
+    <div class="game-project__actions">
+      <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-focus-project>지도에서 보기</button>
+      ${project.status === "opening-ready" ? `<button class="dg-btn dg-btn--primary dg-btn--compact" type="button" data-open-project ${ready ? "" : "disabled"}>노선 개통</button>` : ""}
+    </div>
+  </section>`;
 }
 
 function handleConstructionManagerClick(event: Event) {

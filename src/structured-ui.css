@@ -550,7 +550,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .plan-asset-card,
-.construction-project-card,
 .analysis-card,
 .news-card,
 .news-item {
@@ -603,8 +602,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .dialog-backdrop > section,
 .dialog-backdrop > div > section,
 .planning-dialog,
-.plan-conversion-dialog,
-.construction-manager-dialog {
+.plan-conversion-dialog {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
   background: var(--color-surface-0) !important;
@@ -906,7 +904,6 @@ body .game-shell .dialog-backdrop .dialog-close {
 
 /* Feedback surfaces */
 
-.construction-progress,
 .analysis-progress,
 .statistics-progress {
   border-radius: 2px !important;
@@ -914,7 +911,6 @@ body .game-shell .dialog-backdrop .dialog-close {
   box-shadow: none !important;
 }
 
-.construction-progress > i,
 .analysis-progress > i,
 .statistics-progress > i {
   border-radius: 2px !important;

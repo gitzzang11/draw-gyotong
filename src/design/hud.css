@@ -409,6 +409,15 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-fleet-row__cost { grid-column: 2; justify-self: end; font: var(--type-label); color: var(--text-2); }
 .game-train__full { padding: 0 var(--space-3); color: var(--signal-caution-text); }
 
+/* ===== 공사·개통 현황 ===== */
+.game-projects { z-index: 2000; }
+.game-projects .dg-dialog { width: min(560px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-project__head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--touch-min); }
+.game-project__head strong { flex: 1; min-width: 0; font: var(--type-sign); font-size: 16px; }
+.game-project__progress { margin-bottom: var(--space-1); }
+.game-project__actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-2); }
+.game-project__requirements { display: grid; }
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 2000; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }
