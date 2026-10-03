@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { PAPER_MAP_PALETTE } from "../src/map/mapPalette";
 
 const read = (relative: string) => readFileSync(new URL(relative, import.meta.url), "utf8");
 
@@ -37,5 +38,14 @@ describe("design tokens", () => {
 
   it("defines the same token set for paper and ink", () => {
     expect([...ink.keys()].sort()).toEqual([...paper.keys()].sort());
+  });
+
+  it("keeps the map renderer fallback palette equal to the paper tokens", () => {
+    const fallback: Record<string, string> = {
+      "--surface-0": PAPER_MAP_PALETTE.surface, "--map-ground": PAPER_MAP_PALETTE.ground, "--text-1": PAPER_MAP_PALETTE.ink,
+      "--text-2": PAPER_MAP_PALETTE.inkMuted, "--text-3": PAPER_MAP_PALETTE.inkFaint, "--signal-info": PAPER_MAP_PALETTE.info,
+      "--signal-caution": PAPER_MAP_PALETTE.caution, "--signal-danger": PAPER_MAP_PALETTE.danger, "--signal-ok": PAPER_MAP_PALETTE.ok,
+    };
+    for (const [token, value] of Object.entries(fallback)) expect(value.toUpperCase(), token).toBe(paper.get(token));
   });
 });

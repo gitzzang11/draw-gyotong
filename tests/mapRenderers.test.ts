@@ -76,6 +76,7 @@ import { LayerManager } from "../src/map/layerManager";
 import { LineRenderer, type LineRenderEntity } from "../src/map/lineRenderer";
 import { StationRenderer } from "../src/map/stationRenderer";
 import { TrainRenderer } from "../src/map/trainRenderer";
+import { PAPER_MAP_PALETTE } from "../src/map/mapPalette";
 
 function line(overrides: Partial<LineRenderEntity> = {}): LineRenderEntity {
   return {
@@ -165,7 +166,8 @@ describe("incremental map renderers (mocked Leaflet; no DOM)", () => {
     const colors = group.getLayers().map((layer) =>
       (layer as L.Polyline & { style: Record<string, unknown> }).style.color
     );
-    expect(colors.slice(0, 2)).toEqual(["rgba(4, 10, 14, 0.9)", "rgba(4, 10, 14, 0.9)"]);
+    // casing은 바탕색 (DOM 없는 테스트에서는 종이 테마 값)
+    expect(colors.slice(0, 2)).toEqual([PAPER_MAP_PALETTE.surface, PAPER_MAP_PALETTE.surface]);
     expect(colors.slice(2)).toEqual(["#ff0000", "#ff0000"]);
   });
 

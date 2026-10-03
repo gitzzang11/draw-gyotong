@@ -1,6 +1,7 @@
 import L from "leaflet";
 import { EntityRenderer } from "./entityRenderer";
 import { escapeTooltipText } from "./tooltipText";
+import { mapPalette } from "./mapPalette";
 
 export interface StationRenderEntity {
   id: string;
@@ -71,12 +72,15 @@ export class StationRenderer {
   }
 
   private updateStation(marker: L.CircleMarker, entity: StationRenderEntity) {
+    // 역 기호 (DESIGN_SYSTEM §11): 일반역은 바탕색 원 + 노선 색 테두리, 환승역은 더 큰 원 + 먹 테두리,
+    // 급행 정차역은 노선 색 테두리 안에 먹 점, 공사 중은 점선 테두리.
+    const palette = mapPalette();
     marker.setStyle({
-      radius: entity.express ? 8 : 6,
-      color: "#111111",
-      weight: 2.5,
-      fillColor: entity.transfer ? "#ffffff" : entity.express ? "#ff5d5d" : entity.color,
-      fillOpacity: entity.operational ? 1 : 0.25,
+      radius: entity.transfer ? 8 : entity.express ? 7 : 6,
+      color: entity.transfer ? palette.ink : entity.color,
+      weight: entity.express && !entity.transfer ? 3 : 2.5,
+      fillColor: entity.express && !entity.transfer ? palette.ink : palette.surface,
+      fillOpacity: 1,
       dashArray: entity.operational ? undefined : "3 4",
       className: "station-map-marker",
     });
@@ -115,7 +119,7 @@ export class StationRenderer {
     ring.setLatLng(entity.position);
     ring.setRadius(baseRadius + 5);
     ring.setStyle({
-      color: entity.color,
+      color: mapPalette().ink,
       weight: 2,
       opacity: 0.95,
       fillColor: "transparent",
@@ -125,9 +129,9 @@ export class StationRenderer {
 
   private transferStyle(): L.PolylineOptions {
     return {
-      color: "#ffffff",
-      weight: 2,
-      opacity: 0.7,
+      color: mapPalette().ink,
+      weight: 2.5,
+      opacity: 0.85,
       dashArray: "3 6",
       interactive: false,
       pane: this.pane,

@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { EntityRenderer } from "./entityRenderer";
+import { mapPalette } from "./mapPalette";
 
 export interface ConstructionRenderEntity {
   id: string;
@@ -106,9 +107,10 @@ export class ConstructionRenderer {
 
   private populateDraft(group: L.LayerGroup, entity: ConstructionDraftRenderEntity) {
     if (entity.polygon) {
+      const palette = mapPalette();
       L.polygon(entity.polygon, {
-        color: entity.valid ? "#f3ca52" : "#ff5d5d",
-        fillColor: "#f3ca52",
+        color: entity.valid ? palette.caution : palette.danger,
+        fillColor: palette.caution,
         fillOpacity: 0.2,
         weight: 3,
         dashArray: "10 7",
@@ -121,7 +123,7 @@ export class ConstructionRenderer {
     for (const marker of entity.markers) {
       L.circleMarker(marker.position, {
         radius: 9,
-        color: "#ffffff",
+        color: mapPalette().surface,
         weight: 3,
         fillColor: marker.color,
         fillOpacity: 1,
@@ -132,7 +134,7 @@ export class ConstructionRenderer {
 
   private trackStyle(): L.PolylineOptions {
     return {
-      color: "#dbe5e8",
+      color: mapPalette().inkFaint,
       weight: 9,
       opacity: 0.5,
       dashArray: "3 12",
@@ -143,7 +145,8 @@ export class ConstructionRenderer {
 
   private completedStyle(entity: ConstructionRenderEntity): L.PolylineOptions {
     return {
-      color: entity.ready ? "#f3ca52" : entity.affected ? "#ff5d5d" : "#ff9f43",
+      // 개통 준비 = 정상(점선), 영향받는 공사 = 위험, 진행 중 = 주의
+      color: entity.ready ? mapPalette().ok : entity.affected ? mapPalette().danger : mapPalette().caution,
       weight: 6,
       opacity: 0.95,
       dashArray: entity.ready ? "8 7" : undefined,

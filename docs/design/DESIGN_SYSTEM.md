@@ -262,6 +262,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - 벡터 배경 레이어(행정 경계, 토지 이용)는 지도 층 토큰을 읽어 칠하고 테마를 바꾸면 `resetStyle()`로 다시 칠한다. 인구 밀도는 호박색 한 계열(`--signal-caution` → `--signal-caution-text`)과 불투명도로 표현하고 범례도 같은 범위를 쓴다.
 - 지도 위 편집 안내(편집 점, 삭제 기준점, 철거 범위, 끊긴 구간, 기지 연결, 산악 구간·교량·터널 표시)는 `themeTokenColor`로 신호 토큰을 읽어 칠한다: 위험·철거 `--signal-danger`, 공사·지형 비용 `--signal-caution`, 편집 점·터널·기획 `--signal-info`, 연결 가능 `--signal-ok`. 노선 색 외의 고정 색을 새로 쓰지 않는다.
 - 노선은 굵은 실선 + 바탕색 casing으로 그린다. 선택되지 않은 노선끼리 발광하거나 그림자를 갖지 않는다.
+- 구현: `src/map/mapPalette.ts`의 `mapPalette()`가 테마 토큰(바탕·먹·신호색)을 `data-theme`별로 캐시해 렌더러(노선·역·기지·공사·기획)에 준다. 테마를 바꾸면 렌더러를 비우고 전체 갱신한다. 역명·운행계통 레이블과 역 누름 표시는 `src/design/hud.css` 지도 기호·레이블 구획에 있다.
 
 ### 역 기호
 

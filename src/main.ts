@@ -2969,8 +2969,10 @@ hapticsToggle?.addEventListener("change", () => updateSettings({ hapticsEnabled:
 performanceSelect?.addEventListener("change", () => updateSettings({ performanceMode: performanceSelect.value === "battery" ? "battery" : "balanced" }));
 mapThemeSelect?.addEventListener("change", () => {
   updateSettings({ mapTheme: normalizeMapTheme(mapThemeSelect.value) });
-  // 신호 토큰으로 칠하는 인구 밀도 레이어를 새 테마 색으로 다시 그린다.
+  // 테마 토큰으로 칠하는 지도 기호를 새 테마 색으로 다시 그린다. 렌더러는 바뀐 객체만 다시 칠하므로 비우고 전체 갱신한다.
   updateDynamicLayers();
+  for (const renderer of [lineRenderer, stationRenderer, depotRenderer, blueprintRenderer, constructionRenderer]) renderer.clear();
+  requestUpdate("full");
 });
 reducedMotionToggle?.addEventListener("change", () => updateSettings({ reducedMotion: Boolean(reducedMotionToggle.checked) }));
 sandboxConstructionTimeToggle?.addEventListener("change", () =>

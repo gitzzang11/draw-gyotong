@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { EntityRenderer } from "./entityRenderer";
+import { mapPalette } from "./mapPalette";
 
 export interface DepotRenderEntity {
   id: string;
@@ -44,13 +45,13 @@ export class DepotRenderer {
   }
 
   private updateDepot(polygon: L.Polygon, entity: DepotRenderEntity) {
-    const borderColor = entity.connected ? "#f3ca52" : "#9fb1b9";
-    const fillColor = entity.connected ? "#f3ca52" : "#687c85";
+    // 차량기지 기호: 바탕색 면 + 먹 테두리. 노선과 연결되지 않은 기지는 흐린 테두리, 선택은 굵은 테두리.
+    const palette = mapPalette();
     polygon.setStyle({
-      color: entity.selected ? "#ffffff" : borderColor,
-      fillColor,
-      fillOpacity: entity.operational ? 0.18 : 0.07,
-      weight: entity.selected ? 3 : 2,
+      color: entity.selected || entity.connected ? palette.ink : palette.inkFaint,
+      fillColor: palette.surface,
+      fillOpacity: entity.operational ? 0.55 : 0.3,
+      weight: entity.selected ? 3.5 : 2,
       dashArray: entity.operational ? undefined : "6 7",
       className: "depot-map-shape",
     });

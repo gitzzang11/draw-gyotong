@@ -532,6 +532,69 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .leaflet-container.map .leaflet-control-attribution { background: var(--surface-0); color: var(--text-2); font: var(--type-micro); }
 .leaflet-container.map .leaflet-control-attribution a { color: var(--text-1); }
 
+/* ===== 지도 기호·레이블 (DESIGN_SYSTEM §11) ===== */
+/* 역명: 바탕색 halo 위 먹 글자. 상자·노선 색 글자를 쓰지 않는다. */
+.leaflet-tooltip.station-map-label {
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-1);
+  font: var(--type-micro);
+  font-weight: 800;
+  text-shadow:
+    0 0 2px var(--surface-0), 0 0 2px var(--surface-0), 0 0 3px var(--surface-0),
+    1px 1px 0 var(--surface-0), -1px -1px 0 var(--surface-0), 1px -1px 0 var(--surface-0), -1px 1px 0 var(--surface-0);
+}
+.leaflet-tooltip.station-map-label::before { display: none; }
+/* 역 누름·가리킴: 발광 대신 먹 고리 */
+.station-click-target:hover span,
+.station-click-target:focus span,
+.station-click-target.is-hovered span { background: transparent; box-shadow: inset 0 0 0 2px var(--text-1); transform: scale(.82); }
+.station-click-target.is-pressed span { background: transparent; box-shadow: inset 0 0 0 3px var(--text-1); transform: scale(.68); }
+.station-map-marker.is-hovered { stroke-width: 4px; transform: scale(1.3); }
+.station-map-marker.is-pressed { transform: scale(1.45); }
+
+/* 선택한 운행계통: 정차(이중 표식)·통과(작은 점선)·시종착(마름모)을 모양과 문구로 구분 */
+.operating-service-station-target { border: 0; background: transparent; pointer-events: none; }
+.operating-service-station-target.editable { cursor: pointer; pointer-events: auto; }
+.operating-service-station-target.editable:focus-visible { border-radius: 50%; outline: 2px solid var(--focus); outline-offset: -5px; }
+.operating-service-stop-glyph {
+  position: absolute; top: 50%; left: 50%;
+  box-sizing: border-box; width: 18px; height: 18px;
+  border: 3px solid var(--surface-0); border-radius: 50%;
+  background: var(--service-color, var(--text-1));
+  box-shadow: 0 0 0 2px var(--text-1);
+  transform: translate(-50%, -50%);
+}
+.operating-service-stop-glyph::after {
+  position: absolute; top: 50%; left: 50%;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--text-1); content: "";
+  transform: translate(-50%, -50%);
+}
+.operating-service-stop-glyph.terminal { width: 19px; height: 19px; border-radius: var(--radius); transform: translate(-50%, -50%) rotate(45deg); }
+.operating-service-stop-glyph.terminal::after { border-radius: 1px; }
+.operating-service-stop-glyph.pass { width: 10px; height: 10px; border: 2px dashed var(--text-2); background: var(--surface-0); box-shadow: none; }
+.operating-service-stop-glyph.pass::after { display: none; }
+.operating-service-stop-glyph.changed { animation: operating-service-stop-changed var(--dur-panel) var(--ease-out); }
+@keyframes operating-service-stop-changed { 0% { scale: .68; } 65% { scale: 1.22; } 100% { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .operating-service-stop-glyph.changed { animation: none; } }
+.leaflet-tooltip.operating-service-stop-label {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 5px;
+  border: var(--line-strong) solid var(--text-1); border-radius: var(--radius);
+  background: var(--surface-0); color: var(--text-1);
+  box-shadow: none;
+  font: var(--type-micro); white-space: nowrap;
+}
+.leaflet-tooltip.operating-service-stop-label strong { font-weight: 800; }
+.operating-service-stop-label-kind { color: var(--text-2); font-weight: 800; }
+.leaflet-tooltip.operating-service-stop-label.terminal { border-width: 3px; }
+.leaflet-tooltip-top.operating-service-stop-label::before { border-top-color: var(--text-1); }
+.leaflet-tooltip-bottom.operating-service-stop-label::before { border-bottom-color: var(--text-1); }
+
 /* ===== 시작 화면 (세이브 관리 workspace) =====
    층: 시작 화면 1500 (대화상자 2000 아래, 세이브 수정·삭제 확인이 위에 뜬다) · 로딩 2500 */
 .game-start { z-index: 1500; }

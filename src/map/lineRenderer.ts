@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { EntityRenderer } from "./entityRenderer";
+import { mapPalette } from "./mapPalette";
 
 export type LineLod = "overview" | "district" | "build";
 
@@ -132,8 +133,9 @@ export class LineRenderer {
     const routeWeight = low ? 4 : middle ? 5 : 6;
     const emphasisWeight = routeWeight + 3;
     const haloWeight = emphasisWeight + 6;
+    const palette = mapPalette();
     path.halo?.setStyle({
-      color: "rgba(255, 255, 255, 0.6)",
+      color: palette.surface,
       weight: haloWeight,
       opacity: 0.6,
       lineCap: "round",
@@ -146,8 +148,9 @@ export class LineRenderer {
       lineCap: "round",
       lineJoin: "round",
     });
+    // 바탕색 casing (DESIGN_SYSTEM §11): 노선 색 실선을 지도 바탕에서 떼어 낸다.
     path.outline.setStyle({
-      color: "rgba(4, 10, 14, 0.9)",
+      color: palette.surface,
       weight: outlineWeight,
       opacity: 0.95,
       lineCap: "round",
@@ -156,7 +159,8 @@ export class LineRenderer {
     path.line.setStyle({
       color: entity.color,
       weight: routeWeight,
-      opacity: entity.underConstruction ? 0.42 : entity.planning ? 0.54 : entity.paused ? 0.62 : 0.72,
+      // 운행 노선은 노선 색 그대로의 실선. 공사·기획·일시중지는 흐리게 하고 점선 등 모양으로도 구분한다.
+      opacity: entity.underConstruction ? 0.5 : entity.planning ? 0.6 : entity.paused ? 0.62 : 1,
       dashArray: entity.underConstruction ? "5 10" : entity.planning ? "10 8" : undefined,
       lineCap: "round",
       lineJoin: "round",
