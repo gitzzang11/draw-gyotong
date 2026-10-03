@@ -8,6 +8,9 @@
  */
 
 /* ===== 공통 ===== */
+/* 컴포넌트가 display를 지정해도 hidden 속성은 항상 숨긴다. */
+:where([class^="dg-"], [class*=" dg-"])[hidden] { display: none !important; }
+
 .dg-surface {
   color-scheme: var(--theme-color-scheme);
   background: var(--surface-0);
@@ -257,6 +260,7 @@
   place-items: center;
   width: var(--touch-min);
   height: var(--touch-min);
+  padding: 0;
   border: 0;
   border-radius: var(--radius);
   background: transparent;
@@ -360,6 +364,8 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 
 /* ===== Mode / tool rail (§9, §10) ===== */
 .dg-rail {
+  display: flex;
+  flex-direction: column;
   width: var(--rail-width);
   background: var(--surface-0);
   color: var(--text-1);
@@ -391,6 +397,7 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
   width: 100%;
   min-height: var(--touch-min);
@@ -427,7 +434,9 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
   gap: var(--space-1);
   width: 100%;
   min-height: 36px;
+  padding: 0 var(--space-1);
   border: 0;
+  white-space: nowrap;
   background: var(--invert-bg);
   color: var(--invert-fg);
   font: var(--type-label);
@@ -438,7 +447,7 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 .dg-rail--compact .dg-tool {
   flex-direction: column;
   justify-content: center;
-  min-height: 52px;
+  min-height: var(--touch-min);
   gap: 3px;
   padding: 0;
   font: var(--type-micro);

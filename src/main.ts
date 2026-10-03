@@ -913,15 +913,47 @@ app.innerHTML = `
       </button>
     </div>
 
-    <!-- Mode rail: 도구는 다음 단계에서 이 레일 아래로 옮긴다 -->
-    <nav id="workspaceModeBar" class="dg-hud dg-rail game-mode-rail" aria-label="작업 모드">
+    <!-- 모드·도구 레일: 왼쪽 가장자리 (docs/design/MOBILE_UX.md §3–§4) -->
+    <nav id="workspaceModeBar" class="dg-hud dg-rail game-mode-rail" aria-label="작업 모드와 도구">
       <div class="dg-rail__modes" role="tablist" aria-label="상위 작업 모드">
         <button class="dg-rail__mode" type="button" data-workspace-mode="management" role="tab" aria-selected="true">관리</button>
         <button class="dg-rail__mode" type="button" data-workspace-mode="planning" role="tab" aria-selected="false">기획</button>
         <button class="dg-rail__mode" type="button" data-workspace-mode="construction" role="tab" aria-selected="false">공사</button>
       </div>
+      <button id="railModeNowButton" class="dg-rail__mode-now" type="button" aria-expanded="false" aria-label="작업 모드 바꾸기"><span id="railModeMark" class="dg-mode-mark dg-mode-mark--manage" aria-hidden="true"></span><span id="railModeNowLabel">관리</span></button>
       <strong id="workspaceModeReadout" hidden>관리 모드</strong>
+      <div id="railTools" class="game-rail-tools" role="group" aria-label="도구">
+        <button id="selectTool" class="dg-tool" data-rail-tool type="button" aria-pressed="true" aria-label="지도 탐색"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter" aria-hidden="true"><path d="M5 3 L5 15 L8 12 L11 17 L13 16 L10 11 L14 11 Z"/></svg><span>탐색</span></button>
+        <button id="routeTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 15 L9 9 H17"/><circle cx="3" cy="15" r="1.5"/><circle cx="17" cy="9" r="1.5"/></svg><span>노선 건설</span></button>
+        <button id="stationTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2" fill="currentColor"/></svg><span>역</span></button>
+        <button id="transferTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="2" y="6" width="16" height="8" rx="4"/></svg><span>환승</span></button>
+        <button id="depotTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter" aria-hidden="true"><path d="M3 17 V8 L10 3 L17 8 V17 Z M7 17 V11 H13 V17"/></svg><span>기지</span></button>
+        <button id="extendTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false" aria-label="노선 연장"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 10 H10"/><path d="M13 10 H17" stroke-dasharray="2 2"/><circle cx="11" cy="10" r="2"/></svg><span>연장</span></button>
+        <button id="branchTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false" aria-label="분기 추가"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 15 H17 M9 15 L15 5"/></svg><span>분기</span></button>
+        <button id="mergeTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false" aria-label="노선 연결"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 6 H8 L12 14 H17 M3 14 H8"/></svg><span>연결</span></button>
+        <button id="eraserTool" class="dg-tool dg-tool--destructive" data-rail-tool type="button" aria-pressed="false" aria-label="시설 범위 철거"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 6 H16 M8 6 V3 H12 V6 M6 6 L7 17 H13 L14 6"/></svg><span>철거</span></button>
+        <button id="manageLineTool" class="dg-tool" data-rail-tool type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M7 5 H17 M7 10 H17 M7 15 H17 M3 5 H4 M3 10 H4 M3 15 H4"/></svg><span>노선 목록</span></button>
+        <button id="manageOperationsTool" class="dg-tool" data-rail-tool type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 17 H17 M6 14 V9 M10 14 V5 M14 14 V11"/></svg><span>운영 현황</span></button>
+        <button id="analysisButton" class="dg-tool" data-rail-tool type="button" aria-label="운영 분석 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 3 V17 H17 M6 13 L9 9 L12 11 L16 5"/></svg><span>운영 분석</span><em id="analysisBadge" class="dg-count-badge" hidden>0</em></button>
+        <button id="manageMapTool" class="dg-tool" data-rail-tool type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter" aria-hidden="true"><path d="M2 5 L7 3 L13 5 L18 3 V15 L13 17 L7 15 L2 17 Z M7 3 V15 M13 5 V17"/></svg><span>노선도</span></button>
+        <button id="planOverviewButton" class="dg-tool" data-rail-tool type="button" aria-label="계획 목록 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 3 H17 V17 H3 Z M6 7 L8 9 L11 6 M6 13 H14"/></svg><span>계획 목록</span></button>
+        <button id="constructionOverviewButton" class="dg-tool" data-rail-tool type="button" aria-label="공사 현황 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 17 H17 M5 17 V9 L10 5 L15 9 V17 M8 17 V12 H12 V17"/></svg><span>공사 현황</span></button>
+        <!-- 현재 어떤 모드에서도 노출하지 않는 도구. 기능 연결을 유지하려고 남겨 둔다. -->
+        <button id="expressButton" class="dg-tool" data-rail-tool type="button" aria-pressed="false" aria-label="급행 운행 설정" hidden><span id="expressButtonLabel">급행 해금</span></button>
+        <button id="planningModeButton" class="dg-tool" data-rail-tool type="button" aria-pressed="false" hidden><span>계획</span></button>
+        <button id="editTool" class="dg-tool" data-rail-tool type="button" aria-pressed="false" aria-label="노선 경로 수정" hidden><span>경로 편집</span></button>
+        <button id="diagramToolButton" class="dg-tool" data-rail-tool type="button" hidden><span>노선도</span></button>
+      </div>
+      <button id="modifyToolsButton" class="dg-tool game-rail-more" type="button" aria-expanded="false" aria-controls="modifyToolsCard" hidden><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><rect x="3" y="9" width="3" height="3"/><rect x="8.5" y="9" width="3" height="3"/><rect x="14" y="9" width="3" height="3"/></svg><span id="railMoreLabel">더보기</span></button>
     </nav>
+
+    <section id="modifyToolsCard" class="dg-hud dg-panel game-rail-overflow" hidden aria-label="추가 도구">
+      <p class="dg-panel__section-label">더보기</p>
+      <div id="railOverflowTools" class="game-rail-overflow-tools" role="group" aria-label="추가 도구"></div>
+    </section>
+
+    <!-- 모드 배너: 현재 모드 · 도구 -->
+    <div id="modeBanner" class="dg-hud dg-mode-banner game-mode-banner" role="status"><span id="modeBannerMark" class="dg-mode-mark dg-mode-mark--manage" aria-hidden="true"></span><span id="modeBannerText">관리 · 탐색</span></div>
 
     <!-- Map controls -->
     <div class="dg-hud dg-map-controls game-map-controls" aria-label="지도 컨트롤">
@@ -948,47 +980,8 @@ app.innerHTML = `
       </button>
     </div>
 
-    <!-- LEVEL 4: BOTTOM PRIMARY THUMB DOCK -->
-    <section class="hud build-panel" aria-label="현재 모드 도구">
-      <!-- Construction Tools Group -->
-      <div class="tool-group construction-tools">
-        <button id="routeTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>노선건설</span></button>
-        <button id="stationTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>역</span></button>
-        <button id="transferTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg><span>환승</span></button>
-        <button id="depotTool" class="primary-tool" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg><span>기지</span></button>
-        <button id="modifyToolsButton" class="primary-tool" type="button" aria-pressed="false" aria-expanded="false" aria-label="수정 도구 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span>수정</span></button>
-        <button id="planningModeButton" class="primary-tool planning-mode-button" type="button" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>계획</span></button>
-        <button id="editTool" class="primary-tool legacy-edit-tool" type="button" aria-pressed="false" aria-label="노선 경로 수정"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>경로 편집</span></button>
-      </div>
-
-      <div class="tool-divider"></div>
-
-      <!-- Management & Shortcuts Group -->
-      <div class="tool-group management-tools">
-        <button id="selectTool" class="primary-tool workspace-management-tool" type="button" aria-pressed="true" aria-label="지도 탐색"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg><span>탐색</span></button>
-        <button id="manageLineTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span>노선 목록</span></button>
-        <button id="expressButton" class="primary-tool express-service-tool workspace-management-tool" type="button" aria-pressed="false" aria-label="급행 운행 설정" title="선택한 노선의 급행 운행을 설정합니다"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8z"/></svg><span id="expressButtonLabel">급행 해금</span></button>
-        <button id="manageOperationsTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>운영 현황</span></button>
-        <button id="analysisButton" class="primary-tool workspace-management-tool" type="button" aria-label="운영 분석 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-7"/></svg><span>운영 분석</span><em id="analysisBadge" hidden>0</em></button>
-        <button id="planOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="계획 목록 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>계획 목록</span></button>
-        <button id="constructionOverviewButton" class="primary-tool overview-shortcut" type="button" aria-label="공사 현황 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V9l6-4 6 4v12"/><path d="M9 21v-6h6v6"/></svg><span>공사 현황</span></button>
-        <button id="manageMapTool" class="primary-tool workspace-management-tool" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg><span>노선도</span></button>
-        <button id="diagramToolButton" class="primary-tool diagram-toolbar-button" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg><span>노선도</span></button>
-      </div>
-
-    </section>
-
     <label id="eraserSizeControl" class="hud eraser-size-control" hidden><span>지우개 크기</span><input id="eraserSizeRange" type="range" min="12" max="48" step="4" value="20" aria-label="지우개 크기" /><output id="eraserSizeValue">20</output></label>
 
-    <section id="modifyToolsCard" class="hud modify-tools-card" hidden aria-label="수정 도구">
-      <div class="modify-tools-card-heading"><span>MODIFY TOOLS</span><strong>수정 도구</strong></div>
-      <div class="modify-tools-grid">
-        <button id="eraserTool" class="primary-tool compact danger-tool" type="button" aria-pressed="false" aria-label="시설 범위 철거"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l10-10 7 7-7 7"/><path d="M6.5 12.5l5 5"/></svg><span>철거</span></button>
-        <button id="extendTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연장"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/><path d="M14 8l4 4-4 4"/></svg><span>연장</span></button>
-        <button id="branchTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="분기 추가"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 12h4c4 0 4-7 6-7"/><path d="M11 12c4 0 4 7 6 7"/></svg><span>분기</span></button>
-        <button id="mergeTool" class="primary-tool compact" type="button" aria-pressed="false" aria-label="노선 연결"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 5c5 0 5 7 10 7"/><path d="M7 19c5 0 5-7 10-7"/></svg><span>연결</span></button>
-      </div>
-    </section>
 
 
 
@@ -1976,6 +1969,26 @@ const manageMapTool = document.querySelector<HTMLButtonElement>("#manageMapTool"
 const routeTool = document.querySelector<HTMLButtonElement>("#routeTool");
 const modifyToolsButton = document.querySelector<HTMLButtonElement>("#modifyToolsButton");
 const modifyToolsCard = byId("modifyToolsCard");
+const workspaceModeBar = byId("workspaceModeBar");
+const railTools = byId("railTools");
+const railOverflowTools = byId("railOverflowTools");
+const railMoreLabel = byId("railMoreLabel");
+const railModeNowButton = document.querySelector<HTMLButtonElement>("#railModeNowButton");
+const railModeNowLabel = byId("railModeNowLabel");
+const railModeMark = byId("railModeMark");
+const modeBanner = byId("modeBanner");
+const modeBannerText = byId("modeBannerText");
+const modeBannerMark = byId("modeBannerMark");
+const compactRailQuery = window.matchMedia("(max-width: 719px)");
+/** 모드별 레일 도구. 앞에 둘수록 우선순위가 높고, 자리가 부족하면 뒤에서부터 더보기로 옮긴다. */
+const railToolIds: Record<WorkspaceMode, string[]> = {
+  management: ["selectTool", "manageLineTool", "manageOperationsTool", "analysisButton", "manageMapTool"],
+  planning: ["selectTool", "routeTool", "stationTool", "transferTool", "depotTool", "extendTool", "branchTool", "mergeTool", "eraserTool", "planOverviewButton"],
+  construction: ["selectTool", "transferTool", "eraserTool", "branchTool", "mergeTool", "constructionOverviewButton"],
+};
+const workspaceModeShortNames: Record<WorkspaceMode, string> = { management: "관리", planning: "기획", construction: "공사" };
+const workspaceModeMarks: Record<WorkspaceMode, string> = { management: "manage", planning: "plan", construction: "build" };
+
 const extendTool = document.querySelector<HTMLButtonElement>("#extendTool");
 const editTool = document.querySelector<HTMLButtonElement>("#editTool");
 const eraserTool = document.querySelector<HTMLButtonElement>("#eraserTool");
@@ -2191,7 +2204,6 @@ function addFloatingWindowMinimizer(
 addFloatingWindowMinimizer(leftRouteWindow, ".left-route-header", "노선 목록");
 addFloatingWindowMinimizer(rightLineControlCard, ".right-line-header", "노선 제어");
 addFloatingWindowMinimizer(routeSettingsCard, ".route-settings-card-heading", "노선 설정");
-addFloatingWindowMinimizer(modifyToolsCard, ".modify-tools-card-heading", "수정 도구");
 addFloatingWindowMinimizer(constructionPreviewPanel, ".construction-preview-header", "건설 미리보기");
 
 function syncColorPicker(input: HTMLInputElement | null) {
@@ -2640,10 +2652,16 @@ routeTool?.addEventListener("click", () => setTool(activeTool === "route" ? "pan
 modifyToolsButton?.addEventListener("click", () => {
   if (!modifyToolsCard) return;
   modifyToolsCard.hidden = !modifyToolsCard.hidden;
-  const expanded = !modifyToolsCard.hidden;
-  modifyToolsButton.setAttribute("aria-expanded", String(expanded));
-  modifyToolsButton.setAttribute("aria-pressed", String(expanded));
+  modifyToolsButton.setAttribute("aria-expanded", String(!modifyToolsCard.hidden));
 });
+railModeNowButton?.addEventListener("click", () => {
+  const open = railModeNowButton.getAttribute("aria-expanded") !== "true";
+  railModeNowButton.setAttribute("aria-expanded", String(open));
+  workspaceModeBar?.classList.toggle("game-mode-rail--modes-open", open);
+  layoutRailTools();
+});
+compactRailQuery.addEventListener("change", () => syncRail());
+window.addEventListener("resize", () => layoutRailTools());
 document.addEventListener("pointerdown", (event) => {
   if (!modifyToolsCard || modifyToolsCard.hidden) return;
   const target = event.target;
@@ -2651,13 +2669,11 @@ document.addEventListener("pointerdown", (event) => {
   if (modifyToolsCard.contains(target) || modifyToolsButton?.contains(target)) return;
   modifyToolsCard.hidden = true;
   modifyToolsButton?.setAttribute("aria-expanded", "false");
-  modifyToolsButton?.setAttribute("aria-pressed", "false");
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !modifyToolsCard || modifyToolsCard.hidden) return;
   modifyToolsCard.hidden = true;
   modifyToolsButton?.setAttribute("aria-expanded", "false");
-  modifyToolsButton?.setAttribute("aria-pressed", "false");
   modifyToolsButton?.focus();
 });
 workspaceModeTabs.forEach((tab) => tab.addEventListener("click", () => setWorkspaceMode(tab.dataset.workspaceMode as WorkspaceMode)));
@@ -3053,6 +3069,8 @@ if (topPlates.length && "ResizeObserver" in window) {
   const observer = new ResizeObserver(() => {
     const bottom = Math.max(...topPlates.map((plate) => plate.getBoundingClientRect().bottom));
     document.documentElement.style.setProperty("--hud-top", `${Math.ceil(bottom)}px`);
+    placeModeBanner();
+    layoutRailTools();
   });
   topPlates.forEach((plate) => observer.observe(plate));
 }
@@ -7366,6 +7384,8 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-selected", String(active));
   });
+  railModeNowButton?.setAttribute("aria-expanded", "false");
+  workspaceModeBar?.classList.remove("game-mode-rail--modes-open");
   planningModeButton?.classList.toggle("active", shouldPlan);
   planningModeButton?.setAttribute("aria-pressed", String(shouldPlan));
   const transferToolLabel = transferTool?.querySelector("span");
@@ -12290,11 +12310,8 @@ function setTool(tool: ToolMode) {
   if (planningTool) routePlanningController.start(planningTool, createId("route-planning"));
   else routePlanningController.replace(null);
   document.body.dataset.activeTool = tool;
-  const modifyToolActive = ["eraser", "extend", "branch", "merge"].includes(tool);
-  if (modifyToolsButton) modifyToolsButton.classList.toggle("active", modifyToolActive);
   if (modifyToolsCard) modifyToolsCard.hidden = true;
   modifyToolsButton?.setAttribute("aria-expanded", "false");
-  modifyToolsButton?.setAttribute("aria-pressed", String(modifyToolActive));
   updateRouteSettingsCard(tool);
   if (eraserSizeControl) eraserSizeControl.hidden = tool !== "eraser";
   cancelActiveDrawing();
@@ -12320,6 +12337,7 @@ function setTool(tool: ToolMode) {
     button.setAttribute("aria-pressed", String(isActive));
   });
   document.body.dataset.tool = tool;
+  syncRail();
   updateExpressButton();
   if (tool === "pan") {
     map.dragging.enable();
@@ -15789,6 +15807,53 @@ function applySettingsToUi() {
     autoSaveIntervalSelect.value = String(settings.autoSaveIntervalSeconds);
     autoSaveIntervalSelect.disabled = !settings.autoSaveEnabled;
   }
+}
+
+/** 레일 밀도, 도구 배치, 더보기 상태, 모드 배너를 현재 모드·도구에 맞춘다. */
+function syncRail() {
+  const compact = compactRailQuery.matches || activeTool !== "pan";
+  workspaceModeBar?.classList.toggle("dg-rail--compact", compact);
+  workspaceModeBar?.classList.toggle("dg-rail--planning", workspaceMode === "planning");
+  document.body.classList.toggle("game-rail-compact", compact);
+  const mark = `dg-mode-mark dg-mode-mark--${workspaceModeMarks[workspaceMode]}`;
+  if (railModeMark) railModeMark.className = mark;
+  if (modeBannerMark) modeBannerMark.className = mark;
+  setText(railModeNowLabel, workspaceModeShortNames[workspaceMode]);
+  layoutRailTools();
+  const activeButton = toolButtons.find((button) => button.getAttribute("aria-pressed") === "true");
+  const toolName = activeTool === "pan" ? "탐색" : activeButton?.querySelector("span")?.textContent ?? "";
+  setText(modeBannerText, toolName ? `${workspaceModeShortNames[workspaceMode]} · ${toolName}` : workspaceModeShortNames[workspaceMode]);
+  placeModeBanner();
+}
+
+function layoutRailTools() {
+  if (!workspaceModeBar || !railTools || !railOverflowTools || !modifyToolsButton) return;
+  const modeButtons = railToolIds[workspaceMode]
+    .map((id) => document.getElementById(id))
+    .filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
+  document.querySelectorAll<HTMLButtonElement>("[data-rail-tool]").forEach((button) => {
+    button.hidden = !modeButtons.includes(button);
+  });
+  modeButtons.forEach((button) => railTools.append(button));
+  modifyToolsButton.hidden = true;
+  const overflows = () => workspaceModeBar.scrollHeight > workspaceModeBar.clientHeight + 1;
+  if (overflows()) {
+    modifyToolsButton.hidden = false;
+    for (let index = modeButtons.length - 1; index > 0 && overflows(); index -= 1) railOverflowTools.prepend(modeButtons[index]);
+  }
+  const overflowActive = railOverflowTools.querySelector<HTMLButtonElement>("[aria-pressed=\"true\"]");
+  modifyToolsButton.setAttribute("aria-pressed", String(Boolean(overflowActive)));
+  setText(railMoreLabel, overflowActive?.querySelector("span")?.textContent ?? "더보기");
+  if (modifyToolsButton.hidden && modifyToolsCard) modifyToolsCard.hidden = true;
+}
+
+/** 모드 배너는 두 정보판 사이에 들어가면 위쪽 가운데, 아니면 정보판 아래에 둔다. */
+function placeModeBanner() {
+  const financePlate = byId("financePlate");
+  const timePlate = byId("timePlate");
+  if (!modeBanner || !financePlate || !timePlate) return;
+  const gap = timePlate.getBoundingClientRect().left - financePlate.getBoundingClientRect().right;
+  modeBanner.dataset.placement = gap >= modeBanner.offsetWidth + 24 ? "top" : "low";
 }
 
 /** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */

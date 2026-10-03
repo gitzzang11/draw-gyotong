@@ -11,7 +11,11 @@
   /* 위쪽 정보판의 실제 아래쪽 위치. main.ts가 ResizeObserver로 갱신한다. */
   --hud-top: calc(var(--hud-inset-top) + var(--plate-height) + 2px);
   --hud-gap: 8px;
+  /* 왼쪽 레일 오른쪽에서 시작해야 하는 표면의 left 값 (기존 패널도 임시로 사용) */
+  --hud-left-clear: calc(var(--edge-inset-left) + var(--rail-width) + var(--hud-gap));
 }
+:root { --hud-bottom-clear: calc(var(--edge-inset-bottom) + var(--plate-height) + 2px + var(--hud-gap)); }
+body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--rail-width-compact) + var(--hud-gap)); }
 
 .dg-hud {
   z-index: 1000;
@@ -46,13 +50,55 @@
 /* 배속 칸: 현재 배속을 크게 */
 .game-speed-cell { min-width: 60px; justify-content: center; font: var(--type-metric); font-size: 16px; }
 
-/* ===== 왼쪽 레일 ===== */
+/* ===== 왼쪽 레일 =====
+   위쪽 정보판 아래부터 화면 아래 여백까지 쓴다. 넘치는 도구는 main.ts가 더보기로 옮긴다. */
 .game-mode-rail {
   position: fixed;
   top: calc(var(--hud-top) + var(--hud-gap));
   left: var(--edge-inset-left);
+  max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--edge-inset-bottom));
+  overflow: hidden;
 }
-.game-mode-rail .dg-rail__modes { border-bottom: 0; }
+.game-mode-rail > * { flex-shrink: 0; }
+.game-rail-tools { display: flex; flex-direction: column; }
+.game-rail-tools .dg-tool { border-bottom: var(--line-hair) solid var(--rule); }
+.game-mode-rail .game-rail-more { border-top: var(--line-hair) solid var(--rule); border-bottom: 0; }
+.game-mode-rail:not(.dg-rail--compact) .dg-rail__modes { border-bottom: var(--line-hair) solid var(--edge); }
+
+/* compact 레일에서 현재 모드 칸을 누르면 모드 선택을 세로로 펼친다 */
+.game-mode-rail.dg-rail--compact.game-mode-rail--modes-open .dg-rail__modes {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-bottom: var(--line-hair) solid var(--edge);
+}
+.game-mode-rail.dg-rail--compact .dg-rail__mode {
+  min-height: var(--touch-min);
+  border-right: 0;
+  border-bottom: var(--line-hair) solid var(--rule);
+}
+
+/* 더보기 패널: 레일 오른쪽, 실행 취소 묶음 위 */
+.game-rail-overflow {
+  position: fixed;
+  left: var(--hud-left-clear);
+  bottom: calc(var(--edge-inset-bottom) + var(--plate-height) + 2px + var(--hud-gap));
+  width: 200px;
+  max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) * 2 - var(--edge-inset-bottom) - var(--plate-height));
+  box-shadow: var(--overlay-shadow);
+}
+.game-rail-overflow .dg-panel__section-label { margin: 0; padding: var(--space-2) var(--space-3) var(--space-1); }
+.game-rail-overflow-tools { overflow-y: auto; }
+.game-rail-overflow-tools .dg-tool { border-top: var(--line-hair) solid var(--rule); border-bottom: 0; }
+
+/* ===== 모드 배너 ===== */
+.game-mode-banner {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--hud-inset-top) + 8px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.game-mode-banner[data-placement="low"] { top: calc(var(--hud-top) + var(--hud-gap)); }
 
 /* ===== 지도 컨트롤: 시간 정보판 아래 ===== */
 .game-map-controls {
@@ -106,7 +152,7 @@
 /* ===== 실행 취소·다시 실행: 왼쪽 아래 엄지 영역 ===== */
 .game-history-controls {
   position: fixed;
-  left: var(--edge-inset-left);
+  left: var(--hud-left-clear);
   bottom: var(--edge-inset-bottom);
   transition: opacity var(--dur-fast) linear, transform var(--dur-panel) var(--ease-out);
 }

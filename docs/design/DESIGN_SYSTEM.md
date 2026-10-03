@@ -198,8 +198,9 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
   - Compact(`<720px`)에서는 `자금`·`안정` 같은 보조 문구를 접고 수치·표식만 남긴다.
 - **실행 취소·다시 실행**: 왼쪽 아래 엄지 영역의 `48` 사각 버튼 묶음.
 - **Mode/tool rail(왼쪽 가장자리)**: 상단에 모드 전환(관리·기획·공사 세그먼트, 높이 `40`), 아래에 현재 모드 도구 목록(행 높이 `44`, 폭 `136`). 활성 도구는 반전 행 + 왼쪽 `4px` 표시 막대(반전 바탕 위 `--invert-fg`) + 도구명 + `aria-pressed="true"`.
-  - 한 번에 보이는 도구는 5개 이하로 두고 나머지는 `더보기`로 연다.
-  - 정밀 지도 작업(draft 작도·편집) 중과 compact 화면에서는 compact rail(폭 `64`)로 줄인다. 상단에 현재 모드 반전 칸, 아래에 아이콘 + 짧은 도구명 세로 배치(행 높이 `52`). 모드 전환 세그먼트는 숨기고 현재 모드 칸을 눌러 펼친다.
+  - 모드별 도구 목록은 우선순위 순서로 정의한다. 레일은 화면 높이 안에 들어가는 만큼만 보이고, 나머지는 뒤에서부터 `더보기` 패널로 옮긴다. 더보기 안의 도구가 활성이면 더보기 칸이 반전되고 그 도구 이름을 보인다.
+  - 실행 취소·다시 실행과 더보기 패널은 레일 오른쪽에 붙인다(`--hud-left-clear`).
+  - 정밀 지도 작업(draft 작도·편집) 중과 compact 화면에서는 compact rail(폭 `64`)로 줄인다. 상단에 현재 모드 반전 칸, 아래에 아이콘 + 짧은 도구명 세로 배치(행 높이 `44`). 모드 전환 세그먼트는 숨기고 현재 모드 칸을 눌러 펼친다.
 - **모드 배너**: 위쪽 가운데. 두 정보판 사이에 들어가지 않으면 정보판 아래로 내린다.
 - **Context inspector(오른쪽 아래)**: 선택 객체의 안내판. 폭 `316`, 주 행동은 오른쪽 아래 엄지 위치에 높이 `48`. 선택이 없으면 접힌다. 확장하면 시간 정보판 아래까지 올라가고 지도 컨트롤은 그 뒤로 숨는다.
 - **Map controls(오른쪽, 시간 정보판 아래)**: 레이어, 범례를 `48` 사각 버튼 묶음으로 둔다. 펼침 패널은 바깥 탭과 Escape로 닫힌다. 테마 전환은 설정에만 둔다.
@@ -430,7 +431,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 데이터 행 | `dg-row` (`--meter`), `__label` `__value` (`--metric` `--ok` `--caution` `--danger`), `dg-meter` `dg-meter__fill--over` |
 | 입력 | `dg-field`, `dg-field__label`, `dg-input`, `dg-field__error` |
 | 정보판 | `dg-plate`, `__cell` (`--icon` `--stack` `--on`), `__key` `__metric` `__sub`, 배지 `dg-count-badge` |
-| Tool rail | `dg-rail` (`--compact`), `__modes` `__mode` `__mode-now`, `dg-tool[aria-pressed]` (`--destructive`) |
+| Tool rail | `dg-rail` (`--compact` `--planning`), `__modes` `__mode` `__mode-now`, `dg-tool[aria-pressed]` (`--destructive`). 레일 도구는 `data-rail-tool`로 표시하고 모드별 목록은 `main.ts`의 `railToolIds`가 정한다 |
 | 모드 배너·안내 | `dg-mode-banner`, `dg-mode-mark--manage` / `--plan` / `--build`, `dg-hint` |
 | 지도 컨트롤 | `dg-map-controls` (`--vertical`) |
 | tooltip | `dg-tooltip` |

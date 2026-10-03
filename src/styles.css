@@ -121,7 +121,6 @@ button,
 button svg,
 .ops-button svg,
 .action-button svg,
-.primary-tool svg,
 .summary-chip svg,
 .menu-action-icon,
 .button-icon,
@@ -772,7 +771,6 @@ tr:hover td {
 
 /* Custom operating services replace the legacy route-wide local/express
    switches. Preset labels remain available inside the service editor. */
-html body[data-workspace-mode] #expressButton,
 .manager-toggles label:has(#localServiceToggle),
 .manager-toggles label:has(#expressServiceToggle) {
   display: none !important;
@@ -888,170 +886,14 @@ html body[data-workspace-mode] #expressButton,
    5. WORKSPACE MODE CONTEXT TOOL FILTERING
 ---------------------------------------------------- */
 /* MANAGEMENT MODE (관리 모드): 경영, 선택, 노선목록, 운영현황, 운영분석, 노선도만 표시 */
-body[data-workspace-mode="management"] #routeTool,
-body[data-workspace-mode="management"] #stationTool,
-body[data-workspace-mode="management"] #transferTool,
-body[data-workspace-mode="management"] #depotTool,
-body[data-workspace-mode="management"] #modifyToolsButton,
-body[data-workspace-mode="management"] #editTool,
-body[data-workspace-mode="management"] #planningModeButton,
-body[data-workspace-mode="management"] #planOverviewButton,
-body[data-workspace-mode="management"] #constructionOverviewButton,
-body[data-workspace-mode="management"] .hud.build-panel .tool-divider {
-  display: none !important;
-}
-
-body[data-workspace-mode="management"] #selectTool,
-body[data-workspace-mode="management"] #manageLineTool,
-body[data-workspace-mode="management"] #expressButton,
-body[data-workspace-mode="management"] #manageOperationsTool,
-body[data-workspace-mode="management"] #analysisButton,
-body[data-workspace-mode="management"] #manageMapTool {
-  display: inline-flex !important;
-}
-
-#diagramToolButton,
-.legacy-edit-tool {
-  display: none !important;
-}
 
 /* PLANNING MODE (기획 모드): 기획용 노선, 역, 환승, 기지, 수정, 선택, 계획목록 표시 */
-body[data-workspace-mode="planning"] #manageOperationsTool,
-body[data-workspace-mode="planning"] #analysisButton,
-body[data-workspace-mode="planning"] #expressButton,
-body[data-workspace-mode="planning"] #constructionOverviewButton,
-body[data-workspace-mode="planning"] #manageLineTool,
-body[data-workspace-mode="planning"] #manageMapTool,
-body[data-workspace-mode="planning"] #diagramToolButton,
-body[data-workspace-mode="planning"] #planningModeButton {
-  display: none !important;
-}
-
-body[data-workspace-mode="planning"] #routeTool,
-body[data-workspace-mode="planning"] #stationTool,
-body[data-workspace-mode="planning"] #transferTool,
-body[data-workspace-mode="planning"] #depotTool,
-body[data-workspace-mode="planning"] #modifyToolsButton,
-body[data-workspace-mode="planning"] #selectTool,
-body[data-workspace-mode="planning"] #planOverviewButton {
-  display: inline-flex !important;
-}
-
-body[data-workspace-mode="planning"] .hud.build-panel .tool-divider {
-  display: flex !important;
-}
 
 /* CONSTRUCTION MODE (공사 모드): 기존 환승 해제, 철거, 선택, 공사현황 표시 */
-body[data-workspace-mode="construction"] #planOverviewButton,
-body[data-workspace-mode="construction"] #planningModeButton,
-body[data-workspace-mode="construction"] #routeTool,
-body[data-workspace-mode="construction"] #stationTool,
-body[data-workspace-mode="construction"] #depotTool,
-body[data-workspace-mode="construction"] #manageLineTool,
-body[data-workspace-mode="construction"] #manageOperationsTool,
-body[data-workspace-mode="construction"] #analysisButton,
-body[data-workspace-mode="construction"] #expressButton,
-body[data-workspace-mode="construction"] #manageMapTool,
-body[data-workspace-mode="construction"] #diagramToolButton {
-  display: none !important;
-}
-
-body[data-workspace-mode="construction"] #modifyToolsButton,
-body[data-workspace-mode="construction"] #selectTool,
-body[data-workspace-mode="construction"] #transferTool,
-body[data-workspace-mode="construction"] #constructionOverviewButton {
-  display: inline-flex !important;
-}
-
-body[data-workspace-mode="construction"] .hud.build-panel .tool-divider {
-  display: flex !important;
-}
-
-body[data-workspace-mode="construction"] #modifyToolsCard #extendTool {
-  display: none !important;
-}
-
-body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 
 /* ----------------------------------------------------
    6. FLOATING CONTROL DOCK (BUILD PANEL)
 ---------------------------------------------------- */
-.hud.build-panel {
-  position: absolute;
-  bottom: max(12px, env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 6px 8px;
-  box-shadow: var(--shadow-lg);
-  max-width: calc(100vw - 24px);
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hud.build-panel::-webkit-scrollbar {
-  display: none;
-}
-
-.tool-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tool-divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 0 4px;
-  flex-shrink: 0;
-}
-
-.primary-tool {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 8px 14px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--c-text-main);
-  font-size: 12px;
-  font-weight: 700;
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-}
-
-.hud.build-panel::-webkit-scrollbar {
-  display: none;
-}
-
-.tool-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tool-divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 0 4px;
-  flex-shrink: 0;
-}
 
 .hud-brand-pill {
   display: flex;
@@ -1095,36 +937,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   font-weight: 800;
   padding: 1px 5px;
   border-radius: var(--radius-full);
-}
-
-.primary-tool {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-full);
-  padding: 8px 14px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--c-text-main);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.primary-tool:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: var(--c-border-light);
-  transform: translateY(-2px);
-}
-
-.primary-tool.active {
-  background: linear-gradient(135deg, var(--c-primary), var(--c-secondary));
-  color: #07090E;
-  border-color: transparent;
-  box-shadow: 0 0 16px var(--c-primary-glow);
 }
 
 /* Plan to construction conversion */
@@ -1693,36 +1505,12 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   }
 }
 
-#analysisButton {
-  position: relative;
-}
-
-#analysisBadge {
-  display: inline-grid;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  place-items: center;
-  border-radius: 999px;
-  color: #fff;
-  background: var(--c-danger);
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
-}
-
-#analysisBadge[hidden] {
-  display: none;
-}
-
 /* ----------------------------------------------------
    7. SUB CARDS & POPOVERS
 ---------------------------------------------------- */
-#modifyToolsCard, #routeSettingsCard {
+#routeSettingsCard {
   position: absolute;
-  bottom: max(72px, calc(env(safe-area-inset-bottom) + 60px));
+  bottom: var(--hud-bottom-clear);
   left: 50%;
   transform: translateX(-50%);
   z-index: 1010;
@@ -1738,19 +1526,10 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   gap: 10px;
 }
 
-#modifyToolsCard {
-  right: max(12px, env(safe-area-inset-right));
-  left: auto;
-  width: min(220px, calc(100vw - 24px));
-  max-height: calc(100dvh - 92px);
-  padding: 10px;
-  overflow: auto;
-}
-
 #routeSettingsCard {
   position: absolute !important;
-  left: max(16px, env(safe-area-inset-left)) !important;
-  bottom: max(76px, calc(env(safe-area-inset-bottom) + 64px)) !important;
+  left: var(--hud-left-clear) !important;
+  bottom: var(--hud-bottom-clear) !important;
   transform: none !important;
   width: min(320px, calc(100vw - 32px)) !important;
   padding: 14px !important;
@@ -1767,12 +1546,10 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   box-sizing: border-box !important;
 }
 
-#modifyToolsCard[hidden],
 #routeSettingsCard[hidden] {
   display: none !important;
 }
 
-.modify-tools-card-heading,
 .route-settings-card-heading {
   display: flex;
   align-items: baseline;
@@ -1782,7 +1559,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   border-bottom: 1px solid var(--c-border);
 }
 
-.modify-tools-card-heading span,
 .route-settings-card-heading span {
   color: var(--c-text-muted);
   font-size: 9px;
@@ -1790,7 +1566,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   letter-spacing: 0.08em;
 }
 
-.modify-tools-card-heading strong,
 .route-settings-card-heading strong {
   color: var(--c-text-main);
   font-size: 13px;
@@ -1864,34 +1639,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
   grid-column: 1 / -1;
 }
 
-.modify-tools-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.modify-tools-grid .primary-tool.compact {
-  width: 100%;
-  min-width: 0;
-  min-height: 42px;
-  padding: 8px 10px;
-  font-size: 11px;
-  justify-content: center;
-}
-
-.modify-tools-grid .danger-tool {
-  color: #ffd8dc;
-  border-color: rgba(255, 93, 111, 0.38);
-  background: rgba(255, 93, 111, 0.1);
-}
-
-.modify-tools-grid .danger-tool:hover,
-.modify-tools-grid .danger-tool.active {
-  color: #fff;
-  border-color: rgba(255, 93, 111, 0.75);
-  background: rgba(255, 93, 111, 0.24);
-}
-
 .eraser-size-control {
   position: fixed;
   right: max(12px, env(safe-area-inset-right));
@@ -1929,17 +1676,10 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
 }
 
 @media (max-width: 760px) and (orientation: landscape) {
-  #modifyToolsCard {
-    right: max(8px, env(safe-area-inset-right));
-    bottom: max(66px, calc(env(safe-area-inset-bottom) + 58px));
-    width: min(196px, calc(100vw - 16px));
-    max-height: calc(100dvh - 78px);
-    padding: 8px;
-  }
 
   #routeSettingsCard {
-    left: max(8px, env(safe-area-inset-left));
-    bottom: max(66px, calc(env(safe-area-inset-bottom) + 58px));
+    left: var(--hud-left-clear);
+    bottom: var(--hud-bottom-clear);
     width: min(260px, calc(100vw - 16px));
   }
 
@@ -1956,8 +1696,8 @@ body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
 .left-route-window {
   position: absolute;
   top: max(56px, calc(env(safe-area-inset-top) + 48px));
-  left: max(8px, env(safe-area-inset-left));
-  bottom: max(70px, calc(env(safe-area-inset-bottom) + 60px));
+  left: var(--hud-left-clear);
+  bottom: var(--hud-bottom-clear);
   width: min(340px, 88vw);
   z-index: 950;
   background: var(--c-bg-glass);
@@ -5928,7 +5668,7 @@ font-size: 12px;
 ---------------------------------------------------- */
 .construction-preview-panel {
   position: absolute;
-  bottom: max(76px, calc(env(safe-area-inset-bottom) + 60px));
+  bottom: var(--hud-bottom-clear);
   right: max(18px, env(safe-area-inset-right));
   width: min(430px, calc(100vw - 36px));
   max-height: min(720px, calc(100dvh - 150px));
@@ -6252,7 +5992,7 @@ font-size: 12px;
 .right-line-control-card {
   position: absolute !important;
   top: max(68px, env(safe-area-inset-top)) !important;
-  bottom: max(16px, env(safe-area-inset-bottom)) !important;
+  bottom: var(--hud-bottom-clear) !important;
   width: min(350px, 90vw) !important;
   max-height: calc(100dvh - 84px) !important;
   z-index: 1200 !important;
@@ -6272,7 +6012,7 @@ font-size: 12px;
 }
 
 .left-route-window {
-  left: max(16px, env(safe-area-inset-left)) !important;
+  left: var(--hud-left-clear) !important;
   animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
@@ -7570,19 +7310,8 @@ font-size: 12px;
    ==================================================== */
 
 /* Standard Active Primary Tools (Blue Electric Gradient + Glow + White Text & Icons) */
-.primary-tool.active,
 .tool-button.active,
-#routeTool.active,
-#stationTool.active,
-#transferTool.active,
-#depotTool.active,
-#editTool.active,
-#extendTool.active,
-#reconnectTool.active,
-#branchTool.active,
-#mergeTool.active,
-#modifyToolsButton.active,
-#planningModeButton.active {
+#reconnectTool.active {
   background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
   color: #ffffff !important;
   border-color: #93c5fd !important;
@@ -7590,47 +7319,9 @@ font-size: 12px;
   transform: translateY(-2px) scale(1.03) !important;
 }
 
-.primary-tool.active svg,
-.primary-tool.active path,
-.primary-tool.active circle,
-.primary-tool.active line,
-.primary-tool.active rect {
-  stroke: #ffffff !important;
-}
-
 /* Active Indicator Glow Dot */
-.primary-tool.active::before {
-  content: "" !important;
-  display: inline-block !important;
-  width: 6px !important;
-  height: 6px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
-  box-shadow: 0 0 6px #ffffff !important;
-  margin-right: 2px !important;
-}
 
 /* Danger Active Tool (Eraser / 지우개 - Crimson Red Electric Glow) */
-.danger-tool.active,
-#eraserTool.active {
-  background: linear-gradient(135deg, #dc2626, #ef4444) !important;
-  color: #ffffff !important;
-  border-color: #fca5a5 !important;
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
-  transform: translateY(-2px) scale(1.03) !important;
-}
-
-.danger-tool.active::before,
-#eraserTool.active::before {
-  content: "" !important;
-  display: inline-block !important;
-  width: 6px !important;
-  height: 6px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
-  box-shadow: 0 0 6px #ffffff !important;
-  margin-right: 2px !important;
-}
 
 /* Active Layer Toggles */
 
@@ -8696,7 +8387,7 @@ font-size: 12px;
 @media (max-width: 700px) {
   .construction-preview-panel {
     right: 10px;
-    bottom: max(70px, calc(env(safe-area-inset-bottom) + 58px));
+    bottom: var(--hud-bottom-clear);
     width: calc(100vw - 20px);
     max-height: min(680px, calc(100dvh - 118px));
   }
@@ -9316,7 +9007,6 @@ textarea {
 button,
 .ops-button,
 .action-button,
-.primary-tool,
 .dialog-close,
 .compact-close {
   border-radius: var(--radius-md);
@@ -9326,15 +9016,13 @@ button,
 
 button:hover,
 .ops-button:hover,
-.action-button:hover,
-.primary-tool:hover {
+.action-button:hover {
   transform: translateY(-1px);
 }
 
 button:active,
 .ops-button:active,
-.action-button:active,
-.primary-tool:active {
+.action-button:active {
   transform: translateY(0);
 }
 
@@ -9496,8 +9184,7 @@ textarea {
    MAP HUD
 ======================================================================== */
 
-.hud-brand-pill,
-.hud.build-panel {
+.hud-brand-pill {
   background: rgba(10, 15, 22, 0.88) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
@@ -9533,134 +9220,29 @@ textarea {
 }
 
 /* Minimum 44px touch target for touch screens */
-.primary-tool::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 44px;
-  min-height: 44px;
-  pointer-events: auto;
-}
 
 /* ========================================================================
    TOOL DOCK + CONTEXT FEEDBACK
 ======================================================================== */
-.hud.build-panel {
-  bottom: max(6px, env(safe-area-inset-bottom));
-  max-width: calc(100vw - 16px);
-  padding: 4px;
-  gap: 4px;
-  border-radius: var(--radius-md) !important;
-}
-
-.tool-group {
-  gap: 3px;
-}
-
-.tool-divider {
-  height: 20px;
-  margin: 0 2px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.primary-tool {
-  position: relative;
-  min-height: 36px;
-  min-width: 54px;
-  padding: 0 8px;
-  gap: 4px;
-  border-radius: 4px !important;
-  background: transparent !important;
-  border: 1px solid transparent !important;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-  font-weight: 700;
-  transition: all 0.15s ease;
-}
-
-.primary-tool:hover {
-  box-shadow: none !important;
-  font-weight: 800;
-}
-
-.primary-tool.active svg,
-.primary-tool.active path,
-.primary-tool.active circle,
-.primary-tool.active line,
-.primary-tool.active rect {
-  stroke: currentColor !important;
-}
-
-.danger-tool.active,
-#eraserTool.active {
-  background: rgba(255, 107, 120, 0.16) !important;
-  color: var(--c-danger) !important;
-  border: 1px solid rgba(255, 107, 120, 0.46) !important;
-  box-shadow: none !important;
-  font-weight: 800;
-}
 
 /* 활성 도구는 배경 채움 + 강조 테두리 + 굵은 텍스트로 통일하므로 이전 인디케이터는 제거한다. */
-.primary-tool.active::before,
-.danger-tool.active::before,
-#eraserTool.active::before {
-  content: none !important;
-}
 
-#modifyToolsCard {
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(78px, calc(env(safe-area-inset-bottom) + 72px));
-  width: min(240px, calc(100vw - 24px));
-  padding: 12px;
-  gap: 10px;
-  border-radius: var(--radius-lg) !important;
-  background: rgba(15, 22, 29, 0.98) !important;
-  border: 1px solid var(--c-border) !important;
-  box-shadow: var(--shadow-lg) !important;
-  backdrop-filter: none !important;
-}
-
-.modify-tools-card-heading,
 .route-settings-card-heading {
   padding-bottom: 8px;
   border-color: var(--c-border);
 }
 
-.modify-tools-card-heading span,
 .route-settings-card-heading span {
   color: var(--c-text-dim);
 }
 
-.modify-tools-card-heading strong,
 .route-settings-card-heading strong {
   font-size: 13px;
 }
 
-.modify-tools-grid {
-  gap: 6px;
-}
-
-.modify-tools-grid .primary-tool.compact {
-  min-height: 48px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm) !important;
-}
-
-.modify-tools-grid .primary-tool.compact:not(.active) {
-  background: rgba(255, 255, 255, 0.035) !important;
-  border-color: var(--c-border) !important;
-}
-
-.modify-tools-grid .danger-tool {
-  color: #ffb0b8;
-  background: rgba(255, 107, 120, 0.07) !important;
-}
-
 #routeSettingsCard {
-  left: max(12px, env(safe-area-inset-left)) !important;
-  bottom: max(78px, calc(env(safe-area-inset-bottom) + 72px)) !important;
+  left: var(--hud-left-clear) !important;
+  bottom: var(--hud-bottom-clear) !important;
   width: min(340px, calc(100vw - 24px)) !important;
   padding: 14px !important;
   gap: 10px !important;
@@ -9749,8 +9331,7 @@ textarea {
   box-shadow: none !important;
 }
 
-#routeSettingsCard:not([hidden]) ~ .bottom-right,
-#modifyToolsCard:not([hidden]) ~ .bottom-right {
+#routeSettingsCard:not([hidden]) ~ .bottom-right {
   top: max(72px, calc(env(safe-area-inset-top) + 64px));
   bottom: auto;
 }
@@ -9860,24 +9441,6 @@ textarea {
     white-space: nowrap;
   }
 
-  .hud.build-panel {
-    left: 8px;
-    right: 8px;
-    width: auto;
-    max-width: none;
-    transform: none;
-    justify-content: flex-start;
-    overflow-x: auto;
-    border-radius: var(--radius-lg) !important;
-  }
-
-  .primary-tool {
-    min-width: 64px;
-    min-height: 48px;
-    padding: 0 9px;
-    font-size: 10px;
-  }
-
   .hud.bottom-right {
     right: 12px;
     bottom: max(76px, calc(env(safe-area-inset-bottom) + 70px));
@@ -9889,14 +9452,8 @@ textarea {
     max-width: min(350px, calc(100vw - 24px));
   }
 
-  #modifyToolsCard,
   #routeSettingsCard {
-    bottom: max(76px, calc(env(safe-area-inset-bottom) + 70px));
-  }
-
-  #modifyToolsCard {
-    right: 12px;
-    width: min(240px, calc(100vw - 24px));
+    bottom: var(--hud-bottom-clear);
   }
 
   #routeSettingsCard {
@@ -9925,21 +9482,6 @@ textarea {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-@media (max-width: 700px) {
-  body[data-workspace-mode="management"] .management-tools {
-    flex: 1 1 auto;
-    min-width: 0;
-    justify-content: space-between;
-  }
-
-  body[data-workspace-mode="management"] .management-tools .primary-tool {
-    flex: 1 1 0;
-    min-width: 0;
-    padding-left: 6px;
-    padding-right: 6px;
   }
 }
 
@@ -10121,8 +9663,7 @@ textarea {
 /* dg- 컴포넌트는 새 디자인 시스템의 피드백을 쓴다(src/design). */
 button:not([class*="dg-"]):active,
 .ops-button:active,
-.action-button:active,
-.primary-tool:active {
+.action-button:active {
   transform: scale(var(--press-scale)) !important;
   transition: transform var(--press-transition) !important;
 }
@@ -10132,7 +9673,6 @@ button:not([class*="dg-"]):active,
   button:hover,
   .ops-button:hover,
   .action-button:hover,
-  .primary-tool:hover,
   .slot-card:hover,
   .hero-action-btn:hover {
     transform: none !important;
@@ -10172,22 +9712,6 @@ button:not([class*="dg-"]):active,
     font-size: 16px;
     user-select: text;
     -webkit-user-select: text;
-  }
-
-  .hud.build-panel {
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: 8px;
-    overscroll-behavior-x: contain;
-    touch-action: pan-x;
-  }
-
-  .hud.build-panel .tool-group,
-  .hud.build-panel .primary-tool {
-    scroll-snap-align: start;
-  }
-
-  .hud.build-panel .primary-tool {
-    min-height: 36px;
   }
 
   .left-route-list,
@@ -10251,10 +9775,9 @@ button:not([class*="dg-"]):active,
     bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
   }
 
-  #modifyToolsCard,
   #routeSettingsCard,
   .construction-preview-panel {
-    bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
+    bottom: var(--hud-bottom-clear);
   }
 
   .hint-row {
@@ -10730,36 +10253,7 @@ button:not([class*="dg-"]):active,
 ------------------------------------------------------------------------- */
 @media (max-width: 700px) {
 
-  .hud.build-panel {
-    bottom: max(6px, env(safe-area-inset-bottom));
-    padding: 4px;
-    gap: 4px;
-  }
-
-  .tool-group {
-    gap: 4px;
-  }
-
-  .tool-divider {
-    height: 22px;
-    margin: 0 2px;
-  }
-
-  .primary-tool {
-    min-width: 56px;
-    min-height: 42px;
-    padding: 0 7px;
-    gap: 4px;
-    font-size: 9px;
-  }
-
-  .primary-tool svg {
-    width: 15px;
-    height: 15px;
-  }
-
   .hud.bottom-right,
-  #modifyToolsCard,
   #routeSettingsCard,
   .construction-preview-panel {
     bottom: max(62px, calc(env(safe-area-inset-bottom) + 56px));
@@ -10880,20 +10374,6 @@ button:not([class*="dg-"]):active,
   .hud-brand-pill {
     min-height: 30px;
     max-width: 64px;
-    font-size: 10px;
-  }
-
-  .hud.build-panel {
-    left: 4px;
-    right: 4px;
-    bottom: max(4px, env(safe-area-inset-bottom));
-    padding: 3px;
-  }
-
-  .primary-tool {
-    min-width: 48px;
-    min-height: 32px;
-    padding: 0 6px;
     font-size: 10px;
   }
 
@@ -11160,20 +10640,15 @@ button:not([class*="dg-"]):active,
     --mobile-dock-height: 52px;
   }
 
-  .hud.build-panel::-webkit-scrollbar {
-    display: none;
-  }
-
   .left-route-window,
   .right-line-control-card,
   #routeSettingsCard,
-  #modifyToolsCard,
   .construction-preview-panel {
     position: fixed !important;
     top: auto !important;
     right: max(5px, env(safe-area-inset-right)) !important;
-    bottom: max(calc(var(--mobile-dock-height) + 7px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height))) !important;
-    left: max(5px, env(safe-area-inset-left)) !important;
+    bottom: var(--hud-bottom-clear) !important;
+    left: var(--hud-left-clear) !important;
     width: auto !important;
     max-width: none !important;
     max-height: min(56dvh, 430px) !important;
@@ -11188,7 +10663,6 @@ button:not([class*="dg-"]):active,
   .left-route-window::before,
   .right-line-control-card::before,
   #routeSettingsCard::before,
-  #modifyToolsCard::before,
   .construction-preview-panel::before {
     display: block;
     width: 32px;
@@ -11217,20 +10691,6 @@ button:not([class*="dg-"]):active,
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-  }
-
-  #modifyToolsCard {
-    max-height: min(250px, 46dvh) !important;
-  }
-
-  #modifyToolsCard .modify-tools-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  #modifyToolsCard .modify-tools-grid .primary-tool.compact {
-    min-height: 40px;
-    padding: 0 4px;
-    font-size: 9px;
   }
 
   #routeSettingsCard {
@@ -11275,23 +10735,17 @@ button:not([class*="dg-"]):active,
   .left-route-window,
   .right-line-control-card,
   #routeSettingsCard,
-  #modifyToolsCard,
   .construction-preview-panel {
     right: max(4px, env(safe-area-inset-right)) !important;
-    bottom: max(52px, calc(env(safe-area-inset-bottom) + 48px)) !important;
-    left: max(4px, env(safe-area-inset-left)) !important;
+    bottom: var(--hud-bottom-clear) !important;
+    left: var(--hud-left-clear) !important;
     max-height: min(52dvh, 300px) !important;
     padding: 8px !important;
-  }
-
-  #modifyToolsCard {
-    max-height: min(200px, 42dvh) !important;
   }
 
   .left-route-window::before,
   .right-line-control-card::before,
   #routeSettingsCard::before,
-  #modifyToolsCard::before,
   .construction-preview-panel::before {
     margin-bottom: 6px;
   }
@@ -11310,7 +10764,6 @@ button:not([class*="dg-"]):active,
 .left-route-header,
 .right-line-header,
 .route-settings-card-heading,
-.modify-tools-card-heading,
 .construction-preview-header {
   display: flex !important;
   align-items: center !important;
@@ -11441,7 +10894,6 @@ button:not([class*="dg-"]):active,
 /* Remove Inner Nested Scrolls (창 내부 이중 스크롤 제거) */
 .left-route-list,
 .route-settings-edit-fields,
-.modify-tools-grid,
 .construction-preview-details,
 .setup-grid,
 .slot-list,
@@ -11454,7 +10906,6 @@ button:not([class*="dg-"]):active,
 .left-route-window,
 .right-line-control-card,
 #routeSettingsCard,
-#modifyToolsCard,
 .construction-preview-panel,
 .dialog-backdrop > section,
 .dialog-backdrop > div > section {
@@ -11467,7 +10918,6 @@ button:not([class*="dg-"]):active,
 .left-route-window.is-minimized,
 .right-line-control-card.is-minimized,
 #routeSettingsCard.is-minimized,
-#modifyToolsCard.is-minimized,
 .construction-preview-panel.is-minimized {
   width: auto !important;
   min-width: 210px !important;
@@ -11481,7 +10931,6 @@ button:not([class*="dg-"]):active,
 .left-route-window.is-minimized > :not(.left-route-header),
 .right-line-control-card.is-minimized > :not(.right-line-header),
 #routeSettingsCard.is-minimized > :not(.route-settings-card-heading),
-#modifyToolsCard.is-minimized > :not(.modify-tools-card-heading),
 .construction-preview-panel.is-minimized > :not(header) {
   display: none !important;
 }
@@ -11503,8 +10952,7 @@ button:not([class*="dg-"]):active,
     max-height: min(38dvh, 210px) !important;
   }
 
-  .right-line-control-card,
-  #modifyToolsCard {
+  .right-line-control-card {
     width: min(232px, calc(100vw - 8px)) !important;
     max-height: min(40dvh, 220px) !important;
   }
@@ -11953,7 +11401,6 @@ button:not([class*="dg-"]):active,
 .left-route-header,
 .right-line-header,
 .route-settings-card-heading,
-.modify-tools-card-heading,
 .construction-preview-header {
   padding-right: 0 !important;
 }
@@ -11968,14 +11415,9 @@ button:not([class*="dg-"]):active,
   transform: none !important;
 }
 
-.modify-tools-card-heading > .floating-minimize-button {
-  margin-left: auto !important;
-}
-
 .left-route-window.is-minimized > .left-route-header,
 .right-line-control-card.is-minimized > .right-line-header,
 #routeSettingsCard.is-minimized > .route-settings-card-heading,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading,
 .construction-preview-panel.is-minimized > header {
   position: relative !important;
   display: flex !important;
@@ -12014,14 +11456,6 @@ button:not([class*="dg-"]):active,
   margin: 0 !important;
 }
 
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button {
-  position: absolute !important;
-  top: 50% !important;
-  right: 0 !important;
-  transform: translateY(-50%) !important;
-  margin: 0 !important;
-}
-
 .floating-minimize-button:active {
   transform: scale(0.94);
 }
@@ -12029,7 +11463,6 @@ button:not([class*="dg-"]):active,
 .left-route-window.is-minimized .floating-minimize-button:active,
 .right-line-control-card.is-minimized .floating-minimize-button:active,
 #routeSettingsCard.is-minimized .floating-minimize-button:active,
-#modifyToolsCard.is-minimized .floating-minimize-button:active,
 .construction-preview-panel.is-minimized .floating-minimize-button:active {
   transform: translateY(-50%) scale(0.94);
 }
@@ -12567,308 +12000,12 @@ button:not([class*="dg-"]):active,
    bottom tool dock. Portrait uses a readable 2x2 grid; landscape uses one
    short row because the phone has more horizontal room than vertical room.
 ------------------------------------------------------------------------- */
-@media (max-width: 700px) {
-  #modifyToolsCard {
-    position: fixed !important;
-    top: auto !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
-    bottom: max(calc(var(--mobile-dock-height, 52px) + 8px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 8px)) !important;
-    left: auto !important;
-    width: min(220px, calc(100vw - 16px)) !important;
-    max-width: calc(100vw - 16px) !important;
-    max-height: min(44dvh, 220px) !important;
-    padding: 8px !important;
-    gap: 7px !important;
-    overflow-y: auto !important;
-    border-radius: 14px !important;
-  }
-
-  .modify-tools-card-heading {
-    min-height: 24px;
-    align-items: center !important;
-    gap: 6px !important;
-    padding: 0 2px 5px !important;
-  }
-
-  .modify-tools-card-heading span {
-    font-size: 8px;
-  }
-
-  .modify-tools-card-heading strong {
-    font-size: 12px;
-  }
-
-  .modify-tools-grid {
-    min-width: 0;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 5px !important;
-  }
-
-  .modify-tools-grid .primary-tool.compact {
-    min-width: 0;
-    min-height: 38px !important;
-    padding: 0 6px !important;
-    gap: 4px;
-    border-radius: 9px !important;
-    font-size: 10px;
-    white-space: nowrap;
-  }
-
-  .modify-tools-grid .primary-tool.compact svg {
-    width: 14px;
-    height: 14px;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-  #modifyToolsCard {
-    width: min(208px, calc(100vw - 16px)) !important;
-    max-height: min(34dvh, 150px) !important;
-    padding: 7px !important;
-    gap: 6px !important;
-  }
-
-  .modify-tools-card-heading {
-    min-height: 22px;
-    padding-bottom: 4px !important;
-  }
-
-  .modify-tools-card-heading span {
-    font-size: 7px;
-  }
-
-  .modify-tools-card-heading strong {
-    font-size: 11px;
-  }
-
-  .modify-tools-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 4px !important;
-  }
-
-  body[data-workspace-mode="construction"] #modifyToolsCard .modify-tools-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
-
-  .modify-tools-grid .primary-tool.compact {
-    min-height: 34px !important;
-    padding: 0 3px !important;
-    gap: 2px;
-    border-radius: 7px !important;
-    font-size: 8px;
-  }
-
-  .modify-tools-grid .primary-tool.compact svg {
-    width: 13px;
-    height: 13px;
-  }
-}
 
 /* -------------------------------------------------------------------------
    MODIFY TOOLS — ICON PALETTE
    Replace the dense text-first card with a small visual tool palette. The
    existing buttons and actions stay intact; only their presentation changes.
 ------------------------------------------------------------------------- */
-#modifyToolsCard {
-  width: min(280px, calc(100vw - 24px)) !important;
-  padding: 12px !important;
-  gap: 10px !important;
-  border: 1px solid rgba(85, 217, 192, 0.28) !important;
-  border-radius: 18px !important;
-  background: linear-gradient(165deg, rgba(8, 20, 25, 0.98), rgba(15, 22, 29, 0.98)) !important;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
-}
-
-#modifyToolsCard::before {
-  width: 34px;
-  height: 3px;
-  margin: 0 auto 1px;
-  background: linear-gradient(90deg, transparent, rgba(85, 217, 192, 0.8), transparent);
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading {
-  min-height: 32px !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 8px !important;
-  padding: 0 0 9px !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > span {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 7px;
-  border: 1px solid rgba(85, 217, 192, 0.24);
-  border-radius: 999px;
-  color: #55d9c0;
-  background: rgba(85, 217, 192, 0.08);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  line-height: 1;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > strong {
-  color: #f3fbff;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: -0.02em;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > .floating-minimize-button {
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  min-height: 28px !important;
-  margin-left: auto !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  background: rgba(255, 255, 255, 0.07) !important;
-  color: #dcecf0 !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 7px !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact {
-  width: 100% !important;
-  min-width: 0;
-  min-height: 64px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-  padding: 8px 3px !important;
-  border: 1px solid rgba(148, 163, 184, 0.18) !important;
-  border-radius: 11px !important;
-  color: #dbe8ed !important;
-  background: rgba(255, 255, 255, 0.035) !important;
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.03) !important;
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 1;
-  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact svg {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
-  color: #8ea9b3;
-  transition: color 0.16s ease, filter 0.16s ease;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact span {
-  overflow: hidden;
-  max-width: 100%;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact:hover {
-  transform: translateY(-1px);
-  border-color: rgba(85, 217, 192, 0.52) !important;
-  color: #f4ffff !important;
-  background: rgba(85, 217, 192, 0.12) !important;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2), 0 0 14px rgba(85, 217, 192, 0.1) !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact:hover svg,
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact.active svg {
-  color: #55d9c0;
-  filter: drop-shadow(0 0 5px rgba(85, 217, 192, 0.3));
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact.active {
-  border-color: rgba(85, 217, 192, 0.88) !important;
-  color: #071116 !important;
-  background: linear-gradient(145deg, #69e4ca, #37bda5) !important;
-  box-shadow: 0 8px 22px rgba(42, 194, 164, 0.22), inset 0 1px rgba(255, 255, 255, 0.45) !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact.active svg {
-  color: #071116;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .danger-tool {
-  border-color: rgba(255, 107, 120, 0.34) !important;
-  color: #ffb3ba !important;
-  background: rgba(255, 107, 120, 0.07) !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .danger-tool:hover,
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .danger-tool.active {
-  border-color: rgba(255, 107, 120, 0.78) !important;
-  color: #fff5f6 !important;
-  background: linear-gradient(145deg, rgba(255, 107, 120, 0.3), rgba(173, 47, 73, 0.38)) !important;
-  box-shadow: 0 8px 20px rgba(255, 75, 100, 0.15) !important;
-}
-
-#modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact:focus-visible {
-  outline: 2px solid #fff !important;
-  outline-offset: 2px;
-}
-
-body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .modify-tools-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-}
-
-@media (max-width: 700px) {
-  #modifyToolsCard {
-    width: min(236px, calc(100vw - 16px)) !important;
-    padding: 9px !important;
-    gap: 8px !important;
-    border-radius: 15px !important;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-card-heading {
-    min-height: 27px !important;
-    padding-bottom: 7px !important;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > span {
-    padding: 3px 6px;
-    font-size: 7px;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-card-heading > strong {
-    font-size: 12px;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 5px !important;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact {
-    min-height: 54px !important;
-    gap: 4px !important;
-    padding: 6px 2px !important;
-    border-radius: 9px !important;
-    font-size: 9px;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact svg {
-    width: 15px;
-    height: 15px;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-  #modifyToolsCard {
-    width: min(236px, calc(100vw - 16px)) !important;
-    padding: 8px !important;
-    gap: 7px !important;
-  }
-
-  #modifyToolsCard:not(.is-minimized) .modify-tools-grid .primary-tool.compact {
-    min-height: 48px !important;
-    font-size: 8px;
-  }
-}
 
 /* -------------------------------------------------------------------------
    ROUTE LIST — MINIMIZED BAR
@@ -13002,9 +12139,9 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 @media (max-width: 700px) {
   .left-route-window.is-minimized {
     position: fixed !important;
-    left: max(8px, env(safe-area-inset-left)) !important;
+    left: var(--hud-left-clear) !important;
     right: auto !important;
-    bottom: max(calc(var(--mobile-dock-height, 52px) + 8px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 8px)) !important;
+    bottom: var(--hud-bottom-clear) !important;
     width: min(252px, calc(100vw - 16px)) !important;
     max-width: calc(100vw - 16px) !important;
     height: 50px !important;
@@ -13040,8 +12177,8 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 
 @media (max-width: 700px) and (orientation: landscape) {
   .left-route-window.is-minimized {
-    left: max(8px, env(safe-area-inset-left)) !important;
-    bottom: max(calc(var(--mobile-dock-height, 52px) + 6px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 6px)) !important;
+    left: var(--hud-left-clear) !important;
+    bottom: var(--hud-bottom-clear) !important;
     width: min(260px, calc(100vw - 16px)) !important;
     height: 48px !important;
     max-height: 48px !important;
@@ -13079,7 +12216,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
 #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
   cursor: pointer;
@@ -13090,12 +12226,10 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:hover,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:hover,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:hover,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button[aria-pressed="true"],
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--minimized-accent-strong) 82%, #ffffff) !important;
   color: #d9fff8 !important;
@@ -13122,7 +12256,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .right-line-control-card.is-minimized .floating-window-actions > .dialog-close:active,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:active,
 #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:active,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:active,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:active,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:active {
   transform: scale(0.92);
@@ -13135,7 +12268,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .right-line-control-card.is-minimized .floating-window-actions > .dialog-close:focus-visible,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
 #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:focus-visible,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:focus-visible,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:focus-visible,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--minimized-accent-strong) 86%, #ffffff);
@@ -13242,7 +12374,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .left-route-window.is-minimized,
 .right-line-control-card.is-minimized,
 #routeSettingsCard.is-minimized,
-#modifyToolsCard.is-minimized,
 .construction-preview-panel.is-minimized {
   --minimized-accent: #38bdf8;
   --minimized-accent-strong: #4ce0c3;
@@ -13263,7 +12394,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .left-route-window.is-minimized::before,
 .right-line-control-card.is-minimized::before,
 #routeSettingsCard.is-minimized::before,
-#modifyToolsCard.is-minimized::before,
 .construction-preview-panel.is-minimized::before {
   display: none !important;
 }
@@ -13271,7 +12401,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .left-route-window.is-minimized::after,
 .right-line-control-card.is-minimized::after,
 #routeSettingsCard.is-minimized::after,
-#modifyToolsCard.is-minimized::after,
 .construction-preview-panel.is-minimized::after {
   position: absolute;
   top: 10px;
@@ -13287,7 +12416,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .left-route-window.is-minimized > .left-route-header,
 .right-line-control-card.is-minimized > .right-line-header,
 #routeSettingsCard.is-minimized > .route-settings-card-heading,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading,
 .construction-preview-panel.is-minimized > header {
   min-height: 38px !important;
   display: flex !important;
@@ -13310,8 +12438,7 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 
 .left-route-window.is-minimized .left-route-sub,
 .right-line-control-card.is-minimized .right-line-sub,
-#routeSettingsCard.is-minimized > .route-settings-card-heading > span,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > span {
+#routeSettingsCard.is-minimized > .route-settings-card-heading > span {
   display: inline-flex !important;
   align-items: center;
   width: fit-content;
@@ -13329,8 +12456,7 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 }
 
 .left-route-window.is-minimized .left-route-title,
-.right-line-control-card.is-minimized .right-line-title,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > strong {
+.right-line-control-card.is-minimized .right-line-title {
   min-width: 0;
   overflow: hidden;
   color: #f7fcff !important;
@@ -13423,21 +12549,12 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   margin-left: auto !important;
 }
 
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
-  transform: none !important;
-  margin-left: auto !important;
-}
-
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
 .left-route-window.is-minimized .floating-window-actions > .dialog-close,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
 .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
 #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
   width: 30px !important;
@@ -13457,7 +12574,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button {
   border: 1px solid color-mix(in srgb, var(--minimized-accent-strong) 42%, transparent) !important;
   color: var(--minimized-accent-strong) !important;
@@ -13477,12 +12593,11 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window.is-minimized,
   #routeSettingsCard.is-minimized {
     position: fixed !important;
-    left: max(8px, env(safe-area-inset-left)) !important;
+    left: var(--hud-left-clear) !important;
     right: auto !important;
   }
 
   .right-line-control-card.is-minimized,
-  #modifyToolsCard.is-minimized,
   .construction-preview-panel.is-minimized {
     position: fixed !important;
     right: max(8px, env(safe-area-inset-right)) !important;
@@ -13492,9 +12607,8 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window.is-minimized,
   .right-line-control-card.is-minimized,
   #routeSettingsCard.is-minimized,
-  #modifyToolsCard.is-minimized,
   .construction-preview-panel.is-minimized {
-    bottom: max(calc(var(--mobile-dock-height, 52px) + 8px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 8px)) !important;
+    bottom: var(--hud-bottom-clear) !important;
     width: min(252px, calc(100vw - 16px)) !important;
     max-width: calc(100vw - 16px) !important;
     height: 50px !important;
@@ -13506,7 +12620,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window.is-minimized > .left-route-header,
   .right-line-control-card.is-minimized > .right-line-header,
   #routeSettingsCard.is-minimized > .route-settings-card-heading,
-  #modifyToolsCard.is-minimized > .modify-tools-card-heading,
   .construction-preview-panel.is-minimized > header {
     min-height: 36px !important;
     gap: 8px !important;
@@ -13515,15 +12628,13 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window.is-minimized .left-route-sub,
   .right-line-control-card.is-minimized .right-line-sub,
   #routeSettingsCard.is-minimized > .route-settings-card-heading > span,
-  #modifyToolsCard.is-minimized > .modify-tools-card-heading > span,
   .construction-preview-panel.is-minimized .construction-preview-header-summary::before {
     padding: 3px 5px;
     font-size: 7px !important;
   }
 
   .left-route-window.is-minimized .left-route-title,
-  .right-line-control-card.is-minimized .right-line-title,
-  #modifyToolsCard.is-minimized > .modify-tools-card-heading > strong {
+  .right-line-control-card.is-minimized .right-line-title {
     font-size: 13px !important;
   }
 
@@ -13538,7 +12649,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
   #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
   #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-  #modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
   .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
   .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
     width: 28px !important;
@@ -13554,9 +12664,8 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window.is-minimized,
   .right-line-control-card.is-minimized,
   #routeSettingsCard.is-minimized,
-  #modifyToolsCard.is-minimized,
   .construction-preview-panel.is-minimized {
-    bottom: max(calc(var(--mobile-dock-height, 52px) + 6px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height, 52px) + 6px)) !important;
+    bottom: var(--hud-bottom-clear) !important;
     width: min(260px, calc(100vw - 16px)) !important;
     height: 48px !important;
     max-height: 48px !important;
@@ -13585,9 +12694,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 
 /* The compact modify-tools button has a later positioning rule with
    !important, so repeat its pressed transform at the end of the cascade. */
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button:active {
-  transform: scale(0.92) !important;
-}
 
 /* Keep every action in a minimized bar on the same visual shape. */
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
@@ -13596,7 +12702,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
 #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
 #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-#modifyToolsCard.is-minimized > .modify-tools-card-heading > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
 .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close,
 .construction-preview-panel.is-minimized .header-confirm-btn {
@@ -13632,7 +12737,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
 #routeSettingsCard .floating-minimize-button,
 #routeSettingsCard .dialog-close,
 #closeRouteSettingsButton,
-#modifyToolsCard .floating-minimize-button,
 .construction-preview-panel .floating-minimize-button,
 .construction-preview-panel .dialog-close,
 #closeConstructionPreviewButton,
@@ -13672,35 +12776,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     padding: 0 6px 0 8px;
     font-size: 9px;
   }
-
-  .hud.build-panel {
-    bottom: max(4px, env(safe-area-inset-bottom));
-    padding: 2px;
-    gap: 2px;
-    border-radius: 12px !important;
-  }
-
-  .hud.build-panel .tool-group {
-    gap: 2px;
-  }
-
-  .hud.build-panel .tool-divider {
-    height: 18px;
-    margin: 0 1px;
-  }
-
-  .hud.build-panel .primary-tool {
-    min-width: 48px;
-    min-height: 36px;
-    padding: 0 5px;
-    gap: 3px;
-    font-size: 8px;
-  }
-
-  .hud.build-panel .primary-tool svg {
-    width: 13px;
-    height: 13px;
-  }
 }
 
 @media (max-width: 700px) and (orientation: landscape) {
@@ -13712,34 +12787,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     min-height: 24px;
     max-width: 54px;
     font-size: 8px;
-  }
-
-  .hud.build-panel {
-    bottom: max(3px, env(safe-area-inset-bottom));
-    padding: 2px;
-    gap: 1px;
-  }
-
-  .hud.build-panel .tool-group {
-    gap: 1px;
-  }
-
-  .hud.build-panel .tool-divider {
-    height: 16px;
-    margin: 0 1px;
-  }
-
-  .hud.build-panel .primary-tool {
-    min-width: 43px;
-    min-height: 30px;
-    padding: 0 4px;
-    gap: 2px;
-    font-size: 8px;
-  }
-
-  .hud.build-panel .primary-tool svg {
-    width: 12px;
-    height: 12px;
   }
 }
 
@@ -13754,13 +12801,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
    pseudo-elements into the neighbouring button's hit area. */
 @media (max-width: 700px),
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .primary-tool::after {
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    min-height: 0;
-    pointer-events: none;
-  }
 
   /* Keep the important live state available in a compact, horizontally
      scrollable strip instead of removing it on narrow screens. */
@@ -13788,12 +12828,10 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window .dialog-close,
   .right-line-control-card .dialog-close,
   #routeSettingsCard .dialog-close,
-  #modifyToolsCard .dialog-close,
   .construction-preview-panel .dialog-close,
   .left-route-window .floating-minimize-button,
   .right-line-control-card .floating-minimize-button,
   #routeSettingsCard .floating-minimize-button,
-  #modifyToolsCard .floating-minimize-button,
   .construction-preview-panel .floating-minimize-button {
     width: 36px !important;
     height: 36px !important;
@@ -13807,7 +12845,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window.is-minimized,
   .right-line-control-card.is-minimized,
   #routeSettingsCard.is-minimized,
-  #modifyToolsCard.is-minimized,
   .construction-preview-panel.is-minimized {
     height: 60px !important;
     max-height: 60px !important;
@@ -13817,7 +12854,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .left-route-window,
   .right-line-control-card,
   #routeSettingsCard,
-  #modifyToolsCard,
   .construction-preview-panel {
     min-height: 0 !important;
   }
@@ -14166,69 +13202,27 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
     --mobile-dock-height: 38px;
   }
 
-  .hud.build-panel {
-    left: 50%;
-    right: auto;
-    bottom: max(3px, env(safe-area-inset-bottom));
-    width: max-content;
-    max-width: calc(100vw - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right)));
-    transform: translateX(-50%);
-    box-sizing: border-box;
-    padding: 2px;
-    gap: 2px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    justify-content: flex-start;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
-
-  .hud.build-panel .tool-group {
-    flex: 0 0 auto;
-    gap: 2px;
-  }
-
-  .hud.build-panel .tool-divider {
-    height: 18px;
-    margin: 0 1px;
-  }
-
-  .hud.build-panel .primary-tool {
-    min-width: 48px;
-    min-height: 36px;
-    padding: 0 5px;
-    gap: 3px;
-    font-size: 9px;
-  }
-
-  .hud.build-panel .primary-tool svg {
-    width: 13px;
-    height: 13px;
-  }
-
   /* Floating tools stay above the dock and each list owns its own scroll. */
   .left-route-window,
   .right-line-control-card,
   #routeSettingsCard,
-  #modifyToolsCard,
   .construction-preview-panel {
     position: fixed !important;
     top: auto !important;
-    bottom: max(calc(var(--mobile-dock-height) + 6px), calc(env(safe-area-inset-bottom) + var(--mobile-dock-height) + 6px)) !important;
+    bottom: var(--hud-bottom-clear) !important;
     max-width: calc(100vw - 8px) !important;
     border-radius: 14px !important;
   }
 
   .left-route-window,
   #routeSettingsCard {
-    left: max(4px, env(safe-area-inset-left)) !important;
+    left: var(--hud-left-clear) !important;
     right: auto !important;
     width: min(260px, calc(100vw - 8px)) !important;
     max-height: min(56dvh, 300px) !important;
   }
 
   .right-line-control-card,
-  #modifyToolsCard,
   .construction-preview-panel {
     left: auto !important;
     right: max(4px, env(safe-area-inset-right)) !important;
@@ -14237,11 +13231,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .right-line-control-card {
     width: min(280px, calc(100vw - 8px)) !important;
     max-height: min(58dvh, 310px) !important;
-  }
-
-  #modifyToolsCard {
-    width: min(232px, calc(100vw - 8px)) !important;
-    max-height: min(46dvh, 230px) !important;
   }
 
   .construction-preview-panel {
@@ -14254,15 +13243,6 @@ body[data-workspace-mode="construction"] #modifyToolsCard:not(.is-minimized) .mo
   .route-settings-card-heading,
   .construction-preview-panel > header {
     flex: 0 0 auto;
-  }
-
-  #modifyToolsCard .modify-tools-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-
-  #modifyToolsCard .modify-tools-grid .primary-tool.compact {
-    min-height: 36px !important;
-    font-size: 9px;
   }
 
   /* Full-screen report headers collapse before their actions run out of
@@ -14806,29 +13786,6 @@ body .game-shell button:is(
 
 /* Express service control: visible in management mode and clearly distinct
    from the map-navigation tools. */
-.express-service-tool {
-  color: #fcd34d !important;
-  border-color: rgba(245, 158, 11, 0.48) !important;
-  background: rgba(245, 158, 11, 0.1) !important;
-}
-
-.express-service-tool:hover {
-  color: #fffbeb !important;
-  border-color: rgba(251, 191, 36, 0.86) !important;
-  background: rgba(245, 158, 11, 0.22) !important;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2) !important;
-}
-
-.express-service-tool.active {
-  color: #221200 !important;
-  border-color: #fbbf24 !important;
-  background: linear-gradient(135deg, #fbbf24, #f97316) !important;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.34) !important;
-}
-
-.express-service-tool.active svg {
-  stroke: currentColor !important;
-}
 
 /* Mobile route drawing must own the complete pointer stream. Leaflet removes
    its drag class while a build tool is active, which otherwise changes the
@@ -14856,7 +13813,6 @@ body .game-shell button:is(
   .left-route-window:not(.is-minimized),
   .right-line-control-card:not(.is-minimized),
   #routeSettingsCard:not(.is-minimized),
-  #modifyToolsCard:not(.is-minimized),
   .construction-preview-panel:not(.is-minimized),
   .dialog-backdrop > section,
   .dialog-backdrop > div > section {
@@ -14871,7 +13827,6 @@ body .game-shell button:is(
   .right-line-body,
   .construction-preview-details,
   .route-settings-edit-fields,
-  .modify-tools-grid,
   .satisfaction-dialog-content,
   .construction-project-list,
   .plan-conversion-layout,
