@@ -108,6 +108,7 @@ import {
 import { ListenerRegistry } from "./ui/listenerRegistry.ts";
 import { bindBackdropDismiss } from "./ui/backdropDismiss.ts";
 import { HudRenderer } from "./ui/hudRenderer.ts";
+import { installKeyboardPreview } from "./ui/keyboardPreview.ts";
 import { PanelManager } from "./ui/panelManager.ts";
 import { StationPanel } from "./ui/stationPanel.ts";
 import { LinePanel } from "./ui/linePanel.ts";
@@ -3130,6 +3131,9 @@ layerButtons.forEach((button) => {
     updateDynamicLayers();
   });
 });
+
+// 가상키보드가 입력칸을 가릴 때 입력 중인 내용을 화면 가운데에 보여 준다.
+installKeyboardPreview();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => undefined));

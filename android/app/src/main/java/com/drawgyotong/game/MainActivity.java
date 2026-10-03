@@ -2,6 +2,11 @@ package com.drawgyotong.game;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.view.View;
+import android.webkit.WebView;
+import androidx.activity.OnBackPressedCallback;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -12,6 +17,48 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         applyImmersiveStatusBar();
+        bridgeKeyboardInsets();
+        bridgeBackButton();
+    }
+
+    /**
+     * 시스템 뒤로가기: 웹 기록이 있으면(시작 화면 안내판 등) 웹에서 한 단계 뒤로 가고, 없을 때만 앱을 닫는다.
+     * Capacitor App 플러그인이 없으면 기본 동작이 곧바로 앱 종료라 안내판을 닫을 수 없었다.
+     */
+    private void bridgeBackButton() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+                if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                    return;
+                }
+                setEnabled(false);
+                getOnBackPressedDispatcher().onBackPressed();
+                setEnabled(true);
+            }
+        });
+    }
+
+    /**
+     * 화면을 가장자리까지 쓰므로(decorFitsSystemWindows=false) 가상키보드가 올라와도 웹 화면 크기가 줄지 않는다.
+     * 키보드 표시 여부와 높이(CSS px)를 웹에 "native-keyboard" 이벤트로 알려, 입력 미리보기를 키보드에 가리지 않는 곳에 띄운다.
+     */
+    private void bridgeKeyboardInsets() {
+        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        if (webView == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(webView, (View view, WindowInsetsCompat insets) -> {
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            boolean visible = insets.isVisible(WindowInsetsCompat.Type.ime());
+            float density = getResources().getDisplayMetrics().density;
+            int height = Math.round(ime.bottom / density);
+            webView.evaluateJavascript(
+                "window.dispatchEvent(new CustomEvent('native-keyboard',{detail:{visible:" + visible + ",height:" + height + "}}))",
+                null
+            );
+            return ViewCompat.onApplyWindowInsets(view, insets);
+        });
     }
 
     @Override

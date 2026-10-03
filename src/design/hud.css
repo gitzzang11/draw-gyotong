@@ -542,6 +542,34 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .leaflet-container.map .leaflet-control-attribution { margin: 0; padding: 0 4px; border-radius: 0; background: color-mix(in srgb, var(--surface-0) 85%, transparent); color: var(--text-2); font: var(--type-micro); }
 .leaflet-container.map .leaflet-control-attribution a { color: var(--text-1); }
 
+/* ===== 가상키보드 입력 미리보기 (MOBILE_UX §8: 키보드가 열린 동안 입력 내용이 보이게) =====
+   키보드에 가리지 않는 영역 가운데. 안내판 모양: 위쪽 먹 띠 + 필드 이름 + 큰 입력 글자. 맨 위 층. */
+.game-ime-preview {
+  position: fixed;
+  left: 50%;
+  z-index: 3000;
+  display: grid;
+  gap: 2px;
+  width: min(480px, calc(100vw - 32px));
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: var(--line-strong) solid var(--text-1);
+  border-top-width: var(--band);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-1);
+  box-shadow: var(--overlay-shadow);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.game-ime-preview[hidden] { display: none; }
+.game-ime-preview__label { font: var(--type-label); font-weight: 800; color: var(--text-2); }
+.game-ime-preview__text { display: flex; align-items: center; min-height: 32px; overflow: hidden; font: var(--type-sign); font-size: 22px; line-height: 30px; white-space: pre; }
+.game-ime-preview__value { overflow: hidden; text-overflow: ellipsis; direction: ltr; }
+.game-ime-preview__value[data-placeholder="true"] { color: var(--text-3); }
+.game-ime-preview__caret { flex: none; width: 2px; height: 24px; margin-left: 2px; background: var(--text-1); animation: game-ime-caret 1s steps(1) infinite; }
+@keyframes game-ime-caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .game-ime-preview__caret { animation: none; } }
+
 /* ===== 지도 기호·레이블 (DESIGN_SYSTEM §11) ===== */
 /* 역명: 바탕색 halo 위 먹 글자. 상자·노선 색 글자를 쓰지 않는다. */
 .leaflet-tooltip.station-map-label {
@@ -667,7 +695,9 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-title__menu { display: grid; margin-top: var(--space-2); border-top: var(--line-hair) solid var(--rule); }
 .game-title__item { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--touch-min); padding: 2px var(--space-2); justify-content: flex-start; text-align: left; font: var(--type-sign); font-size: 17px; color: var(--text-1); background: transparent; border: 0; border-bottom: var(--line-hair) solid var(--rule); border-radius: 0; cursor: pointer; }
 .game-title__item small { margin-left: auto; font: var(--type-label); font-weight: 600; color: var(--text-2); text-align: right; }
-.game-title__item:hover, .game-title__item[aria-expanded="true"] { background: var(--surface-2); }
+.game-title__item[aria-expanded="true"] { background: var(--surface-2); }
+/* 터치 기기에서는 마지막으로 누른 항목에 hover가 남으므로 마우스가 있을 때만 강조 */
+@media (hover: hover) { .game-title__item:hover { background: var(--surface-2); } }
 .game-title__item--primary { min-height: 50px; background: var(--invert-bg); color: var(--invert-fg); }
 .game-title__item--primary:hover { background: var(--invert-bg); }
 .game-title__item--primary small { color: inherit; opacity: .85; }
