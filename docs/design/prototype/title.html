@@ -36,7 +36,8 @@
   /* 왼쪽을 바탕색으로 덮어 글자 대비 확보 (그라디언트 대신 단색 띠 + 경계선) */
   .veil { position: absolute; inset: 0 auto 0 0; width: 46%; background: var(--surface-0); border-right: 2px solid var(--text-1); }
 
-  .title { position: absolute; left: var(--l, 28px); top: 28px; width: calc(46% - 56px); }
+  .title { position: absolute; left: var(--l, 28px); top: 14px; width: calc(46% - 56px); }
+  .logo-img { display: block; height: 132px; margin: 0 auto; mix-blend-mode: multiply; } /* 후보 이미지 배경이 흰색이라 종이 바탕에 곱하기로 얹음. 실제 적용 때는 투명 PNG/SVG */
   .logo { display: flex; align-items: stretch; }
   .logo .mark { display: block; width: 64px; flex: none; }
   .logo .mark img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -44,13 +45,13 @@
   .logo .name strong { display: block; font-size: 26px; line-height: 32px; font-weight: 900; letter-spacing: -.01em; }
   .logo .name small { display: block; font-size: 11px; line-height: 14px; opacity: .8; }
 
-  .menu { margin: 22px 0 0; padding: 0; list-style: none; display: grid; gap: 0; }
+  .menu { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 0; }
   .menu li { border-top: 1px solid var(--rule); }
   .menu li:last-child { border-bottom: 1px solid var(--rule); }
-  .menu button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 4px 8px; cursor: pointer; font-size: 17px; font-weight: 800; }
+  .menu button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 2px 8px; cursor: pointer; font-size: 17px; font-weight: 800; }
   .menu button .no { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--text-1); border-radius: 50%; font-size: 12px; }
   .menu button small { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--text-2); text-align: right; line-height: 15px; }
-  .menu .primary button { background: var(--invert-bg); color: var(--invert-fg); min-height: 56px; }
+  .menu .primary button { background: var(--invert-bg); color: var(--invert-fg); min-height: 50px; }
   .menu .primary button .no { border-color: var(--invert-fg); }
   .menu .primary button small { color: var(--invert-fg); opacity: .85; }
   .menu button:hover:not(:where(.primary *)) { background: var(--surface-2); }
@@ -82,7 +83,7 @@
 </head>
 <body>
 <h1 class="doc">메인(타이틀) 화면 시안 v1 — 실제 폰 가로 크기</h1>
-<p class="doc">상용 게임처럼 첫 화면은 <b>타이틀 + 큰 메뉴</b>만 둡니다. 배경에는 노선이 천천히 그려지는 도시 지도가 움직이고, 왼쪽에 게임 로고(역명판 모양)와 세로 메뉴가 있습니다. 새 게임·불러오기·설정은 메뉴를 누르면 오른쪽에서 안내판이 열립니다(B). 지금 한 화면에 몰려 있는 세이브 목록과 새 게임 설정을 나눈 구조입니다.</p>
+<p class="doc">v1.1: 새 로고 후보 적용. 상용 게임처럼 첫 화면은 <b>타이틀 + 큰 메뉴</b>만 둡니다. 배경에는 노선이 천천히 그려지는 도시 지도가 움직이고, 왼쪽에 게임 로고(역명판 모양)와 세로 메뉴가 있습니다. 새 게임·불러오기·설정은 메뉴를 누르면 오른쪽에서 안내판이 열립니다(B). 지금 한 화면에 몰려 있는 세이브 목록과 새 게임 설정을 나눈 구조입니다.</p>
 
 <div class="frame-label">A. 타이틀 (844×390)</div>
 <div class="device d844">
@@ -97,7 +98,7 @@
   </svg>
   <div class="veil"></div>
   <div class="title">
-    <div class="logo"><span class="mark"><img src="/branding/metro-maker-android-icon.png" alt="" /></span><span class="name"><strong>메트로 메이커</strong><small>METRO MAKER</small></span></div>
+    <img class="logo-img" src="/branding/metro-maker-logo-candidate.png" alt="메트로 메이커" />
     <ul class="menu">
       <li class="primary"><button><span class="no">▶</span>이어하기<small>서울 1호 계획<br/>10월 3일 저장</small></button></li>
       <li><button><span class="no">＋</span>새 게임</button></li>
@@ -115,7 +116,7 @@
   </svg>
   <div class="veil"></div>
   <div class="title">
-    <div class="logo"><span class="mark"><img src="/branding/metro-maker-android-icon.png" alt="" /></span><span class="name"><strong>메트로 메이커</strong><small>METRO MAKER</small></span></div>
+    <img class="logo-img" src="/branding/metro-maker-logo-candidate.png" alt="메트로 메이커" />
     <ul class="menu">
       <li><button><span class="no">▶</span>이어하기</button></li>
       <li class="primary"><button><span class="no">＋</span>새 게임</button></li>
@@ -146,9 +147,9 @@
     <circle class="st" cx="400" cy="100" r="6"/><circle class="st" cx="560" cy="140" r="8"/><circle class="st" cx="450" cy="140" r="6"/>
   </svg>
   <div class="veil" style="width:50%"></div>
-  <div class="title" style="width: calc(50% - 64px); top: 18px">
-    <div class="logo"><span class="mark" style="width:46px"><img src="/branding/metro-maker-android-icon.png" alt="" /></span><span class="name"><strong style="font-size:20px;line-height:24px">메트로 메이커</strong><small>METRO MAKER</small></span></div>
-    <ul class="menu" style="margin-top:14px">
+  <div class="title" style="width: calc(50% - 64px); top: 10px">
+    <img class="logo-img" style="height:112px" src="/branding/metro-maker-logo-candidate.png" alt="메트로 메이커" />
+    <ul class="menu" style="margin-top:6px">
       <li class="primary"><button><span class="no">▶</span>이어하기<small>서울 1호 계획</small></button></li>
       <li><button><span class="no">＋</span>새 게임</button></li>
       <li><button><span class="no">≡</span>불러오기</button></li>
