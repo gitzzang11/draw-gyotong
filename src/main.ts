@@ -795,7 +795,7 @@ app.innerHTML = `
     <section id="loadingScreen" class="game-loading" aria-live="polite">
       <div class="game-loading__sign">
         <img class="game-loading__icon" src="/branding/metro-maker-app-icon.png" alt="" />
-        <strong class="game-loading__title">SEOUL METRO SIMULATOR</strong>
+        <strong class="game-loading__title">메트로 메이커</strong>
       </div>
       <span id="loadingStatus" class="game-loading__status">관제 지도를 준비하고 있습니다</span>
       <span class="dg-meter game-loading__meter" aria-hidden="true"><span id="loadingProgress" class="dg-meter__fill" style="width:0%"></span></span>
@@ -803,8 +803,8 @@ app.innerHTML = `
     <section id="startScreen" class="dg-workspace game-start" aria-labelledby="startTitle">
       <header class="dg-workspace__bar game-start__bar">
         <svg class="game-start__logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18 M3 12h18"/></svg>
-        <h1 id="startTitle" class="dg-workspace__title">SEOUL METRO SIMULATOR</h1>
-        <span class="game-workspace__sub game-optional">수도권 도시 철도망 통합 관제 시스템</span>
+        <h1 id="startTitle" class="dg-workspace__title">메트로 메이커</h1>
+        <span class="game-workspace__sub game-optional">METRO MAKER</span>
       </header>
       <div class="game-start__body">
         <section class="game-start__col" aria-labelledby="startSavesLabel">
