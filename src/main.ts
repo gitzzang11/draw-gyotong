@@ -800,20 +800,28 @@ app.innerHTML = `
       <span id="loadingStatus" class="game-loading__status">관제 지도를 준비하고 있습니다</span>
       <span class="dg-meter game-loading__meter" aria-hidden="true"><span id="loadingProgress" class="dg-meter__fill" style="width:0%"></span></span>
     </section>
-    <section id="startScreen" class="dg-workspace game-start" aria-labelledby="startTitle">
-      <header class="dg-workspace__bar game-start__bar">
-        <img class="game-start__logo" src="/branding/metro-maker-android-icon.png" alt="" />
-        <h1 id="startTitle" class="dg-workspace__title">메트로 메이커</h1>
-        <span class="game-workspace__sub game-optional">METRO MAKER</span>
-      </header>
-      <div class="game-start__body">
-        <section class="game-start__col" aria-labelledby="startSavesLabel">
-          <button id="continueButton" class="dg-btn dg-btn--primary game-start__continue" type="button"><span>최근 세이브 이어하기</span><small>마지막으로 저장한 지도로 바로 돌아갑니다</small></button>
-          <h2 id="startSavesLabel" class="dg-panel__section-label">세이브</h2>
-          <div id="slotList" class="game-start__slots"></div>
-        </section>
-        <section class="game-start__col game-start__setup" aria-labelledby="startNewLabel">
-          <h2 id="startNewLabel" class="dg-panel__section-label">새 게임</h2>
+    <section id="startScreen" class="game-title" aria-labelledby="startTitle">
+      <svg class="game-title__bg" viewBox="0 0 844 390" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path class="game-title__river" d="M-20 300 C 200 250 330 330 520 290 S 760 240 870 280"/>
+        <rect class="game-title__park" x="560" y="40" width="90" height="60"/><rect class="game-title__park" x="700" y="150" width="70" height="50"/>
+        <path class="game-title__casing" d="M380 40 L 470 130 H 640 L 720 210 V 360"/><path class="game-title__line" stroke="#1D5FC2" d="M380 40 L 470 130 H 640 L 720 210 V 360"/>
+        <path class="game-title__casing" d="M420 360 V 250 L 520 150 H 820"/><path class="game-title__line" stroke="#1E8A47" style="animation-delay:1.2s" d="M420 360 V 250 L 520 150 H 820"/>
+        <path class="game-title__casing" d="M600 20 V 130 L 680 210 H 820"/><path class="game-title__line" stroke="#C8242C" style="animation-delay:2.4s" d="M600 20 V 130 L 680 210 H 820"/>
+        <circle class="game-title__st" cx="470" cy="130" r="6"/><circle class="game-title__st game-title__st--x" cx="640" cy="130" r="8"/><circle class="game-title__st" cx="520" cy="150" r="6"/><circle class="game-title__st" cx="720" cy="210" r="6"/><circle class="game-title__st game-title__st--x" cx="680" cy="210" r="8"/><circle class="game-title__st" cx="420" cy="250" r="6"/>
+      </svg>
+      <div class="game-title__panel">
+        <h1 id="startTitle" class="game-title__logo"><img src="/branding/metro-maker-logo-candidate.png" alt="메트로 메이커" /></h1>
+        <nav class="game-title__menu" aria-label="메인 메뉴">
+          <button id="continueButton" class="game-title__item game-title__item--primary" type="button"><span class="game-title__no" aria-hidden="true">▶</span>이어하기<small id="continueSlotMeta"></small></button>
+          <button class="game-title__item" type="button" data-title-open="new"><span class="game-title__no" aria-hidden="true">＋</span>새 게임</button>
+          <button class="game-title__item" type="button" data-title-open="load"><span class="game-title__no" aria-hidden="true">≡</span>불러오기<small id="loadSlotCount"></small></button>
+          <button class="game-title__item" type="button" data-title-settings><span class="game-title__no" aria-hidden="true">⚙</span>설정</button>
+        </nav>
+        <p class="game-title__foot">지도 © OpenStreetMap 기여자</p>
+      </div>
+      <section class="game-title__sheet" data-title-panel="new" hidden aria-labelledby="startNewLabel">
+        <header class="game-title__sheet-bar"><h2 id="startNewLabel">새 게임</h2><button class="dg-icon-btn" type="button" data-title-close aria-label="새 게임 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></header>
+        <div class="game-title__sheet-body">
           <div class="dg-field" role="group" aria-labelledby="cityPickerLabel">
             <span id="cityPickerLabel" class="dg-field__label">도시</span>
             <select id="citySelect" class="dg-hook" aria-hidden="true" tabindex="-1" hidden></select>
@@ -838,9 +846,13 @@ app.innerHTML = `
             </div>
           </div>
           <label class="dg-field"><span class="dg-field__label">세이브 이름</span><input id="slotNameInput" class="dg-input" value="서울 1호 계획" maxlength="20" placeholder="세이브 이름" autocomplete="off" /></label>
-          <button id="newGameButton" class="dg-btn dg-btn--primary game-start__new" type="button">새 게임 시작</button>
-        </section>
-      </div>
+        </div>
+        <footer class="game-title__sheet-actions"><button class="dg-btn dg-btn--secondary" type="button" data-title-close>취소</button><button id="newGameButton" class="dg-btn dg-btn--primary" type="button">게임 시작 ▶</button></footer>
+      </section>
+      <section class="game-title__sheet" data-title-panel="load" hidden aria-labelledby="startLoadLabel">
+        <header class="game-title__sheet-bar"><h2 id="startLoadLabel">불러오기</h2><button class="dg-icon-btn" type="button" data-title-close aria-label="불러오기 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></header>
+        <div class="game-title__sheet-body"><div id="slotList" class="game-start__slots"></div></div>
+      </section>
     </section>
 
     <section id="map" class="map" aria-label="Korea city rail map"></section>
@@ -2883,6 +2895,20 @@ newGameButton?.addEventListener("click", () => {
   const difficulty = (difficultySelect?.value as Difficulty) || "normal";
   const cityId = (citySelect?.value as CityId) || "seoul";
   void createNewGame(mode, difficulty, cityId, slotNameInput?.value || `${cityConfigs[cityId].name} 계획`);
+});
+const continueSlotMeta = byId("continueSlotMeta");
+const loadSlotCount = byId("loadSlotCount");
+/** 시작 화면 안내판(새 게임·불러오기)을 연다. 한 번에 하나만 열린다. */
+function openTitleSheet(name: string | null) {
+  startScreen?.querySelectorAll<HTMLElement>("[data-title-panel]").forEach((panel) => (panel.hidden = panel.dataset.titlePanel !== name));
+  startScreen?.querySelectorAll<HTMLElement>("[data-title-open]").forEach((item) => item.setAttribute("aria-expanded", String(item.dataset.titleOpen === name)));
+}
+startScreen?.addEventListener("click", (event) => {
+  const target = (event.target as HTMLElement).closest<HTMLElement>("[data-title-open], [data-title-close], [data-title-settings]");
+  if (!target) return;
+  if (target.dataset.titleOpen) openTitleSheet(target.dataset.titleOpen);
+  else if (target.hasAttribute("data-title-close")) openTitleSheet(null);
+  else openSettings();
 });
 continueButton?.addEventListener("click", () => {
   const latest = slotSummaries[0];
@@ -8437,9 +8463,13 @@ function renderStartScreen() {
   if (slotSummaries.length === 0) {
     slotList.innerHTML = `<p class="game-news__empty"><strong>저장된 세이브가 없습니다</strong><span class="game-inspector__note">오른쪽에서 새 게임을 시작하세요.</span></p>`;
     if (continueButton) continueButton.disabled = true;
+    setText(continueSlotMeta, "저장된 세이브 없음");
+    setText(loadSlotCount, "");
     return;
   }
   if (continueButton) continueButton.disabled = false;
+  setText(continueSlotMeta, `${slotSummaries[0].slotName} · ${formatDate(slotSummaries[0].updatedAt)}`);
+  setText(loadSlotCount, `세이브 ${slotSummaries.length}개`);
   slotList.innerHTML = slotSummaries
     .map((slot) => {
       const city = cityConfigs[slot.cityId] || { name: "도시" };

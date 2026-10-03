@@ -635,14 +635,6 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 
 /* ===== 시작 화면 (세이브 관리 workspace) =====
    층: 시작 화면 1500 (대화상자 2000 아래, 세이브 수정·삭제 확인이 위에 뜬다) · 로딩 2500 */
-.game-start { z-index: 1500; }
-.game-start__logo { width: 32px; height: 32px; flex: none; border-radius: var(--radius); }
-.game-start__body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-.game-start__col { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; overflow-y: auto; padding: var(--space-3) var(--space-4) var(--edge-inset-bottom) var(--edge-inset-left); }
-.game-start__setup { padding-left: var(--space-4); padding-right: var(--edge-inset-right); border-left: var(--line-strong) solid var(--text-1); }
-.game-start__continue { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; min-height: 56px; text-align: left; }
-.game-start__continue small { font: var(--type-label); opacity: .85; }
-.game-start__new { align-self: flex-end; min-width: 160px; margin-top: var(--space-1); }
 .game-start__slots { display: grid; }
 .game-slot { display: flex; align-items: center; gap: var(--space-1); border-top: var(--line-hair) solid var(--rule); }
 .game-slot:first-child { border-top: 0; }
@@ -664,8 +656,46 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-start__choice .dg-seg__item small { font: var(--type-micro); font-weight: 600; opacity: .85; }
 @media (max-width: 719px) {
   .game-start__cities { grid-template-columns: 1fr; }
-  .game-start__col { padding-left: var(--edge-inset-left); padding-right: var(--space-3); }
-  .game-start__setup { padding-left: var(--space-3); padding-right: var(--edge-inset-right); }
+}
+
+/* ===== 메인(타이틀) 화면 (docs/design/prototype/title.html v1.1) =====
+   왼쪽 단색 열: 로고 + 세로 메뉴, 오른쪽: 노선이 그려지는 지도. 새 게임·불러오기는 오른쪽 안내판. 층 1500 */
+.game-title { position: fixed; inset: 0; z-index: 1500; overflow: hidden; color-scheme: var(--theme-color-scheme); background: var(--map-ground); color: var(--text-1); font: var(--type-body); }
+.game-title[hidden] { display: none; }
+.game-title__bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.game-title__river { fill: none; stroke: var(--map-water); stroke-width: 34; stroke-linecap: round; }
+.game-title__park { fill: var(--map-green); }
+.game-title__casing { fill: none; stroke: var(--surface-0); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; }
+.game-title__line { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: game-title-draw 9s var(--ease-out) forwards; }
+.game-title__st { fill: var(--surface-0); stroke: var(--text-1); stroke-width: 2.5; }
+@keyframes game-title-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .game-title__line { animation: none; stroke-dashoffset: 0; } }
+.game-title__panel { position: absolute; inset: 0 auto 0 0; width: 46%; display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) var(--space-5) var(--space-2) var(--edge-inset-left); background: var(--surface-0); border-right: var(--line-strong) solid var(--text-1); overflow-y: auto; }
+.game-title__logo { margin: 0 auto; }
+.game-title__logo img { display: block; height: clamp(96px, 34vh, 140px); mix-blend-mode: multiply; }
+/* 후보 로고가 흰 배경이라 먹 테마에서는 밝은 판 위에 둔다 (투명 파일을 받으면 제거) */
+:root[data-theme="ink"] .game-title__logo { padding: 4px 8px; background: #FBFAF6; border-radius: var(--radius); }
+.game-title__menu { display: grid; margin-top: var(--space-2); border-top: var(--line-hair) solid var(--rule); }
+.game-title__item { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--touch-min); padding: 2px var(--space-2); justify-content: flex-start; text-align: left; font: var(--type-sign); font-size: 17px; color: var(--text-1); background: transparent; border: 0; border-bottom: var(--line-hair) solid var(--rule); border-radius: 0; cursor: pointer; }
+.game-title__item small { margin-left: auto; font: var(--type-label); font-weight: 600; color: var(--text-2); text-align: right; }
+.game-title__item:hover, .game-title__item[aria-expanded="true"] { background: var(--surface-2); }
+.game-title__item--primary { min-height: 50px; background: var(--invert-bg); color: var(--invert-fg); }
+.game-title__item--primary:hover { background: var(--invert-bg); }
+.game-title__item--primary small { color: inherit; opacity: .85; }
+.game-title__item:disabled { cursor: not-allowed; background: var(--surface-1); color: var(--text-3); }
+.game-title__no { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border: var(--line-strong) solid currentColor; border-radius: 50%; font-size: 12px; }
+.game-title__foot { margin: auto 0 0; padding-top: var(--space-2); font: var(--type-micro); color: var(--text-3); }
+.game-title__sheet { position: absolute; top: 0; right: 0; bottom: 0; width: 54%; display: flex; flex-direction: column; background: var(--surface-0); border-left: var(--line-strong) solid var(--text-1); }
+.game-title__sheet[hidden] { display: none; }
+.game-title__sheet-bar { display: flex; align-items: center; min-height: var(--touch-min); padding: env(safe-area-inset-top) var(--edge-inset-right) 0 var(--space-4); background: var(--invert-bg); color: var(--invert-fg); }
+.game-title__sheet-bar h2 { flex: 1; margin: 0; font: var(--type-sign); }
+.game-title__sheet-bar .dg-icon-btn { color: var(--invert-fg); background: transparent; border-color: transparent; }
+.game-title__sheet-body { flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: var(--space-2); padding: var(--space-3) var(--edge-inset-right) var(--space-3) var(--space-4); }
+.game-title__sheet-actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-2) var(--edge-inset-right) max(var(--space-2), env(safe-area-inset-bottom)) var(--space-4); border-top: var(--line-strong) solid var(--text-1); }
+.game-title__sheet-actions .dg-btn--primary { min-width: 150px; }
+@media (max-width: 719px) {
+  .game-title__panel { width: 50%; padding-right: var(--space-3); }
+  .game-title__sheet { width: 50%; }
 }
 
 /* ===== 로딩 ===== */
