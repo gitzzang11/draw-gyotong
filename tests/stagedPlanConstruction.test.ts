@@ -10,6 +10,7 @@ import { stableEntityId } from "../src/storage/migrations";
 import { addStagedPlanSegments } from "../src/domain/stagedPlanRoute";
 import { isValidConstructionStatusTransition } from "../src/storage/integrityCheck";
 import { mergeLineExtension } from "../src/lineExtension";
+import { normalizeTrainType } from "../src/domain/trainTypes";
 
 const sourceText = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
 const sourceFile = ts.createSourceFile("main.ts", sourceText, ts.ScriptTarget.Latest, true);
@@ -57,7 +58,7 @@ function application(plan = fixture(), timeline = false, flushStateSave = async 
     metaState: { current: { mode: "sandbox", cityId: "seoul", difficulty: "normal" }, patch: noop },
     analysisStateOwner: { current: { dayIndex: 0 } },
     baseConstructionDaysPerKm: 95, bridgeConstructionDays: 60, tunnelConstructionDays: 90,
-    filterValidPlanConnections, coordinatesEqual, stableEntityId, addStagedPlanSegments, isValidConstructionStatusTransition, mergeLineExtension,
+    filterValidPlanConnections, coordinatesEqual, stableEntityId, addStagedPlanSegments, isValidConstructionStatusTransition, mergeLineExtension, normalizeTrainType,
     pendingStationNameTargets: new Map(), planConversionsInFlight: new Set(),
     dedupeById: <T extends { id: string }>(values: T[]) => Array.from(new Map(values.map((value) => [value.id, value])).values()),
     L: { latLng }, map: { distance: (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => Math.hypot(a.lat - b.lat, a.lng - b.lng) * 100_000 },

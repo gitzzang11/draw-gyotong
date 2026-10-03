@@ -139,7 +139,7 @@ import {
 } from "./simulation/finance/dailySettlement.ts";
 import { LoanStateOwner } from "./simulation/finance/loanStateOwner.ts";
 import { LayerManager } from "./map/layerManager.ts";
-import { clampCars, defaultCars, normalizeTrainType, roundCost, trainCatalog, type TrainType } from "./domain/trainTypes.ts";
+import { clampCars, defaultCars, DEFAULT_TRAIN_TYPE, normalizeTrainType, roundCost, TRAIN_TYPES, trainCatalog, type TrainType } from "./domain/trainTypes.ts";
 import { mapPalette } from "./map/mapPalette.ts";
 import { LineRenderer, type LineRenderEntity } from "./map/lineRenderer.ts";
 import {
@@ -978,6 +978,7 @@ app.innerHTML = `
           <p id="routeSettingsTargetMeta" class="game-inspector__note">지도에서 대상 노선을 선택하면 여기에 표시됩니다.</p>
         </section>
         <section id="routeSettingsEditFields" class="dg-panel__section game-side-panel__fields">
+          <label id="draftRouteTrainTypeField" class="dg-field"><span class="dg-field__label">차종 (건설 후 변경 불가)</span><select id="draftRouteTrainTypeSelect" class="dg-input">${TRAIN_TYPES.map((type) => `<option value="${type}"${type === DEFAULT_TRAIN_TYPE ? " selected" : ""}>${trainCatalog[type].label} · ${trainCatalog[type].minCars}~${trainCatalog[type].maxCars}량 · ${trainCatalog[type].speedKmh}km/h</option>`).join("")}</select></label>
           <label class="dg-field"><span class="dg-field__label">이름</span><input id="draftRouteNameInput" class="dg-input" type="text" maxlength="32" placeholder="비우면 자동 이름" autocomplete="off" /></label>
           <div class="dg-field game-color-field" data-color-input="draftRouteColorInput">
             <span class="dg-field__label">노선 색</span>
@@ -1951,6 +1952,12 @@ const routeSettingsTargetMeta = byId("routeSettingsTargetMeta");
 const routeSettingsEditFields = byId("routeSettingsEditFields");
 const draftRouteNameInput = document.querySelector<HTMLInputElement>("#draftRouteNameInput");
 const draftRouteColorInput = document.querySelector<HTMLInputElement>("#draftRouteColorInput");
+const draftRouteTrainTypeSelect = document.querySelector<HTMLSelectElement>("#draftRouteTrainTypeSelect");
+const draftRouteTrainTypeField = byId("draftRouteTrainTypeField");
+draftRouteTrainTypeSelect?.addEventListener("change", () => {
+  draftRouteTrainType = normalizeTrainType(draftRouteTrainTypeSelect.value);
+  requestUpdate("blueprint-preview");
+});
 const saveRouteSettingsButton = document.querySelector<HTMLButtonElement>("#saveRouteSettingsButton");
 const operationRouteSelect = document.querySelector<HTMLSelectElement>("#operationRouteSelect");
 const carCountInput = document.querySelector<HTMLInputElement>("#carCountInput");
@@ -2379,6 +2386,8 @@ let operatingServiceMapEditActive = false;
 let operatingServiceMapEditInitialStops: string[] = [];
 let selectedColor = routeColors[0];
 let draftRouteName = "";
+/** 새 노선을 그릴 때 고른 차종. 연장·분기는 대상 노선 차종을 따른다. */
+let draftRouteTrainType: TrainType = DEFAULT_TRAIN_TYPE;
 let eraserRadiusPx = 20;
 let activeTool: ToolMode = "pan";
 const routeStrokeHudTools = new Set<ToolMode>(["route", "extend", "reconnect", "branch", "merge"]);
@@ -5754,6 +5763,7 @@ function applyRouteConstructionDraft(draft: ConstructionDraft) {
   let route: RouteLine = {
     id: createId("route"),
     name: draftRouteName || `Line ${networkState.routes.length + 1}`,
+    trainType: draftRouteTrainType,
     color: selectedColor,
     coordinates: draft.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
     lengthKm: Math.round(draft.analysis.lengthKm * 10) / 10,
@@ -7340,6 +7350,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
           extensionTarget?.name ||
           `계획 노선 ${plan.routes.length + 1}`,
         color: extensionTarget?.color ?? existingPlannedRoute?.color ?? selectedColor,
+        trainType: extensionTarget?.trainType ?? existingPlannedRoute?.trainType ?? draftRouteTrainType,
         coordinates: draft.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
         segments: graph.segments,
         completedSegmentIds: [],
@@ -8165,7 +8176,7 @@ async function confirmPlanConversion() {
       const previous = plannedRoute.actualRouteId ? networkState.routes.find((route) => route.id === plannedRoute.actualRouteId) : undefined;
       if (plannedRoute.actualRouteId && !previous) throw new Error("분할 건설의 기존 노선을 찾을 수 없습니다.");
       const base: RouteLine = previous ?? {
-        id: createId("route"), name: plannedRoute.name, color: plannedRoute.color,
+        id: createId("route"), name: plannedRoute.name, color: plannedRoute.color, trainType: normalizeTrainType(plannedRoute.trainType),
         coordinates: [], lengthKm: 0, constructionCost: 0, riverCrossings: 0, mountainSegments: 0,
         riverMode: selectedSegments.some((segment) => segment.constructionMode === "tunnel") ? "tunnel" : "bridge",
         visibility: "public", localServiceEnabled: true, expressServiceEnabled: false, operationPaused: false,
@@ -12585,7 +12596,7 @@ function renderLeftRouteWindow() {
     id: route.id,
     name: route.name,
     color: route.color,
-    meta: `${route.lengthKm.toFixed(1)}km · 역 ${networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 운행 계통 ${operationsState.services.filter((service) => service.ownerRouteId === route.id).length}개`,
+    meta: `${trainCatalog[routeTrainType(route)].label} · ${route.lengthKm.toFixed(1)}km · 역 ${networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 운행 계통 ${operationsState.services.filter((service) => service.ownerRouteId === route.id).length}개`,
     selected: route.id === selectedRouteId,
   })), (routeId) => {
     selectedRouteId = routeId;
@@ -12958,7 +12969,7 @@ function openLineManager() {
     id: route.id,
     name: route.name,
     color: route.color,
-    meta: `${route.lengthKm.toFixed(1)}km · ${status}${branchLabel}`,
+    meta: `${trainCatalog[routeTrainType(route)].label} · ${route.lengthKm.toFixed(1)}km · ${status}${branchLabel}`,
     summary: `${route.lengthKm.toFixed(1)}km · 역 ${networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 분기 ${(route.branches?.length ?? 0)}개`,
     visibility: route.visibility ?? "public",
     localService: route.localServiceEnabled !== false,
@@ -13954,14 +13965,18 @@ function openMergeDialog(merge: PendingMerge) {
   if (!first || !second || !mergeDialog) return;
   connectionDialogMode = "merge";
   const transferStationIds = getMergeTransferStationIds(merge);
+  // 한 노선에는 한 차종만 다닌다. 차종이 다르면 하나로 잇지 않고 환승 연결만 고를 수 있다.
+  const sameTrainType = routeTrainType(first) === routeTrainType(second);
   const choiceModel = getConnectionChoices({
-    canMerge: true,
+    canMerge: sameTrainType,
     canTransfer: Boolean(transferStationIds),
   });
   selectedConnectionChoice = choiceModel.defaultChoice;
   setText(
     mergeDescription,
-    `${first.name}과 ${second.name}의 끝점이 만났습니다. 연결 결과를 선택하세요.`,
+    sameTrainType
+      ? `${first.name}과 ${second.name}의 끝점이 만났습니다. 연결 결과를 선택하세요.`
+      : `${first.name}(${trainCatalog[routeTrainType(first)].label})과 ${second.name}(${trainCatalog[routeTrainType(second)].label})은 차종이 달라 한 노선으로 이을 수 없습니다. 환승 연결만 가능합니다.`,
   );
   if (mergeConnectionSummary) {
     mergeConnectionSummary.innerHTML = `
@@ -14097,6 +14112,10 @@ async function confirmRouteMerge() {
   const first = networkState.routes.find((route) => route.id === merge.first.routeId);
   const second = networkState.routes.find((route) => route.id === merge.second.routeId);
   if (!first || !second) return;
+  if (routeTrainType(first) !== routeTrainType(second)) {
+    showError("차종이 다른 노선은 하나로 이을 수 없습니다. 환승 연결을 선택하세요.");
+    return;
+  }
   if (metaState.current.mode === "career" && merge.bridgeCost > financeState.economy.cash) {
     showError(`연결 구간 건설비가 ${formatCost(merge.bridgeCost - financeState.economy.cash)} 부족합니다.`);
     return;
@@ -15998,6 +16017,9 @@ function updateRouteSettingsCard(tool: ToolMode) {
     routeSettingsTargetSwatch?.style.setProperty("--target-route-color", "#64748b");
   }
   if (draftRouteNameInput) draftRouteNameInput.value = draftRouteName;
+  // 차종은 새 노선을 그릴 때만 고른다. 연장·분기·연결은 대상 노선 차종을 따른다.
+  if (draftRouteTrainTypeField) draftRouteTrainTypeField.hidden = tool !== "route";
+  if (draftRouteTrainTypeSelect) draftRouteTrainTypeSelect.value = draftRouteTrainType;
   setColorPickerValue(draftRouteColorInput, selectedColor);
   setText(routeSettingsHeaderName, draftRouteName || "노선 설정");
   routeSettingsHeaderSwatch?.style.setProperty("background-color", selectedColor);

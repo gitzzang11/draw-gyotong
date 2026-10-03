@@ -7,6 +7,8 @@ export type PlanStatus = "draft" | "review" | "insufficient" | "ready" | "partia
 export type PlanPriority = "low" | "normal" | "high" | "critical";
 
 export interface PlannedRoute {
+  /** 기획 단계에서 정한 차종 (src/domain/trainTypes.ts). 건설 전환 시 실제 노선에 그대로 넘어간다. */
+  trainType?: import("./trainTypes").TrainType;
   id: string;
   name: string;
   color: string;
