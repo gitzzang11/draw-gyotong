@@ -680,7 +680,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .save-tab-pane,
 .finance-section,
 .finance-card,
-.setting-row,
 .connection-safety-note,
 .planning-editor,
 .plan-comparison,

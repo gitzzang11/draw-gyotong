@@ -325,6 +325,16 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-decision[data-decision-intent="danger"] .game-decision__warning { border-left-color: var(--signal-danger); }
 .game-decision[data-decision-intent="danger"] .game-decision__confirm { background: var(--signal-danger); color: #FFFFFF; }
 
+/* ===== 설정 대화상자 ===== */
+.game-settings { z-index: 1150; }
+.game-settings .dg-dialog { width: min(520px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-setting-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-min); border-top: var(--line-hair) solid var(--rule); }
+.dg-panel__section-label + .game-setting-row { border-top: 0; }
+.game-setting-row__text { display: grid; flex: 1; min-width: 0; cursor: pointer; }
+.game-setting-row__text small { font: var(--type-label); font-weight: 600; color: var(--text-2); }
+.game-setting-row__check { width: 22px; height: 22px; margin: 0 var(--space-2) 0 0; accent-color: var(--text-1); flex: none; }
+.game-setting-row__select { width: auto; min-width: 104px; }
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 1100; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }

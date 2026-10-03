@@ -1063,19 +1063,63 @@ app.innerHTML = `
 
 
 
-    <div id="settingsDialog" class="dialog-backdrop" hidden>
-      <section class="settings-dialog" role="dialog" aria-modal="true" aria-label="게임 설정">
-        <div class="dialog-heading"><div><span>CONTROL SETTINGS</span><h2>게임 설정</h2></div><button id="closeSettingsButton" class="dialog-close" type="button" aria-label="설정 닫기">×</button></div>
-        <label class="setting-row"><span><strong>효과음</strong><small>건설과 조작 피드백</small></span><input id="soundToggle" type="checkbox" checked /></label>
-        <label class="setting-row"><span><strong>진동</strong><small>지원 기기에서 촉각 피드백</small></span><input id="hapticsToggle" type="checkbox" checked /></label>
-        <label class="setting-row"><span><strong>성능</strong><small>열차 표시와 지도 자원 사용량</small></span><select id="performanceSelect"><option value="balanced">균형</option><option value="battery">절전</option></select></label>
-        <label class="setting-row"><span><strong>지도 테마</strong><small>종이: 밝은 지도(기본) · 먹: 어두운 지도</small></span><select id="mapThemeSelect">${MAP_THEMES.map((theme) => `<option value="${theme}">${MAP_THEME_LABELS[theme]}</option>`).join("")}</select></label>
-        <label class="setting-row"><span><strong>모션 감소</strong><small>화면 전환과 애니메이션 축소</small></span><input id="reducedMotionToggle" type="checkbox" /></label>
-        <label class="setting-row"><span><strong>샌드박스 공사 기간</strong><small>샌드박스에서도 공사와 개통 절차 사용</small></span><input id="sandboxConstructionTimeToggle" type="checkbox" /></label>
-        <label class="setting-row"><span><strong>역 이름 자동 생성</strong><small>1km 안 가장 가까운 실제 역 → 동네명 → 주변 시설</small></span><input id="autoStationNamingToggle" type="checkbox" checked /></label>
-        <label class="setting-row"><span><strong>자동 저장</strong><small>현재 슬롯을 설정한 주기로 저장</small></span><input id="autoSaveToggle" type="checkbox" checked /></label>
-        <label class="setting-row"><span><strong>자동 저장 주기</strong><small>자동 저장이 켜졌을 때 적용</small></span><select id="autoSaveIntervalSelect"><option value="30">30초</option><option value="60">1분</option><option value="180">3분</option><option value="300">5분</option></select></label>
-        <div class="settings-footer"><span id="cacheReadout">지도 캐시 확인 중</span><button id="clearCacheButton" class="ops-button" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span>캐시 정리</span></button></div>
+    <div id="settingsDialog" class="dg-hud dg-scrim game-settings" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <header class="dg-panel__header">
+          <h2 id="settingsTitle" class="dg-panel__title">게임 설정</h2>
+          <div class="dg-panel__header-end"><button id="closeSettingsButton" class="dg-icon-btn" type="button" aria-label="설정 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">화면</h3>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="mapThemeSelect"><strong>지도 테마</strong><small>종이: 밝은 지도(기본) · 먹: 어두운 지도</small></label>
+              <select class="dg-input game-setting-row__select" id="mapThemeSelect">${MAP_THEMES.map((theme) => `<option value="${theme}">${MAP_THEME_LABELS[theme]}</option>`).join("")}</select>
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="reducedMotionToggle"><strong>모션 감소</strong><small>화면 전환과 애니메이션 축소</small></label>
+              <input class="game-setting-row__check" id="reducedMotionToggle" type="checkbox" />
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="performanceSelect"><strong>성능</strong><small>열차 표시와 지도 자원 사용량</small></label>
+              <select class="dg-input game-setting-row__select" id="performanceSelect"><option value="balanced">균형</option><option value="battery">절전</option></select>
+            </div>
+          </section>
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">피드백</h3>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="soundToggle"><strong>효과음</strong><small>건설과 조작 피드백</small></label>
+              <input class="game-setting-row__check" id="soundToggle" type="checkbox" checked />
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="hapticsToggle"><strong>진동</strong><small>지원 기기에서 촉각 피드백</small></label>
+              <input class="game-setting-row__check" id="hapticsToggle" type="checkbox" checked />
+            </div>
+          </section>
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">게임</h3>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="sandboxConstructionTimeToggle"><strong>샌드박스 공사 기간</strong><small>샌드박스에서도 공사와 개통 절차 사용</small></label>
+              <input class="game-setting-row__check" id="sandboxConstructionTimeToggle" type="checkbox" />
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="autoStationNamingToggle"><strong>역 이름 자동 생성</strong><small>1km 안 가장 가까운 실제 역 → 동네명 → 주변 시설</small></label>
+              <input class="game-setting-row__check" id="autoStationNamingToggle" type="checkbox" checked />
+            </div>
+          </section>
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">저장</h3>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="autoSaveToggle"><strong>자동 저장</strong><small>현재 슬롯을 설정한 주기로 저장</small></label>
+              <input class="game-setting-row__check" id="autoSaveToggle" type="checkbox" checked />
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="autoSaveIntervalSelect"><strong>자동 저장 주기</strong><small>자동 저장이 켜졌을 때 적용</small></label>
+              <select class="dg-input game-setting-row__select" id="autoSaveIntervalSelect"><option value="30">30초</option><option value="60">1분</option><option value="180">3분</option><option value="300">5분</option></select>
+            </div>
+            <div class="game-setting-row"><span id="cacheReadout" class="game-setting-row__text"><small>지도 캐시 확인 중</small></span><button id="clearCacheButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button"><span>캐시 정리</span></button></div>
+          </section>
+        </div>
       </section>
     </div>
 
