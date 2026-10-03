@@ -1596,25 +1596,30 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="saveEditorDialog" class="dialog-backdrop" hidden>
-      <section class="save-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="saveEditorTitle">
-        <header class="save-editor-header">
-          <div><span>SAVE FILE SETTINGS</span><h2 id="saveEditorTitle">세이브 수정</h2></div>
-          <button id="closeSaveEditorButton" class="dialog-close" type="button" aria-label="세이브 수정창 닫기">×</button>
+    <div id="saveEditorDialog" class="dg-hud dg-scrim game-save-editor" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="saveEditorTitle">
+        <header class="dg-panel__header">
+          <h2 id="saveEditorTitle" class="dg-panel__title">세이브 수정</h2>
+          <div class="dg-panel__header-end"><button id="closeSaveEditorButton" class="dg-icon-btn" type="button" aria-label="세이브 수정 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
         </header>
-        <form id="saveEditorForm" class="save-editor-form">
-          <label class="save-editor-name-field"><span>세이브 이름</span><input id="saveEditorNameInput" maxlength="20" required autocomplete="off" /></label>
-          <div class="save-editor-setting-grid">
-            <label><span>게임 모드</span><select id="saveEditorModeSelect"><option value="sandbox">샌드박스</option><option value="career">커리어</option></select></label>
-            <label><span>난이도</span><select id="saveEditorDifficultySelect"><option value="easy">쉬움</option><option value="normal">보통</option><option value="hard">어려움</option></select></label>
+        <form id="saveEditorForm" class="game-save-editor__form">
+          <div class="dg-panel__body">
+            <section class="dg-panel__section game-side-panel__fields">
+              <label class="dg-field"><span class="dg-field__label">세이브 이름</span><input id="saveEditorNameInput" class="dg-input" maxlength="20" required autocomplete="off" /></label>
+              <div class="game-save-editor__pair">
+                <label class="dg-field"><span class="dg-field__label">게임 모드</span><select id="saveEditorModeSelect" class="dg-input"><option value="sandbox">샌드박스</option><option value="career">커리어</option></select></label>
+                <label class="dg-field"><span class="dg-field__label">난이도</span><select id="saveEditorDifficultySelect" class="dg-input"><option value="easy">쉬움</option><option value="normal">보통</option><option value="hard">어려움</option></select></label>
+              </div>
+              <label class="dg-field"><span class="dg-field__label">철도망 제목</span><input id="saveEditorNetworkTitleInput" class="dg-input" maxlength="40" placeholder="비우면 도시 이름 사용" autocomplete="off" /></label>
+              <div class="dg-row"><span class="dg-row__label">운영 도시</span><strong id="saveEditorCityReadout" class="dg-row__value">서울</strong></div>
+              <p class="game-inspector__note">기존 노선 좌표와 수요 데이터를 보호하기 위해 도시는 바꿀 수 없습니다.</p>
+              <div id="saveEditorError" class="dg-notice dg-notice--danger" role="alert" hidden></div>
+            </section>
           </div>
-          <label><span>철도망 제목</span><input id="saveEditorNetworkTitleInput" maxlength="40" placeholder="비워두면 도시 이름을 사용합니다" autocomplete="off" /></label>
-          <div class="save-editor-city-lock"><span>운영 도시</span><strong id="saveEditorCityReadout">서울</strong><small>기존 노선 좌표와 수요 데이터를 보호하기 위해 도시는 변경할 수 없습니다.</small></div>
-          <p id="saveEditorError" class="save-editor-error" hidden></p>
-          <footer class="save-editor-actions">
-            <button id="cancelSaveEditorButton" type="button">취소</button>
-            <button id="submitSaveEditorButton" class="primary" type="submit">변경사항 저장</button>
-          </footer>
+          <div class="dg-panel__actions">
+            <button id="cancelSaveEditorButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
+            <button id="submitSaveEditorButton" class="dg-btn dg-btn--primary dg-panel__actions-push" type="submit">변경 저장</button>
+          </div>
         </form>
       </section>
     </div>

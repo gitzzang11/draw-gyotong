@@ -20,6 +20,7 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 /* 화면 배치 클래스가 display를 지정해도 hidden 속성은 항상 숨긴다. */
 :where([class^="game-"], [class*=" game-"])[hidden] { display: none !important; }
 
+/* 층: HUD 1000 · 알림 1050 · 시작 화면(기존) 1500 · 대화상자 2000 · 색 선택 2100 · 확인 2200 */
 .dg-hud {
   z-index: 1000;
   color-scheme: var(--theme-color-scheme);
@@ -321,7 +322,7 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 }
 
 /* ===== 확인 대화상자 ===== */
-.game-decision { z-index: 1200; }
+.game-decision { z-index: 2200; }
 .game-decision .dg-dialog { display: flex; flex-direction: column; max-height: 100%; }
 .game-decision__message { margin: 0 0 var(--space-2); font: var(--type-sign); font-size: 16px; line-height: 22px; }
 .game-decision[data-decision-intent="danger"] .dg-panel { --panel-band: var(--signal-danger); }
@@ -329,7 +330,7 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-decision[data-decision-intent="danger"] .game-decision__confirm { background: var(--signal-danger); color: #FFFFFF; }
 
 /* ===== 설정 대화상자 ===== */
-.game-settings { z-index: 1150; }
+.game-settings { z-index: 2000; }
 .game-settings .dg-dialog { width: min(520px, 100%); display: flex; flex-direction: column; max-height: 100%; }
 .game-setting-row { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-min); border-top: var(--line-hair) solid var(--rule); }
 .dg-panel__section-label + .game-setting-row { border-top: 0; }
@@ -339,7 +340,7 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-setting-row__select { width: auto; min-width: 104px; }
 
 /* ===== 시스템 메뉴 ===== */
-.game-menu { z-index: 1150; }
+.game-menu { z-index: 2000; }
 .game-menu .dg-dialog { width: min(480px, 100%); display: flex; flex-direction: column; max-height: 100%; }
 .game-menu__save { display: grid; gap: var(--space-2); }
 .game-menu__tabs { display: grid; grid-template-columns: 1fr 1fr; }
@@ -350,12 +351,12 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-slot-item .game-route-item__text { flex: 1; }
 
 /* ===== 재정 대화상자 ===== */
-.game-finance { z-index: 1150; }
+.game-finance { z-index: 2000; }
 .game-finance .dg-dialog { width: min(520px, 100%); display: flex; flex-direction: column; max-height: 100%; }
 .game-finance__actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 
 /* ===== 리포트 대화상자 (만족도 등) ===== */
-.game-report { z-index: 1150; }
+.game-report { z-index: 2000; }
 .game-report .dg-dialog { width: min(560px, 100%); display: flex; flex-direction: column; max-height: 100%; }
 .game-report__score { display: flex; align-items: baseline; gap: var(--space-2); }
 .game-report__score strong { font: var(--type-display); font-size: 32px; line-height: 36px; font-variant-numeric: tabular-nums; }
@@ -369,7 +370,7 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-report__icon { width: 20px; flex: none; text-align: center; font-weight: 800; }
 
 /* ===== 색상 선택 ===== */
-.game-color-picker { z-index: 1250; }
+.game-color-picker { z-index: 2100; }
 .game-color-picker .dg-dialog { width: min(400px, 100%); display: flex; flex-direction: column; max-height: 100%; }
 .game-color-preview { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-min); padding: 0 var(--space-3); background: var(--map-ground); border: var(--line-hair) solid var(--rule); }
 .game-color-preview__line { flex: 1; height: 6px; background: var(--picker-color, var(--text-3)); box-shadow: 0 0 0 2px var(--map-ground); }
@@ -380,8 +381,14 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 /* 기존 전역 슬라이더 꾸밈 대신 테마 색을 따르는 기본 슬라이더를 쓴다. */
 .dg-hud input[type="range"] { -webkit-appearance: auto; appearance: auto; height: auto; background: transparent; border: 0; box-shadow: none; accent-color: var(--text-1); }
 
+/* ===== 세이브 수정 ===== */
+.game-save-editor { z-index: 2000; }
+.game-save-editor .dg-dialog { width: min(460px, 100%); max-height: 100%; }
+.game-save-editor__form { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - var(--edge-inset-top) - var(--edge-inset-bottom) - var(--touch-min)); }
+.game-save-editor__pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+
 /* ===== 지도 객체 후보 선택 ===== */
-.game-chooser { z-index: 1100; }
+.game-chooser { z-index: 2000; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }
 .game-chooser__list { overflow-y: auto; }
 

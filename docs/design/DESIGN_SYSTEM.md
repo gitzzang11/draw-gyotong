@@ -444,7 +444,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 지도 컨트롤 | `dg-map-controls` (`--vertical`) |
 | tooltip | `dg-tooltip` |
 | 알림 | `dg-toast`, `dg-banner` (`--caution` / `--danger`), 패널 내 `dg-notice` (`--danger`) |
-| 다이얼로그 | `dg-scrim` + `dg-dialog dg-panel` |
+| 다이얼로그 | `dg-scrim` + `dg-dialog dg-panel`. 층 순서는 HUD 1000 · 알림 1050 · (기존 시작 화면 1500) · 대화상자 2000 · 색 선택 2100 · 확인 2200 (`src/design/hud.css`) |
 | 전체 화면 | `dg-workspace`, `__bar` `__title` `__body` |
 | 표 | `dg-table`, 숫자 열 `dg-num` |
 | 패널 진입 | `dg-enter-edge` |
