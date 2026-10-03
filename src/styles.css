@@ -4974,406 +4974,6 @@ tr:hover td {
 /* ----------------------------------------------------
    PASSENGER SATISFACTION REPORT
 ---------------------------------------------------- */
-.satisfaction-dialog {
-  --satisfaction-accent: #52d683;
-  width: min(920px, 95vw);
-  max-height: 90dvh;
-  overflow-y: auto;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--satisfaction-accent) 38%, transparent);
-  border-radius: 24px;
-  color: #f8fafc;
-  background:
-    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--satisfaction-accent) 16%, transparent), transparent 30%),
-    linear-gradient(155deg, rgba(12, 18, 29, 0.99), rgba(7, 11, 19, 0.98));
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.78), 0 0 45px color-mix(in srgb, var(--satisfaction-accent) 12%, transparent);
-  animation: modal-pop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.satisfaction-backdrop[data-level="excellent"] .satisfaction-dialog { --satisfaction-accent: #34d399; }
-.satisfaction-backdrop[data-level="stable"] .satisfaction-dialog { --satisfaction-accent: #6ee7b7; }
-.satisfaction-backdrop[data-level="warning"] .satisfaction-dialog { --satisfaction-accent: #fbbf24; }
-.satisfaction-backdrop[data-level="critical"] .satisfaction-dialog { --satisfaction-accent: #fb7185; }
-
-.satisfaction-dialog-header {
-  position: sticky;
-  z-index: 3;
-  top: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 24px 26px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 13, 22, 0.88);
-  backdrop-filter: blur(18px);
-}
-
-.satisfaction-dialog-header > div > span,
-.satisfaction-section-heading > div > span {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--satisfaction-accent);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-}
-
-.satisfaction-dialog-header h2 {
-  margin: 0;
-  font-size: 23px;
-  letter-spacing: -0.5px;
-}
-
-.satisfaction-dialog-header p {
-  margin: 7px 0 0;
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.satisfaction-dialog-content {
-  display: grid;
-  gap: 18px;
-  padding: 22px 26px 28px;
-}
-
-.satisfaction-hero {
-  display: grid;
-  grid-template-columns: 134px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 22px;
-  min-height: 150px;
-  padding: 18px 22px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--satisfaction-accent) 28%, rgba(255, 255, 255, 0.08));
-  border-radius: 20px;
-  background:
-    linear-gradient(110deg, color-mix(in srgb, var(--satisfaction-accent) 12%, transparent), transparent 52%),
-    rgba(255, 255, 255, 0.035);
-}
-
-.satisfaction-score-ring {
-  width: 118px;
-  height: 118px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: conic-gradient(var(--satisfaction-accent) calc(var(--satisfaction-score) * 1%), rgba(255, 255, 255, 0.08) 0);
-  box-shadow: 0 0 30px color-mix(in srgb, var(--satisfaction-accent) 18%, transparent);
-}
-
-.satisfaction-score-ring::before {
-  content: "";
-  grid-area: 1 / 1;
-  width: 92px;
-  height: 92px;
-  border-radius: inherit;
-  background: #0b111c;
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.65);
-}
-
-.satisfaction-score-ring > div {
-  z-index: 1;
-  grid-area: 1 / 1;
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-}
-
-.satisfaction-score-ring strong {
-  font-size: 35px;
-  line-height: 1;
-}
-
-.satisfaction-score-ring span {
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.satisfaction-level {
-  display: inline-flex;
-  width: fit-content;
-  margin-bottom: 9px;
-  padding: 4px 9px;
-  border: 1px solid color-mix(in srgb, var(--satisfaction-accent) 38%, transparent);
-  border-radius: 999px;
-  color: var(--satisfaction-accent);
-  background: color-mix(in srgb, var(--satisfaction-accent) 12%, transparent);
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.satisfaction-hero-copy h3 {
-  margin: 0;
-  font-size: 19px;
-}
-
-.satisfaction-hero-copy p {
-  margin: 8px 0 0;
-  color: #a7b2c3;
-  font-size: 12px;
-}
-
-.satisfaction-change {
-  min-width: 112px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  text-align: right;
-  background: rgba(0, 0, 0, 0.22);
-}
-
-.satisfaction-change span {
-  display: block;
-  margin-bottom: 5px;
-  color: #7f8da1;
-  font-size: 10px;
-}
-
-.satisfaction-change strong { font-size: 17px; }
-.satisfaction-change.positive strong { color: #34d399; }
-.satisfaction-change.negative strong { color: #fb7185; }
-.satisfaction-change.neutral strong { color: #94a3b8; }
-
-.satisfaction-factor-section,
-.satisfaction-trend-card,
-.satisfaction-journey-card,
-.satisfaction-recommendations {
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.028);
-}
-
-.satisfaction-section-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.satisfaction-section-heading h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.satisfaction-section-heading em {
-  color: #64748b;
-  font-size: 10px;
-  font-style: normal;
-}
-
-.satisfaction-factor-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.satisfaction-factor {
-  padding: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  background: rgba(3, 7, 13, 0.36);
-}
-
-.satisfaction-factor > div {
-  display: grid;
-  grid-template-columns: 30px 1fr;
-  align-items: center;
-  gap: 1px 8px;
-}
-
-.satisfaction-factor > div > i {
-  grid-row: 1 / 3;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  color: var(--satisfaction-accent);
-  background: color-mix(in srgb, var(--satisfaction-accent) 12%, transparent);
-  font-style: normal;
-  font-weight: 900;
-}
-
-.satisfaction-factor > div > span {
-  color: #8492a6;
-  font-size: 10px;
-}
-
-.satisfaction-factor > div > strong { font-size: 16px; }
-
-.satisfaction-factor > b {
-  height: 5px;
-  display: block;
-  margin: 12px 0 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.satisfaction-factor > b > i {
-  height: 100%;
-  display: block;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #fbbf24, #fb7185);
-}
-
-.satisfaction-factor > small {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-  color: #94a3b8;
-  font-size: 9px;
-}
-
-.satisfaction-factor > small em {
-  color: #fb9aa8;
-  font-style: normal;
-}
-
-.satisfaction-detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 14px;
-}
-
-.satisfaction-trend {
-  height: 132px;
-  display: flex;
-  align-items: end;
-  gap: 8px;
-  padding: 8px 4px 0;
-}
-
-.satisfaction-trend > div {
-  height: 100%;
-  min-width: 22px;
-  flex: 1;
-  display: grid;
-  grid-template-rows: 1fr auto auto;
-  align-items: end;
-  justify-items: center;
-  gap: 4px;
-}
-
-.satisfaction-trend > div > i {
-  width: min(24px, 76%);
-  max-height: 100%;
-  align-self: end;
-  border-radius: 7px 7px 3px 3px;
-  background: linear-gradient(180deg, var(--satisfaction-accent), color-mix(in srgb, var(--satisfaction-accent) 36%, #172033));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--satisfaction-accent) 12%, transparent);
-}
-
-.satisfaction-trend > div > strong { font-size: 10px; }
-.satisfaction-trend > div > span { color: #64748b; font-size: 9px; }
-.satisfaction-trend > p,
-.satisfaction-journey-list > p { margin: auto; color: #64748b; font-size: 11px; }
-
-.satisfaction-journey-list {
-  display: grid;
-  gap: 8px;
-}
-
-.satisfaction-journey-list article {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 11px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.18);
-}
-
-.satisfaction-journey-list article div {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.satisfaction-journey-list article strong {
-  overflow: hidden;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.satisfaction-journey-list article span { color: #718096; font-size: 9px; }
-.satisfaction-journey-list article > em {
-  flex-shrink: 0;
-  color: #fbbf24;
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 900;
-}
-
-.satisfaction-recommendations > div:last-child {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.satisfaction-recommendations article {
-  display: flex;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--satisfaction-accent) 7%, rgba(255, 255, 255, 0.02));
-}
-
-.satisfaction-recommendations article > i {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  color: var(--satisfaction-accent);
-  background: color-mix(in srgb, var(--satisfaction-accent) 13%, transparent);
-  font-style: normal;
-  font-weight: 900;
-}
-
-.satisfaction-recommendations article > div {
-  display: grid;
-  gap: 4px;
-}
-
-.satisfaction-recommendations article strong { font-size: 11px; }
-.satisfaction-recommendations article span {
-  color: #8390a3;
-  font-size: 9px;
-  line-height: 1.45;
-}
-
-@media (max-width: 760px) {
-  .satisfaction-dialog-header { padding: 18px 18px 14px; }
-  .satisfaction-dialog-header p { display: none; }
-  .satisfaction-dialog-content { padding: 16px; }
-  .satisfaction-hero {
-    grid-template-columns: 96px 1fr;
-    gap: 14px;
-    padding: 15px;
-  }
-  .satisfaction-score-ring { width: 88px; height: 88px; }
-  .satisfaction-score-ring::before { width: 68px; height: 68px; }
-  .satisfaction-score-ring strong { font-size: 27px; }
-  .satisfaction-change {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    text-align: left;
-  }
-  .satisfaction-change span { margin: 0; }
-  .satisfaction-factor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .satisfaction-detail-grid { grid-template-columns: 1fr; }
-  .satisfaction-recommendations > div:last-child { grid-template-columns: 1fr; }
-}
 
 /* 기타 상단 바 (모드 전환 바, 게임 시간 바, 네트워크 표시 바) 호버 */
 .hud-brand-pill:hover {
@@ -6234,7 +5834,6 @@ button:active,
 .statistics-screen,
 .train-manager-dialog,
 .settings-dialog,
-.satisfaction-dialog,
 .menu-dialog {
   background: rgba(15, 22, 29, 0.97) !important;
   border: 1px solid var(--c-border) !important;
@@ -6512,7 +6111,6 @@ textarea:where(:not([class*="dg-"])) {
    Keep every dismiss action in the same, predictable top-right position.
 ------------------------------------------------------------------------- */
 .dialog-heading,
-.satisfaction-dialog-header,
 .connection-dialog-header,
 .diagram-header,
 .analysis-header,
@@ -6531,7 +6129,6 @@ textarea:where(:not([class*="dg-"])) {
 }
 
 .dialog-heading > .dialog-close,
-.satisfaction-dialog-header > .dialog-close,
 .connection-dialog-header > .dialog-close {
   position: absolute;
   top: 50%;
@@ -6540,7 +6137,6 @@ textarea:where(:not([class*="dg-"])) {
   z-index: 2;
 }
 
-.satisfaction-dialog-header,
 .connection-dialog-header {
   padding-right: 52px;
   box-sizing: border-box;
@@ -6571,13 +6167,11 @@ textarea:where(:not([class*="dg-"])) {
 
 @media (max-width: 700px) {
   .dialog-heading,
-  .satisfaction-dialog-header,
   .connection-dialog-header {
     padding-right: 48px;
   }
 
   .dialog-heading > .dialog-close,
-  .satisfaction-dialog-header > .dialog-close,
   .connection-dialog-header > .dialog-close {
     right: 0;
   }
@@ -6678,7 +6272,6 @@ button:where(:not([class*="dg-"])):active,
 
   .dialog-backdrop > .settings-dialog,
   .dialog-backdrop > .train-manager-dialog,
-  .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .merge-dialog,
   .dialog-backdrop > .planning-dialog,
   .dialog-backdrop > .plan-conversion-dialog {
@@ -7276,7 +6869,6 @@ button:where(:not([class*="dg-"])):active,
 
   .dialog-backdrop > .settings-dialog,
   .dialog-backdrop > .train-manager-dialog,
-  .dialog-backdrop > .satisfaction-dialog,
   .dialog-backdrop > .merge-dialog,
   .dialog-backdrop > .planning-dialog,
   .dialog-backdrop > .plan-conversion-dialog {
@@ -8014,35 +7606,6 @@ button:where(:not([class*="dg-"])):active,
   .dialog-backdrop > div > section {
     max-height: calc(100dvh - 12px) !important;
   }
-
-  .satisfaction-dialog {
-    width: min(1080px, calc(100vw - 16px)) !important;
-    max-height: min(92dvh, calc(100dvh - 12px)) !important;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-radius: 20px !important;
-  }
-
-  .satisfaction-dialog-header {
-    flex: 0 0 auto;
-    padding: 16px 22px 12px;
-  }
-
-  .satisfaction-dialog-header h2 {
-    font-size: clamp(19px, 2.4vw, 25px);
-  }
-
-  .satisfaction-dialog-header p {
-    font-size: 11px;
-  }
-
-  .satisfaction-dialog-content {
-    min-height: 0;
-    overflow-y: auto;
-    padding: 16px 22px 22px;
-    gap: 14px;
-  }
 }
 
 /* A horizontal phone has less height but enough width for the report's
@@ -8050,212 +7613,6 @@ button:where(:not([class*="dg-"])):active,
 @media (orientation: landscape) and (max-width: 760px) {
   .dialog-backdrop {
     padding: max(4px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left));
-  }
-
-  .satisfaction-dialog {
-    width: calc(100vw - 8px) !important;
-    max-height: calc(100dvh - 8px) !important;
-  }
-
-  .satisfaction-dialog-header {
-    gap: 12px;
-    padding: 10px 14px 8px;
-  }
-
-  .satisfaction-dialog-header p {
-    display: block;
-    margin-top: 4px;
-    font-size: 9px;
-    line-height: 1.25;
-  }
-
-  .satisfaction-dialog-content {
-    gap: 10px;
-    padding: 10px 14px 14px;
-  }
-
-  .satisfaction-hero {
-    grid-template-columns: 84px minmax(0, 1fr) minmax(88px, auto);
-    gap: 10px;
-    min-height: 100px;
-    padding: 10px;
-  }
-
-  .satisfaction-score-ring {
-    width: 78px;
-    height: 78px;
-  }
-
-  .satisfaction-score-ring::before {
-    width: 60px;
-    height: 60px;
-  }
-
-  .satisfaction-score-ring strong {
-    font-size: 24px;
-  }
-
-  .satisfaction-change {
-    grid-column: auto;
-    min-width: 88px;
-    padding: 8px;
-    text-align: right;
-  }
-
-  .satisfaction-change span {
-    margin-bottom: 3px;
-    font-size: 8px;
-  }
-
-  .satisfaction-change strong {
-    font-size: 13px;
-  }
-
-  .satisfaction-level {
-    margin-bottom: 5px;
-    padding: 3px 6px;
-    font-size: 8px;
-  }
-
-  .satisfaction-hero-copy h3 {
-    font-size: 14px;
-  }
-
-  .satisfaction-hero-copy p {
-    margin-top: 4px;
-    font-size: 9px;
-  }
-
-  .satisfaction-factor-section,
-  .satisfaction-trend-card,
-  .satisfaction-journey-card,
-  .satisfaction-recommendations {
-    padding: 10px;
-    border-radius: 13px;
-  }
-
-  .satisfaction-section-heading {
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .satisfaction-section-heading > div > span {
-    margin-bottom: 3px;
-    font-size: 8px;
-  }
-
-  .satisfaction-section-heading h3 {
-    font-size: 12px;
-  }
-
-  .satisfaction-section-heading em {
-    font-size: 8px;
-  }
-
-  .satisfaction-factor-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .satisfaction-factor {
-    padding: 8px;
-    border-radius: 10px;
-  }
-
-  .satisfaction-factor > div {
-    grid-template-columns: 22px 1fr;
-    gap: 1px 5px;
-  }
-
-  .satisfaction-factor > div > i {
-    width: 22px;
-    height: 22px;
-    border-radius: 7px;
-    font-size: 11px;
-  }
-
-  .satisfaction-factor > div > span {
-    font-size: 8px;
-  }
-
-  .satisfaction-factor > div > strong {
-    overflow: hidden;
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .satisfaction-factor > b {
-    margin: 7px 0 6px;
-  }
-
-  .satisfaction-factor > small {
-    font-size: 8px;
-  }
-
-  .satisfaction-detail-grid {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 8px;
-  }
-
-  .satisfaction-trend {
-    height: 90px;
-    gap: 4px;
-  }
-
-  .satisfaction-trend > div > strong {
-    font-size: 8px;
-  }
-
-  .satisfaction-trend > div > span {
-    font-size: 7px;
-  }
-
-  .satisfaction-journey-list {
-    gap: 5px;
-  }
-
-  .satisfaction-journey-list article {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .satisfaction-journey-list article strong {
-    font-size: 9px;
-  }
-
-  .satisfaction-journey-list article span {
-    font-size: 8px;
-  }
-
-  .satisfaction-journey-list article > em {
-    font-size: 11px;
-  }
-
-  .satisfaction-recommendations > div:last-child {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .satisfaction-recommendations article {
-    gap: 6px;
-    padding: 8px;
-  }
-
-  .satisfaction-recommendations article > i {
-    width: 22px;
-    height: 22px;
-    flex-basis: 22px;
-    border-radius: 7px;
-    font-size: 11px;
-  }
-
-  .satisfaction-recommendations article strong {
-    font-size: 9px;
-  }
-
-  .satisfaction-recommendations article span {
-    font-size: 8px;
   }
 }
 
@@ -8970,7 +8327,6 @@ button:where(:not([class*="dg-"])):active,
     touch-action: pan-y;
   }
 
-  .satisfaction-dialog-content,
   .construction-project-list,
   .plan-conversion-layout,
   .plan-asset-list,
@@ -9028,36 +8384,6 @@ button:where(:not([class*="dg-"])):active,
 /* Finance and satisfaction reports use the entire mobile safe viewport. The
    generic bottom-sheet cap (620px) left unused space on tall phones and made
    the lower edge look cropped. Keep one scroll owner on the dialog itself. */
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .dialog-backdrop:has(> .satisfaction-dialog) {
-    align-items: center;
-    padding: max(6px, env(safe-area-inset-top))
-      max(6px, env(safe-area-inset-right))
-      max(6px, env(safe-area-inset-bottom))
-      max(6px, env(safe-area-inset-left));
-  }
-
-  .dialog-backdrop > .satisfaction-dialog {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    box-sizing: border-box;
-    border-radius: 16px !important;
-  }
-
-  .satisfaction-dialog-header,
-  .satisfaction-dialog-content,
-  .satisfaction-dialog-content > * {
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-}
 
 /* The plan conversion flow must use the complete mobile safe viewport. The
    generic 620px bottom-sheet cap left the dialog anchored to the lower edge

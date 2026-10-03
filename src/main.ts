@@ -1153,17 +1153,13 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="satisfactionDialog" class="dialog-backdrop satisfaction-backdrop" hidden>
-      <section class="satisfaction-dialog" role="dialog" aria-modal="true" aria-labelledby="satisfactionDialogTitle">
-        <header class="satisfaction-dialog-header">
-          <div>
-            <span>PASSENGER EXPERIENCE</span>
-            <h2 id="satisfactionDialogTitle">승객 만족도 리포트</h2>
-            <p>실제 이동 그룹의 대기·혼잡·환승·요금 체감을 종합한 현재 평가입니다.</p>
-          </div>
-          <button id="closeSatisfactionButton" class="dialog-close" type="button" aria-label="승객 만족도 리포트 닫기">×</button>
+    <div id="satisfactionDialog" class="dg-hud dg-scrim game-report" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="satisfactionDialogTitle">
+        <header class="dg-panel__header">
+          <h2 id="satisfactionDialogTitle" class="dg-panel__title">승객 만족도</h2>
+          <div class="dg-panel__header-end"><button id="closeSatisfactionButton" class="dg-icon-btn" type="button" aria-label="승객 만족도 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
         </header>
-        <div id="satisfactionDialogContent" class="satisfaction-dialog-content"></div>
+        <div id="satisfactionDialogContent" class="dg-panel__body"></div>
       </section>
     </div>
 
@@ -12055,55 +12051,37 @@ function renderSatisfactionDialog() {
     if (recommendations.length === 0) recommendations.push({ icon: "✓", title: "현재 서비스 유지", text: "뚜렷한 위험 요인이 없습니다. 승객 증가에 맞춰 혼잡과 대기 추세를 계속 확인하세요." });
   }
   satisfactionDialog.dataset.level = level;
-  satisfactionDialog.style.setProperty("--satisfaction-score", String(score));
+  const scoreMark = score >= 70 ? "●" : score >= 50 ? "△" : "✕";
+  const scoreTone = score >= 70 ? "ok" : score >= 50 ? "caution" : "danger";
   satisfactionDialogContent.innerHTML = `
-    <section class="satisfaction-hero">
-      <div class="satisfaction-score-ring">
-        <div><strong>${score}</strong><span>/ 100</span></div>
-      </div>
-      <div class="satisfaction-hero-copy">
-        <span class="satisfaction-level">${label}</span>
-        <h3>${groups.length > 0 ? `${groups.length.toLocaleString("ko-KR")}개 이동 그룹의 현재 체감` : "운행 초기 기준 만족도"}</h3>
-        <p>${dominantFactor.penalty > 0.5 ? `현재 가장 큰 감점 요인은 ‘${dominantFactor.title}’입니다.` : "현재 뚜렷한 감점 요인 없이 안정적인 서비스입니다."}</p>
-      </div>
-      <div class="satisfaction-change ${change === null ? "neutral" : change >= 0 ? "positive" : "negative"}">
-        <span>직전 기록 대비</span>
-        <strong>${change === null ? "기록 대기" : `${change > 0 ? "+" : ""}${change}점`}</strong>
-      </div>
+    <section class="dg-panel__section game-report__summary">
+      <div class="game-report__score"><span class="game-report__mark game-report__mark--${scoreTone}" aria-hidden="true">${scoreMark}</span><strong>${score}</strong><span class="game-inspector__muted">/ 100 · ${label}</span></div>
+      <p class="game-inspector__note">${groups.length > 0 ? `${groups.length.toLocaleString("ko-KR")}개 이동 그룹의 현재 체감입니다.` : "운행 초기 기준 만족도입니다."} ${dominantFactor.penalty > 0.5 ? `가장 큰 감점 요인은 ‘${dominantFactor.title}’입니다.` : "뚜렷한 감점 요인이 없습니다."}</p>
+      <div class="dg-row"><span class="dg-row__label">직전 기록 대비</span><span class="dg-row__value${change === null ? "" : change >= 0 ? " dg-row__value--ok" : " dg-row__value--danger"}">${change === null ? "기록 대기" : `${change >= 0 ? "▲ +" : "▼ "}${change}점`}</span></div>
     </section>
-    <section class="satisfaction-factor-section">
-      <div class="satisfaction-section-heading"><div><span>EXPERIENCE FACTORS</span><h3>만족도 구성 요인</h3></div><em>감점 영향이 클수록 막대가 길어집니다</em></div>
-      <div class="satisfaction-factor-grid">
-        ${factors.map((factor) => `
-          <article class="satisfaction-factor ${factor.key}">
-            <div><i aria-hidden="true">${factor.icon}</i><span>${factor.title}</span><strong>${factor.value}</strong></div>
-            <b><i style="width:${Math.min(100, Math.round((factor.penalty / 25) * 100))}%"></i></b>
-            <small>${factor.note}<em>${factor.penalty > 0 ? `-${factor.penalty.toFixed(1)}점 영향` : "감점 없음"}</em></small>
-          </article>
-        `).join("")}
-      </div>
+    <section class="dg-panel__section">
+      <h3 class="dg-panel__section-label">구성 요인<span class="game-inspector__section-meta">막대가 길수록 감점이 큽니다</span></h3>
+      ${factors.map((factor) => `
+        <div class="game-report__factor">
+          <div class="dg-row dg-row--meter"><span class="dg-row__label">${factor.title}</span><span class="dg-meter" aria-hidden="true"><span class="dg-meter__fill${factor.penalty >= 12 ? " dg-meter__fill--over" : ""}" style="width:${Math.min(100, Math.round((factor.penalty / 25) * 100))}%"></span></span><span class="dg-row__value">${factor.value}</span></div>
+          <small class="game-report__factor-note">${factor.note} · ${factor.penalty > 0 ? `-${factor.penalty.toFixed(1)}점` : "감점 없음"}</small>
+        </div>`).join("")}
     </section>
-    <div class="satisfaction-detail-grid">
-      <section class="satisfaction-trend-card">
-        <div class="satisfaction-section-heading"><div><span>RECENT TREND</span><h3>최근 만족도</h3></div></div>
-        <div class="satisfaction-trend ${trendValues.length < 2 ? "empty" : ""}">
-          ${trendValues.map((item) => `<div title="${item.day}일차 ${item.value}점"><i style="height:${Math.max(12, item.value)}%"></i><strong>${item.value}</strong><span>${item.day}일</span></div>`).join("") || "<p>하루가 지나면 변화 추세가 표시됩니다.</p>"}
-        </div>
-      </section>
-      <section class="satisfaction-journey-card">
-        <div class="satisfaction-section-heading"><div><span>LOW SCORE JOURNEYS</span><h3>개선 우선 이동</h3></div></div>
-        <div class="satisfaction-journey-list">
-          ${worstGroups.length > 0 ? worstGroups.map((group) => {
-            const origin = networkState.stations.find((station) => station.id === group.originStationId)?.name ?? "출발역";
-            const destination = networkState.stations.find((station) => station.id === group.destinationStationId)?.name ?? "도착역";
-            return `<article><div><strong>${escapeHtml(origin)} → ${escapeHtml(destination)}</strong><span>${group.routeIds.length > 1 ? `${group.routeIds.length - 1}회 환승 · ` : ""}${group.activeDemand.toLocaleString("ko-KR")}명</span></div><em>${group.satisfaction}점</em></article>`;
-          }).join("") : "<p>분석할 승객 이동이 아직 없습니다.</p>"}
-        </div>
-      </section>
-    </div>
-    <section class="satisfaction-recommendations">
-      <div class="satisfaction-section-heading"><div><span>NEXT ACTION</span><h3>추천 개선 방향</h3></div></div>
-      <div>${recommendations.slice(0, 3).map((item) => `<article><i aria-hidden="true">${item.icon}</i><div><strong>${item.title}</strong><span>${item.text}</span></div></article>`).join("")}</div>
+    <section class="dg-panel__section">
+      <h3 class="dg-panel__section-label">최근 추세</h3>
+      ${trendValues.length < 2 ? "<p class=\"game-inspector__note\">하루가 지나면 변화 추세가 표시됩니다.</p>" : trendValues.map((item) => `<div class="dg-row dg-row--meter"><span class="dg-row__label">${item.day}일차</span><span class="dg-meter" aria-hidden="true"><span class="dg-meter__fill" style="width:${Math.max(0, Math.min(100, item.value))}%"></span></span><span class="dg-row__value">${item.value}점</span></div>`).join("")}
+    </section>
+    <section class="dg-panel__section">
+      <h3 class="dg-panel__section-label">개선 우선 이동</h3>
+      ${worstGroups.length > 0 ? worstGroups.map((group) => {
+        const origin = networkState.stations.find((station) => station.id === group.originStationId)?.name ?? "출발역";
+        const destination = networkState.stations.find((station) => station.id === group.destinationStationId)?.name ?? "도착역";
+        return `<div class="dg-row"><span class="dg-row__label game-route-item__text"><strong>${escapeHtml(origin)} → ${escapeHtml(destination)}</strong><small>${group.routeIds.length > 1 ? `${group.routeIds.length - 1}회 환승 · ` : ""}${group.activeDemand.toLocaleString("ko-KR")}명</small></span><span class="dg-row__value">${group.satisfaction}점</span></div>`;
+      }).join("") : "<p class=\"game-inspector__note\">분석할 승객 이동이 아직 없습니다.</p>"}
+    </section>
+    <section class="dg-panel__section">
+      <h3 class="dg-panel__section-label">추천 개선 방향</h3>
+      <ul class="game-inspector__list">${recommendations.slice(0, 3).map((item) => `<li><span class="game-report__icon" aria-hidden="true">${item.icon}</span><span><strong>${item.title}</strong> · ${item.text}</span></li>`).join("")}</ul>
     </section>
   `;
 }

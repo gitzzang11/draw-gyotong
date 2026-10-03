@@ -517,7 +517,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    rule still carried the centered panel translate, which shifted it half a
    panel left even after right anchoring was applied. */
 
-.satisfaction-dialog-header,
 .save-editor-header,
 .connection-dialog-header,
 .color-picker-header,
@@ -585,8 +584,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.train-manager-content,
-.satisfaction-dialog-content {
+.train-manager-content {
   background: var(--color-surface-0) !important;
 }
 
@@ -621,7 +619,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .save-editor-dialog,
 .merge-dialog,
 .plan-conversion-dialog,
-.satisfaction-dialog,
 .train-manager-dialog,
 .construction-manager-dialog,
 .color-picker-dialog {

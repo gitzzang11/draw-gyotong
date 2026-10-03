@@ -354,6 +354,20 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-finance .dg-dialog { width: min(520px, 100%); display: flex; flex-direction: column; max-height: 100%; }
 .game-finance__actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 
+/* ===== 리포트 대화상자 (만족도 등) ===== */
+.game-report { z-index: 1150; }
+.game-report .dg-dialog { width: min(560px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-report__score { display: flex; align-items: baseline; gap: var(--space-2); }
+.game-report__score strong { font: var(--type-display); font-size: 32px; line-height: 36px; font-variant-numeric: tabular-nums; }
+.game-report__mark { font-size: 18px; }
+.game-report__mark--ok { color: var(--signal-ok); }
+.game-report__mark--caution { color: var(--signal-caution-text); }
+.game-report__mark--danger { color: var(--signal-danger); }
+.game-report__factor { padding: 2px 0; border-top: var(--line-hair) solid var(--rule); }
+.dg-panel__section-label + .game-report__factor { border-top: 0; }
+.game-report__factor-note { display: block; font: var(--type-label); font-weight: 600; color: var(--text-2); }
+.game-report__icon { width: 20px; flex: none; text-align: center; font-weight: 800; }
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 1100; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }
