@@ -1033,28 +1033,21 @@ app.innerHTML = `
       <button id="applyOperatingServiceMapEditButton" class="primary" type="button">적용</button>
     </section>
 
-    <section id="leftRouteWindow" class="left-route-window" hidden aria-label="노선 목록 창">
-      <div class="left-route-header">
-        <div class="left-route-title-group">
-          <span class="left-route-sub">ROUTE OVERVIEW</span>
-          <h3 class="left-route-title">노선 목록</h3>
-        </div>
-        <div id="leftRouteMinimizedSummary" class="left-route-minimized-summary" aria-label="최소화된 노선 목록"></div>
-        <button id="closeLeftRouteWindowButton" class="dialog-close compact-close floating-close-button" type="button" aria-label="닫기">×</button>
+    <!-- 노선 목록: 레일 오른쪽 보조 패널 -->
+    <section id="leftRouteWindow" class="dg-hud dg-panel game-side-panel" hidden aria-labelledby="leftRouteTitle">
+      <header class="dg-panel__header">
+        <svg class="dg-panel__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M7 5 H17 M7 10 H17 M7 15 H17 M3 5 H4 M3 10 H4 M3 15 H4"/></svg>
+        <h2 id="leftRouteTitle" class="dg-panel__title">노선 목록</h2>
+        <div class="dg-panel__header-end"><button id="closeLeftRouteWindowButton" class="dg-icon-btn" type="button" aria-label="노선 목록 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+      </header>
+      <div class="dg-panel__body">
+        <section class="dg-panel__section">
+          <div class="dg-row"><span class="dg-row__label">운행 노선</span><strong id="leftRouteTotalCount" class="dg-row__value">0개</strong></div>
+          <div class="dg-row"><span class="dg-row__label">총 연장</span><strong id="leftRouteTotalKm" class="dg-row__value">0 km</strong></div>
+        </section>
+        <div id="leftRouteList" class="game-route-list"></div>
       </div>
-
-      <div class="left-route-summary">
-        <div class="summary-chip"><strong id="leftRouteTotalCount">0개</strong><span>운행 노선</span></div>
-        <div class="summary-chip"><strong id="leftRouteTotalKm">0 km</strong><span>총 연장</span></div>
-      </div>
-
-      <div id="leftRouteList" class="left-route-list"></div>
-
-      <div class="left-route-footer">
-        <button id="leftRouteNewButton" class="left-route-action-btn" type="button">
-          <span>＋ 새 노선 건설</span>
-        </button>
-      </div>
+      <div class="dg-panel__actions"><button id="leftRouteNewButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">＋ 새 노선 건설</button></div>
     </section>
 
 
@@ -1819,7 +1812,6 @@ const headwayReadout = byId("headwayReadout");
 const leftRouteWindow = byId("leftRouteWindow");
 const closeLeftRouteWindowButton = byId("closeLeftRouteWindowButton");
 const leftRouteList = byId("leftRouteList");
-const leftRouteMinimizedSummary = byId("leftRouteMinimizedSummary");
 const leftRouteTotalCount = byId("leftRouteTotalCount");
 const leftRouteTotalKm = byId("leftRouteTotalKm");
 const leftRouteNewButton = byId("leftRouteNewButton");
@@ -2153,44 +2145,6 @@ const colorHexInput = document.querySelector<HTMLInputElement>("#colorHexInput")
 let colorPickerTarget: HTMLInputElement | null = null;
 let colorPickerHsl = { hue: 180, saturation: 70, lightness: 55 };
 
-function addFloatingWindowMinimizer(
-  windowElement: HTMLElement | null,
-  headerSelector: string,
-  label: string,
-) {
-  const header = windowElement?.querySelector<HTMLElement>(headerSelector);
-  if (!windowElement || !header || header.querySelector(".floating-minimize-button")) return;
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "floating-minimize-button";
-  button.setAttribute("aria-label", `${label} 최소화`);
-  button.setAttribute("title", `${label} 최소화`);
-  button.textContent = "−";
-  button.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const minimized = windowElement.classList.toggle("is-minimized");
-    button.textContent = minimized ? "⤢" : "−";
-    button.setAttribute("aria-label", minimized ? `${label} 복원` : `${label} 최소화`);
-    button.setAttribute("title", minimized ? `${label} 복원` : `${label} 최소화`);
-    button.setAttribute("aria-pressed", String(minimized));
-  });
-
-  const closeBtn = header.querySelector(".dialog-close, .compact-close");
-  closeBtn?.classList.add("floating-close-button");
-  if (closeBtn && closeBtn.parentElement === header) {
-    const actions = document.createElement("div");
-    actions.className = "floating-window-actions";
-    header.insertBefore(actions, closeBtn);
-    actions.append(button, closeBtn);
-  } else if (closeBtn && closeBtn.parentElement) {
-    closeBtn.parentElement.insertBefore(button, closeBtn);
-  } else {
-    header.append(button);
-  }
-}
-
-addFloatingWindowMinimizer(leftRouteWindow, ".left-route-header", "노선 목록");
 
 function syncColorPicker(input: HTMLInputElement | null) {
   if (!input) return;
@@ -12485,18 +12439,10 @@ function renderLeftRouteWindow() {
   const totalKm = networkState.routes.reduce((sum, r) => sum + r.lengthKm, 0);
   setText(leftRouteTotalCount, `${networkState.routes.length}개`);
   setText(leftRouteTotalKm, `${totalKm.toFixed(1)} km`);
-  if (leftRouteMinimizedSummary) {
-    leftRouteMinimizedSummary.innerHTML = networkState.routes.length === 0
-      ? `<span class="left-route-minimized-empty">노선 없음</span>`
-      : networkState.routes.map((route) => `
-          <span class="left-route-minimized-route${route.id === selectedRouteId ? " is-selected" : ""}" style="--route-color:${escapeHtml(route.color)}" title="${escapeHtml(route.name)}">
-            <i aria-hidden="true"></i><strong>${escapeHtml(route.name)}</strong>
-          </span>`).join("");
-  }
   linePanel.renderRouteList(networkState.routes.map((route) => ({
     id: route.id,
-    name: escapeHtml(route.name),
-    color: escapeHtml(route.color),
+    name: route.name,
+    color: route.color,
     meta: `${route.lengthKm.toFixed(1)}km · 역 ${networkState.stations.filter((station) => station.connectedRouteIds.includes(route.id)).length}개 · 운행 계통 ${operationsState.services.filter((service) => service.ownerRouteId === route.id).length}개`,
     selected: route.id === selectedRouteId,
   })), (routeId) => {

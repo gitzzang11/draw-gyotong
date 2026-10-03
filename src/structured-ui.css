@@ -470,7 +470,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 .section-card-header > span,
-.left-route-sub,
 .dialog-heading > div > span,
 .section-title > span {
   color: var(--color-accent) !important;
@@ -595,7 +594,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    Floating inspectors and contextual surfaces — geometry unchanged
    -------------------------------------------------------------------------- */
 
-.left-route-window,
 .tutorial-panel {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
@@ -610,7 +608,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    rule still carried the centered panel translate, which shifted it half a
    panel left even after right anchoring was applied. */
 
-.left-route-header,
 .satisfaction-dialog-header,
 .save-editor-header,
 .connection-dialog-header,
@@ -623,13 +620,11 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.left-route-title,
 .dialog-heading h2 {
   color: var(--color-text-primary) !important;
   text-shadow: none !important;
 }
 
-.left-route-summary,
 .finance-stats-grid,
 .analysis-summary-grid,
 .news-summary {
@@ -640,7 +635,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   background: transparent !important;
 }
 
-.left-route-summary > *,
 .finance-stats-grid > *,
 .analysis-summary-grid > *,
 .news-summary > * {
@@ -652,7 +646,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.left-route-item,
 .plan-asset-card,
 .construction-project-card,
 .analysis-card,
@@ -666,17 +659,10 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   transform: none !important;
 }
 
-.left-route-item:hover,
 .analysis-card:hover,
 .news-card:hover,
 .news-item:hover {
   background: var(--color-surface-1) !important;
-}
-
-.left-route-item.selected-route-item {
-  border-color: var(--color-accent) !important;
-  background: var(--color-accent-dim) !important;
-  box-shadow: inset 3px 0 0 var(--color-accent) !important;
 }
 
 .connection-section,
@@ -693,13 +679,11 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.left-route-list,
 .train-manager-content,
 .satisfaction-dialog-content {
   background: var(--color-surface-0) !important;
 }
 
-.left-route-footer,
 .planning-actions,
 .conversion-actions,
 .dialog-actions,
@@ -887,17 +871,6 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
 }
 
 /* Legacy route-panel selectors carry stronger blue-gradient declarations. */
-body .game-shell .left-route-window .left-route-action-btn,
-body .game-shell .left-route-window .left-route-action-btn:hover,
-body .game-shell .left-route-window .left-route-action-btn:active {
-  border: 1px solid var(--color-accent) !important;
-  border-radius: 6px !important;
-  background: var(--color-accent-dim) !important;
-  color: var(--color-accent-strong) !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  transform: none !important;
-}
 
 .menu-footer-btn.title-btn,
 .planning-delete-button,

@@ -175,6 +175,18 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-inspector__minus { color: var(--signal-danger); font-weight: 800; }
 .game-inspector__danger-action { display: flex; justify-content: flex-end; }
 
+/* ===== 노선 목록 ===== */
+.game-route-list { display: grid; }
+.game-route-item {
+  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--touch-min);
+  padding: 6px var(--space-3); border: 0; border-top: var(--line-hair) solid var(--rule); border-radius: 0;
+  background: transparent; color: var(--text-1); font: var(--type-body); text-align: left; cursor: pointer;
+}
+.game-route-item[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+.game-route-item__text { display: grid; min-width: 0; }
+.game-route-item__text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-route-item__text small { font: var(--type-label); font-weight: 600; opacity: .8; }
+
 /* ===== 노선 inspector ===== */
 /* 여러 설정을 조정하는 확장 inspector: 시간 정보판 아래까지 올라가고 지도 컨트롤은 뒤로 숨는다 (§9). */
 .game-inspector--tall { max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--edge-inset-bottom)); }

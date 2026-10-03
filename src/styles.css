@@ -121,7 +121,6 @@ button,
 button svg,
 .ops-button svg,
 .action-button svg,
-.summary-chip svg,
 .menu-action-icon,
 .button-icon,
 .tool-glyph {
@@ -1447,41 +1446,6 @@ tr:hover td {
 /* ----------------------------------------------------
    8. LEFT ROUTE DRAWER WINDOW
 ---------------------------------------------------- */
-.left-route-window {
-  position: absolute;
-  top: max(56px, calc(env(safe-area-inset-top) + 48px));
-  left: var(--hud-left-clear);
-  bottom: var(--hud-bottom-clear);
-  width: min(340px, 88vw);
-  z-index: 950;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.left-route-window[hidden] {
-  display: none !important;
-}
-
-.left-route-header {
-  padding: 14px;
-  border-bottom: 1px solid var(--c-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.left-route-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-}
 
 .compact-close {
   background: rgba(255, 255, 255, 0.08);
@@ -1490,56 +1454,6 @@ tr:hover td {
   width: 32px;
   height: 32px;
   color: var(--c-text-muted);
-}
-
-.left-route-summary {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.summary-chip {
-  background: rgba(255, 255, 255, 0.04);
-  padding: 8px;
-  border-radius: var(--radius-md);
-}
-
-.summary-chip strong {
-  font-size: 15px;
-  color: var(--c-primary);
-}
-
-.left-route-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.left-route-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 52px;
-}
-
-.left-route-action-btn {
-  width: 100%;
-  padding: 12px;
-  min-height: 48px;
-  background: linear-gradient(135deg, var(--c-secondary), var(--c-primary));
-  color: #07090E;
-  border: none;
-  border-radius: var(--radius-md);
-  font-weight: 800;
 }
 
 /* ----------------------------------------------------
@@ -4990,66 +4904,8 @@ font-size: 12px;
 }
 
 /* Common Drawer Backdrop & Panels */
-.left-route-window {
-  position: absolute !important;
-  top: max(68px, env(safe-area-inset-top)) !important;
-  bottom: var(--hud-bottom-clear) !important;
-  width: min(350px, 90vw) !important;
-  max-height: calc(100dvh - 84px) !important;
-  z-index: 1200 !important;
-  background: rgba(22, 26, 34, 0.94) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: 16px !important;
-  padding: 16px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65) !important;
-  color: #f1f5f9 !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  overflow-x: hidden !important;
-  box-sizing: border-box !important;
-}
-
-.left-route-window {
-  left: var(--hud-left-clear) !important;
-  animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-.left-route-window[hidden] {
-  display: none !important;
-}
 
 /* Headers */
-.left-route-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding-bottom: 10px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.left-route-title-group {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-}
-
-.left-route-sub {
-  font-size: 0.68rem !important;
-  font-weight: 800 !important;
-  color: #94a3b8 !important;
-  letter-spacing: 0.06em !important;
-  text-transform: uppercase !important;
-}
-
-.left-route-title {
-  margin: 0 !important;
-  font-size: 1.1rem !important;
-  font-weight: 800 !important;
-  color: #f1f5f9 !important;
-}
 
 .compact-close {
   background: rgba(255, 255, 255, 0.08) !important;
@@ -5074,165 +4930,6 @@ font-size: 12px;
 }
 
 /* Left Route Window Specifics */
-.left-route-summary {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 8px !important;
-}
-
-.summary-chip {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 10px !important;
-  padding: 10px 12px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-}
-
-.summary-chip strong {
-  font-size: 1.05rem !important;
-  font-weight: 800 !important;
-  color: #38bdf8 !important;
-}
-
-.summary-chip span {
-  font-size: 0.7rem !important;
-  font-weight: 700 !important;
-  color: #94a3b8 !important;
-}
-
-.left-route-list {
-  flex: 1 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-  padding-right: 4px !important;
-}
-
-.left-route-list::-webkit-scrollbar {
-  width: 5px !important;
-}
-
-.left-route-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-radius: 4px !important;
-}
-
-.left-route-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18) !important;
-  border-radius: 4px !important;
-}
-
-.left-route-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35) !important;
-}
-
-.left-route-item {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  padding: 10px 12px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-}
-
-.left-route-item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-}
-
-.left-route-item.selected-route-item {
-  background: rgba(56, 189, 248, 0.12) !important;
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2) !important;
-}
-
-.route-item-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  overflow: hidden !important;
-}
-
-.route-badge-dot {
-  width: 14px !important;
-  height: 14px !important;
-  border-radius: 50% !important;
-  flex-shrink: 0 !important;
-  box-shadow: 0 0 8px currentColor !important;
-}
-
-.route-item-details {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 2px !important;
-  overflow: hidden !important;
-}
-
-.route-item-name {
-  font-size: 0.88rem !important;
-  font-weight: 800 !important;
-  color: #f1f5f9 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.route-item-meta {
-  font-size: 0.74rem !important;
-  color: #94a3b8 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.route-item-manage-btn {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #e2e8f0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: 8px !important;
-  padding: 5px 10px !important;
-  font-size: 0.75rem !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  transition: all 0.15s ease !important;
-}
-
-.selected-route-item .route-item-manage-btn {
-  background: #3b82f6 !important;
-  color: #ffffff !important;
-  border-color: #3b82f6 !important;
-}
-
-.left-route-footer {
-  padding-top: 8px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.left-route-action-btn {
-  width: 100% !important;
-  background: #3b82f6 !important;
-  color: #ffffff !important;
-  border: none !important;
-  border-radius: 10px !important;
-  padding: 10px !important;
-  font-size: 0.88rem !important;
-  font-weight: 800 !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-}
-
-.left-route-action-btn:hover {
-  filter: brightness(1.15) !important;
-  transform: translateY(-1px) !important;
-}
 
 /* Right Line Control Card Specifics */
 
@@ -7552,7 +7249,6 @@ button:active,
 
 /* Shared panel surface: quiet separation from the map, no glass spectacle. */
 .start-panel,
-.left-route-window,
 .analysis-screen,
 .statistics-screen,
 .train-manager-dialog,
@@ -7927,7 +7623,6 @@ textarea:where(:not([class*="dg-"])) {
    Keep every dismiss action in the same, predictable top-right position.
 ------------------------------------------------------------------------- */
 .dialog-heading,
-.left-route-header,
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header,
@@ -7948,7 +7643,6 @@ textarea:where(:not([class*="dg-"])) {
 }
 
 .dialog-heading > .dialog-close,
-.left-route-header > .dialog-close,
 .satisfaction-dialog-header > .dialog-close,
 .connection-dialog-header > .dialog-close,
 .decision-dialog-header > .dialog-close {
@@ -7959,7 +7653,6 @@ textarea:where(:not([class*="dg-"])) {
   z-index: 2;
 }
 
-.left-route-header,
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header {
@@ -8006,7 +7699,6 @@ textarea:where(:not([class*="dg-"])) {
 
 @media (max-width: 700px) {
   .dialog-heading,
-  .left-route-header,
   .satisfaction-dialog-header,
   .connection-dialog-header,
   .decision-dialog-header {
@@ -8014,7 +7706,6 @@ textarea:where(:not([class*="dg-"])) {
   }
 
   .dialog-heading > .dialog-close,
-  .left-route-header > .dialog-close,
   .satisfaction-dialog-header > .dialog-close,
   .connection-dialog-header > .dialog-close,
   .decision-dialog-header > .dialog-close {
@@ -8096,7 +7787,6 @@ button:where(:not([class*="dg-"])):active,
     -webkit-user-select: text;
   }
 
-  .left-route-list,
   .dialog-backdrop > section,
   .dialog-backdrop > div > section {
     overscroll-behavior: contain;
@@ -8945,66 +8635,10 @@ button:where(:not([class*="dg-"])):active,
     --mobile-dock-height: 52px;
   }
 
-  .left-route-window {
-    position: fixed !important;
-    top: auto !important;
-    right: max(5px, env(safe-area-inset-right)) !important;
-    bottom: var(--hud-bottom-clear) !important;
-    left: var(--hud-left-clear) !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: min(56dvh, 430px) !important;
-    padding: 11px !important;
-    overflow: auto;
-    overscroll-behavior: contain;
-    border-radius: 15px 15px 10px 10px !important;
-    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.38) !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .left-route-window::before {
-    display: block;
-    width: 32px;
-    height: 3px;
-    margin: 0 auto 9px;
-    content: "";
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.24);
-  }
-
-  .left-route-window {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .left-route-header {
-    min-height: 32px;
-  }
-
-  .left-route-list {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
   .toast {
     top: max(56px, calc(env(safe-area-inset-top) + 50px));
     max-width: min(360px, calc(100vw - 24px));
     font-size: 11px;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window {
-    right: max(4px, env(safe-area-inset-right)) !important;
-    bottom: var(--hud-bottom-clear) !important;
-    left: var(--hud-left-clear) !important;
-    max-height: min(52dvh, 300px) !important;
-    padding: 8px !important;
-  }
-
-  .left-route-window::before {
-    margin-bottom: 6px;
   }
 }
 
@@ -9018,47 +8652,6 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Floating map windows header layout & minimizer button styling */
-.left-route-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  position: relative !important;
-  padding-right: 0 !important;
-}
-
-.floating-minimize-button {
-  display: inline-grid !important;
-  place-items: center !important;
-  width: 26px !important;
-  height: 26px !important;
-  min-width: 26px !important;
-  min-height: 26px !important;
-  max-width: 26px !important;
-  max-height: 26px !important;
-  aspect-ratio: 1 / 1 !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: 50% !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #f5fbff !important;
-  font: 800 14px/1 system-ui, sans-serif !important;
-  cursor: pointer !important;
-  flex-shrink: 0 !important;
-  align-self: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-}
-
-.floating-minimize-button:hover {
-  background: rgba(85, 217, 192, 0.15) !important;
-  color: #55d9c0 !important;
-  border-color: rgba(85, 217, 192, 0.4) !important;
-}
-
-.floating-minimize-button:active {
-  transform: scale(0.94);
-}
 
 /* 1:1 Aspect Ratio for Close Buttons */
 .dialog-close,
@@ -9085,7 +8678,6 @@ button:where(:not([class*="dg-"])):active,
 /* Minimized Header Summaries */
 
 /* Remove Inner Nested Scrolls (창 내부 이중 스크롤 제거) */
-.left-route-list,
 .setup-grid,
 .slot-list,
 .dialog-body {
@@ -9094,7 +8686,6 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Single Scroll Container for Floating Windows */
-.left-route-window,
 .dialog-backdrop > section,
 .dialog-backdrop > div > section {
   overflow-y: auto !important;
@@ -9103,28 +8694,8 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Minimized Floating Window Layout */
-.left-route-window.is-minimized {
-  width: auto !important;
-  min-width: 210px !important;
-  max-width: min(340px, calc(100vw - 16px)) !important;
-  min-height: 0 !important;
-  max-height: 44px !important;
-  padding: 4px 8px !important;
-  overflow: hidden !important;
-}
-
-.left-route-window.is-minimized > :not(.left-route-header) {
-  display: none !important;
-}
 
 /* 건설 미리보기/기획 검토 창 최소화 전용 구성: [ 건설 예상 비용 | 건설 확정 버튼 | 펼치기 버튼 | X 버튼 ] */
-
-@media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window {
-    width: min(218px, calc(100vw - 8px)) !important;
-    max-height: min(38dvh, 210px) !important;
-  }
-}
 
 /* -------------------------------------------------------------------------
    LANDSCAPE START SCREEN
@@ -9550,56 +9121,6 @@ button:where(:not([class*="dg-"])):active,
    window is minimized, the visible title or summary stays centered while
    the actions remain docked to the right edge.
 ------------------------------------------------------------------------- */
-.floating-window-actions {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  gap: 4px !important;
-  flex: 0 0 auto !important;
-  min-width: max-content;
-  margin-left: auto !important;
-}
-
-.left-route-header {
-  padding-right: 0 !important;
-}
-
-.floating-window-actions .dialog-close,
-.floating-window-actions .compact-close {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
-  transform: none !important;
-}
-
-.left-route-window.is-minimized > .left-route-header {
-  position: relative !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  min-height: 26px !important;
-  padding: 0 !important;
-  border-bottom: 0 !important;
-  box-sizing: border-box !important;
-}
-
-.left-route-window.is-minimized > .left-route-header > .floating-window-actions {
-  position: absolute !important;
-  top: 50% !important;
-  right: 0 !important;
-  transform: translateY(-50%) !important;
-  margin: 0 !important;
-}
-
-.floating-minimize-button:active {
-  transform: scale(0.94);
-}
-
-.left-route-window.is-minimized .floating-minimize-button:active {
-  transform: translateY(-50%) scale(0.94);
-}
 
 /* Full-screen workspaces must reach every edge of the game viewport. Their
    internal headers still provide safe-area padding where the device needs it,
@@ -10147,526 +9668,29 @@ button:where(:not([class*="dg-"])):active,
    collapsed copy of the full drawer. The route title stays readable while
    restore and close remain separate, touch-friendly controls.
 ------------------------------------------------------------------------- */
-.left-route-window.is-minimized {
-  position: absolute !important;
-  width: min(286px, calc(100vw - 16px)) !important;
-  min-width: 210px !important;
-  max-width: min(286px, calc(100vw - 16px)) !important;
-  height: 54px !important;
-  max-height: 54px !important;
-  padding: 7px 8px !important;
-  overflow: hidden !important;
-  border: 1px solid rgba(56, 189, 248, 0.36) !important;
-  border-radius: 16px !important;
-  background: linear-gradient(135deg, rgba(8, 26, 39, 0.98), rgba(15, 22, 29, 0.98)) !important;
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48), 0 0 22px rgba(56, 189, 248, 0.12) !important;
-}
-
-.left-route-window.is-minimized::before {
-  display: none !important;
-}
-
-.left-route-window.is-minimized::after {
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 0;
-  width: 3px;
-  content: "";
-  border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg, #38bdf8, #4ce0c3);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.55);
-}
-
-.left-route-window.is-minimized > .left-route-header {
-  min-height: 38px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 10px !important;
-  padding: 0 2px !important;
-  border-bottom: 0 !important;
-}
-
-.left-route-window.is-minimized .left-route-title-group {
-  min-width: 0;
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0 8px;
-  flex: 1 1 auto;
-}
-
-.left-route-window.is-minimized .left-route-sub {
-  grid-column: 1;
-  margin: 0;
-  padding: 4px 6px;
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  border-radius: 7px;
-  color: #7dd3fc !important;
-  background: rgba(56, 189, 248, 0.1);
-  font-size: 8px !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.08em !important;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.left-route-window.is-minimized .left-route-title {
-  grid-column: 2;
-  min-width: 0;
-  overflow: hidden;
-  color: #f7fcff !important;
-  font-size: 14px !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.left-route-window.is-minimized > .left-route-header > .floating-window-actions {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
-  transform: none !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  flex: 0 0 auto !important;
-  margin-left: auto !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close {
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
-  max-width: 30px !important;
-  max-height: 30px !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  padding: 0 !important;
-  border-radius: 10px !important;
-  line-height: 1 !important;
-  font-size: 15px !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button {
-  border: 1px solid rgba(85, 217, 192, 0.42) !important;
-  color: #6ee7d0 !important;
-  background: rgba(85, 217, 192, 0.12) !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .dialog-close {
-  border: 1px solid rgba(251, 113, 133, 0.32) !important;
-  color: #fda4af !important;
-  background: rgba(251, 113, 133, 0.08) !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.15);
-}
-
-@media (max-width: 700px) {
-  .left-route-window.is-minimized {
-    position: fixed !important;
-    left: var(--hud-left-clear) !important;
-    right: auto !important;
-    bottom: var(--hud-bottom-clear) !important;
-    width: min(252px, calc(100vw - 16px)) !important;
-    max-width: calc(100vw - 16px) !important;
-    height: 50px !important;
-    max-height: 50px !important;
-    padding: 6px 7px !important;
-    border-radius: 14px !important;
-  }
-
-  .left-route-window.is-minimized > .left-route-header {
-    min-height: 36px !important;
-    gap: 8px !important;
-  }
-
-  .left-route-window.is-minimized .left-route-sub {
-    padding: 3px 5px;
-    font-size: 7px !important;
-  }
-
-  .left-route-window.is-minimized .left-route-title {
-    font-size: 13px !important;
-  }
-
-  .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-  .left-route-window.is-minimized .floating-window-actions > .dialog-close {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    min-height: 28px !important;
-    max-width: 28px !important;
-    max-height: 28px !important;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window.is-minimized {
-    left: var(--hud-left-clear) !important;
-    bottom: var(--hud-bottom-clear) !important;
-    width: min(260px, calc(100vw - 16px)) !important;
-    height: 48px !important;
-    max-height: 48px !important;
-  }
-}
 
 /* Minimized route list content: show only route names and their colours. */
-.left-route-minimized-summary {
-  display: none;
-}
-
-.left-route-window.is-minimized .left-route-title-group {
-  display: none !important;
-}
-
-.left-route-window.is-minimized .left-route-minimized-summary {
-  min-width: 0;
-  display: flex !important;
-  align-items: center;
-  gap: 6px;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.left-route-window.is-minimized .left-route-minimized-summary::-webkit-scrollbar {
-  display: none;
-}
 
 /* Minimized controls: keep hover, keyboard-focus, active and pressed states
    visible on every compact window, not just on the route-list window. */
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close {
-  cursor: pointer;
-  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease,
-    color 140ms ease, filter 140ms ease, transform 100ms ease;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--minimized-accent-strong) 82%, #ffffff) !important;
-  color: #d9fff8 !important;
-  background: color-mix(in srgb, var(--minimized-accent-strong) 26%, rgba(8, 20, 28, 0.9)) !important;
-  box-shadow: 0 0 14px color-mix(in srgb, var(--minimized-accent-strong) 28%, transparent),
-    inset 0 1px rgba(255, 255, 255, 0.16);
-  filter: brightness(1.08);
-}
-
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:hover {
-  border-color: rgba(251, 113, 133, 0.82) !important;
-  color: #ffe4e8 !important;
-  background: rgba(251, 113, 133, 0.22) !important;
-  box-shadow: 0 0 14px rgba(251, 113, 133, 0.22), inset 0 1px rgba(255, 255, 255, 0.14);
-  filter: brightness(1.08);
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:active,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:active {
-  transform: scale(0.92);
-  filter: brightness(1.16);
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--minimized-accent-strong) 86%, #ffffff);
-  outline-offset: 2px;
-}
-
-.left-route-window.is-minimized .left-route-minimized-route:hover,
-.left-route-window.is-minimized .left-route-minimized-route.is-selected {
-  border-color: color-mix(in srgb, var(--route-color) 94%, #ffffff);
-  background: color-mix(in srgb, var(--route-color) 23%, rgba(8, 18, 25, 0.86));
-  box-shadow: 0 0 14px color-mix(in srgb, var(--route-color) 32%, transparent),
-    inset 0 1px rgba(255, 255, 255, 0.16);
-}
-
-.left-route-window.is-minimized .left-route-minimized-route:active {
-  transform: scale(0.96);
-}
-
-.left-route-minimized-route {
-  min-width: 0;
-  max-width: 150px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex: 0 0 auto;
-  padding: 5px 8px;
-  border: 1px solid color-mix(in srgb, var(--route-color) 44%, transparent);
-  border-radius: 999px;
-  color: color-mix(in srgb, var(--route-color) 78%, #ffffff);
-  background: color-mix(in srgb, var(--route-color) 13%, rgba(8, 18, 25, 0.86));
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.left-route-minimized-route i {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border: 2px solid rgba(255, 255, 255, 0.86);
-  border-radius: 50%;
-  background: var(--route-color);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--route-color) 72%, transparent);
-}
-
-.left-route-minimized-route strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.left-route-minimized-route.is-selected {
-  border-color: color-mix(in srgb, var(--route-color) 82%, #ffffff);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--route-color) 24%, transparent), inset 0 1px rgba(255, 255, 255, 0.12);
-}
-
-.left-route-minimized-empty {
-  color: #8798a4;
-  font-size: 10px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-@media (max-width: 700px) {
-  .left-route-minimized-route {
-    max-width: 116px;
-    gap: 4px;
-    padding: 4px 6px;
-    font-size: 9px;
-  }
-
-  .left-route-minimized-route i {
-    width: 7px;
-    height: 7px;
-    flex-basis: 7px;
-  }
-}
 
 /* -------------------------------------------------------------------------
    SHARED MINIMIZED WINDOW SYSTEM
    Apply the route-list status-bar language consistently to every floating
    window that supports minimization.
 ------------------------------------------------------------------------- */
-.left-route-window.is-minimized {
-  --minimized-accent: #38bdf8;
-  --minimized-accent-strong: #4ce0c3;
-  position: absolute !important;
-  width: min(286px, calc(100vw - 16px)) !important;
-  min-width: 210px !important;
-  max-width: min(286px, calc(100vw - 16px)) !important;
-  height: 54px !important;
-  max-height: 54px !important;
-  padding: 7px 8px !important;
-  overflow: hidden !important;
-  border: 1px solid color-mix(in srgb, var(--minimized-accent) 42%, transparent) !important;
-  border-radius: 16px !important;
-  background: linear-gradient(135deg, rgba(8, 26, 39, 0.98), rgba(15, 22, 29, 0.98)) !important;
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48), 0 0 22px color-mix(in srgb, var(--minimized-accent) 14%, transparent) !important;
-}
-
-.left-route-window.is-minimized::before {
-  display: none !important;
-}
-
-.left-route-window.is-minimized::after {
-  position: absolute;
-  top: 10px;
-  bottom: 10px;
-  left: 0;
-  width: 3px;
-  content: "";
-  border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg, var(--minimized-accent), var(--minimized-accent-strong));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--minimized-accent) 55%, transparent);
-}
-
-.left-route-window.is-minimized > .left-route-header {
-  min-height: 38px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 10px !important;
-  padding: 0 2px !important;
-  border-bottom: 0 !important;
-}
-
-.left-route-window.is-minimized .left-route-title-group {
-  min-width: 0;
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0 8px;
-  flex: 1 1 auto;
-}
-
-.left-route-window.is-minimized .left-route-sub {
-  display: inline-flex !important;
-  align-items: center;
-  width: fit-content;
-  margin: 0 !important;
-  padding: 4px 6px;
-  border: 1px solid color-mix(in srgb, var(--minimized-accent) 30%, transparent);
-  border-radius: 7px;
-  color: #7dd3fc !important;
-  background: color-mix(in srgb, var(--minimized-accent) 10%, transparent);
-  font-size: 8px !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.08em !important;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.left-route-window.is-minimized .left-route-title {
-  min-width: 0;
-  overflow: hidden;
-  color: #f7fcff !important;
-  font-size: 14px !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.left-route-window.is-minimized > .left-route-header > .floating-window-actions {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
-  transform: none !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  flex: 0 0 auto !important;
-  margin-left: auto !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close {
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
-  max-width: 30px !important;
-  max-height: 30px !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  padding: 0 !important;
-  border-radius: 10px !important;
-  line-height: 1 !important;
-  font-size: 15px !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button {
-  border: 1px solid color-mix(in srgb, var(--minimized-accent-strong) 42%, transparent) !important;
-  color: var(--minimized-accent-strong) !important;
-  background: color-mix(in srgb, var(--minimized-accent-strong) 12%, transparent) !important;
-}
-
-.left-route-window.is-minimized .floating-window-actions > .dialog-close {
-  border: 1px solid rgba(251, 113, 133, 0.32) !important;
-  color: #fda4af !important;
-  background: rgba(251, 113, 133, 0.08) !important;
-}
-
-@media (max-width: 700px) {
-  .left-route-window.is-minimized {
-    position: fixed !important;
-    left: var(--hud-left-clear) !important;
-    right: auto !important;
-  }
-
-  .left-route-window.is-minimized {
-    bottom: var(--hud-bottom-clear) !important;
-    width: min(252px, calc(100vw - 16px)) !important;
-    max-width: calc(100vw - 16px) !important;
-    height: 50px !important;
-    max-height: 50px !important;
-    padding: 6px 7px !important;
-    border-radius: 14px !important;
-  }
-
-  .left-route-window.is-minimized > .left-route-header {
-    min-height: 36px !important;
-    gap: 8px !important;
-  }
-
-  .left-route-window.is-minimized .left-route-sub {
-    padding: 3px 5px;
-    font-size: 7px !important;
-  }
-
-  .left-route-window.is-minimized .left-route-title {
-    font-size: 13px !important;
-  }
-
-  .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-  .left-route-window.is-minimized .floating-window-actions > .dialog-close {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    min-height: 28px !important;
-    max-width: 28px !important;
-    max-height: 28px !important;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window.is-minimized {
-    bottom: var(--hud-bottom-clear) !important;
-    width: min(260px, calc(100vw - 16px)) !important;
-    height: 48px !important;
-    max-height: 48px !important;
-  }
-}
 
 /* Final route-list minimization override: the bar contains only route names
    and their colour markers; the window controls remain in the action group. */
-.left-route-window.is-minimized .left-route-title-group {
-  display: none !important;
-}
-
-.left-route-window.is-minimized .left-route-minimized-summary {
-  min-width: 0;
-  display: flex !important;
-  align-items: center;
-  gap: 6px;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.left-route-window.is-minimized .left-route-minimized-summary::-webkit-scrollbar {
-  display: none;
-}
 
 /* The compact modify-tools button has a later positioning rule with
    !important, so repeat its pressed transform at the end of the cascade. */
 
 /* Keep every action in a minimized bar on the same visual shape. */
-.left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.left-route-window.is-minimized .floating-window-actions > .dialog-close {
-  border-radius: 10px !important;
-  box-sizing: border-box !important;
-}
 
 /* Shared floating-window action shape. Keep every window header control in
    the same rounded-square language, including full-screen workspaces and
    dialog-backed floating panels. */
-.left-route-window .floating-minimize-button,
-.left-route-window .dialog-close,
 .dialog-backdrop .dialog-close,
 .diagram-screen .diagram-close,
 .analysis-screen .analysis-close,
@@ -10751,41 +9775,8 @@ button:where(:not([class*="dg-"])):active,
 
   /* Floating-window controls use a slightly shorter target so the compact
      minimized bar remains usable without becoming taller than the panel. */
-  .left-route-window .dialog-close,
-  .left-route-window .floating-minimize-button {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    max-width: 36px !important;
-    max-height: 36px !important;
-    flex: 0 0 36px !important;
-  }
-
-  .left-route-window.is-minimized {
-    height: 60px !important;
-    max-height: 60px !important;
-  }
 
   /* Restore a single intentional scroll owner for long floating panels. */
-  .left-route-window {
-    min-height: 0 !important;
-  }
-
-  .left-route-window {
-    overflow: hidden !important;
-  }
-
-  .left-route-list {
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .left-route-list {
-    flex: 1 1 auto !important;
-  }
 }
 
 /* -------------------------------------------------------------------------
@@ -11111,24 +10102,6 @@ button:where(:not([class*="dg-"])):active,
   }
 
   /* Floating tools stay above the dock and each list owns its own scroll. */
-  .left-route-window {
-    position: fixed !important;
-    top: auto !important;
-    bottom: var(--hud-bottom-clear) !important;
-    max-width: calc(100vw - 8px) !important;
-    border-radius: 14px !important;
-  }
-
-  .left-route-window {
-    left: var(--hud-left-clear) !important;
-    right: auto !important;
-    width: min(260px, calc(100vw - 8px)) !important;
-    max-height: min(56dvh, 300px) !important;
-  }
-
-  .left-route-header {
-    flex: 0 0 auto;
-  }
 
   /* Full-screen report headers collapse before their actions run out of
      horizontal space. Their content areas already have independent scroll. */
@@ -11442,7 +10415,6 @@ body .game-shell button:is(
 ------------------------------------------------------------------------- */
 @media (max-width: 700px),
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .left-route-window:not(.is-minimized),
   .dialog-backdrop > section,
   .dialog-backdrop > div > section {
     overflow-x: hidden !important;
@@ -11452,7 +10424,6 @@ body .game-shell button:is(
     touch-action: pan-y;
   }
 
-  .left-route-list,
   .satisfaction-dialog-content,
   .construction-project-list,
   .plan-conversion-layout,

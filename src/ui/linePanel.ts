@@ -1,4 +1,5 @@
 import { PanelManager } from "./panelManager";
+import { escapeHtml, lineMarkHtml } from "./inspectorMarkup";
 
 export interface LinePanelView {
   id: string;
@@ -66,15 +67,12 @@ export class LinePanel {
 
   renderRouteList(items: RouteListItemView[], onSelect: (routeId: string) => void) {
     const html = items.length === 0
-      ? `<div class="left-route-empty"><span>등록된 노선이 없습니다</span><small>새 노선을 건설하여 지하철망을 구축해보세요</small></div>`
+      ? `<p class="game-inspector__note">등록된 노선이 없습니다. 새 노선을 건설해 철도망을 만들어 보세요.</p>`
       : items.map((item) => `
-        <div class="left-route-item ${item.selected ? "selected-route-item" : ""}" data-route-id="${item.id}">
-          <div class="route-item-left">
-            <span class="route-badge-dot" style="background: ${item.color}"></span>
-            <div class="route-item-details"><strong class="route-item-name">${item.name}</strong><span class="route-item-meta">${item.meta}</span></div>
-          </div>
-          <button class="route-item-manage-btn" type="button">${item.selected ? "선택됨" : "선택"}</button>
-        </div>`).join("");
+        <button class="game-route-item" type="button" data-route-id="${escapeHtml(item.id)}" aria-pressed="${item.selected}">
+          ${lineMarkHtml(item)}
+          <span class="game-route-item__text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.meta)}</small></span>
+        </button>`).join("");
     this.manager.render("route-list", null, html);
     const content = this.elements.routeList;
     if (content) {
