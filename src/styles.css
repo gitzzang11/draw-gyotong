@@ -1455,7 +1455,6 @@ tr:hover td {
   display: none !important;
 }
 
-.settings-dialog,
 .statistics-screen,
 .news-screen,
 .analysis-screen,
@@ -1499,7 +1498,6 @@ tr:hover td {
   border-color: var(--c-danger);
 }
 
-.settings-dialog,
 .statistics-screen,
 .news-screen,
 .analysis-screen,
@@ -2272,14 +2270,6 @@ tr:hover td {
 /* ----------------------------------------------------
    13. SETTINGS DIALOG
 ---------------------------------------------------- */
-.settings-dialog {
-  width: min(520px, 94vw);
-  max-height: 85dvh;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
 
 /* ----------------------------------------------------
    14. FINANCE DIALOG
@@ -2316,14 +2306,6 @@ tr:hover td {
 /* ----------------------------------------------------
    13. SETTINGS DIALOG
 ---------------------------------------------------- */
-.settings-dialog {
-  width: min(520px, 94vw);
-  max-height: 85dvh;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
 
 /* ----------------------------------------------------
    14. FINANCE DIALOG
@@ -3624,477 +3606,10 @@ tr:hover td {
 /* ----------------------------------------------------
    19. TRAIN MANAGER DIALOG (.train-manager-dialog)
 ---------------------------------------------------- */
-.train-manager-dialog {
-  width: min(600px, 94vw);
-  max-height: 88dvh;
-  background: rgba(10, 16, 30, 0.95);
-  backdrop-filter: var(--glass-blur-dense);
-  -webkit-backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.88), 0 0 32px rgba(59, 130, 246, 0.15);
-  color: var(--c-text-main);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-y: auto;
-  animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.train-manager-dialog .dialog-heading span {
-  font-size: 10px;
-  font-weight: 800;
-  color: #60A5FA;
-  letter-spacing: 1.2px;
-  background: rgba(59, 130, 246, 0.15);
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  display: inline-block;
-  margin-bottom: 4px;
-}
-
-.train-manager-dialog .dialog-heading h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 900;
-  background: linear-gradient(135deg, #60A5FA, #ffffff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.train-manager-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.train-modal-header-chip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.train-modal-header-chip strong {
-  font-size: 17px;
-  font-weight: 900;
-}
-
-.train-sub-info {
-  font-size: 12px;
-  color: var(--c-text-muted);
-  font-weight: 600;
-  display: block;
-  margin-top: 3px;
-}
-
-.depot-capacity-chip {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--c-gold);
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-}
-
-.train-fleet-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.fleet-card-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  gap: 12px;
-  flex-wrap: wrap;
-  transition: border-color 0.2s ease;
-}
-
-.fleet-card-item:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.fleet-card-info strong {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-text-main);
-  display: block;
-}
-
-.fleet-card-info span {
-  font-size: 12px;
-  color: var(--c-text-muted);
-  font-weight: 600;
-  margin-top: 3px;
-  display: block;
-}
-
-.fleet-card-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fleet-count-readout {
-  font-size: 14px;
-  font-weight: 900;
-  color: #38BDF8;
-  font-variant-numeric: tabular-nums;
-  padding: 6px 12px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: var(--radius-md);
-}
-
-.fleet-qty-btn {
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.fleet-qty-btn.decrease {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.35) !important;
-  color: #FCA5A5 !important;
-}
-
-.fleet-qty-btn.decrease:hover {
-  background: rgba(239, 68, 68, 0.3) !important;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-}
-
-.fleet-qty-btn.increase {
-  background: rgba(52, 211, 153, 0.15) !important;
-  border: 1px solid rgba(52, 211, 153, 0.35) !important;
-  color: var(--c-mint) !important;
-}
-
-.fleet-qty-btn.increase:hover {
-  background: rgba(52, 211, 153, 0.3) !important;
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
-}
 
 /* Train Addition Section */
-.train-add-section {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.train-add-section h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-text-main);
-}
-
-.train-add-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-@media (max-width: 520px) {
-  .train-add-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.train-add-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.train-add-grid label span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.train-add-grid select {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: var(--radius-md) !important;
-  color: var(--c-text-main) !important;
-  padding: 8px 12px !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  min-height: 40px !important;
-}
-
-.modal-add-fleet-btn {
-  width: 100%;
-  min-height: 46px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
-  background: linear-gradient(135deg, #2563EB, #3B82F6) !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: currentColor;
-}
-
-.train-manager-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.train-modal-header-chip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.train-modal-header-chip strong {
-  font-size: 17px;
-  font-weight: 900;
-}
-
-.train-sub-info {
-  font-size: 12px;
-  color: var(--c-text-muted);
-  font-weight: 600;
-  display: block;
-  margin-top: 3px;
-}
-
-.depot-capacity-chip {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--c-gold);
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-}
-
-.train-fleet-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.fleet-card-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  gap: 12px;
-  flex-wrap: wrap;
-  transition: border-color 0.2s ease;
-}
-
-.fleet-card-item:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.fleet-card-info strong {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-text-main);
-  display: block;
-}
-
-.fleet-card-info span {
-  font-size: 12px;
-  color: var(--c-text-muted);
-  font-weight: 600;
-  margin-top: 3px;
-  display: block;
-}
-
-.fleet-card-info .fleet-service-badge {
-  display: inline-flex;
-  width: fit-content;
-  margin: 0 0 4px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.14);
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  color: #cbd5e1;
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.fleet-card-item.fleet-service-express .fleet-service-badge {
-  background: rgba(250, 204, 21, 0.14);
-  border-color: rgba(250, 204, 21, 0.36);
-  color: #fde68a;
-}
-
-.fleet-card-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fleet-count-readout {
-  font-size: 14px;
-  font-weight: 900;
-  color: #38BDF8;
-  font-variant-numeric: tabular-nums;
-  padding: 6px 12px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: var(--radius-md);
-}
-
-.fleet-qty-btn {
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.fleet-qty-btn.decrease {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border: 1px solid rgba(239, 68, 68, 0.35) !important;
-  color: #FCA5A5 !important;
-}
-
-.fleet-qty-btn.decrease:hover {
-  background: rgba(239, 68, 68, 0.3) !important;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-}
-
-.fleet-qty-btn.increase {
-  background: rgba(52, 211, 153, 0.15) !important;
-  border: 1px solid rgba(52, 211, 153, 0.35) !important;
-  color: var(--c-mint) !important;
-}
-
-.fleet-qty-btn.increase:hover {
-  background: rgba(52, 211, 153, 0.3) !important;
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
-}
 
 /* Train Addition Section */
-.train-add-section {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.train-add-section h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--c-text-main);
-}
-
-.train-add-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-@media (max-width: 520px) {
-  .train-add-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.train-add-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.train-add-grid label span {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--c-text-muted);
-}
-
-.train-add-grid select {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: var(--radius-md) !important;
-  color: var(--c-text-main) !important;
-  padding: 8px 12px !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  min-height: 40px !important;
-}
-
-.modal-add-fleet-btn {
-  width: 100%;
-  min-height: 46px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
-  background: linear-gradient(135deg, #2563EB, #3B82F6) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
-  transition: all 0.2s ease;
-}
-
-.train-manager-dialog button,
-.train-manager-dialog button span {
-  -webkit-background-clip: border-box !important;
-  background-clip: border-box !important;
-  -webkit-text-fill-color: currentColor !important;
-}
-
-.train-manager-dialog .fleet-qty-btn.decrease {
-  color: #fca5a5 !important;
-}
-
-.train-manager-dialog .fleet-qty-btn.increase {
-  color: #6ee7b7 !important;
-}
-
-.train-manager-dialog .modal-add-fleet-btn {
-  color: #ffffff !important;
-}
-
-.modal-add-fleet-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 24px rgba(59, 130, 246, 0.6);
-}
 
 /* ====================================================
    UNIFIED ACTIVE TOOL HIGHLIGHT & DESIGN SYSTEM
@@ -4186,31 +3701,6 @@ tr:hover td {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-}
-
-.selected-train-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--selected-train-color) 55%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--selected-train-color) 14%, rgba(8, 15, 25, .92));
-}
-
-.selected-train-summary span {
-  color: rgba(255, 255, 255, .66);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.selected-train-summary strong {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 900;
-  text-align: right;
 }
 
 /* Current-system metro diagram */
@@ -5191,58 +4681,6 @@ tr:hover td {
   .analysis-card footer > div { justify-content: stretch; }
   .analysis-card footer button { flex: 1 1 auto; }
 }
-.service-operation-summary {
-  margin: 12px 0;
-  padding: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 12px;
-  background: rgba(13, 20, 29, 0.78);
-}
-
-.service-operation-summary > header {
-  display: grid;
-  gap: 3px;
-  margin-bottom: 8px;
-}
-
-.service-operation-summary > header span {
-  color: #94a3b8;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-}
-
-.service-operation-summary > header strong {
-  color: #e2e8f0;
-  font-size: 13px;
-}
-
-.service-operation-row {
-  display: grid;
-  grid-template-columns: 70px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 0;
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
-  color: #cbd5e1;
-  font-size: 11px;
-}
-
-.service-operation-row > span {
-  color: #cbd5e1;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.service-operation-row > strong {
-  color: #f1f5f9;
-  font-size: 12px;
-}
-
-.service-operation-row > small {
-  color: #94a3b8;
-  text-align: right;
-}
 
 .service-operation-express > span {
   color: #fde68a;
@@ -5344,8 +4782,6 @@ button:active,
 .start-panel,
 .analysis-screen,
 .statistics-screen,
-.train-manager-dialog,
-.settings-dialog,
 .menu-dialog {
   background: rgba(15, 22, 29, 0.97) !important;
   border: 1px solid var(--c-border) !important;
@@ -5773,8 +5209,6 @@ button:where(:not([class*="dg-"])):active,
     padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   }
 
-  .dialog-backdrop > .settings-dialog,
-  .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .planning-dialog,
   .dialog-backdrop > .plan-conversion-dialog {
     width: min(100%, 680px) !important;
@@ -6369,8 +5803,6 @@ button:where(:not([class*="dg-"])):active,
     min-height: 52px;
   }
 
-  .dialog-backdrop > .settings-dialog,
-  .dialog-backdrop > .train-manager-dialog,
   .dialog-backdrop > .planning-dialog,
   .dialog-backdrop > .plan-conversion-dialog {
     max-height: min(84dvh, 620px) !important;

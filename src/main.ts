@@ -1562,16 +1562,13 @@ app.innerHTML = `
       </div>
     </aside>
 
-    <div id="trainManagerDialog" class="dialog-backdrop" hidden>
-      <section class="train-manager-dialog settings-dialog" role="dialog" aria-modal="true" aria-labelledby="trainManagerTitle">
-        <div class="dialog-heading">
-          <div>
-            <span>TRAIN FLEET MANAGEMENT</span>
-            <h2 id="trainManagerTitle">열차 운행 및 편성 관리</h2>
-          </div>
-          <button id="closeTrainManagerButton" class="dialog-close" type="button" aria-label="열차 관리 닫기">×</button>
-        </div>
-        <div id="trainManagerContent" class="train-manager-content"></div>
+    <div id="trainManagerDialog" class="dg-hud dg-scrim game-train" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="trainManagerTitle">
+        <header class="dg-panel__header">
+          <h2 id="trainManagerTitle" class="dg-panel__title">열차 운행·편성</h2>
+          <div class="dg-panel__header-end"><button id="closeTrainManagerButton" class="dg-icon-btn" type="button" aria-label="열차 편성 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div id="trainManagerContent" class="game-inspector__content"></div>
       </section>
     </div>
 
@@ -12984,24 +12981,12 @@ function updateOperatingForecastComparison(forecast: DemandResponsiveForecast) {
   }
 }
 
-function renderServiceOperationSummary(service: OperatingService) {
-  const operation = getOperatingServiceOperation(service);
-  return `<section class="service-operation-summary" aria-label="운행계통 현황">
-    <header><span>OPERATING SERVICE</span><strong>${escapeHtml(service.name)}</strong></header>
-    <div class="service-operation-row">
-      <span>${operation.enabled ? "운행 중" : "열차 미배정"}</span>
-      <strong>${operation.trainSets}편성 · ${operation.headwayMin > 0 ? `${operation.headwayMin.toFixed(1)}분` : "-"}</strong>
-      <small>시간당 ${operation.hourlyCapacity.toLocaleString("ko-KR")}명 · ${service.stopStationIds.length}개 정차</small>
-    </div>
-  </section>`;
-}
-
 function renderTrainManager() {
   if (!trainPanel) return;
   const service = operationsState.services.find((item) => item.id === selectedOperatingServiceId);
   const route = networkState.routes.find((item) => item.id === service?.ownerRouteId);
   if (!route || !service) {
-    trainPanel.render("none", `<div class="left-route-empty"><span>선택된 운행 계통이 없습니다</span></div>`, handleTrainPanelClick, handleTrainPanelChange);
+    trainPanel.render("none", `<div class="dg-panel__body"><p class="dg-panel__section game-inspector__note">선택된 운행 계통이 없습니다.</p></div>`, handleTrainPanelClick, handleTrainPanelChange);
     return;
   }
 
@@ -13013,42 +12998,33 @@ function renderTrainManager() {
   const operation = getOperatingServiceOperation(service);
   const selectedFleet = routeFleets.find((fleet) => fleet.id === selectedTrainFleetId);
   const operatingForecast = calculateDemandResponsiveForecast();
-  const selectedTrainSummary = selectedFleet
-    ? `<div class="selected-train-summary" style="--selected-train-color:${escapeHtml(route.color)}">
-        <span>선택한 열차</span>
-        <strong>${escapeHtml(trainCatalog[selectedFleet.trainType].label)} · ${selectedFleet.cars}량 ${selectedTrainSetNumber ? `· ${selectedTrainSetNumber}편성` : ""}</strong>
-      </div>`
-    : "";
-
-  const fleetsHtml = routeFleets.length === 0
-    ? `<div class="left-route-empty"><span>배치된 열차가 없습니다</span><small>아래에서 신규 열차 편성을 도입하세요</small></div>`
-    : routeFleets.map((fleet) => {
-      const spec = trainCatalog[fleet.trainType];
-      return `
-            <div class="fleet-card-item fleet-service-fleet" data-service-kind="fleet">
-              <div class="fleet-card-info">
-                <span class="fleet-service-badge">FLEET</span>
-                <strong>${escapeHtml(spec.label)} (${fleet.cars}량)</strong>
-                <span>수송력: ${(spec.capacityPerCar * fleet.cars).toLocaleString()}명 · 최고속도: ${spec.speedKmh}km/h</span>
-              </div>
-              <div class="fleet-card-controls">
-                <span class="fleet-count-readout">${fleet.sets}편성</span>
-                <button class="fleet-qty-btn decrease" data-fleet-id="${fleet.id}">-1편성</button>
-                <button class="fleet-qty-btn increase" data-fleet-id="${fleet.id}">+1편성</button>
-              </div>
-            </div>
-          `;
-    }).join("");
+  const defaultSpec = trainCatalog.metro;
   trainPanel.renderView({
     entityId: service.id,
-    selectedSummary: selectedTrainSummary,
+    serviceName: service.name,
     color: route.color,
-    escapedRouteName: escapeHtml(service.name),
+    selectedTrain: selectedFleet ? `${trainCatalog[selectedFleet.trainType].label} · ${selectedFleet.cars}량${selectedTrainSetNumber ? ` · ${selectedTrainSetNumber}편성` : ""}` : undefined,
+    operating: operation.enabled,
     totalSets,
-    headway: operation.headwayMin.toFixed(1),
+    headway: operation.headwayMin > 0 ? `${operation.headwayMin.toFixed(1)}분` : "-",
+    hourlyCapacity: operation.hourlyCapacity,
+    stopCount: service.stopStationIds.length,
     depotCapacity: connectedDepotCapacity,
-    forecastHtml: renderServiceOperationSummary(service) + renderOperatingForecastComparison(operatingForecast),
-    fleetsHtml,
+    forecastHtml: renderOperatingForecastComparison(operatingForecast),
+    fleets: routeFleets.map((fleet) => {
+      const spec = trainCatalog[fleet.trainType];
+      return {
+        id: fleet.id,
+        label: spec.label,
+        cars: fleet.cars,
+        capacity: spec.capacityPerCar * fleet.cars,
+        speedKmh: spec.speedKmh,
+        sets: fleet.sets,
+        addCost: formatCost(Math.round(spec.pricePerCar * fleet.cars)),
+      };
+    }),
+    // 선택 상자의 기본값(도시철도 6량)과 같은 구입비
+    addCost: formatCost(Math.round(defaultSpec.pricePerCar * 6)),
   }, handleTrainPanelClick, handleTrainPanelChange);
 }
 
@@ -13061,6 +13037,7 @@ function handleTrainPanelChange(event: Event) {
   const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
   const cars = Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? 6);
   const spec = trainCatalog[trainType];
+  setText(document.querySelector<HTMLElement>("#modalAddFleetButton [data-add-cost]"), formatCost(Math.round(spec.pricePerCar * cars)));
   const previewFleet: TrainFleet = {
     id: "forecast-preview",
     routeId: route.id,
@@ -13084,7 +13061,7 @@ function handleTrainPanelClick(event: Event) {
   const connectedDepotCapacity = networkState.depots
     .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.some((routeId) => service.routeIds.includes(routeId)))
     .reduce((sum, depot) => sum + depot.capacity, 0);
-  if (button.classList.contains("increase")) {
+  if (button.dataset.fleetStep === "1") {
     const fleet = operationsState.fleets.find((item) => item.id === button.dataset.fleetId);
     if (!fleet) return;
     const currentRouteSets = operationsState.fleets.filter((item) => item.serviceId === service.id).reduce((sum, item) => sum + item.sets, 0);
@@ -13107,7 +13084,7 @@ function handleTrainPanelClick(event: Event) {
     showToast(`${service.name}에 열차 1편성을 추가했습니다.`);
     return;
   }
-  if (button.classList.contains("decrease")) {
+  if (button.dataset.fleetStep === "-1") {
     const fleet = operationsState.fleets.find((item) => item.id === button.dataset.fleetId);
     if (!fleet) return;
     pushHistory();

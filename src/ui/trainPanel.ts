@@ -1,15 +1,30 @@
 import { PanelManager } from "./panelManager";
+import { escapeHtml } from "./inspectorMarkup";
+
+export interface TrainPanelFleet {
+  id: string;
+  label: string;
+  cars: number;
+  capacity: number;
+  speedKmh: number;
+  sets: number;
+  addCost: string;
+}
 
 export interface TrainPanelView {
   entityId: string;
-  selectedSummary: string;
+  serviceName: string;
   color: string;
-  escapedRouteName: string;
+  selectedTrain?: string;
+  operating: boolean;
   totalSets: number;
   headway: string;
+  hourlyCapacity: number;
+  stopCount: number;
   depotCapacity: number;
   forecastHtml: string;
-  fleetsHtml: string;
+  fleets: TrainPanelFleet[];
+  addCost: string;
 }
 
 export class TrainPanel {
@@ -23,28 +38,49 @@ export class TrainPanel {
   }
 
   renderView(view: TrainPanelView, onClick: (event: Event) => void, onChange: (event: Event) => void) {
+    const full = view.totalSets >= view.depotCapacity;
+    const fleets = view.fleets.length === 0
+      ? `<p class="game-inspector__note">배치된 열차가 없습니다. 아래에서 새 편성을 들이세요.</p>`
+      : view.fleets.map((fleet) => `
+        <div class="game-fleet-row">
+          <span class="game-route-item__text"><strong>${escapeHtml(fleet.label)} · ${fleet.cars}량</strong><small>편성당 ${fleet.capacity.toLocaleString("ko-KR")}명 · 최고 ${fleet.speedKmh}km/h</small></span>
+          <span class="dg-seg game-fleet-row__stepper" role="group" aria-label="${escapeHtml(fleet.label)} 편성 수">
+            <button class="dg-seg__item" type="button" data-fleet-id="${escapeHtml(fleet.id)}" data-fleet-step="-1" aria-label="1편성 줄이기">−</button>
+            <span class="game-fleet-row__count">${fleet.sets}편성</span>
+            <button class="dg-seg__item" type="button" data-fleet-id="${escapeHtml(fleet.id)}" data-fleet-step="1" aria-label="1편성 추가, ${escapeHtml(fleet.addCost)}" ${full ? "disabled" : ""}>＋</button>
+          </span>
+          <small class="game-fleet-row__cost">추가 1편성 ${escapeHtml(fleet.addCost)}</small>
+        </div>`).join("");
     this.render(view.entityId, `
-      ${view.selectedSummary}
-      <div class="train-modal-header-chip" style="border-left: 4px solid ${view.color}">
-        <div><strong style="color: ${view.color}">${view.escapedRouteName}</strong><span class="train-sub-info">배치 중: ${view.totalSets}편성 · 배차 간격: ${view.headway}분</span></div>
-        <div class="depot-capacity-chip">기지 수용력: ${view.totalSets} / ${view.depotCapacity}</div>
-      </div>
-      ${view.forecastHtml}
-      <div class="train-fleet-list">${view.fleetsHtml}</div>
-      <div class="train-add-section">
-        <h3>신규 열차 편성 추가</h3>
-        <div class="train-add-grid">
-          <label class="manager-field"><span>차량 종류</span><select id="modalTrainTypeSelect">
+      <div class="dg-panel__body">
+        <section class="dg-panel__section">
+          <div class="game-inspector__route"><span class="game-color-swatch" style="--selected-route-color:${escapeHtml(view.color)}" aria-hidden="true"></span><strong class="dg-text-sign">${escapeHtml(view.serviceName)}</strong></div>
+          ${view.selectedTrain ? `<p class="game-inspector__note">선택한 열차 · ${escapeHtml(view.selectedTrain)}</p>` : ""}
+          <div class="dg-row"><span class="dg-row__label">운행</span><span class="dg-row__value${view.operating ? " dg-row__value--ok" : ""}">${view.operating ? "● 운행 중" : "열차 미배정"}</span></div>
+          <div class="dg-row"><span class="dg-row__label">배치 · 배차</span><span class="dg-row__value">${view.totalSets}편성 · ${escapeHtml(view.headway)}</span></div>
+          <div class="dg-row"><span class="dg-row__label">시간당 수송</span><span class="dg-row__value">${view.hourlyCapacity.toLocaleString("ko-KR")}명 · ${view.stopCount}개 정차</span></div>
+          <div class="dg-row"><span class="dg-row__label">기지 수용</span><span class="dg-row__value${full ? " dg-row__value--caution" : ""}">${full ? "△ " : ""}${view.totalSets} / ${view.depotCapacity}편성</span></div>
+        </section>
+        ${view.forecastHtml}
+        <section class="dg-panel__section">
+          <h3 class="dg-panel__section-label">배치된 편성</h3>
+          ${fleets}
+        </section>
+        <section class="dg-panel__section game-save-editor__pair">
+          <label class="dg-field"><span class="dg-field__label">새 편성 차량</span><select id="modalTrainTypeSelect" class="dg-input">
             <option value="metro">도시철도 (160명/량 · 34km/h)</option>
             <option value="commuter">광역전철 (190명/량 · 42km/h)</option>
             <option value="express">급행형 (150명/량 · 54km/h)</option>
           </select></label>
-          <label class="manager-field"><span>편성당 차량 수</span><select id="modalCarCountSelect">
-            <option value="4">4량 편성</option><option value="6" selected>6량 편성</option>
-            <option value="8">8량 편성</option><option value="10">10량 편성</option>
+          <label class="dg-field"><span class="dg-field__label">편성당 차량 수</span><select id="modalCarCountSelect" class="dg-input">
+            <option value="4">4량</option><option value="6" selected>6량</option>
+            <option value="8">8량</option><option value="10">10량</option>
           </select></label>
-        </div>
-        <button id="modalAddFleetButton" data-train-action="add" type="button" class="modal-add-fleet-btn">➕ 신규 편성 구입 및 배치 (+80억)</button>
+        </section>
+        ${full ? `<p class="game-inspector__note game-train__full">△ 차량기지 수용량이 가득 찼습니다. 기지를 확장하거나 연결을 확인하세요.</p>` : ""}
+      </div>
+      <div class="dg-panel__actions">
+        <button id="modalAddFleetButton" class="dg-btn dg-btn--primary dg-panel__actions-push" data-train-action="add" type="button" ${full ? "disabled" : ""}>새 편성 구입·배치<span class="dg-btn__cost" data-add-cost>${escapeHtml(view.addCost)}</span></button>
       </div>`, onClick, onChange);
   }
 

@@ -577,10 +577,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   box-shadow: none !important;
 }
 
-.train-manager-content {
-  background: var(--color-surface-0) !important;
-}
-
 .planning-actions,
 .conversion-actions,
 .dialog-actions {
@@ -606,10 +602,8 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .dialog-backdrop > section,
 .dialog-backdrop > div > section,
-.settings-dialog,
 .planning-dialog,
 .plan-conversion-dialog,
-.train-manager-dialog,
 .construction-manager-dialog {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
@@ -665,8 +659,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .planning-save-button,
 .action-button--build,
-.dialog-actions .primary,
-.modal-add-fleet-btn {
+.dialog-actions .primary {
   border: 1px solid var(--color-accent) !important;
   border-radius: 6px !important;
   background: var(--color-accent-dim) !important;
