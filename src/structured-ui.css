@@ -519,7 +519,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .save-editor-header,
 .connection-dialog-header,
-.color-picker-header,
 .dialog-heading {
   border-color: var(--color-border-subtle) !important;
   border-radius: 0 !important;
@@ -590,8 +589,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .planning-actions,
 .conversion-actions,
-.dialog-actions,
-.color-picker-actions {
+.dialog-actions {
   border-color: var(--color-border-strong) !important;
   background: var(--color-surface-0) !important;
   box-shadow: none !important;
@@ -620,8 +618,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .merge-dialog,
 .plan-conversion-dialog,
 .train-manager-dialog,
-.construction-manager-dialog,
-.color-picker-dialog {
+.construction-manager-dialog {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
   background: var(--color-surface-0) !important;
@@ -668,8 +665,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .connection-safety-note,
 .planning-editor,
 .plan-comparison,
-.plan-conversion-group,
-.color-preview {
+.plan-conversion-group {
   border-color: var(--color-border-subtle) !important;
   border-radius: 8px !important;
   background: var(--color-surface-1) !important;
@@ -679,7 +675,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .planning-save-button,
 .action-button--build,
 .dialog-actions .primary,
-.color-picker-actions .primary,
 .modal-add-fleet-btn {
   border: 1px solid var(--color-accent) !important;
   border-radius: 6px !important;

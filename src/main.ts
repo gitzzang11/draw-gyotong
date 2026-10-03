@@ -1011,17 +1011,43 @@ app.innerHTML = `
       </div>
     </section>
 
-    <div id="colorPickerDialog" class="dialog-backdrop color-picker-backdrop" hidden>
-      <section class="color-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="colorPickerTitle">
-        <header class="color-picker-header"><div><span>LINE APPEARANCE</span><h2 id="colorPickerTitle">노선 색상</h2></div><button id="closeColorPickerButton" class="dialog-close" type="button" aria-label="색상 조절 닫기">×</button></header>
-        <div id="colorPreview" class="color-preview"><i aria-hidden="true"></i><div><strong id="colorHexReadout">#4CE0C3</strong><small>노선에 적용될 미리보기</small></div></div>
-        <div class="color-controls">
-          <label><span>색조</span><output id="colorHueValue">180°</output><input id="colorHueRange" type="range" min="0" max="360" value="180" aria-label="색조" /></label>
-          <label><span>채도</span><output id="colorSaturationValue">70%</output><input id="colorSaturationRange" type="range" min="0" max="100" value="70" aria-label="채도" /></label>
-          <label><span>밝기</span><output id="colorLightnessValue">55%</output><input id="colorLightnessRange" type="range" min="0" max="100" value="55" aria-label="밝기" /></label>
+    <div id="colorPickerDialog" class="dg-hud dg-scrim game-color-picker" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="colorPickerTitle">
+        <header class="dg-panel__header">
+          <h2 id="colorPickerTitle" class="dg-panel__title">노선 색</h2>
+          <div class="dg-panel__header-end"><button id="closeColorPickerButton" class="dg-icon-btn" type="button" aria-label="색상 선택 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        </header>
+        <div class="dg-panel__body">
+          <section class="dg-panel__section">
+            <div id="colorPreview" class="game-color-preview">
+              <span class="game-color-preview__line" aria-hidden="true"></span>
+              <span class="dg-line-mark dg-line-mark--lg game-color-preview__mark" aria-hidden="true">1</span>
+              <strong id="colorHexReadout" class="dg-text-metric">#4CE0C3</strong>
+            </div>
+          </section>
+          <section class="dg-panel__section game-color-picker__controls">
+            <div class="game-slider-row">
+              <label class="dg-field__label" for="colorHueRange">색조</label>
+              <input id="colorHueRange" type="range" min="0" max="360" value="180" />
+              <output id="colorHueValue" for="colorHueRange" class="dg-row__value">180°</output>
+            </div>
+            <div class="game-slider-row">
+              <label class="dg-field__label" for="colorSaturationRange">채도</label>
+              <input id="colorSaturationRange" type="range" min="0" max="100" value="70" />
+              <output id="colorSaturationValue" for="colorSaturationRange" class="dg-row__value">70%</output>
+            </div>
+            <div class="game-slider-row">
+              <label class="dg-field__label" for="colorLightnessRange">밝기</label>
+              <input id="colorLightnessRange" type="range" min="0" max="100" value="55" />
+              <output id="colorLightnessValue" for="colorLightnessRange" class="dg-row__value">55%</output>
+            </div>
+            <label class="dg-field"><span class="dg-field__label">색상값 (HEX)</span><input id="colorHexInput" class="dg-input" type="text" maxlength="7" inputmode="text" autocomplete="off" spellcheck="false" /></label>
+          </section>
         </div>
-        <label class="color-hex-field"><span>HEX</span><input id="colorHexInput" type="text" maxlength="7" inputmode="text" autocomplete="off" spellcheck="false" aria-label="HEX 색상 코드" /></label>
-        <footer class="color-picker-actions"><button id="cancelColorPickerButton" type="button">취소</button><button id="applyColorPickerButton" class="primary" type="button">색상 적용</button></footer>
+        <div class="dg-panel__actions">
+          <button id="cancelColorPickerButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
+          <button id="applyColorPickerButton" class="dg-btn dg-btn--primary dg-panel__actions-push" type="button">색 적용</button>
+        </div>
       </section>
     </div>
 

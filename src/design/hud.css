@@ -368,6 +368,18 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-report__factor-note { display: block; font: var(--type-label); font-weight: 600; color: var(--text-2); }
 .game-report__icon { width: 20px; flex: none; text-align: center; font-weight: 800; }
 
+/* ===== 색상 선택 ===== */
+.game-color-picker { z-index: 1250; }
+.game-color-picker .dg-dialog { width: min(400px, 100%); display: flex; flex-direction: column; max-height: 100%; }
+.game-color-preview { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-min); padding: 0 var(--space-3); background: var(--map-ground); border: var(--line-hair) solid var(--rule); }
+.game-color-preview__line { flex: 1; height: 6px; background: var(--picker-color, var(--text-3)); box-shadow: 0 0 0 2px var(--map-ground); }
+.game-color-preview__mark { --line-color: var(--picker-color, var(--text-3)); }
+.game-color-picker__controls { display: grid; gap: var(--space-1); }
+.game-slider-row { display: grid; grid-template-columns: 48px 1fr 52px; align-items: center; gap: var(--space-2); min-height: var(--touch-min); }
+.game-slider-row input[type="range"] { width: 100%; accent-color: var(--text-1); }
+/* 기존 전역 슬라이더 꾸밈 대신 테마 색을 따르는 기본 슬라이더를 쓴다. */
+.dg-hud input[type="range"] { -webkit-appearance: auto; appearance: auto; height: auto; background: transparent; border: 0; box-shadow: none; accent-color: var(--text-1); }
+
 /* ===== 지도 객체 후보 선택 ===== */
 .game-chooser { z-index: 1100; }
 .game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }
