@@ -1,6 +1,6 @@
 {
-  "name": "Draw Gyotong",
-  "short_name": "Gyotong",
+  "name": "메트로 메이커",
+  "short_name": "메트로 메이커",
   "description": "대한민국 실제 도시 지도 기반 모바일 철도 경영 샌드박스",
   "start_url": "/",
   "display": "standalone",

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Draw Gyotong</string>
-    <string name="title_activity_main">Draw Gyotong</string>
+    <string name="app_name">메트로 메이커</string>
+    <string name="title_activity_main">메트로 메이커</string>
     <string name="package_name">com.drawgyotong.game</string>
     <string name="custom_url_scheme">com.drawgyotong.game</string>
 </resources>
