@@ -521,6 +521,24 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
   .game-stats__split { grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-3); }
 }
 
+/* ===== 노선도 ===== */
+.game-diagram__body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 232px; }
+.game-diagram__canvas { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #071116; }
+.game-diagram[data-background="light"] .game-diagram__canvas { background: #ffffff; }
+.game-diagram[data-background="blueprint"] .game-diagram__canvas { background: #092d48; }
+.game-diagram__canvas svg { display: block; width: 100%; height: 100%; touch-action: none; }
+.game-diagram__empty { position: absolute; inset: 0; display: grid; place-content: center; gap: var(--space-1); margin: 0; padding: var(--space-4); text-align: center; background: var(--surface-0); }
+.game-diagram__side { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; overflow-y: auto; padding: var(--space-3) var(--edge-inset-right) var(--edge-inset-bottom) var(--space-3); border-left: var(--line-strong) solid var(--text-1); background: var(--surface-0); }
+.game-diagram__side .dg-panel__section-label { margin: var(--space-2) 0 0; }
+.game-diagram__actions { display: grid; gap: var(--space-1); }
+.game-diagram__legend { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.game-diagram__legend li { display: flex; align-items: center; gap: var(--space-2); min-height: 28px; }
+.game-diagram__symbol { width: 24px; height: 24px; flex: none; color: var(--text-2); }
+.game-diagram__routes { display: grid; }
+@media (max-width: 719px) {
+  .game-diagram__body { grid-template-columns: minmax(0, 1fr) 196px; }
+}
+
 /* ===== 운영 분석 (뉴스와 같은 집계 열 + 목록 배치) ===== */
 .game-analysis__health { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: var(--line-strong) solid var(--text-1); }
 .game-analysis__score { display: flex; align-items: baseline; gap: var(--space-1); }

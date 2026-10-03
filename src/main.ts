@@ -1240,47 +1240,53 @@ app.innerHTML = `
       <button id="headerConfirmConstructionButton" class="dg-hook" type="button" hidden>건설 확정</button>
     </aside>
 
-    <section id="diagramScreen" class="diagram-screen" hidden aria-label="자동 노선도">
-      <header class="diagram-header">
-        <div class="diagram-brand">
-          <div><span>NETWORK MAP</span><strong id="diagramCompanyName">서울 철도망</strong></div>
-        </div>
-        <div class="diagram-controls">
-          <label><span>표시 노선</span><select id="diagramRouteFilter" aria-label="노선도 표시 노선"></select></label>
-          <label><span>배경</span><select id="diagramBackgroundSelect" aria-label="노선도 배경색">
-            <option value="dark">다크</option><option value="light">라이트</option><option value="blueprint">청사진</option>
-          </select></label>
-          <label class="diagram-check"><input id="diagramLabelsToggle" type="checkbox" checked /><span>역 이름</span></label>
-          <label class="diagram-check"><input id="diagramCompanyToggle" type="checkbox" checked /><span>철도망 정보</span></label>
-          <button id="resetDiagramLayoutButton" type="button">자동 재배치</button>
-          <button id="saveDiagramSvgButton" type="button">SVG 저장</button>
-          <button id="exportShareJsonButton" type="button">공유 JSON</button>
-          <button id="importShareJsonButton" type="button">JSON 가져오기</button>
-          <input id="importShareJsonInput" type="file" accept="application/json,.json" hidden />
-          <button id="closeDiagramButton" class="diagram-close" type="button" aria-label="노선도 닫기">×</button>
-        </div>
+    <section id="diagramScreen" class="dg-workspace game-workspace game-diagram" hidden aria-labelledby="diagramTitle">
+      <header class="dg-workspace__bar">
+        <h2 id="diagramTitle" class="dg-workspace__title">노선도</h2>
+        <span id="diagramCompanyName" class="game-workspace__sub game-workspace__title">서울 철도망</span>
+        <span class="game-workspace__clock" data-workspace-clock></span>
+        <button id="closeDiagramButton" class="dg-icon-btn" type="button" aria-label="노선도 닫고 지도로"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button>
       </header>
-      <div class="diagram-workspace">
-        <div class="diagram-help"><strong>자동 노선도</strong><span>역을 드래그해 위치를 조정할 수 있습니다. 조정값은 세이브에 저장됩니다.</span></div>
-        <svg id="metroDiagramSvg" viewBox="0 0 1800 1000" role="img" aria-labelledby="diagramSvgTitle diagramSvgDescription">
-          <title id="diagramSvgTitle">자동 생성 지하철 노선도</title>
-          <desc id="diagramSvgDescription">실제 노선, 분기, 급행 정차역과 환승 그룹을 현재 운행 구조에 맞춰 단순화한 노선도</desc>
-          <g id="diagramBackgroundLayer"></g>
-          <g id="diagramRouteLayer"></g>
-          <g id="diagramStationLayer"></g>
-          <g id="diagramLabelLayer"></g>
-          <g id="diagramCompanyLayer"></g>
-        </svg>
-        <div id="diagramEmptyState" class="diagram-empty" hidden><strong>표시할 노선이 없습니다</strong><span>실제 노선과 역을 건설하면 자동 노선도가 생성됩니다.</span></div>
+      <div class="game-diagram__body">
+        <div class="game-diagram__canvas">
+          <svg id="metroDiagramSvg" viewBox="0 0 1800 1000" role="img" aria-labelledby="diagramSvgTitle diagramSvgDescription">
+            <title id="diagramSvgTitle">자동 생성 지하철 노선도</title>
+            <desc id="diagramSvgDescription">실제 노선, 분기, 급행 정차역과 환승 그룹을 현재 운행 구조에 맞춰 단순화한 노선도</desc>
+            <g id="diagramBackgroundLayer"></g>
+            <g id="diagramRouteLayer"></g>
+            <g id="diagramStationLayer"></g>
+            <g id="diagramLabelLayer"></g>
+            <g id="diagramCompanyLayer"></g>
+          </svg>
+          <p id="diagramEmptyState" class="game-diagram__empty" hidden><strong>표시할 노선이 없습니다</strong><span>실제 노선과 역을 건설하면 노선도가 자동으로 만들어집니다.</span></p>
+        </div>
+        <aside class="game-diagram__side" aria-label="노선도 설정">
+          <label class="dg-field"><span class="dg-field__label">표시 노선</span><select id="diagramRouteFilter" class="dg-input"></select></label>
+          <label class="dg-field"><span class="dg-field__label">배경</span><select id="diagramBackgroundSelect" class="dg-input">
+            <option value="dark">어두운 바탕</option><option value="light">밝은 바탕</option><option value="blueprint">청사진</option>
+          </select></label>
+          <label class="game-check"><input id="diagramLabelsToggle" type="checkbox" checked /><span>역 이름</span></label>
+          <label class="game-check"><input id="diagramCompanyToggle" type="checkbox" checked /><span>철도망 정보</span></label>
+          <p class="game-inspector__note">역을 끌어 위치를 조정합니다. 조정값은 세이브에 저장됩니다.</p>
+          <button id="resetDiagramLayoutButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">자동 재배치</button>
+          <h3 class="dg-panel__section-label">내보내기</h3>
+          <div class="game-diagram__actions">
+            <button id="saveDiagramSvgButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">SVG 저장</button>
+            <button id="exportShareJsonButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">공유 JSON</button>
+            <button id="importShareJsonButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">JSON 가져오기…</button>
+          </div>
+          <input id="importShareJsonInput" type="file" accept="application/json,.json" hidden />
+          <h3 class="dg-panel__section-label">범례</h3>
+          <ul class="game-diagram__legend">
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="8" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/></svg>일반역</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="8" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/><path d="M14 9 L19 14 L14 19 L9 14 Z" fill="#1b252b"/></svg>급행 정차역</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="8" y="3" width="12" height="22" rx="6" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/></svg>환승역</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="7" y="7" width="14" height="14" rx="2" fill="#ffffff" stroke="currentColor" stroke-width="4"/></svg>노선 끝점</li>
+          </ul>
+          <div id="diagramRouteLegend" class="game-diagram__routes" aria-label="노선 색상 범례"></div>
+          <p id="diagramStatus" class="game-inspector__note">자동 배치</p>
+        </aside>
       </div>
-      <footer class="diagram-legend">
-        <span><i class="legend-station"></i> 일반역</span>
-        <span><i class="legend-express"></i> 급행 정차역</span>
-        <span><i class="legend-transfer"></i> 환승역</span>
-        <span><i class="legend-terminal"></i> 노선 끝점</span>
-        <div id="diagramRouteLegend" class="diagram-route-legend" aria-label="노선 색상 범례"></div>
-        <strong id="diagramStatus">자동 배치</strong>
-      </footer>
     </section>
 
     <section id="analysisScreen" class="dg-workspace game-workspace game-analysis" hidden aria-labelledby="analysisTitle">
@@ -6292,6 +6298,7 @@ function openDiagramScreen() {
   if (startScreen) startScreen.hidden = true;
   diagramScreen.hidden = false;
   document.body.classList.add("diagram-open");
+  syncWorkspaceClocks();
   renderDiagramControls();
   renderMetroDiagram();
 }
@@ -6326,7 +6333,7 @@ function renderDiagramRouteLegend() {
     .filter((route) => route.coordinates.length >= 2)
     .filter((route) => diagramStateOwner.current.selectedRouteId === "all" || route.id === diagramStateOwner.current.selectedRouteId);
   diagramRouteLegend.innerHTML = visibleRoutes
-    .map((route) => `<span><i style="--diagram-route-color:${escapeHtml(route.color)}"></i>${escapeHtml(route.name)}</span>`)
+    .map((route) => `<div class="dg-row"><span class="dg-row__label game-inspector__route">${lineMarkHtml(route, "sm")}${escapeHtml(route.name)}</span></div>`)
     .join("");
 }
 
