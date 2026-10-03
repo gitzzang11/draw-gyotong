@@ -427,6 +427,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 상태 태그 | `dg-tag` + `--ok` / `--build` / `--plan` / `--paused` / `--error` / `--express`, `dg-tag__icon` |
 | 공사 빗금 | `dg-hazard`, 토큰 `--hazard-pattern` |
 | Inspector 마크업 | `src/ui/inspectorMarkup.ts`: 이스케이프, 노선 기호(글자 대비 자동 선택), 상태 태그, 지표 행(톤마다 ▲▼✕△ 표식 병행), 노선 행, 구획. 패널 템플릿은 HTML 조각이 아니라 구조화된 데이터를 받는다 |
+| 건설·철거 검토 | `game-inspector game-review`, `data-review-mode`(공사: 빗금 띠, 기획: info 점선 띠)·`data-review-tool="eraser"`(위험 띠). 확정 버튼 왼쪽에 비용 Metric |
+| 보조 패널 | `dg-panel game-side-panel`(레일 오른쪽 위). compact 화면에서 검토와 함께 열리면 머리글만 남기고 펼침 버튼을 보인다 |
 | 선택 객체 inspector | `dg-panel game-inspector` (비모달 `aside`, 오른쪽 아래). 빈 지도 탭과 닫기 버튼으로 닫는다 |
 | 안내판 패널 | `dg-panel` (`--panel-band` 지정, 공사 검토는 `--hazard`), `__header` `__icon` `__title` `__header-end` `__body` `__section` `__section-label` `__actions` `__actions-push` |
 | 기획 재질 | 상위 요소에 `dg-planning`, 레일은 `dg-rail--planning` |

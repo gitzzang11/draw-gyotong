@@ -613,8 +613,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .left-route-window,
 .right-line-control-card,
-.route-settings-card,
-.construction-preview-panel,
 .tutorial-panel {
   border-color: var(--color-border-strong) !important;
   border-radius: 10px !important;
@@ -631,8 +629,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .left-route-header,
 .right-line-header,
-.route-settings-card-heading,
-.construction-preview-header,
 .satisfaction-dialog-header,
 .save-editor-header,
 .connection-dialog-header,
@@ -647,8 +643,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 
 .left-route-title,
 .right-line-title,
-.route-settings-card-heading strong,
-.construction-preview-header strong,
 .dialog-heading h2 {
   color: var(--color-text-primary) !important;
   text-shadow: none !important;
@@ -713,11 +707,9 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 .line-identity-card,
 .right-line-action-box,
 .manager-summary,
-.route-settings-target,
 .connection-section,
 .connection-target-card,
 .connection-choice,
-.construction-summary,
 .plan-conversion-intro,
 .plan-conversion-summary,
 .planning-form-card,
@@ -748,176 +740,9 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 }
 
 /* Unified square window controls. */
-body .game-shell :is(
-  .floating-close-button,
-  .floating-minimize-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-) {
-  border: 1px solid transparent !important;
-  border-radius: 6px !important;
-  background: transparent !important;
-  color: var(--color-text-secondary) !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
 
 /* Universal close language: every X uses the same rose surface and drawn
    glyph. Existing context rules continue to own only the control size. */
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-) {
-  --universal-close-glyph-width: 42%;
-  --universal-close-glyph-stroke: 2px;
-  overflow: hidden !important;
-  border: 1px solid rgba(251, 113, 133, 0.58) !important;
-  border-radius: 12px !important;
-  background:
-    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.14), transparent 38%),
-    linear-gradient(145deg, rgba(190, 24, 93, 0.3), rgba(69, 10, 35, 0.82)) !important;
-  color: #fecdd3 !important;
-  box-shadow:
-    0 0 0 1px rgba(251, 113, 133, 0.1) inset,
-    0 6px 16px rgba(76, 5, 25, 0.35),
-    0 0 16px rgba(244, 63, 94, 0.12) !important;
-  font-size: 0 !important;
-  line-height: 1 !important;
-}
-
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::before,
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::after {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  display: block !important;
-  width: var(--universal-close-glyph-width) !important;
-  height: var(--universal-close-glyph-stroke) !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: currentColor !important;
-  box-shadow: none !important;
-  content: "" !important;
-  pointer-events: none !important;
-}
-
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::before {
-  transform: translate(-50%, -50%) rotate(45deg) !important;
-}
-
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::after {
-  transform: translate(-50%, -50%) rotate(-45deg) !important;
-}
-
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-):hover {
-  border-color: #fb7185 !important;
-  background:
-    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.2), transparent 38%),
-    linear-gradient(145deg, rgba(225, 29, 72, 0.52), rgba(127, 29, 59, 0.92)) !important;
-  color: #fff1f2 !important;
-  box-shadow:
-    0 0 0 1px rgba(251, 113, 133, 0.24) inset,
-    0 8px 20px rgba(76, 5, 25, 0.44),
-    0 0 20px rgba(244, 63, 94, 0.28) !important;
-}
-
-body .game-shell button:is(
-  .floating-close-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-):focus-visible {
-  outline: 0 !important;
-  box-shadow:
-    0 0 0 3px rgba(7, 13, 20, 0.96),
-    0 0 0 6px rgba(251, 113, 133, 0.7),
-    0 0 18px rgba(244, 63, 94, 0.3) !important;
-}
 
 body .game-shell .tutorial-panel {
   padding-right: max(68px, calc(env(safe-area-inset-right) + 60px)) !important;
@@ -928,27 +753,6 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
   top: 12px !important;
   right: max(12px, env(safe-area-inset-right)) !important;
   margin: 0 !important;
-  transform: none !important;
-}
-
-body .game-shell :is(
-  .floating-close-button,
-  .floating-minimize-button,
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-):hover {
-  border-color: var(--color-border-strong) !important;
-  background: var(--color-surface-2) !important;
-  color: var(--color-text-primary) !important;
-  box-shadow: none !important;
   transform: none !important;
 }
 

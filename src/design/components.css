@@ -554,8 +554,13 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
   font-size: 12px;
 }
 .dg-notice--danger { border-left-color: var(--signal-danger); }
+.dg-notice--ok { border-left-color: var(--signal-ok); }
+.dg-notice--info { border-left-color: var(--signal-info); }
 .dg-notice__lead { font-weight: 800; color: var(--signal-caution-text); }
 .dg-notice--danger .dg-notice__lead { color: var(--signal-danger); }
+.dg-notice--ok .dg-notice__lead { color: var(--signal-ok); }
+.dg-notice--info .dg-notice__lead { color: var(--signal-info); }
+.dg-notice__lead { white-space: nowrap; }
 
 /* ===== Dialog (§12) ===== */
 .dg-scrim {

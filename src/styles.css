@@ -1508,136 +1508,6 @@ tr:hover td {
 /* ----------------------------------------------------
    7. SUB CARDS & POPOVERS
 ---------------------------------------------------- */
-#routeSettingsCard {
-  position: absolute;
-  bottom: var(--hud-bottom-clear);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1010;
-  background: var(--c-bg-glass);
-  backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-xl);
-  padding: 16px;
-  box-shadow: var(--shadow-lg);
-  width: min(380px, 92vw);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-#routeSettingsCard {
-  position: absolute !important;
-  left: var(--hud-left-clear) !important;
-  bottom: var(--hud-bottom-clear) !important;
-  transform: none !important;
-  width: min(320px, calc(100vw - 32px)) !important;
-  padding: 14px !important;
-  z-index: 1300 !important;
-  background: rgba(22, 26, 34, 0.96) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  box-sizing: border-box !important;
-}
-
-#routeSettingsCard[hidden] {
-  display: none !important;
-}
-
-.route-settings-card-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 2px 7px;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.route-settings-card-heading span {
-  color: var(--c-text-muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.route-settings-card-heading strong {
-  color: var(--c-text-main);
-  font-size: 13px;
-}
-
-.route-settings-target {
-  display: grid;
-  gap: 7px;
-  padding: 11px 12px;
-  border: 1px solid color-mix(in srgb, var(--target-route-color, #64748b) 48%, rgba(255, 255, 255, 0.12));
-  border-radius: 12px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--target-route-color, #64748b) 15%, transparent), rgba(255, 255, 255, 0.025));
-}
-
-.route-settings-target[hidden],
-.route-settings-edit-fields[hidden] {
-  display: none !important;
-}
-
-.route-settings-target > span {
-  color: #94a3b8;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-}
-
-.route-settings-target > div {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-}
-
-.route-settings-target i {
-  flex: 0 0 11px;
-  width: 11px;
-  height: 11px;
-  border: 3px solid rgba(255, 255, 255, 0.86);
-  border-radius: 50%;
-  background: var(--target-route-color, #64748b);
-  box-shadow: 0 0 0 2px var(--target-route-color, #64748b), 0 0 14px color-mix(in srgb, var(--target-route-color, #64748b) 55%, transparent);
-}
-
-.route-settings-target strong {
-  min-width: 0;
-  overflow: hidden;
-  color: #f8fafc;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.route-settings-target small {
-  color: #9aa8ba;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.route-settings-edit-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 70px;
-  gap: 9px;
-}
-
-.route-settings-edit-fields > label {
-  min-width: 0;
-}
-
-.route-settings-edit-fields > button {
-  grid-column: 1 / -1;
-}
 
 .eraser-size-control {
   position: fixed;
@@ -1676,12 +1546,6 @@ tr:hover td {
 }
 
 @media (max-width: 760px) and (orientation: landscape) {
-
-  #routeSettingsCard {
-    left: var(--hud-left-clear);
-    bottom: var(--hud-bottom-clear);
-    width: min(260px, calc(100vw - 16px));
-  }
 
   .eraser-size-control {
     right: max(8px, env(safe-area-inset-right));
@@ -5151,94 +5015,6 @@ font-size: 12px;
 /* ----------------------------------------------------
    17. CONSTRUCTION PREVIEW PANEL
 ---------------------------------------------------- */
-.construction-preview-panel {
-  position: absolute;
-  bottom: var(--hud-bottom-clear);
-  right: max(18px, env(safe-area-inset-right));
-  width: min(430px, calc(100vw - 36px));
-  max-height: min(720px, calc(100dvh - 150px));
-  z-index: 1050;
-  background:
-    radial-gradient(circle at 92% 0%, rgba(56, 189, 248, 0.16), transparent 38%),
-    linear-gradient(165deg, rgba(19, 28, 39, 0.97), rgba(8, 13, 21, 0.97));
-  backdrop-filter: var(--glass-blur-dense);
-  border: 1px solid rgba(125, 211, 252, 0.24);
-  border-radius: var(--radius-xl);
-  padding: 0;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(255, 255, 255, 0.025) inset;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  color: var(--c-text-main);
-  animation: constructionReviewIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.construction-preview-panel[hidden] {
-  display: none !important;
-}
-
-.construction-preview-panel[data-review-mode="planning"] {
-  background:
-    radial-gradient(circle at 94% 0%, rgba(167, 139, 250, 0.22), transparent 42%),
-    linear-gradient(165deg, rgba(26, 25, 48, 0.98), rgba(9, 13, 24, 0.98));
-  border-color: rgba(167, 139, 250, 0.44);
-  box-shadow: 0 24px 70px rgba(4, 4, 14, 0.62), 0 0 34px rgba(124, 58, 237, 0.12);
-}
-
-.construction-preview-panel[data-review-tool="eraser"] {
-  background:
-    radial-gradient(circle at 94% 0%, rgba(248, 113, 113, 0.2), transparent 42%),
-    linear-gradient(165deg, rgba(42, 20, 27, 0.98), rgba(12, 12, 20, 0.98));
-  border-color: rgba(248, 113, 113, 0.44);
-  box-shadow: 0 24px 70px rgba(12, 4, 7, 0.68), 0 0 34px rgba(220, 38, 38, 0.12);
-}
-
-.construction-preview-panel[data-review-tool="eraser"] > header span {
-  color: #fca5a5;
-}
-
-.construction-preview-panel[data-review-tool="eraser"] #confirmConstructionButton {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
-  box-shadow: 0 8px 24px rgba(185, 28, 28, 0.32);
-}
-
-.construction-preview-panel > header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.construction-preview-panel > header > div:first-child {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.construction-preview-panel > header span {
-  color: #7dd3fc;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-}
-
-.construction-preview-panel[data-review-mode="planning"] > header span {
-  color: #c4b5fd;
-}
-
-.construction-preview-panel > header strong {
-  font-size: 19px;
-  line-height: 1.25;
-}
-
-.construction-preview-panel > header small {
-  color: #94a3b8;
-  font-size: 11px;
-  line-height: 1.45;
-}
 
 #toggleConstructionPreviewButton {
   flex: 0 0 34px;
@@ -5249,155 +5025,6 @@ font-size: 12px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   color: #cbd5e1;
-  cursor: pointer;
-}
-
-.construction-preview-details {
-  padding: 16px 20px;
-  overflow-y: auto;
-  display: grid;
-  gap: 13px;
-}
-
-.construction-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  background: transparent;
-  padding: 0;
-}
-
-.construction-summary > div {
-  min-width: 0;
-  display: grid;
-  gap: 5px;
-  padding: 11px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.construction-summary span,
-.construction-breakdown dt {
-  color: #94a3b8;
-  font-size: 10px;
-  font-weight: 750;
-}
-
-.construction-summary strong {
-  overflow: hidden;
-  color: #f8fafc;
-  font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.construction-preview-panel[data-review-mode="planning"] .construction-summary > div:first-child strong,
-.construction-preview-panel[data-review-mode="planning"] .construction-summary > div:nth-child(2) strong {
-  color: #c4b5fd;
-}
-
-.construction-breakdown {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.construction-breakdown > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  padding: 10px 12px;
-  background: rgba(7, 12, 20, 0.94);
-}
-
-.construction-breakdown dd {
-  margin: 0;
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 800;
-  text-align: right;
-}
-
-.construction-warnings {
-  display: grid;
-  gap: 7px;
-}
-
-.construction-warnings > div {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 9px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
-  color: #cbd5e1;
-  font-size: 11px;
-}
-
-.construction-warnings > div.error {
-  border-color: rgba(248, 113, 113, 0.34);
-  background: rgba(127, 29, 29, 0.2);
-}
-
-.construction-warnings > div.warning {
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(120, 53, 15, 0.16);
-}
-
-.construction-ready {
-  color: #6ee7b7 !important;
-  border-color: rgba(52, 211, 153, 0.26) !important;
-  background: rgba(6, 78, 59, 0.16) !important;
-}
-
-.construction-preview-panel > footer {
-  display: grid;
-  grid-template-columns: 0.8fr 1.6fr;
-  gap: 9px;
-  padding: 14px 20px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(3, 7, 13, 0.5);
-}
-
-#confirmConstructionButton {
-  background: linear-gradient(135deg, var(--c-success), #059669);
-  color: #fff;
-  font-weight: 800;
-  border: none;
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
-  width: 100%;
-  cursor: pointer;
-}
-
-.construction-preview-panel[data-review-mode="planning"] #confirmConstructionButton {
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-  box-shadow: 0 8px 24px rgba(109, 40, 217, 0.3);
-}
-
-#confirmConstructionButton:disabled {
-  cursor: not-allowed;
-  filter: grayscale(0.65);
-  opacity: 0.48;
-}
-
-#cancelConstructionButton {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--c-border);
-  color: var(--c-text-muted);
-  padding: 12px;
-  min-height: 48px;
-  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -7869,30 +7496,6 @@ font-size: 12px;
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (max-width: 700px) {
-  .construction-preview-panel {
-    right: 10px;
-    bottom: var(--hud-bottom-clear);
-    width: calc(100vw - 20px);
-    max-height: min(680px, calc(100dvh - 118px));
-  }
-
-  .construction-preview-panel > header,
-  .construction-preview-details,
-  .construction-preview-panel > footer {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
-  .construction-summary {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .construction-summary > div:last-child {
-    grid-column: 1 / -1;
-  }
-}
-
 /* Keep the refresh action clear of the absolute close control. */
 .analysis-screen .analysis-header {
   padding-right: 76px !important;
@@ -8528,8 +8131,6 @@ button:active,
 /* Shared panel surface: quiet separation from the map, no glass spectacle. */
 .start-panel,
 .left-route-window,
-.route-settings-card,
-.construction-preview-panel,
 .analysis-screen,
 .statistics-screen,
 .train-manager-dialog,
@@ -8710,47 +8311,6 @@ textarea:where(:not([class*="dg-"])) {
 
 /* 활성 도구는 배경 채움 + 강조 테두리 + 굵은 텍스트로 통일하므로 이전 인디케이터는 제거한다. */
 
-.route-settings-card-heading {
-  padding-bottom: 8px;
-  border-color: var(--c-border);
-}
-
-.route-settings-card-heading span {
-  color: var(--c-text-dim);
-}
-
-.route-settings-card-heading strong {
-  font-size: 13px;
-}
-
-#routeSettingsCard {
-  left: var(--hud-left-clear) !important;
-  bottom: var(--hud-bottom-clear) !important;
-  width: min(340px, calc(100vw - 24px)) !important;
-  padding: 14px !important;
-  gap: 10px !important;
-  border-radius: var(--radius-lg) !important;
-  background: rgba(15, 22, 29, 0.98) !important;
-  border: 1px solid var(--c-border) !important;
-  box-shadow: var(--shadow-lg) !important;
-  backdrop-filter: none !important;
-}
-
-.route-settings-target {
-  padding: 12px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.route-settings-edit-fields {
-  gap: 8px;
-}
-
-.route-settings-edit-fields > button,
-.route-settings-card button:not(.dialog-close) {
-  min-height: 44px;
-}
-
 .hud.bottom-right {
   position: fixed;
   right: max(12px, env(safe-area-inset-right));
@@ -8803,20 +8363,6 @@ textarea:where(:not([class*="dg-"])) {
   box-shadow: var(--shadow-card);
   white-space: normal;
   text-align: center;
-}
-
-#routeSettingsCard .ops-button.primary,
-#routeSettingsCard .action-button.primary,
-#routeSettingsCard button.primary {
-  color: var(--c-primary) !important;
-  background: rgba(85, 217, 192, 0.13) !important;
-  border: 1px solid rgba(85, 217, 192, 0.46) !important;
-  box-shadow: none !important;
-}
-
-#routeSettingsCard:not([hidden]) ~ .bottom-right {
-  top: max(72px, calc(env(safe-area-inset-top) + 64px));
-  bottom: auto;
 }
 
 .tutorial-panel {
@@ -8934,19 +8480,6 @@ textarea:where(:not([class*="dg-"])) {
     max-width: min(350px, calc(100vw - 24px));
   }
 
-  #routeSettingsCard {
-    bottom: var(--hud-bottom-clear);
-  }
-
-  #routeSettingsCard {
-    left: 12px !important;
-    width: min(340px, calc(100vw - 24px)) !important;
-  }
-
-  .route-settings-edit-fields {
-    grid-template-columns: minmax(0, 1fr) 70px;
-  }
-
   .start-panel {
     padding: 18px;
   }
@@ -8977,7 +8510,6 @@ textarea:where(:not([class*="dg-"])) {
 .satisfaction-dialog-header,
 .connection-dialog-header,
 .decision-dialog-header,
-.route-settings-card-heading,
 .diagram-header,
 .analysis-header,
 .statistics-header,
@@ -8999,8 +8531,7 @@ textarea:where(:not([class*="dg-"])) {
 .right-line-header > .dialog-close,
 .satisfaction-dialog-header > .dialog-close,
 .connection-dialog-header > .dialog-close,
-.decision-dialog-header > .dialog-close,
-.route-settings-card-heading > .dialog-close {
+.decision-dialog-header > .dialog-close {
   position: absolute;
   top: 50%;
   right: 0;
@@ -9017,42 +8548,9 @@ textarea:where(:not([class*="dg-"])) {
   box-sizing: border-box;
 }
 
-.route-settings-card-heading {
-  align-items: center;
-  padding-right: 44px;
-  box-sizing: border-box;
-}
-
-.route-settings-card-heading > .dialog-close.compact-close {
-  width: 32px !important;
-  min-width: 32px !important;
-  height: 32px !important;
-  min-height: 32px !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  font-size: 17px !important;
-  line-height: 1 !important;
-}
-
 .planning-dialog .planning-dialog-heading,
 .plan-conversion-heading {
   padding-right: 70px !important;
-}
-
-.construction-preview-panel > header {
-  position: relative;
-}
-
-.construction-preview-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.construction-preview-header-actions .dialog-close,
-.construction-preview-header-actions #toggleConstructionPreviewButton {
-  flex: 0 0 auto;
 }
 
 .tutorial-panel {
@@ -9118,11 +8616,6 @@ textarea:where(:not([class*="dg-"])) {
   .statistics-header .statistics-close,
   .news-header .news-close {
     right: 12px;
-  }
-
-  .construction-preview-panel > header {
-    gap: 10px;
-    padding-right: 12px;
   }
 }
 
@@ -9245,11 +8738,6 @@ button:where(:not([class*="dg-"])):active,
     bottom: max(84px, calc(env(safe-area-inset-bottom) + 78px));
   }
 
-  #routeSettingsCard,
-  .construction-preview-panel {
-    bottom: var(--hud-bottom-clear);
-  }
-
   .hint-row {
     display: none;
   }
@@ -9361,10 +8849,6 @@ button:where(:not([class*="dg-"])):active,
 
 .custom-color-button input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .custom-color-button input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
-
-.route-settings-edit-fields > .mobile-color-picker {
-  grid-column: 1 / -1;
-}
 
 .right-line-control-card .mobile-color-picker {
   margin-top: 2px;
@@ -9723,9 +9207,7 @@ button:where(:not([class*="dg-"])):active,
 ------------------------------------------------------------------------- */
 @media (max-width: 700px) {
 
-  .hud.bottom-right,
-  #routeSettingsCard,
-  .construction-preview-panel {
+  .hud.bottom-right {
     bottom: max(62px, calc(env(safe-area-inset-bottom) + 56px));
   }
 
@@ -9877,10 +9359,6 @@ button:where(:not([class*="dg-"])):active,
 
 .route-color-field > input[type="color"] {
   display: none !important;
-}
-
-.route-settings-edit-fields > .route-color-field {
-  grid-column: 1 / -1;
 }
 
 .route-color-trigger {
@@ -10109,9 +9587,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-window,
-  .right-line-control-card,
-  #routeSettingsCard,
-  .construction-preview-panel {
+  .right-line-control-card {
     position: fixed !important;
     top: auto !important;
     right: max(5px, env(safe-area-inset-right)) !important;
@@ -10129,9 +9605,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-window::before,
-  .right-line-control-card::before,
-  #routeSettingsCard::before,
-  .construction-preview-panel::before {
+  .right-line-control-card::before {
     display: block;
     width: 32px;
     height: 3px;
@@ -10148,9 +9622,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-header,
-  .right-line-header,
-  .route-settings-card-heading,
-  .construction-preview-panel > header {
+  .right-line-header {
     min-height: 32px;
   }
 
@@ -10159,10 +9631,6 @@ button:where(:not([class*="dg-"])):active,
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-  }
-
-  #routeSettingsCard {
-    max-height: min(290px, 50dvh) !important;
   }
 
   .right-line-control-card {
@@ -10181,17 +9649,6 @@ button:where(:not([class*="dg-"])):active,
     background: #0f161d;
   }
 
-  .construction-preview-panel {
-    max-height: min(62dvh, 450px) !important;
-  }
-
-  .construction-preview-panel > footer {
-    position: sticky;
-    bottom: -11px;
-    padding-bottom: 7px;
-    background: #0f161d;
-  }
-
   .toast {
     top: max(56px, calc(env(safe-area-inset-top) + 50px));
     max-width: min(360px, calc(100vw - 24px));
@@ -10201,9 +9658,7 @@ button:where(:not([class*="dg-"])):active,
 
 @media (max-width: 700px) and (orientation: landscape) {
   .left-route-window,
-  .right-line-control-card,
-  #routeSettingsCard,
-  .construction-preview-panel {
+  .right-line-control-card {
     right: max(4px, env(safe-area-inset-right)) !important;
     bottom: var(--hud-bottom-clear) !important;
     left: var(--hud-left-clear) !important;
@@ -10212,9 +9667,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-window::before,
-  .right-line-control-card::before,
-  #routeSettingsCard::before,
-  .construction-preview-panel::before {
+  .right-line-control-card::before {
     margin-bottom: 6px;
   }
 }
@@ -10230,22 +9683,13 @@ button:where(:not([class*="dg-"])):active,
 
 /* Floating map windows header layout & minimizer button styling */
 .left-route-header,
-.right-line-header,
-.route-settings-card-heading,
-.construction-preview-header {
+.right-line-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 8px !important;
   position: relative !important;
   padding-right: 0 !important;
-}
-
-.construction-preview-header-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  flex-shrink: 0 !important;
 }
 
 .floating-minimize-button {
@@ -10283,9 +9727,7 @@ button:where(:not([class*="dg-"])):active,
 
 /* 1:1 Aspect Ratio for Close Buttons */
 .dialog-close,
-.compact-close,
-#closeRouteSettingsButton,
-#closeConstructionPreviewButton {
+.compact-close {
   width: 26px !important;
   height: 26px !important;
   min-width: 26px !important;
@@ -10306,63 +9748,9 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* Minimized Header Summaries */
-.minimized-swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: var(--target-route-color, var(--c-primary));
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
-  flex-shrink: 0;
-}
-
-.route-settings-header-summary,
-.construction-preview-header-summary {
-  display: none;
-  align-items: center;
-  gap: 6px;
-}
-
-#routeSettingsHeaderName {
-  font-size: 11px;
-  color: var(--c-primary);
-  font-weight: 700;
-  max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#headerPreviewCost {
-  font-size: 11px;
-  color: var(--c-primary);
-  font-weight: 800;
-}
-
-.header-confirm-btn {
-  font-size: 10px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(85, 217, 192, 0.22);
-  color: #55d9c0;
-  border: 1px solid rgba(85, 217, 192, 0.6);
-  cursor: pointer;
-}
-
-.header-confirm-btn:hover {
-  background: rgba(85, 217, 192, 0.35);
-}
-
-.header-confirm-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* Remove Inner Nested Scrolls (창 내부 이중 스크롤 제거) */
 .left-route-list,
-.route-settings-edit-fields,
-.construction-preview-details,
 .setup-grid,
 .slot-list,
 .dialog-body {
@@ -10373,8 +9761,6 @@ button:where(:not([class*="dg-"])):active,
 /* Single Scroll Container for Floating Windows */
 .left-route-window,
 .right-line-control-card,
-#routeSettingsCard,
-.construction-preview-panel,
 .dialog-backdrop > section,
 .dialog-backdrop > div > section {
   overflow-y: auto !important;
@@ -10384,9 +9770,7 @@ button:where(:not([class*="dg-"])):active,
 
 /* Minimized Floating Window Layout */
 .left-route-window.is-minimized,
-.right-line-control-card.is-minimized,
-#routeSettingsCard.is-minimized,
-.construction-preview-panel.is-minimized {
+.right-line-control-card.is-minimized {
   width: auto !important;
   min-width: 210px !important;
   max-width: min(340px, calc(100vw - 16px)) !important;
@@ -10397,25 +9781,14 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized > :not(.left-route-header),
-.right-line-control-card.is-minimized > :not(.right-line-header),
-#routeSettingsCard.is-minimized > :not(.route-settings-card-heading),
-.construction-preview-panel.is-minimized > :not(header) {
+.right-line-control-card.is-minimized > :not(.right-line-header) {
   display: none !important;
 }
 
 /* 건설 미리보기/기획 검토 창 최소화 전용 구성: [ 건설 예상 비용 | 건설 확정 버튼 | 펼치기 버튼 | X 버튼 ] */
-.construction-preview-panel.is-minimized .header-title-group {
-  display: none !important;
-}
-
-#routeSettingsCard.is-minimized .route-settings-header-summary,
-.construction-preview-panel.is-minimized .construction-preview-header-summary {
-  display: inline-flex !important;
-}
 
 @media (max-width: 700px) and (orientation: landscape) {
-  .left-route-window,
-  #routeSettingsCard {
+  .left-route-window {
     width: min(218px, calc(100vw - 8px)) !important;
     max-height: min(38dvh, 210px) !important;
   }
@@ -10423,11 +9796,6 @@ button:where(:not([class*="dg-"])):active,
   .right-line-control-card {
     width: min(232px, calc(100vw - 8px)) !important;
     max-height: min(40dvh, 220px) !important;
-  }
-
-  .construction-preview-panel {
-    width: min(250px, calc(100vw - 8px)) !important;
-    max-height: min(40dvh, 225px) !important;
   }
 }
 
@@ -10855,8 +10223,7 @@ button:where(:not([class*="dg-"])):active,
    window is minimized, the visible title or summary stays centered while
    the actions remain docked to the right edge.
 ------------------------------------------------------------------------- */
-.floating-window-actions,
-.construction-preview-header-actions {
+.floating-window-actions {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
@@ -10867,16 +10234,12 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-header,
-.right-line-header,
-.route-settings-card-heading,
-.construction-preview-header {
+.right-line-header {
   padding-right: 0 !important;
 }
 
 .floating-window-actions .dialog-close,
-.floating-window-actions .compact-close,
-.construction-preview-header-actions .dialog-close,
-.construction-preview-header-actions .compact-close {
+.floating-window-actions .compact-close {
   position: static !important;
   top: auto !important;
   right: auto !important;
@@ -10884,9 +10247,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized > .left-route-header,
-.right-line-control-card.is-minimized > .right-line-header,
-#routeSettingsCard.is-minimized > .route-settings-card-heading,
-.construction-preview-panel.is-minimized > header {
+.right-line-control-card.is-minimized > .right-line-header {
   position: relative !important;
   display: flex !important;
   flex-direction: row !important;
@@ -10899,24 +10260,8 @@ button:where(:not([class*="dg-"])):active,
   box-sizing: border-box !important;
 }
 
-#routeSettingsCard.is-minimized .route-settings-card-heading > span,
-#routeSettingsCard.is-minimized .route-settings-card-heading > strong,
-.construction-preview-panel.is-minimized .header-title-group {
-  display: none !important;
-}
-
-#routeSettingsCard.is-minimized .route-settings-header-summary,
-.construction-preview-panel.is-minimized .construction-preview-header-summary {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: 0 !important;
-}
-
 .left-route-window.is-minimized > .left-route-header > .floating-window-actions,
-.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions,
-#routeSettingsCard.is-minimized > .route-settings-card-heading > .floating-window-actions,
-.construction-preview-panel.is-minimized > header .construction-preview-header-actions {
+.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions {
   position: absolute !important;
   top: 50% !important;
   right: 0 !important;
@@ -10929,9 +10274,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized .floating-minimize-button:active,
-.right-line-control-card.is-minimized .floating-minimize-button:active,
-#routeSettingsCard.is-minimized .floating-minimize-button:active,
-.construction-preview-panel.is-minimized .floating-minimize-button:active {
+.right-line-control-card.is-minimized .floating-minimize-button:active {
   transform: translateY(-50%) scale(0.94);
 }
 
@@ -11681,11 +11024,7 @@ button:where(:not([class*="dg-"])):active,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
 .left-route-window.is-minimized .floating-window-actions > .dialog-close,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
   cursor: pointer;
   transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease,
     color 140ms ease, filter 140ms ease, transform 100ms ease;
@@ -11693,12 +11032,8 @@ button:where(:not([class*="dg-"])):active,
 
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:hover,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:hover,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:hover,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"],
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button[aria-pressed="true"] {
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--minimized-accent-strong) 82%, #ffffff) !important;
   color: #d9fff8 !important;
   background: color-mix(in srgb, var(--minimized-accent-strong) 26%, rgba(8, 20, 28, 0.9)) !important;
@@ -11708,9 +11043,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized .floating-window-actions > .dialog-close:hover,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:hover,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:hover,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:hover {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:hover {
   border-color: rgba(251, 113, 133, 0.82) !important;
   color: #ffe4e8 !important;
   background: rgba(251, 113, 133, 0.22) !important;
@@ -11721,11 +11054,7 @@ button:where(:not([class*="dg-"])):active,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:active,
 .left-route-window.is-minimized .floating-window-actions > .dialog-close:active,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:active,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:active,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:active,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:active,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:active,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:active {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:active {
   transform: scale(0.92);
   filter: brightness(1.16);
 }
@@ -11733,30 +11062,8 @@ button:where(:not([class*="dg-"])):active,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
 .left-route-window.is-minimized .floating-window-actions > .dialog-close:focus-visible,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:focus-visible,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button:focus-visible,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close:focus-visible,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button:focus-visible,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close:focus-visible {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--minimized-accent-strong) 86%, #ffffff);
-  outline-offset: 2px;
-}
-
-.construction-preview-panel.is-minimized .header-confirm-btn:not(:disabled):hover {
-  border-color: rgba(251, 191, 36, 0.82) !important;
-  color: #fff7d6 !important;
-  background: rgba(251, 191, 36, 0.22) !important;
-  box-shadow: 0 0 14px rgba(251, 191, 36, 0.22), inset 0 1px rgba(255, 255, 255, 0.14);
-  filter: brightness(1.08);
-}
-
-.construction-preview-panel.is-minimized .header-confirm-btn:not(:disabled):active {
-  transform: scale(0.94);
-  filter: brightness(1.16);
-}
-
-.construction-preview-panel.is-minimized .header-confirm-btn:focus-visible {
-  outline: 2px solid #fcd34d;
   outline-offset: 2px;
 }
 
@@ -11840,9 +11147,7 @@ button:where(:not([class*="dg-"])):active,
    window that supports minimization.
 ------------------------------------------------------------------------- */
 .left-route-window.is-minimized,
-.right-line-control-card.is-minimized,
-#routeSettingsCard.is-minimized,
-.construction-preview-panel.is-minimized {
+.right-line-control-card.is-minimized {
   --minimized-accent: #38bdf8;
   --minimized-accent-strong: #4ce0c3;
   position: absolute !important;
@@ -11860,16 +11165,12 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized::before,
-.right-line-control-card.is-minimized::before,
-#routeSettingsCard.is-minimized::before,
-.construction-preview-panel.is-minimized::before {
+.right-line-control-card.is-minimized::before {
   display: none !important;
 }
 
 .left-route-window.is-minimized::after,
-.right-line-control-card.is-minimized::after,
-#routeSettingsCard.is-minimized::after,
-.construction-preview-panel.is-minimized::after {
+.right-line-control-card.is-minimized::after {
   position: absolute;
   top: 10px;
   bottom: 10px;
@@ -11882,9 +11183,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized > .left-route-header,
-.right-line-control-card.is-minimized > .right-line-header,
-#routeSettingsCard.is-minimized > .route-settings-card-heading,
-.construction-preview-panel.is-minimized > header {
+.right-line-control-card.is-minimized > .right-line-header {
   min-height: 38px !important;
   display: flex !important;
   align-items: center !important;
@@ -11905,8 +11204,7 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized .left-route-sub,
-.right-line-control-card.is-minimized .right-line-sub,
-#routeSettingsCard.is-minimized > .route-settings-card-heading > span {
+.right-line-control-card.is-minimized .right-line-sub {
   display: inline-flex !important;
   align-items: center;
   width: fit-content;
@@ -11936,76 +11234,8 @@ button:where(:not([class*="dg-"])):active,
   white-space: nowrap;
 }
 
-#routeSettingsCard.is-minimized > .route-settings-card-heading > strong {
-  display: none !important;
-}
-
-#routeSettingsCard.is-minimized .route-settings-header-summary {
-  min-width: 0;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  flex: 1 1 auto;
-  margin: 0 !important;
-  overflow: hidden;
-}
-
-#routeSettingsCard.is-minimized #routeSettingsHeaderName {
-  min-width: 0;
-  overflow: hidden;
-  color: #f7fcff !important;
-  font-size: 13px !important;
-  font-weight: 900 !important;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.construction-preview-panel.is-minimized .construction-preview-header-summary {
-  min-width: 0;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 7px !important;
-  flex: 1 1 auto;
-  margin: 0 !important;
-  overflow: hidden;
-}
-
-.construction-preview-panel.is-minimized .construction-preview-header-summary::before {
-  padding: 4px 6px;
-  content: "BUILD REVIEW";
-  border: 1px solid rgba(251, 191, 36, 0.32);
-  border-radius: 7px;
-  color: #fcd34d;
-  background: rgba(251, 191, 36, 0.1);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.construction-preview-panel.is-minimized #headerPreviewCost {
-  min-width: 0;
-  overflow: hidden;
-  color: #f8fafc !important;
-  font-size: 13px !important;
-  font-weight: 900 !important;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.construction-preview-panel.is-minimized .header-confirm-btn {
-  flex: 0 0 auto;
-  min-height: 28px;
-  padding: 4px 7px;
-  border-radius: 8px;
-  font-size: 9px;
-}
-
 .left-route-window.is-minimized > .left-route-header > .floating-window-actions,
-.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions,
-#routeSettingsCard.is-minimized > .route-settings-card-heading > .floating-window-actions,
-.construction-preview-panel.is-minimized > header .construction-preview-header-actions {
+.right-line-control-card.is-minimized > .right-line-header > .floating-window-actions {
   position: static !important;
   top: auto !important;
   right: auto !important;
@@ -12020,11 +11250,7 @@ button:where(:not([class*="dg-"])):active,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
 .left-route-window.is-minimized .floating-window-actions > .dialog-close,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
   width: 30px !important;
   height: 30px !important;
   min-width: 30px !important;
@@ -12040,42 +11266,34 @@ button:where(:not([class*="dg-"])):active,
 }
 
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button {
+.right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button {
   border: 1px solid color-mix(in srgb, var(--minimized-accent-strong) 42%, transparent) !important;
   color: var(--minimized-accent-strong) !important;
   background: color-mix(in srgb, var(--minimized-accent-strong) 12%, transparent) !important;
 }
 
 .left-route-window.is-minimized .floating-window-actions > .dialog-close,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
   border: 1px solid rgba(251, 113, 133, 0.32) !important;
   color: #fda4af !important;
   background: rgba(251, 113, 133, 0.08) !important;
 }
 
 @media (max-width: 700px) {
-  .left-route-window.is-minimized,
-  #routeSettingsCard.is-minimized {
+  .left-route-window.is-minimized {
     position: fixed !important;
     left: var(--hud-left-clear) !important;
     right: auto !important;
   }
 
-  .right-line-control-card.is-minimized,
-  .construction-preview-panel.is-minimized {
+  .right-line-control-card.is-minimized {
     position: fixed !important;
     right: max(8px, env(safe-area-inset-right)) !important;
     left: auto !important;
   }
 
   .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized,
-  #routeSettingsCard.is-minimized,
-  .construction-preview-panel.is-minimized {
+  .right-line-control-card.is-minimized {
     bottom: var(--hud-bottom-clear) !important;
     width: min(252px, calc(100vw - 16px)) !important;
     max-width: calc(100vw - 16px) !important;
@@ -12086,17 +11304,13 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-window.is-minimized > .left-route-header,
-  .right-line-control-card.is-minimized > .right-line-header,
-  #routeSettingsCard.is-minimized > .route-settings-card-heading,
-  .construction-preview-panel.is-minimized > header {
+  .right-line-control-card.is-minimized > .right-line-header {
     min-height: 36px !important;
     gap: 8px !important;
   }
 
   .left-route-window.is-minimized .left-route-sub,
-  .right-line-control-card.is-minimized .right-line-sub,
-  #routeSettingsCard.is-minimized > .route-settings-card-heading > span,
-  .construction-preview-panel.is-minimized .construction-preview-header-summary::before {
+  .right-line-control-card.is-minimized .right-line-sub {
     padding: 3px 5px;
     font-size: 7px !important;
   }
@@ -12106,19 +11320,10 @@ button:where(:not([class*="dg-"])):active,
     font-size: 13px !important;
   }
 
-  #routeSettingsCard.is-minimized #routeSettingsHeaderName,
-  .construction-preview-panel.is-minimized #headerPreviewCost {
-    font-size: 12px !important;
-  }
-
   .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
   .left-route-window.is-minimized .floating-window-actions > .dialog-close,
   .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-  .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
-  #routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
-  #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-  .construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
-  .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close {
+  .right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
     width: 28px !important;
     height: 28px !important;
     min-width: 28px !important;
@@ -12130,9 +11335,7 @@ button:where(:not([class*="dg-"])):active,
 
 @media (max-width: 700px) and (orientation: landscape) {
   .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized,
-  #routeSettingsCard.is-minimized,
-  .construction-preview-panel.is-minimized {
+  .right-line-control-card.is-minimized {
     bottom: var(--hud-bottom-clear) !important;
     width: min(260px, calc(100vw - 16px)) !important;
     height: 48px !important;
@@ -12167,32 +11370,9 @@ button:where(:not([class*="dg-"])):active,
 .left-route-window.is-minimized .floating-window-actions > .floating-minimize-button,
 .left-route-window.is-minimized .floating-window-actions > .dialog-close,
 .right-line-control-card.is-minimized .floating-window-actions > .floating-minimize-button,
-.right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
-#routeSettingsCard.is-minimized .floating-window-actions > .floating-minimize-button,
-#routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .floating-minimize-button,
-.construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close,
-.construction-preview-panel.is-minimized .header-confirm-btn {
+.right-line-control-card.is-minimized .floating-window-actions > .dialog-close {
   border-radius: 10px !important;
   box-sizing: border-box !important;
-}
-
-.construction-preview-panel.is-minimized .header-confirm-btn {
-  height: 30px !important;
-  min-height: 30px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 10px !important;
-  line-height: 1 !important;
-}
-
-@media (max-width: 700px) {
-  .construction-preview-panel.is-minimized .header-confirm-btn {
-    height: 28px !important;
-    min-height: 28px !important;
-    padding: 0 8px !important;
-  }
 }
 
 /* Shared floating-window action shape. Keep every window header control in
@@ -12202,13 +11382,6 @@ button:where(:not([class*="dg-"])):active,
 .left-route-window .dialog-close,
 .right-line-control-card .floating-minimize-button,
 .right-line-control-card .dialog-close,
-#routeSettingsCard .floating-minimize-button,
-#routeSettingsCard .dialog-close,
-#closeRouteSettingsButton,
-.construction-preview-panel .floating-minimize-button,
-.construction-preview-panel .dialog-close,
-#closeConstructionPreviewButton,
-.construction-preview-panel .header-confirm-btn,
 .dialog-backdrop .dialog-close,
 .diagram-screen .diagram-close,
 .analysis-screen .analysis-close,
@@ -12295,12 +11468,8 @@ button:where(:not([class*="dg-"])):active,
      minimized bar remains usable without becoming taller than the panel. */
   .left-route-window .dialog-close,
   .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
   .left-route-window .floating-minimize-button,
-  .right-line-control-card .floating-minimize-button,
-  #routeSettingsCard .floating-minimize-button,
-  .construction-preview-panel .floating-minimize-button {
+  .right-line-control-card .floating-minimize-button {
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
@@ -12311,30 +11480,24 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-window.is-minimized,
-  .right-line-control-card.is-minimized,
-  #routeSettingsCard.is-minimized,
-  .construction-preview-panel.is-minimized {
+  .right-line-control-card.is-minimized {
     height: 60px !important;
     max-height: 60px !important;
   }
 
   /* Restore a single intentional scroll owner for long floating panels. */
   .left-route-window,
-  .right-line-control-card,
-  #routeSettingsCard,
-  .construction-preview-panel {
+  .right-line-control-card {
     min-height: 0 !important;
   }
 
   .left-route-window,
-  .right-line-control-card,
-  .construction-preview-panel {
+  .right-line-control-card {
     overflow: hidden !important;
   }
 
   .left-route-list,
-  .right-line-body,
-  .construction-preview-details {
+  .right-line-body {
     min-height: 0 !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
@@ -12342,8 +11505,7 @@ button:where(:not([class*="dg-"])):active,
   }
 
   .left-route-list,
-  .right-line-body,
-  .construction-preview-details {
+  .right-line-body {
     flex: 1 1 auto !important;
   }
 }
@@ -12672,9 +11834,7 @@ button:where(:not([class*="dg-"])):active,
 
   /* Floating tools stay above the dock and each list owns its own scroll. */
   .left-route-window,
-  .right-line-control-card,
-  #routeSettingsCard,
-  .construction-preview-panel {
+  .right-line-control-card {
     position: fixed !important;
     top: auto !important;
     bottom: var(--hud-bottom-clear) !important;
@@ -12682,16 +11842,14 @@ button:where(:not([class*="dg-"])):active,
     border-radius: 14px !important;
   }
 
-  .left-route-window,
-  #routeSettingsCard {
+  .left-route-window {
     left: var(--hud-left-clear) !important;
     right: auto !important;
     width: min(260px, calc(100vw - 8px)) !important;
     max-height: min(56dvh, 300px) !important;
   }
 
-  .right-line-control-card,
-  .construction-preview-panel {
+  .right-line-control-card {
     left: auto !important;
     right: max(4px, env(safe-area-inset-right)) !important;
   }
@@ -12701,15 +11859,8 @@ button:where(:not([class*="dg-"])):active,
     max-height: min(58dvh, 310px) !important;
   }
 
-  .construction-preview-panel {
-    width: min(310px, calc(100vw - 8px)) !important;
-    max-height: min(60dvh, 330px) !important;
-  }
-
   .left-route-header,
-  .right-line-header,
-  .route-settings-card-heading,
-  .construction-preview-panel > header {
+  .right-line-header {
     flex: 0 0 auto;
   }
 
@@ -12991,266 +12142,13 @@ body .game-shell button:is(
    Map-overlaid windows use a clearer dismiss affordance than report dialogs:
    a rose accent, a rounded-square surface, and a crisp CSS-drawn X.
 ------------------------------------------------------------------------- */
-body .game-shell :is(
-  .floating-close-button,
-  .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton,
-  button#closeLeftRouteWindowButton,
-  button#tutorialSkipButton
-) {
-  --close-glyph-size: var(--floating-close-glyph-size);
-  --close-glyph-stroke: 2px;
-  width: var(--floating-close-button-size) !important;
-  height: var(--floating-close-button-size) !important;
-  min-width: var(--floating-close-button-size) !important;
-  min-height: var(--floating-close-button-size) !important;
-  max-width: var(--floating-close-button-size) !important;
-  max-height: var(--floating-close-button-size) !important;
-  flex: 0 0 var(--floating-close-button-size) !important;
-  position: relative !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  overflow: hidden !important;
-  border: 1px solid rgba(251, 113, 133, 0.58) !important;
-  border-radius: 12px !important;
-  background:
-    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.14), transparent 38%),
-    linear-gradient(145deg, rgba(190, 24, 93, 0.3), rgba(69, 10, 35, 0.82)) !important;
-  box-shadow:
-    0 0 0 1px rgba(251, 113, 133, 0.1) inset,
-    0 6px 16px rgba(76, 5, 25, 0.35),
-    0 0 16px rgba(244, 63, 94, 0.12) !important;
-  color: #fecdd3 !important;
-  cursor: pointer !important;
-  font-size: 0 !important;
-  line-height: 1 !important;
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 140ms ease !important;
-}
-
-body .game-shell :is(
-  .floating-close-button,
-  .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton,
-  button#closeLeftRouteWindowButton,
-  button#tutorialSkipButton
-)::before {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  display: block !important;
-  width: var(--close-glyph-size, 16px) !important;
-  height: var(--close-glyph-stroke, 2px) !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: currentColor !important;
-  box-shadow: none !important;
-  content: "" !important;
-  pointer-events: none !important;
-  transform: translate(-50%, -50%) rotate(45deg) !important;
-}
-
-body .game-shell :is(
-  .floating-close-button,
-  .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton,
-  button#closeLeftRouteWindowButton,
-  button#tutorialSkipButton
-)::after {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  display: block !important;
-  width: var(--close-glyph-size, 16px) !important;
-  height: var(--close-glyph-stroke, 2px) !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: currentColor !important;
-  box-shadow: none !important;
-  content: "";
-  pointer-events: none !important;
-  transform: translate(-50%, -50%) rotate(-45deg) !important;
-}
 
 /* Larger floating panels get a little more breathing room in the header. */
-body .game-shell :is(
-  #routeSettingsCard .dialog-close,
-  #closeRouteSettingsButton,
-  .construction-preview-panel .dialog-close,
-  #closeConstructionPreviewButton
-) {
-  --floating-close-button-size: 36px;
-  --floating-close-glyph-size: 15px;
-}
-
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  body .game-shell :is(
-    #routeSettingsCard .dialog-close,
-    #closeRouteSettingsButton,
-    .construction-preview-panel .dialog-close,
-    #closeConstructionPreviewButton
-  ) {
-    --floating-close-button-size: 40px;
-    --floating-close-glyph-size: 16px;
-  }
-}
 
 /* Minimized bars are intentionally more compact than their open windows. */
-body .game-shell :is(
-  .left-route-window.is-minimized .floating-window-actions > .dialog-close,
-  .right-line-control-card.is-minimized .floating-window-actions > .dialog-close,
-  #routeSettingsCard.is-minimized .floating-window-actions > .dialog-close,
-  .construction-preview-panel.is-minimized .construction-preview-header-actions > .dialog-close
-) {
-  --close-glyph-size: var(--floating-minimized-close-glyph-size);
-  width: var(--floating-minimized-close-size) !important;
-  height: var(--floating-minimized-close-size) !important;
-  min-width: var(--floating-minimized-close-size) !important;
-  min-height: var(--floating-minimized-close-size) !important;
-  max-width: var(--floating-minimized-close-size) !important;
-  max-height: var(--floating-minimized-close-size) !important;
-  flex: 0 0 var(--floating-minimized-close-size) !important;
-}
-
-body .game-shell :is(
-  .floating-close-button,
-  .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton,
-  button#closeLeftRouteWindowButton,
-  button#tutorialSkipButton
-):hover {
-  border-color: #fb7185 !important;
-  background:
-    radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.2), transparent 38%),
-    linear-gradient(145deg, rgba(225, 29, 72, 0.52), rgba(127, 29, 59, 0.92)) !important;
-  color: #fff1f2 !important;
-  box-shadow:
-    0 0 0 1px rgba(251, 113, 133, 0.24) inset,
-    0 8px 20px rgba(76, 5, 25, 0.44),
-    0 0 20px rgba(244, 63, 94, 0.28) !important;
-  transform: translateY(-1px) scale(1.03) !important;
-}
-
-body .game-shell :is(
-  .floating-close-button,
-  .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton,
-  button#closeLeftRouteWindowButton,
-  button#tutorialSkipButton
-):active {
-  transform: scale(0.94) !important;
-  box-shadow: 0 2px 8px rgba(76, 5, 25, 0.42) !important;
-}
-
-body .game-shell :is(
-  .left-route-window .dialog-close,
-  .right-line-control-card .dialog-close,
-  #routeSettingsCard .dialog-close,
-  .construction-preview-panel .dialog-close,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton,
-  button#closeLeftRouteWindowButton,
-  button#tutorialSkipButton
-):focus-visible {
-  outline: 0 !important;
-  box-shadow:
-    0 0 0 3px rgba(7, 13, 20, 0.96),
-    0 0 0 6px rgba(251, 113, 133, 0.7),
-    0 0 18px rgba(244, 63, 94, 0.3) !important;
-}
 
 /* Keep the close glyph itself simple and identical everywhere. The previous
    decorative ring made the X look doubled inside floating controls. */
-body .game-shell button:is(
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::before,
-body .game-shell button:is(
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::after {
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  display: block !important;
-  width: var(--close-glyph-size, 16px) !important;
-  height: var(--close-glyph-stroke, 2px) !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: currentColor !important;
-  box-shadow: none !important;
-  content: "" !important;
-  pointer-events: none !important;
-}
-
-body .game-shell button:is(
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::before {
-  transform: translate(-50%, -50%) rotate(45deg) !important;
-}
-
-body .game-shell button:is(
-  .dialog-close,
-  .compact-close,
-  .diagram-close,
-  .analysis-close,
-  .statistics-close,
-  .news-close,
-  #tutorialSkipButton,
-  #errorDismissButton,
-  #closeRouteSettingsButton,
-  #closeConstructionPreviewButton
-)::after {
-  transform: translate(-50%, -50%) rotate(-45deg) !important;
-}
 
 /* Express service control: visible in management mode and clearly distinct
    from the map-navigation tools. */
@@ -13280,8 +12178,6 @@ body .game-shell button:is(
   (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   .left-route-window:not(.is-minimized),
   .right-line-control-card:not(.is-minimized),
-  #routeSettingsCard:not(.is-minimized),
-  .construction-preview-panel:not(.is-minimized),
   .dialog-backdrop > section,
   .dialog-backdrop > div > section {
     overflow-x: hidden !important;
@@ -13293,8 +12189,6 @@ body .game-shell button:is(
 
   .left-route-list,
   .right-line-body,
-  .construction-preview-details,
-  .route-settings-edit-fields,
   .satisfaction-dialog-content,
   .construction-project-list,
   .plan-conversion-layout,

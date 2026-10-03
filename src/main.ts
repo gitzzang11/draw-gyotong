@@ -985,29 +985,28 @@ app.innerHTML = `
 
 
 
-    <section id="routeSettingsCard" class="hud route-settings-card" hidden aria-label="노선 설정">
-      <div class="route-settings-card-heading">
-        <span>ROUTE SETTINGS</span>
-        <strong>노선 설정</strong>
-        <div id="routeSettingsHeaderSummary" class="route-settings-header-summary">
-          <i id="routeSettingsHeaderSwatch" class="minimized-swatch" aria-hidden="true"></i>
-          <strong id="routeSettingsHeaderName">노선</strong>
-        </div>
-        <button id="closeRouteSettingsButton" class="dialog-close compact-close" type="button" aria-label="노선 설정 닫기">×</button>
-      </div>
-      <div id="routeSettingsTarget" class="route-settings-target" hidden>
-        <span id="routeSettingsTargetKicker">수정 대상</span>
-        <div><i id="routeSettingsTargetSwatch" aria-hidden="true"></i><strong id="routeSettingsTargetName">노선을 선택하세요</strong></div>
-        <small id="routeSettingsTargetMeta">지도에서 대상 노선을 선택하면 여기에 표시됩니다.</small>
-      </div>
-      <div id="routeSettingsEditFields" class="route-settings-edit-fields">
-        <label><span>이름</span><input id="draftRouteNameInput" type="text" maxlength="32" placeholder="자동 이름" autocomplete="off" /></label>
-        <div class="route-settings-color-field route-color-field" data-color-input="draftRouteColorInput">
-          <span>노선 색상</span>
-          <input id="draftRouteColorInput" type="color" value="#3277ff" tabindex="-1" aria-hidden="true" />
-          <button type="button" class="route-color-trigger" data-open-color-picker="draftRouteColorInput"><i aria-hidden="true"></i><span>색상 조절</span><b aria-hidden="true">›</b></button>
-        </div>
-        <button id="saveRouteSettingsButton" class="ops-button primary action-button action-button--setting" type="button"><span class="button-icon" aria-hidden="true">✓</span><span>설정 적용</span></button>
+    <!-- 노선 설정: 그리는 동안 레일 오른쪽에 두는 보조 패널 -->
+    <section id="routeSettingsCard" class="dg-hud dg-panel game-side-panel" hidden aria-labelledby="routeSettingsTitle">
+      <header class="dg-panel__header">
+        <span id="routeSettingsHeaderSwatch" class="game-color-swatch" aria-hidden="true"></span>
+        <h2 id="routeSettingsTitle" class="dg-panel__title"><span id="routeSettingsHeaderName">노선 설정</span></h2>
+        <div class="dg-panel__header-end"><button id="routeSettingsExpandButton" class="dg-icon-btn game-side-panel__expand" type="button" aria-expanded="false" aria-controls="routeSettingsCard" aria-label="노선 설정 펼치기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 8 L10 13 L15 8"/></svg></button><button id="closeRouteSettingsButton" class="dg-icon-btn" type="button" aria-label="노선 설정 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+      </header>
+      <div class="dg-panel__body">
+        <section id="routeSettingsTarget" class="dg-panel__section" hidden>
+          <p id="routeSettingsTargetKicker" class="dg-panel__section-label">수정 대상</p>
+          <div class="game-inspector__route"><span id="routeSettingsTargetSwatch" class="game-color-swatch game-color-swatch--target" aria-hidden="true"></span><strong id="routeSettingsTargetName">노선을 선택하세요</strong></div>
+          <p id="routeSettingsTargetMeta" class="game-inspector__note">지도에서 대상 노선을 선택하면 여기에 표시됩니다.</p>
+        </section>
+        <section id="routeSettingsEditFields" class="dg-panel__section game-side-panel__fields">
+          <label class="dg-field"><span class="dg-field__label">이름</span><input id="draftRouteNameInput" class="dg-input" type="text" maxlength="32" placeholder="비우면 자동 이름" autocomplete="off" /></label>
+          <div class="dg-field game-color-field" data-color-input="draftRouteColorInput">
+            <span class="dg-field__label">노선 색</span>
+            <input id="draftRouteColorInput" type="color" value="#3277ff" tabindex="-1" aria-hidden="true" hidden />
+            <button type="button" class="dg-btn dg-btn--secondary dg-btn--compact game-color-trigger" data-open-color-picker="draftRouteColorInput"><span class="game-color-swatch" aria-hidden="true"></span><span data-color-value>#3277FF</span><span class="game-color-trigger__action" aria-hidden="true">›</span><span class="dg-sr-only">색 바꾸기</span></button>
+          </div>
+          <button id="saveRouteSettingsButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">설정 적용</button>
+        </section>
       </div>
     </section>
 
@@ -1157,43 +1156,43 @@ app.innerHTML = `
     <div id="errorBanner" class="error-banner" hidden role="alert"><span id="errorMessage">일시적인 오류가 발생했습니다.</span><button id="errorRetryButton" type="button">재시도</button><button id="errorDismissButton" type="button" aria-label="닫기">×</button></div>
     <div id="toast" class="toast" hidden role="status"></div>
 
-    <section id="constructionPreviewPanel" class="construction-preview-panel" hidden aria-live="polite">
-      <header class="construction-preview-header">
-        <div class="header-title-group">
-          <span id="constructionPreviewKicker">CONSTRUCTION REVIEW</span>
-          <strong id="constructionPreviewTitle">건설 미리보기</strong>
-          <small id="constructionPreviewSubtitle">범위와 비용을 확인한 뒤 확정하세요.</small>
-        </div>
-        <div id="constructionPreviewHeaderSummary" class="construction-preview-header-summary">
-          <strong id="headerPreviewCost">0억</strong>
-          <button id="headerConfirmConstructionButton" class="header-confirm-btn" type="button">건설 확정</button>
-        </div>
-        <div class="construction-preview-header-actions">
-          <button id="closeConstructionPreviewButton" class="dialog-close compact-close" type="button" aria-label="건설 미리보기 닫기">×</button>
-        </div>
+    <!-- 건설·철거 검토: 오른쪽 아래 inspector 자리. 확정은 오른쪽 아래 엄지 위치 (MOBILE_UX §7.2) -->
+    <aside id="constructionPreviewPanel" class="dg-hud dg-panel game-inspector game-review" hidden aria-live="polite" aria-labelledby="constructionPreviewTitle">
+      <header class="dg-panel__header">
+        <svg class="dg-panel__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 15 L9 9 H17"/><circle cx="3" cy="15" r="1.5"/><circle cx="17" cy="9" r="1.5"/></svg>
+        <h2 id="constructionPreviewTitle" class="dg-panel__title">건설 검토</h2>
+        <span id="constructionPreviewKicker" class="dg-tag game-review__tag">공사</span>
+        <div class="dg-panel__header-end"><button id="closeConstructionPreviewButton" class="dg-icon-btn" type="button" aria-label="검토 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
       </header>
-      <div id="constructionPreviewDetails" class="construction-preview-details">
-        <div class="construction-summary">
-          <div><span id="previewTotalCostLabel">예상 총비용</span><strong id="previewTotalCost">0억</strong></div>
-          <div><span id="previewBalanceLabel">건설 후 잔액</span><strong id="previewBalance">0억</strong></div>
-          <div><span id="previewDurationLabel">예상 공기</span><strong id="previewDuration">0일</strong></div>
+      <div class="game-inspector__content">
+        <div id="constructionPreviewDetails" class="dg-panel__body">
+          <section class="dg-panel__section">
+            <p id="constructionPreviewSubtitle" class="game-inspector__note">범위와 비용을 확인한 뒤 확정하세요.</p>
+          <div class="dg-row"><span id="previewTotalCostLabel" class="dg-row__label">예상 총비용</span><span id="previewTotalCost" class="dg-row__value dg-row__value--metric">0억</span></div>
+          <div class="dg-row"><span id="previewBalanceLabel" class="dg-row__label">건설 후 잔액</span><span id="previewBalance" class="dg-row__value">0억</span></div>
+          <div class="dg-row"><span id="previewDurationLabel" class="dg-row__label">예상 공기</span><span id="previewDuration" class="dg-row__value">0일</span></div>
+          </section>
+          <section class="dg-panel__section">
+            <h3 class="dg-panel__section-label">세부</h3>
+          <div class="dg-row"><span id="previewLengthLabel" class="dg-row__label">총 길이</span><span id="previewLength" class="dg-row__value">0m</span></div>
+          <div class="dg-row"><span id="previewBaseCostLabel" class="dg-row__label">기본 건설비</span><span id="previewBaseCost" class="dg-row__value">0억</span></div>
+          <div class="dg-row"><span id="previewMountainLabel" class="dg-row__label">산악 구간</span><span id="previewMountain" class="dg-row__value">없음</span></div>
+          <div class="dg-row"><span id="previewRiverCountLabel" class="dg-row__label">강 통과</span><span id="previewRiverCount" class="dg-row__value">없음</span></div>
+          <div class="dg-row"><span id="previewStationCountLabel" class="dg-row__label">역 연결/설치</span><span id="previewStationCount" class="dg-row__value">0개</span></div>
+          <div class="dg-row"><span id="previewDepotConnectionLabel" class="dg-row__label">차량기지 연결</span><span id="previewDepotConnection" class="dg-row__value">미연결</span></div>
+          </section>
+          <section id="riverChoiceList" class="dg-panel__section" hidden></section>
+          <section id="constructionWarnings" class="dg-panel__section game-review__warnings"></section>
         </div>
-        <dl class="construction-breakdown">
-          <div><dt id="previewLengthLabel">총 길이</dt><dd id="previewLength">0m</dd></div>
-          <div><dt id="previewBaseCostLabel">기본 건설비</dt><dd id="previewBaseCost">0억</dd></div>
-          <div><dt id="previewMountainLabel">산악 구간</dt><dd id="previewMountain">없음</dd></div>
-          <div><dt id="previewRiverCountLabel">강 통과</dt><dd id="previewRiverCount">없음</dd></div>
-          <div><dt id="previewStationCountLabel">역 연결/설치</dt><dd id="previewStationCount">0개</dd></div>
-          <div><dt id="previewDepotConnectionLabel">차량기지 연결</dt><dd id="previewDepotConnection">미연결</dd></div>
-        </dl>
-        <div id="riverChoiceList" class="river-choice-list" hidden></div>
-        <div id="constructionWarnings" class="construction-warnings"></div>
+        <div class="dg-panel__actions">
+          <button id="cancelConstructionButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
+          <strong id="headerPreviewCost" class="game-review__cost dg-panel__actions-push">0억</strong>
+          <button id="confirmConstructionButton" class="dg-btn dg-btn--primary" type="button" disabled>건설 확정</button>
+        </div>
       </div>
-      <footer>
-        <button id="cancelConstructionButton" type="button">취소</button>
-        <button id="confirmConstructionButton" type="button" disabled>건설 확정</button>
-      </footer>
-    </section>
+      <!-- 이전 최소화 머리글용 확정 버튼. 동작 연결을 유지하려고 숨겨 둔다. -->
+      <button id="headerConfirmConstructionButton" class="dg-hook" type="button" hidden>건설 확정</button>
+    </aside>
 
     <section id="diagramScreen" class="diagram-screen" hidden aria-label="자동 노선도">
       <header class="diagram-header">
@@ -2202,14 +2201,14 @@ function addFloatingWindowMinimizer(
 
 addFloatingWindowMinimizer(leftRouteWindow, ".left-route-header", "노선 목록");
 addFloatingWindowMinimizer(rightLineControlCard, ".right-line-header", "노선 제어");
-addFloatingWindowMinimizer(routeSettingsCard, ".route-settings-card-heading", "노선 설정");
-addFloatingWindowMinimizer(constructionPreviewPanel, ".construction-preview-header", "건설 미리보기");
 
 function syncColorPicker(input: HTMLInputElement | null) {
   if (!input) return;
   const normalizedColor = input.value.toLowerCase();
   document.querySelectorAll<HTMLElement>(`[data-color-input="${input.id}"]`).forEach((picker) => {
     picker.style.setProperty("--selected-route-color", normalizedColor);
+    const valueLabel = picker.querySelector<HTMLElement>("[data-color-value]");
+    if (valueLabel) valueLabel.textContent = normalizedColor.toUpperCase();
   });
 }
 
@@ -2660,6 +2659,12 @@ railModeNowButton?.addEventListener("click", () => {
   layoutRailTools();
 });
 compactRailQuery.addEventListener("change", () => syncRail());
+// compact 화면에서 검토 중에는 노선 설정을 머리글만 남기고, 필요할 때 펼친다.
+const routeSettingsExpandButton = document.querySelector<HTMLButtonElement>("#routeSettingsExpandButton");
+routeSettingsExpandButton?.addEventListener("click", () => {
+  const expanded = routeSettingsCard?.classList.toggle("is-expanded") ?? false;
+  routeSettingsExpandButton.setAttribute("aria-expanded", String(expanded));
+});
 window.addEventListener("resize", () => layoutRailTools());
 document.addEventListener("pointerdown", (event) => {
   if (!modifyToolsCard || modifyToolsCard.hidden) return;
@@ -4387,7 +4392,7 @@ function renderConstructionPanel() {
   const copy = reviewCopy[constructionDraft.kind];
   constructionPreviewPanel.dataset.reviewMode = planningMode ? "planning" : "construction";
   constructionPreviewPanel.dataset.reviewTool = constructionDraft.kind;
-  setText(constructionPreviewKicker, planningMode ? "PLANNING REVIEW" : "CONSTRUCTION REVIEW");
+  setText(constructionPreviewKicker, planningMode ? "기획" : "공사");
   setText(constructionPreviewSubtitle, planningMode ? `${copy.planningDescription} 자금은 아직 차감되지 않습니다.` : copy.constructionDescription);
   setText(previewTotalCostLabel, planningMode ? "계획 예상비" : "예상 총비용");
   setText(previewBalanceLabel, planningMode ? "현재 단계" : "건설 후 잔액");
@@ -4419,9 +4424,13 @@ function renderConstructionPanel() {
   if (constructionWarnings) {
     constructionWarnings.innerHTML =
       analysis.warnings.length === 0
-        ? `<div class="construction-ready">✓ 건설 가능한 계획입니다</div>`
+        ? `<div class="dg-notice dg-notice--ok"><span class="dg-notice__lead">✓</span><span>건설 가능한 계획입니다</span></div>`
         : analysis.warnings
-            .map((warning) => `<div class="${warning.severity}"><strong>${warning.severity === "error" ? "확인 필요" : warning.severity === "warning" ? "주의" : "안내"}</strong><span>${escapeHtml(warning.message)}</span></div>`)
+            .map((warning) => {
+              const lead = warning.severity === "error" ? "✕ 확인 필요" : warning.severity === "warning" ? "△ 주의" : "i 안내";
+              const variant = warning.severity === "error" ? " dg-notice--danger" : warning.severity === "warning" ? "" : " dg-notice--info";
+              return `<div class="dg-notice${variant}"><span class="dg-notice__lead">${lead}</span><span>${escapeHtml(warning.message)}</span></div>`;
+            })
             .join("");
   }
   const blocked = analysis.warnings.some((warning) => warning.severity === "error");
@@ -4442,11 +4451,11 @@ function renderRiverChoices() {
   riverChoiceList.innerHTML = crossings
     .map(
       (crossing, index) => `
-        <div class="river-choice-card">
-          <span>강 통과 ${index + 1}</span>
-          <div>
-            <button type="button" data-crossing-id="${crossing.id}" data-mode="bridge" class="${crossing.mode === "bridge" ? "active" : ""}">교량</button>
-            <button type="button" data-crossing-id="${crossing.id}" data-mode="tunnel" class="${crossing.mode === "tunnel" ? "active" : ""}">지하</button>
+        <div class="dg-row">
+          <span class="dg-row__label">강 통과 ${index + 1}</span>
+          <div class="dg-seg" role="group" aria-label="강 통과 ${index + 1} 방식">
+            <button class="dg-seg__item" type="button" data-crossing-id="${crossing.id}" data-mode="bridge" aria-pressed="${crossing.mode === "bridge"}">교량</button>
+            <button class="dg-seg__item" type="button" data-crossing-id="${crossing.id}" data-mode="tunnel" aria-pressed="${crossing.mode === "tunnel"}">지하</button>
           </div>
         </div>`,
     )
@@ -4484,7 +4493,7 @@ function openDemolitionReview(review: DemolitionReview) {
   constructionPreviewPanel.dataset.reviewMode = review.planning ? "planning" : "construction";
   constructionPreviewPanel.dataset.reviewTool = "eraser";
   if (constructionPreviewDetails) constructionPreviewDetails.hidden = false;
-  setText(constructionPreviewKicker, review.planning ? "PLANNING DEMOLITION" : "CONSTRUCTION DEMOLITION");
+  setText(constructionPreviewKicker, review.planning ? "기획 철거" : "철거");
   setText(constructionPreviewTitle, "철거 검토");
   setText(constructionPreviewSubtitle, review.description);
   setText(previewTotalCostLabel, review.planning ? "계획 비용" : "예상 환급");
@@ -4512,7 +4521,7 @@ function openDemolitionReview(review: DemolitionReview) {
     riverChoiceList.innerHTML = "";
   }
   if (constructionWarnings) {
-    constructionWarnings.innerHTML = `<div class="warning"><strong>삭제 주의</strong><span>${escapeHtml(review.description)}</span></div>`;
+    constructionWarnings.innerHTML = `<div class="dg-notice dg-notice--danger"><span class="dg-notice__lead">△ 삭제 주의</span><span>${escapeHtml(review.description)}</span></div>`;
   }
   if (confirmConstructionButton) {
     confirmConstructionButton.disabled = false;
@@ -15855,6 +15864,7 @@ function placeModeBanner() {
   if (!modeBanner || !financePlate || !timePlate) return;
   const gap = timePlate.getBoundingClientRect().left - financePlate.getBoundingClientRect().right;
   modeBanner.dataset.placement = gap >= modeBanner.offsetWidth + 24 ? "top" : "low";
+  document.body.dataset.modeBanner = modeBanner.dataset.placement;
 }
 
 /** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */

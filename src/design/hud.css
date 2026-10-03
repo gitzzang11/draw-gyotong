@@ -155,7 +155,8 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
   position: fixed;
   right: var(--edge-inset-right);
   bottom: var(--edge-inset-bottom);
-  width: min(316px, calc(100vw - var(--hud-left-clear) - var(--edge-inset-right)));
+  /* 좁은 화면에서는 화면 절반까지만 써서 왼쪽 보조 패널과 겹치지 않는다. */
+  width: min(316px, calc(50vw - var(--edge-inset-right) - 4px));
   max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) * 2 - var(--plate-height) - 2px - var(--edge-inset-bottom));
 }
 .game-inspector .dg-panel__title { flex: 1; }
@@ -173,6 +174,50 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-inspector__plus { color: var(--signal-ok); font-weight: 800; }
 .game-inspector__minus { color: var(--signal-danger); font-weight: 800; }
 .game-inspector__danger-action { display: flex; justify-content: flex-end; }
+
+/* ===== 건설·철거 검토 (DESIGN_SYSTEM §8 모드별 재질) ===== */
+.game-review[data-review-mode="construction"] { border-top-color: transparent; }
+.game-review[data-review-mode="construction"]::before {
+  --hazard-dark: #15171A;
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--band));
+  left: calc(-1 * var(--line-hair));
+  right: calc(-1 * var(--line-hair));
+  height: var(--band);
+  background: var(--hazard-pattern);
+}
+.game-review[data-review-mode="planning"] { border-top-style: dashed; border-top-color: var(--signal-info); }
+.game-review[data-review-tool="eraser"] { border-top-style: solid; border-top-color: var(--signal-danger); }
+.game-review[data-review-tool="eraser"]::before { content: none; }
+.game-review__tag { background: var(--signal-caution); border-color: var(--signal-caution); color: var(--on-line-dark); }
+.game-review[data-review-mode="planning"] .game-review__tag { background: var(--surface-0); border-style: dashed; border-color: var(--signal-info); color: var(--signal-info); }
+.game-review[data-review-tool="eraser"] .game-review__tag { background: var(--surface-0); border-color: var(--signal-danger); color: var(--signal-danger); }
+.game-review__warnings { display: grid; gap: var(--space-1); }
+.game-review__cost { font: var(--type-metric); white-space: nowrap; }
+
+/* ===== 보조 패널: 레일 오른쪽 위 (노선 설정 등) ===== */
+.game-side-panel {
+  position: fixed;
+  left: var(--hud-left-clear);
+  top: calc(var(--hud-top) + var(--hud-gap));
+  width: min(240px, calc(50vw - var(--hud-left-clear) - 4px));
+  max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--hud-bottom-clear));
+}
+body[data-mode-banner="low"] .game-side-panel { top: calc(var(--hud-top) + var(--hud-gap) * 2 + 32px); max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) * 2 - 32px - var(--hud-bottom-clear)); }
+.game-side-panel .dg-panel__title { flex: 1; }
+.game-side-panel__expand { display: none; }
+@media (max-width: 719px) {
+  body.construction-reviewing .game-side-panel:not(.is-expanded) .dg-panel__body { display: none; }
+  body.construction-reviewing .game-side-panel .game-side-panel__expand { display: inline-grid; }
+  body.construction-reviewing .game-side-panel.is-expanded .game-side-panel__expand svg { transform: rotate(180deg); }
+}
+.game-side-panel__fields { display: grid; gap: var(--space-2); }
+.game-color-swatch { display: inline-block; width: 16px; height: 16px; flex: none; border: var(--line-hair) solid var(--edge); border-radius: var(--radius); background: var(--selected-route-color, var(--text-3)); }
+.game-color-swatch--target { background: var(--target-route-color, var(--text-3)); }
+.game-color-trigger { justify-content: flex-start; width: 100%; }
+.game-color-trigger [data-color-value] { font-variant-numeric: tabular-nums; }
+.game-color-trigger__action { margin-left: auto; color: var(--text-2); }
 
 /* ===== 실행 취소·다시 실행: 왼쪽 아래 엄지 영역 ===== */
 .game-history-controls {
