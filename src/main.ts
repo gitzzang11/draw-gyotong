@@ -3,6 +3,9 @@ import "leaflet/dist/leaflet.css";
 import "./styles.css";
 import "./structured-ui.css";
 import "./mobile-system-menu.css";
+import "./design/tokens.css";
+import "./design/components.css";
+import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
@@ -325,6 +328,7 @@ type GameSettings = {
   autoStationNaming: boolean;
   autoSaveEnabled: boolean;
   autoSaveIntervalSeconds: 30 | 60 | 180 | 300;
+  mapTheme: MapTheme;
 };
 
 type SaveState = {
@@ -590,6 +594,7 @@ const defaultSettings: GameSettings = {
   autoStationNaming: true,
   autoSaveEnabled: true,
   autoSaveIntervalSeconds: 30,
+  mapTheme: "paper",
 };
 const fallbackSaveKey = "draw-gyotong-save-slots-v1";
 const localRecoveryStateKey = "draw-gyotong-state";
@@ -1085,6 +1090,7 @@ app.innerHTML = `
         <label class="setting-row"><span><strong>효과음</strong><small>건설과 조작 피드백</small></span><input id="soundToggle" type="checkbox" checked /></label>
         <label class="setting-row"><span><strong>진동</strong><small>지원 기기에서 촉각 피드백</small></span><input id="hapticsToggle" type="checkbox" checked /></label>
         <label class="setting-row"><span><strong>성능</strong><small>열차 표시와 지도 자원 사용량</small></span><select id="performanceSelect"><option value="balanced">균형</option><option value="battery">절전</option></select></label>
+        <label class="setting-row"><span><strong>지도 테마</strong><small>종이: 밝은 지도(기본) · 먹: 어두운 지도</small></span><select id="mapThemeSelect">${MAP_THEMES.map((theme) => `<option value="${theme}">${MAP_THEME_LABELS[theme]}</option>`).join("")}</select></label>
         <label class="setting-row"><span><strong>모션 감소</strong><small>화면 전환과 애니메이션 축소</small></span><input id="reducedMotionToggle" type="checkbox" /></label>
         <label class="setting-row"><span><strong>샌드박스 공사 기간</strong><small>샌드박스에서도 공사와 개통 절차 사용</small></span><input id="sandboxConstructionTimeToggle" type="checkbox" /></label>
         <label class="setting-row"><span><strong>역 이름 자동 생성</strong><small>1km 안 가장 가까운 실제 역 → 동네명 → 주변 시설</small></span><input id="autoStationNamingToggle" type="checkbox" checked /></label>
@@ -1918,6 +1924,7 @@ const closeSettingsButton = document.querySelector<HTMLButtonElement>("#closeSet
 const soundToggle = document.querySelector<HTMLInputElement>("#soundToggle");
 const hapticsToggle = document.querySelector<HTMLInputElement>("#hapticsToggle");
 const performanceSelect = document.querySelector<HTMLSelectElement>("#performanceSelect");
+const mapThemeSelect = document.querySelector<HTMLSelectElement>("#mapThemeSelect");
 const reducedMotionToggle = document.querySelector<HTMLInputElement>("#reducedMotionToggle");
 const sandboxConstructionTimeToggle = document.querySelector<HTMLInputElement>("#sandboxConstructionTimeToggle");
 const autoStationNamingToggle = document.querySelector<HTMLInputElement>("#autoStationNamingToggle");
@@ -2457,6 +2464,7 @@ let selectedStatisticsRouteId = "";
 let selectedStatisticsStationId = "";
 let autoSaveTimer = 0;
 let settings: GameSettings = loadSettings();
+applyMapTheme(document.documentElement, settings.mapTheme);
 let audioContext: AudioContext | null = null;
 let toastTimer = 0;
 let trainInteractionLockedUntil = 0;
@@ -2985,6 +2993,7 @@ saveRouteSettingsButton?.addEventListener("click", saveRouteSettings);
 soundToggle?.addEventListener("change", () => updateSettings({ soundEnabled: Boolean(soundToggle.checked) }));
 hapticsToggle?.addEventListener("change", () => updateSettings({ hapticsEnabled: Boolean(hapticsToggle.checked) }));
 performanceSelect?.addEventListener("change", () => updateSettings({ performanceMode: performanceSelect.value === "battery" ? "battery" : "balanced" }));
+mapThemeSelect?.addEventListener("change", () => updateSettings({ mapTheme: normalizeMapTheme(mapThemeSelect.value) }));
 reducedMotionToggle?.addEventListener("change", () => updateSettings({ reducedMotion: Boolean(reducedMotionToggle.checked) }));
 sandboxConstructionTimeToggle?.addEventListener("change", () =>
   updateSettings({ sandboxConstructionTime: Boolean(sandboxConstructionTimeToggle.checked) }),
@@ -15710,7 +15719,8 @@ function completeTutorial(skipped = true) {
 function loadSettings(): GameSettings {
   try {
     const saved = localStorage.getItem("draw-gyotong-settings");
-    return { ...defaultSettings, ...(saved ? (JSON.parse(saved) as Partial<GameSettings>) : {}) };
+    const loaded: GameSettings = { ...defaultSettings, ...(saved ? (JSON.parse(saved) as Partial<GameSettings>) : {}) };
+    return { ...loaded, mapTheme: normalizeMapTheme(loaded.mapTheme) };
   } catch {
     return { ...defaultSettings };
   }
@@ -15725,11 +15735,13 @@ function updateSettings(patch: Partial<GameSettings>) {
 }
 
 function applySettingsToUi() {
+  applyMapTheme(document.documentElement, settings.mapTheme);
   document.body.dataset.performance = settings.performanceMode;
   document.body.classList.toggle("reduced-motion", settings.reducedMotion);
   if (soundToggle) soundToggle.checked = settings.soundEnabled;
   if (hapticsToggle) hapticsToggle.checked = settings.hapticsEnabled;
   if (performanceSelect) performanceSelect.value = settings.performanceMode;
+  if (mapThemeSelect) mapThemeSelect.value = settings.mapTheme;
   if (reducedMotionToggle) reducedMotionToggle.checked = settings.reducedMotion;
   if (sandboxConstructionTimeToggle) sandboxConstructionTimeToggle.checked = settings.sandboxConstructionTime;
   if (autoStationNamingToggle) autoStationNamingToggle.checked = settings.autoStationNaming;

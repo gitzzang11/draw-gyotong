@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="ko" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draw Gyotong 디자인 시안</title>
+<style>
+/* ===== Tokens: docs/design/DESIGN_SYSTEM.md §4 ===== */
+:root, [data-theme="paper"] {
+  --map-ground:#ECE9E1; --map-water:#C6D3D9; --map-green:#DDE2D2; --map-road:#FFFFFF; --map-label:#7A7D80;
+  --surface-0:#FBFAF6; --surface-1:#F2F0E9; --surface-2:#E5E2D9;
+  --text-1:#15171A; --text-2:#454A50; --text-3:#6B7076;
+  --rule:#D3CFC4; --edge:#15171A; --invert-bg:#15171A; --invert-fg:#FBFAF6;
+  --signal-caution:#F2BE00; --signal-caution-text:#7A5C00; --signal-danger:#C8242C;
+  --signal-info:#1D5FC2; --signal-ok:#1D7F47; --focus:#1D5FC2;
+  --hazard-dark:#15171A;
+  color-scheme: light;
+}
+[data-theme="ink"] {
+  --map-ground:#17191C; --map-water:#1F2B33; --map-green:#1C221D; --map-road:#2A2E33; --map-label:#7E8186;
+  --surface-0:#121416; --surface-1:#1B1E21; --surface-2:#262A2E;
+  --text-1:#ECEAE3; --text-2:#B4B1A9; --text-3:#8C8981;
+  --rule:#33373C; --edge:#4C5258; --invert-bg:#ECEAE3; --invert-fg:#121416;
+  --signal-caution:#F2BE00; --signal-caution-text:#F2C94C; --signal-danger:#FF5C61;
+  --signal-info:#6AA3FF; --signal-ok:#45C27F; --focus:#6AA3FF;
+  --hazard-dark:#121416;
+  color-scheme: dark;
+}
+:root {
+  --font: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  --r: 2px;
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --hazard: repeating-linear-gradient(45deg, var(--signal-caution) 0 6px, var(--hazard-dark) 6px 12px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--surface-1); color: var(--text-1);
+  font: 500 13px/18px var(--font); font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ===== Document chrome ===== */
+.doc-head {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px max(16px, env(safe-area-inset-left));
+  background: var(--invert-bg); color: var(--invert-fg);
+}
+.doc-head h1 { margin: 0; font-size: 15px; line-height: 20px; font-weight: 800; }
+.doc-head .sub { opacity: .75; font-size: 12px; }
+.doc-head .seg { margin-left: auto; }
+.doc-head .seg button { border-color: var(--invert-fg); color: var(--invert-fg); background: transparent; }
+.doc-head .seg button[aria-pressed="true"] { background: var(--invert-fg); color: var(--invert-bg); }
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+section.block { background: var(--surface-0); border: 1px solid var(--edge); margin: 0 0 24px; }
+section.block > h2 {
+  margin: 0; padding: 10px 16px; font-size: 15px; line-height: 20px; font-weight: 800;
+  border-top: 4px solid var(--text-1); border-bottom: 1px solid var(--rule);
+}
+section.block > .body { padding: 16px; }
+.note { color: var(--text-2); margin: 0 0 12px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.label { font-size: 11px; line-height: 14px; font-weight: 600; color: var(--text-2); }
+.section-label { font-size: 12px; line-height: 16px; font-weight: 700; color: var(--text-2); margin: 0 0 8px; }
+
+/* token table */
+.tokens { width: 100%; border-collapse: collapse; }
+.tokens td, .tokens th { padding: 6px 8px; border-bottom: 1px solid var(--rule); text-align: left; font-size: 12px; }
+.tokens th { font-weight: 700; color: var(--text-2); }
+.tokens td.hex { font-family: ui-monospace, Consolas, monospace; color: var(--text-2); }
+.chip { width: 28px; height: 20px; border: 1px solid var(--edge); border-radius: var(--r); }
+.token-cols { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+/* ===== Components ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px;
+  border-radius: var(--r); border: 1.5px solid transparent; font-weight: 700; cursor: pointer;
+  background: transparent; white-space: nowrap;
+}
+.btn.compact { min-height: 36px; }
+.btn.primary { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
+.btn.secondary { background: var(--surface-0); border-color: var(--text-1); }
+.btn.quiet { color: var(--text-1); }
+.btn.quiet:hover { background: var(--surface-2); }
+.btn.danger { background: var(--signal-danger); color: #fff; }
+.btn .cost { padding-left: 10px; margin-left: 2px; border-left: 1px solid currentColor; font-size: 15px; font-weight: 700; }
+.btn svg { width: 18px; height: 18px; }
+
+.seg { display: inline-flex; border: 1.5px solid var(--text-1); border-radius: var(--r); }
+.seg button {
+  min-height: 32px; padding: 0 10px; border: 0; border-right: 1.5px solid var(--text-1);
+  background: var(--surface-0); font-weight: 700; cursor: pointer;
+}
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+
+.lm { /* line mark */
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: var(--r);
+  font-weight: 800; font-size: 12px; line-height: 1; color: #fff; flex: none;
+}
+.lm.l24 { width: 24px; height: 24px; font-size: 14px; }
+.lm.l16 { width: 16px; height: 16px; font-size: 10px; }
+.lm.dark-text { color: #15171A; }
+.lm.plan { background: transparent !important; border: 2px dashed currentColor; }
+.lm.building { outline: 2px dashed var(--signal-caution); outline-offset: 1px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px;
+  border: 1px solid var(--text-2); border-radius: var(--r); font-size: 11px; font-weight: 700;
+  background: var(--surface-0); white-space: nowrap;
+}
+.tag.ok { border-color: var(--signal-ok); } .tag.ok i { color: var(--signal-ok); }
+.tag.plan { border: 1px dashed var(--signal-info); color: var(--signal-info); }
+.tag.build { background: var(--signal-caution); border-color: var(--signal-caution); color: #15171A; }
+.tag.build i { width: 10px; height: 10px; background: var(--hazard); --hazard-dark:#15171A; display: inline-block; }
+.tag.bad { border-color: var(--signal-danger); color: var(--signal-danger); }
+.tag.express { background: var(--invert-bg); color: var(--invert-fg); border-color: var(--invert-bg); }
+.tag i { font-style: normal; }
+.hazard-swatch { height: 24px; background: var(--hazard); border: 1px solid var(--edge); }
+
+.field { display: grid; gap: 4px; }
+.field input {
+  height: 40px; padding: 0 10px; border: 0; border-bottom: 1.5px solid var(--text-1);
+  border-radius: var(--r) var(--r) 0 0; background: var(--surface-1); color: var(--text-1); font: inherit;
+}
+.field input:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ===== Frame (844×390 device) ===== */
+.frame-wrap { width: 100%; aspect-ratio: 844 / 390; position: relative; overflow: hidden; border: 1px solid var(--edge); }
+.frame { position: absolute; left: 0; top: 0; width: 844px; height: 390px; transform-origin: 0 0; overflow: hidden; background: var(--map-ground); }
+.frame > svg.map { position: absolute; inset: 0; }
+.frame-caption { margin: 8px 0 24px; color: var(--text-2); }
+
+.status {
+  position: absolute; left: 0; right: 0; top: 0; height: 36px; display: flex; align-items: stretch;
+  background: var(--surface-0); border-bottom: 1px solid var(--edge); padding: 0 12px; font-size: 12px;
+}
+.status .cell { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-right: 1px solid var(--rule); white-space: nowrap; }
+.status .cell:first-child { padding-left: 0; }
+.status .metric { font-size: 15px; font-weight: 700; }
+.status .k { color: var(--text-2); font-size: 11px; font-weight: 600; }
+.status .pos { color: var(--signal-ok); font-weight: 700; }
+.status .spacer { flex: 1; border: 0; }
+.status .seg { align-self: center; border-width: 1px; }
+.status .seg button { min-height: 26px; padding: 0 8px; font-size: 12px; border-right-width: 1px; }
+.alert-cell { color: var(--signal-caution-text); font-weight: 700; }
+
+.rail {
+  position: absolute; left: 12px; top: 48px; width: 128px; background: var(--surface-0); border: 1px solid var(--edge);
+}
+.rail .modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--edge); }
+.rail .modes button {
+  height: 34px; border: 0; border-right: 1px solid var(--rule); background: var(--surface-0); font-weight: 700; font-size: 12px; padding: 0;
+}
+.rail .modes button:last-child { border-right: 0; }
+.rail .modes button[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+.rail .tool {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 0 10px 0 12px; border: 0;
+  border-bottom: 1px solid var(--rule); background: transparent; text-align: left; font-weight: 600; position: relative;
+}
+.rail .tool:last-child { border-bottom: 0; }
+.rail .tool svg { width: 16px; height: 16px; flex: none; }
+.rail .tool[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
+.rail .tool[aria-pressed="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--invert-fg); }
+.rail .tool.destructive { color: var(--signal-danger); }
+.rail.planning, .rail.planning .modes, .rail.planning .tool { border-style: dashed; }
+.rail.compact { width: 56px; }
+.rail.compact .mode-now { display: flex; align-items: center; justify-content: center; gap: 4px; height: 28px; background: var(--invert-bg); color: var(--invert-fg); font-size: 11px; font-weight: 800; }
+.rail.compact .mode-now .mk { width: 8px; height: 8px; background: var(--hazard); --hazard-dark: #15171A; }
+.rail.compact .tool { flex-direction: column; justify-content: center; gap: 2px; height: 44px; padding: 0; font-size: 10px; line-height: 12px; text-align: center; }
+.rail.compact .tool[aria-pressed="true"]::before { width: 3px; }
+
+.banner {
+  position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px;
+  background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; font-size: 12px; white-space: nowrap;
+}
+.banner .mk { width: 12px; height: 12px; display: inline-block; }
+.banner .mk.sign { background: var(--invert-fg); }
+.banner .mk.plan { border: 1.5px dashed var(--signal-info); }
+.banner .mk.build { background: var(--hazard); --hazard-dark: #15171A; }
+.hint {
+  position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+  padding: 4px 10px; background: var(--surface-0); border: 1px solid var(--edge); font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+
+.mapctl { position: absolute; right: 12px; top: 48px; display: flex; background: var(--surface-0); border: 1px solid var(--edge); }
+.mapctl button { width: 36px; height: 34px; border: 0; border-right: 1px solid var(--rule); background: transparent; display: grid; place-items: center; }
+.mapctl button:last-child { border-right: 0; }
+.mapctl svg { width: 16px; height: 16px; }
+
+.inspector {
+  position: absolute; right: 12px; bottom: 12px; width: 300px; max-height: 286px;
+  display: flex; flex-direction: column; background: var(--surface-0); border: 1px solid var(--edge);
+  border-top-width: 0;
+}
+.inspector.wide { width: 336px; max-height: 330px; }
+.inspector .band { height: 4px; background: var(--text-1); flex: none; }
+.inspector header { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--rule); }
+.inspector header .ico { width: 18px; height: 18px; flex: none; }
+.inspector header .name { font-size: 17px; line-height: 22px; font-weight: 800; }
+.inspector header .close { margin-left: auto; width: 32px; height: 32px; border: 0; background: transparent; display: grid; place-items: center; }
+.inspector header .close svg { width: 16px; height: 16px; }
+.inspector .scroll { overflow: hidden; flex: 1; }
+.inspector .sec { padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.inspector .sec:last-child { border-bottom: 0; }
+.inspector .sec h3 { margin: 0 0 2px; font-size: 12px; line-height: 16px; font-weight: 700; color: var(--text-2); }
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 26px; }
+.row .v { text-align: right; font-weight: 700; }
+.row .v.big { font-size: 16px; }
+.row.bar { grid-template-columns: 1fr 72px auto; }
+.meter { height: 6px; background: var(--surface-2); position: relative; }
+.meter > span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--text-1); }
+.meter > span.over { background: var(--signal-danger); }
+.row .warn { color: var(--signal-caution-text); }
+.row .bad { color: var(--signal-danger); }
+.row .ok { color: var(--signal-ok); }
+.actions { display: flex; gap: 8px; padding: 8px 12px; border-top: 2px solid var(--text-1); flex: none; }
+.actions .push { margin-left: auto; }
+.msg { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-left: 4px solid var(--signal-caution); background: var(--surface-1); font-size: 12px; }
+.msg b { color: var(--signal-caution-text); }
+
+.draftctl { position: absolute; left: 76px; bottom: 12px; display: flex; background: var(--surface-0); border: 1px solid var(--edge); }
+.draftctl .btn { border-radius: 0; border-right: 1px solid var(--rule); }
+.draftctl .btn:last-child { border-right: 0; }
+.tip {
+  position: absolute; padding: 3px 8px; background: var(--invert-bg); color: var(--invert-fg);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div class="doc-head">
+  <h1>Draw Gyotong · 노선도와 안내사인</h1>
+  <span class="sub">디자인 시안 v0 · DESIGN_SYSTEM.md 기준</span>
+  <div class="seg" role="group" aria-label="지도 테마">
+    <button type="button" data-theme-btn="paper" aria-pressed="true">종이</button>
+    <button type="button" data-theme-btn="ink" aria-pressed="false">먹</button>
+  </div>
+</div>
+
+<main>
+  <section class="block">
+    <h2>1. 핵심 화면 · 844×390</h2>
+    <div class="body">
+      <p class="note">지도는 인쇄 노선도처럼, UI는 안내판처럼 만듭니다. 채도 높은 색은 노선과 신호에만 씁니다.</p>
+      <div class="frame-wrap"><div class="frame" id="f-explore"></div></div>
+      <p class="frame-caption"><b>A. 관리 · 탐색</b>: 환승역 선택. 지도에는 먹색 외곽선과 기준점 핀이, inspector에는 먹 상단 띠와 노선 기호가 같은 대상을 가리킵니다.</p>
+      <div class="frame-wrap"><div class="frame" id="f-build"></div></div>
+      <p class="frame-caption"><b>B. 공사 · 노선 건설 검토</b>: 도면 재질입니다. 정밀 작업 중이라 tool rail이 축소되어 있습니다. 점선 draft, 사각 handle, 구간 치수, 스냅 고리, 교량 경고 구간이 보입니다. 취소와 되돌리기는 왼쪽 엄지 영역에, 확정과 비용은 오른쪽 엄지 영역에 둡니다.</p>
+      <div class="frame-wrap"><div class="frame" id="f-line"></div></div>
+      <p class="frame-caption"><b>C. 관리 · 노선 inspector</b>: 선택 노선만 원래 대비로 두고 나머지는 낮춥니다. 상단 띠는 노선 색이며, 혼잡 초과는 막대 색과 수치 표기를 함께 씁니다.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>2. 기본 자산</h2>
+    <div class="body grid">
+      <div>
+        <p class="section-label">노선 기호</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="lm l24" style="background:#2F5BB7">1</span>
+          <span class="lm l24" style="background:#2E9E4F">2</span>
+          <span class="lm l24 dark-text" style="background:#E8A93A">3</span>
+          <span class="lm" style="background:#8A4FB0">4</span>
+          <span class="lm l16" style="background:#C2335B">5</span>
+          <span style="display:inline-flex;gap:4px;align-items:center"><span class="lm" style="background:#2E9E4F">2</span><span class="tag express">급행</span></span>
+          <span class="lm building" style="background:#2F5BB7">6</span>
+          <span class="lm plan" style="color:#2E9E4F">7</span>
+        </div>
+        <p class="label" style="margin-top:8px">24 · 20 · 16 크기, 급행 태그, 공사 중(주의 점선), 기획안(빈 면 점선)</p>
+      </div>
+      <div>
+        <p class="section-label">상태 태그</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="tag ok"><i>●</i>운행</span>
+          <span class="tag build"><i></i>공사</span>
+          <span class="tag plan"><i>◌</i>기획</span>
+          <span class="tag"><i>‖</i>중지</span>
+          <span class="tag bad"><i>✕</i>연결 불가</span>
+        </div>
+        <p class="section-label" style="margin-top:16px">공사 빗금</p>
+        <div class="hazard-swatch" role="img" aria-label="공사 빗금 패턴"></div>
+      </div>
+      <div>
+        <p class="section-label">버튼</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary">건설 확정<span class="cost">1,240억</span></button>
+          <button class="btn secondary">수요 원인</button>
+          <button class="btn quiet">이름 변경</button>
+          <button class="btn danger">차량기지 철거</button>
+        </div>
+      </div>
+      <div>
+        <p class="section-label">입력 · 세그먼트</p>
+        <label class="field"><span class="label">노선 이름</span><input value="2호선 순환"></label>
+        <div style="margin-top:12px" class="seg" role="group" aria-label="배속">
+          <button aria-pressed="false">‖</button><button aria-pressed="true">1×</button><button aria-pressed="false">2×</button><button aria-pressed="false">4×</button>
+        </div>
+      </div>
+      <div style="grid-column:1/-1">
+        <p class="section-label">지도 기호와 상태</p>
+        <svg id="legend" viewBox="0 0 1040 120" width="100%" role="img" aria-label="지도 기호 범례"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>3. 색상 토큰 · 현재 테마</h2>
+    <div class="body token-cols" id="tokens"></div>
+  </section>
+</main>
+
+<script>
+const LINES = {
+  1: { color: '#2F5BB7', pts: [[120,96],[250,140],[380,172],[500,172],[620,202],[770,214]] },
+  2: { color: '#2E9E4F', pts: [[330,58],[380,172],[420,252],[520,300],[650,322]] },
+  3: { color: '#E8A93A', pts: [[220,330],[330,302],[420,252],[500,172],[570,92]] },
+};
+const STATIONS = [
+  { p:[120,96], n:'서원', l:[1] }, { p:[250,140], n:'북문', l:[1] }, { p:[380,172], n:'중앙', l:[1,2] },
+  { p:[500,172], n:'동문', l:[1,3] }, { p:[620,202], n:'강변', l:[1] }, { p:[770,214], n:'남항', l:[1] },
+  { p:[330,58], n:'북산', l:[2] }, { p:[420,252], n:'시청', l:[2,3] }, { p:[520,300], n:'남산', l:[2] },
+  { p:[650,322], n:'포구', l:[2] }, { p:[220,330], n:'서강', l:[3] }, { p:[330,302], n:'한내', l:[3] },
+  { p:[570,92], n:'고개', l:[3] },
+];
+const path = pts => 'M' + pts.map(p => p.join(' ')).join(' L');
+const ICON = {
+  station:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="10" cy="10" r="6"/></svg>',
+  transfer:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="6" width="16" height="8" rx="4"/></svg>',
+  line:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M3 15 L9 9 L17 9"/></svg>',
+  extend:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M3 10 H11 M11 10 l0 0"/><path d="M13 10 H17" stroke-dasharray="2 2"/><circle cx="11" cy="10" r="2"/></svg>',
+  depot:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter"><path d="M3 17 V8 L10 3 L17 8 V17 Z M7 17 V11 H13 V17"/></svg>',
+  train:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="5" y="3" width="10" height="11" rx="1"/><path d="M5 9 H15 M7 17 L8.5 14 M13 17 L11.5 14"/></svg>',
+  explore:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M5 3 L5 15 L8 12 L11 17 L13 16 L10 11 L14 11 Z"/></svg>',
+  chart:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M3 17 H17 M6 14 V9 M10 14 V5 M14 14 V11"/></svg>',
+  demolish:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M4 6 H16 M8 6 V3 H12 V6 M6 6 L7 17 H13 L14 6"/></svg>',
+  close:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M5 5 L15 15 M15 5 L5 15"/></svg>',
+  plus:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M10 4 V16 M4 10 H16"/></svg>',
+  minus:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 10 H16"/></svg>',
+  layers:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter"><path d="M10 3 L18 7 L10 11 L2 7 Z M2 11 L10 15 L18 11"/></svg>',
+  undo:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M7 5 L3 9 L7 13 M3 9 H12 A4 4 0 0 1 12 17 H9"/></svg>',
+};
+
+function mapBase() {
+  return `
+  <defs>
+    <pattern id="hz" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="var(--signal-caution)"/><rect width="4" height="8" fill="#15171A"/>
+    </pattern>
+  </defs>
+  <rect width="844" height="390" fill="var(--map-ground)"/>
+  <path d="M150 20 C220 10 300 30 290 80 C280 120 200 118 160 96 C120 74 110 30 150 20Z" fill="var(--map-green)"/>
+  <path d="M640 40 C700 30 760 60 740 110 C720 150 650 140 630 100 C615 70 610 48 640 40Z" fill="var(--map-green)"/>
+  <path d="M60 230 C110 210 160 220 150 260 C140 290 80 290 60 270Z" fill="var(--map-green)"/>
+  <path d="M-10 268 C100 236 210 296 350 276 S 590 214 860 250" fill="none" stroke="var(--map-water)" stroke-width="28"/>
+  <g stroke="var(--map-road)" stroke-width="5" fill="none" stroke-linecap="round">
+    <path d="M0 150 C200 160 420 120 844 150"/><path d="M300 0 C320 120 290 260 340 390"/>
+    <path d="M520 0 C540 140 600 260 580 390"/><path d="M0 340 C240 360 600 350 844 300"/>
+  </g>
+  <g stroke="var(--map-road)" stroke-width="2.5" fill="none">
+    <path d="M100 0 L180 390"/><path d="M700 0 L660 390"/><path d="M0 60 L844 100"/><path d="M420 150 L460 390"/>
+  </g>
+  <g fill="var(--map-label)" font-size="10" font-weight="600" font-family="var(--font)">
+    <text x="182" y="58">북산 공원</text><text x="660" y="78">동산</text><text x="150" y="252" letter-spacing="2">한 내 천</text>
+    <text x="700" y="268">남항동</text><text x="30" y="190">서원구</text><text x="440" y="120">중앙구</text>
+  </g>`;
+}
+function routeSvg(id, { dim = false, selected = false, building = false } = {}) {
+  const L = LINES[id], d = path(L.pts);
+  const op = dim ? ' opacity=".28"' : '';
+  let s = `<g${op} fill="none" stroke-linejoin="round" stroke-linecap="round">`;
+  if (selected) s += `<path d="${d}" stroke="var(--text-1)" stroke-width="15"/><path d="${d}" stroke="var(--map-ground)" stroke-width="11"/>`;
+  else s += `<path d="${d}" stroke="var(--map-ground)" stroke-width="9"/>`;
+  if (building) s += `<path d="${d}" stroke="url(#hz)" stroke-width="9"/>`;
+  s += `<path d="${d}" stroke="${L.color}" stroke-width="5"/></g>`;
+  return s;
+}
+function stationSvg(st, { dim = false, label = true, bold = false } = {}) {
+  const [x, y] = st.p, tr = st.l.length > 1;
+  const op = dim ? ' opacity=".35"' : '';
+  const sym = tr
+    ? `<circle cx="${x}" cy="${y}" r="7.5" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2.5"/>`
+    : `<circle cx="${x}" cy="${y}" r="5" fill="var(--surface-0)" stroke="${LINES[st.l[0]].color}" stroke-width="2.5"/>`;
+  const lab = label ? `<text x="${x + 10}" y="${y - 9}" font-size="11" font-weight="${bold ? 800 : 700}" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" stroke-linejoin="round" font-family="var(--font)">${st.n}</text>` : '';
+  return `<g${op}>${sym}${lab}</g>`;
+}
+function selectionMark(x, y, r) {
+  return `<circle cx="${x}" cy="${y}" r="${r + 2}" fill="none" stroke="var(--map-ground)" stroke-width="3"/>
+    <circle cx="${x}" cy="${y}" r="${r + 4.5}" fill="none" stroke="var(--text-1)" stroke-width="3"/>
+    <path d="M${x - 7} ${y - r - 22} H${x + 7} L${x} ${y - r - 9} Z" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="1.5"/>`;
+}
+const rail = (mode, tools, extra = '') => `
+  <nav class="rail ${mode === '기획' ? 'planning' : ''}" aria-label="모드와 도구">
+    <div class="modes" role="group" aria-label="모드">${['관리','기획','공사'].map(m => `<button aria-pressed="${m === mode}">${m}</button>`).join('')}</div>
+    ${tools.map(t => `<button class="tool ${t.cls || ''}" aria-pressed="${!!t.on}">${ICON[t.i]}${t.n}</button>`).join('')}
+  </nav>${extra}`;
+const status = `
+  <div class="status">
+    <div class="cell"><span class="k">자금</span><span class="metric">12,450억</span></div>
+    <div class="cell"><span class="k">일 손익</span><span class="pos">▲ +38.2억</span></div>
+    <div class="cell alert-cell">△ 경보 2</div>
+    <div class="cell spacer"></div>
+    <div class="cell"><span class="k">2026.10.03</span><span class="metric">07:40</span></div>
+    <div class="seg" role="group" aria-label="배속"><button aria-pressed="false" aria-label="일시정지">‖</button><button aria-pressed="false">1×</button><button aria-pressed="true">2×</button><button aria-pressed="false">4×</button></div>
+  </div>`;
+const mapctl = `<div class="mapctl"><button aria-label="확대">${ICON.plus}</button><button aria-label="축소">${ICON.minus}</button><button aria-label="레이어">${ICON.layers}</button></div>`;
+const lm = (id, size = '') => `<span class="lm ${size} ${id == 3 ? 'dark-text' : ''}" style="background:${LINES[id].color}">${id}</span>`;
+
+/* ----- Frame A: explore ----- */
+document.getElementById('f-explore').innerHTML = `
+  <svg class="map" viewBox="0 0 844 390">${mapBase()}
+    ${[1,3,2].map(i => routeSvg(i)).join('')}
+    ${STATIONS.map(s => stationSvg(s, { bold: s.n === '중앙' })).join('')}
+    ${selectionMark(380, 172, 7.5)}
+  </svg>
+  ${status}
+  ${rail('관리', [{ i:'explore', n:'탐색', on:true }, { i:'line', n:'노선 운영' }, { i:'train', n:'차량' }, { i:'chart', n:'분석' }])}
+  <div class="banner"><span class="mk sign"></span>관리 · 탐색</div>
+  ${mapctl}
+  <aside class="inspector" aria-label="선택: 중앙역">
+    <div class="band"></div>
+    <header><span class="ico">${ICON.transfer}</span><span class="name">중앙</span>${lm(1)}${lm(2)}<span class="tag ok"><i>●</i>운행</span>
+      <button class="close" aria-label="선택 해제">${ICON.close}</button></header>
+    <div class="scroll">
+      <div class="sec">
+        <div class="row"><span>일 승객</span><span class="v big">48,200명</span></div>
+        <div class="row bar"><span>대기 승객</span><span class="meter"><span style="width:62%"></span></span><span class="v">1,240명</span></div>
+        <div class="row"><span>환승 1 ↔ 2</span><span class="v">도보 2분</span></div>
+      </div>
+      <div class="sec"><h3>연결 노선</h3>
+        <div class="row"><span style="display:flex;gap:8px;align-items:center">${lm(1,'l16')}1호선 서원–남항</span><span class="v">배차 5분</span></div>
+        <div class="row"><span style="display:flex;gap:8px;align-items:center">${lm(2,'l16')}2호선 북산–포구</span><span class="v">배차 4분</span></div>
+      </div>
+    </div>
+    <div class="actions"><button class="btn compact secondary">수요 원인</button><button class="btn compact quiet">이름 변경</button><button class="btn compact quiet push" style="color:var(--signal-danger)">${ICON.demolish}철거…</button></div>
+  </aside>`;
+
+/* ----- Frame B: build review ----- */
+const draft = [[380,172],[290,200],[220,250],[170,310]];
+const seg = (a, b, stroke, extra='') => `<path d="M${a.join(' ')} L${b.join(' ')}" stroke="${stroke}" stroke-width="2.5" stroke-dasharray="7 5" fill="none" ${extra}/>`;
+const dim = (a, b, t, dx = 0, dy = -12) => { const x = (a[0]+b[0])/2 + dx, y = (a[1]+b[1])/2 + dy;
+  return `<text x="${x}" y="${y}" font-size="10" font-weight="700" text-anchor="middle" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" font-family="var(--font)">${t}</text>`; };
+document.getElementById('f-build').innerHTML = `
+  <svg class="map" viewBox="0 0 844 390">${mapBase()}
+    <g opacity=".55">${[1,3,2].map(i => routeSvg(i)).join('')}${STATIONS.map(s => stationSvg(s, { label: s.n === '중앙' })).join('')}</g>
+    <g fill="none" stroke-linecap="square">
+      ${seg(draft[0], draft[1], 'var(--text-1)')}
+      ${seg(draft[1], draft[2], 'var(--text-1)')}
+      <path d="M${draft[2].join(' ')} L${draft[3].join(' ')}" stroke="var(--signal-caution)" stroke-width="6" opacity=".9"/>
+      ${seg(draft[2], draft[3], 'var(--text-1)')}
+    </g>
+    ${dim(draft[0], draft[1], '2.2 km', 0, 16)}${dim(draft[1], draft[2], '2.0 km', 16, 8)}
+    <g transform="translate(${(draft[2][0]+draft[3][0])/2 - 16} ${(draft[2][1]+draft[3][1])/2 - 4})">
+      <path d="M0 -9 L9 7 H-9 Z" fill="var(--signal-caution)" stroke="#15171A" stroke-width="1.5"/>
+      <text y="5" text-anchor="middle" font-size="10" font-weight="900" fill="#15171A">!</text>
+      <text x="-13" y="4" text-anchor="end" font-size="10" font-weight="800" fill="var(--signal-caution-text)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" font-family="var(--font)">교량 +180억</text>
+    </g>
+    <circle cx="380" cy="172" r="13" fill="none" stroke="var(--text-1)" stroke-width="2.5"/>
+    ${draft.slice(1).map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2" stroke-dasharray="3 2"/><rect x="${x-4}" y="${y-4}" width="8" height="8" fill="var(--text-1)" transform="translate(9 9)"/>`).join('')}
+    <circle cx="170" cy="310" r="22" fill="none" stroke="var(--text-1)" stroke-width="1" stroke-dasharray="2 3"/>
+  </svg>
+  ${status}
+  <nav class="rail compact" aria-label="공사 모드 도구 (정밀 작업 중 축소)">
+    <div class="mode-now"><span class="mk"></span>공사</div>
+    ${[{ i:'line', n:'노선', on:true }, { i:'extend', n:'연장' }, { i:'station', n:'역' }, { i:'depot', n:'기지' }, { i:'demolish', n:'철거', cls:'destructive' }].map(t => `<button class="tool ${t.cls || ''}" aria-pressed="${!!t.on}">${ICON[t.i]}${t.n}</button>`).join('')}
+  </nav>
+  <div class="banner" style="left:300px"><span class="mk build"></span>공사 · 노선 건설</div>
+  <div class="hint" style="left:300px">다음 역 위치를 탭하세요 · 두 손가락으로 지도 이동</div>
+  <div class="tip" style="left:188px;top:300px">총 6.2 km · 1,240억</div>
+  ${mapctl}
+  <div class="draftctl"><button class="btn compact quiet">${ICON.undo}되돌리기</button><button class="btn compact quiet">${ICON.close}취소</button></div>
+  <aside class="inspector" aria-label="새 노선 검토" style="width:292px">
+    <div class="band" style="background:var(--hazard);--hazard-dark:#15171A"></div>
+    <header><span class="ico">${ICON.line}</span><span class="name">새 노선 검토</span><span class="tag build"><i></i>공사</span></header>
+    <div class="scroll">
+      <div class="sec">
+        <div class="row"><span>총 길이</span><span class="v">6.2 km</span></div>
+        <div class="row"><span>역</span><span class="v">신규 3 · 환승 1 (중앙)</span></div>
+        <div class="row"><span>예상 기간</span><span class="v">180일</span></div>
+        <div class="row"><span>건설비</span><span class="v big">1,240억</span></div>
+        <div class="row"><span>잔액</span><span class="v">12,450 → 11,210억</span></div>
+      </div>
+      <div class="sec"><div class="msg"><b>△</b><span><b>교량</b> 한내천 횡단 +180억 · +30일</span></div></div>
+    </div>
+    <div class="actions"><button class="btn primary push">건설 확정<span class="cost">1,240억</span></button></div>
+  </aside>`;
+
+/* ----- Frame C: line inspector ----- */
+document.getElementById('f-line').innerHTML = `
+  <svg class="map" viewBox="0 0 844 390">${mapBase()}
+    ${routeSvg(1, { dim:true })}${routeSvg(3, { dim:true })}${routeSvg(2, { selected:true })}
+    ${STATIONS.map(s => stationSvg(s, { dim: !s.l.includes(2), label: s.l.includes(2), bold: s.l.includes(2) })).join('')}
+    <path d="M${400 - 7} ${212 - 22} H${400 + 7} L400 ${212 - 9} Z" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="1.5"/>
+  </svg>
+  ${status}
+  ${rail('관리', [{ i:'explore', n:'탐색', on:true }, { i:'line', n:'노선 운영' }, { i:'train', n:'차량' }, { i:'chart', n:'분석' }])}
+  <div class="banner"><span class="mk sign"></span>관리 · 탐색</div>
+  <aside class="inspector wide" aria-label="선택: 2호선" style="max-height:330px">
+    <div class="band" style="background:${LINES[2].color}"></div>
+    <header>${lm(2,'l24')}<span class="name">2호선</span><span class="tag ok"><i>●</i>운행</span><span class="tag express">급행</span>
+      <button class="close" aria-label="선택 해제">${ICON.close}</button></header>
+    <div class="scroll">
+      <div class="sec"><h3>운영</h3>
+        <div class="row"><span>배차 간격</span><span class="v">4분</span></div>
+        <div class="row bar"><span>최대 혼잡</span><span class="meter"><span class="over" style="width:100%"></span></span><span class="v bad">✕ 132%</span></div>
+        <div class="row"><span>평균 대기</span><span class="v">3.1분</span></div>
+        <div class="row"><span>차량</span><span class="v">18편성 · 6량</span></div>
+      </div>
+      <div class="sec"><h3>수익 · 일</h3>
+        <div class="row"><span>운임 수입</span><span class="v ok">+15.5억</span></div>
+        <div class="row"><span>운영·유지비</span><span class="v">−3.1억</span></div>
+      </div>
+    </div>
+    <div class="actions"><button class="btn compact primary">운영 조정</button><button class="btn compact secondary">연장</button><button class="btn compact quiet push">더보기</button></div>
+  </aside>`;
+
+/* ----- Legend ----- */
+(function legend() {
+  const items = [];
+  const cell = (x, svg, t) => items.push(`<g transform="translate(${x} 0)">${svg}<text x="40" y="104" text-anchor="middle" font-size="11" font-weight="600" fill="var(--text-2)" font-family="var(--font)">${t}</text></g>`);
+  cell(0, `<circle cx="40" cy="50" r="6" fill="var(--surface-0)" stroke="#2F5BB7" stroke-width="2.5"/>`, '일반역');
+  cell(90, `<circle cx="40" cy="50" r="8.5" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2.5"/>`, '환승역');
+  cell(180, `<circle cx="40" cy="50" r="6" fill="var(--surface-0)" stroke="#2F5BB7" stroke-width="2.5"/><circle cx="40" cy="50" r="2" fill="var(--text-1)"/>`, '급행 정차');
+  cell(270, `<path d="M8 50 H40" stroke="#2F5BB7" stroke-width="5"/><path d="M40 40 V60" stroke="#2F5BB7" stroke-width="5"/>`, '종착');
+  cell(360, `<rect x="30" y="40" width="20" height="20" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2"/><path d="M34 56 V48 L40 44 L46 48 V56" fill="none" stroke="var(--text-1)" stroke-width="1.5"/>`, '차량기지');
+  cell(450, `<path d="M4 50 H76" stroke="var(--map-ground)" stroke-width="9"/><path d="M4 50 H76" stroke="url(#hz2)" stroke-width="9"/><path d="M4 50 H76" stroke="#2E9E4F" stroke-width="5"/>`, '공사 중');
+  cell(540, `<path d="M4 50 H76" stroke="var(--signal-info)" stroke-width="3" stroke-dasharray="8 5"/><circle cx="40" cy="50" r="5" fill="var(--map-ground)" stroke="var(--signal-info)" stroke-width="2"/>`, '기획안');
+  cell(630, `<path d="M4 50 H76" stroke="var(--text-1)" stroke-width="2.5" stroke-dasharray="7 5"/><rect x="36" y="46" width="8" height="8" fill="var(--text-1)"/>`, '작도 draft');
+  cell(720, `<circle cx="40" cy="50" r="7.5" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2.5"/><circle cx="40" cy="50" r="12" fill="none" stroke="var(--map-ground)" stroke-width="3"/><circle cx="40" cy="50" r="14" fill="none" stroke="var(--text-1)" stroke-width="3"/><path d="M33 18 H47 L40 31 Z" fill="var(--text-1)"/>`, '선택');
+  cell(810, `<path d="M18 50 H62" stroke="var(--signal-caution)" stroke-width="6"/><path d="M40 38 L49 54 H31 Z" fill="var(--signal-caution)" stroke="#15171A" stroke-width="1.5"/><text x="40" y="52" text-anchor="middle" font-size="10" font-weight="900" fill="#15171A">!</text>`, '경고 구간');
+  cell(900, `<path d="M32 42 L48 58 M48 42 L32 58" stroke="var(--signal-danger)" stroke-width="3.5"/>`, '실행 불가');
+  const el = document.getElementById('legend');
+  el.innerHTML = `<defs><pattern id="hz2" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--signal-caution)"/><rect width="4" height="8" fill="#15171A"/></pattern></defs>
+    <rect width="1040" height="120" fill="var(--map-ground)"/>${items.join('')}`;
+})();
+
+/* ----- Token table ----- */
+const TOKEN_GROUPS = {
+  '지도 층': ['--map-ground','--map-water','--map-green','--map-road','--map-label'],
+  'UI 층': ['--surface-0','--surface-1','--surface-2','--text-1','--text-2','--text-3','--rule','--edge','--invert-bg','--invert-fg'],
+  '신호 색': ['--signal-caution','--signal-caution-text','--signal-danger','--signal-info','--signal-ok','--focus'],
+};
+function renderTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  document.getElementById('tokens').innerHTML = Object.entries(TOKEN_GROUPS).map(([g, list]) => `
+    <div><p class="section-label">${g}</p><table class="tokens"><tbody>
+      ${list.map(t => `<tr><td style="width:40px"><div class="chip" style="background:var(${t})"></div></td><td>${t}</td><td class="hex">${cs.getPropertyValue(t).trim()}</td></tr>`).join('')}
+    </tbody></table></div>`).join('');
+}
+
+/* ----- Theme + scaling ----- */
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.querySelectorAll('[data-theme-btn]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeBtn === t)));
+  try { localStorage.setItem('dg-proto-theme', t); } catch (e) {}
+  renderTokens();
+}
+document.querySelectorAll('[data-theme-btn]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeBtn)));
+let saved = 'paper'; try { saved = localStorage.getItem('dg-proto-theme') || 'paper'; } catch (e) {}
+setTheme(saved);
+function scaleFrames() {
+  document.querySelectorAll('.frame-wrap').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 844})`; });
+}
+new ResizeObserver(scaleFrames).observe(document.body);
+scaleFrames();
+</script>
+</body>
+</html>

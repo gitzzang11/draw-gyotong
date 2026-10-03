@@ -1,0 +1,139 @@
+/*
+ * Draw Gyotong 디자인 토큰
+ * 기준: docs/design/DESIGN_SYSTEM.md §3–§6, §13
+ *
+ * 색 값은 문서의 토큰 표와 일치해야 한다(tests/designTokens.test.ts가 검증).
+ * 컴포넌트는 테마별 색을 직접 쓰지 않고 이 토큰만 참조한다.
+ */
+
+/* ===== 종이 (기본) ===== */
+:root,
+:root[data-theme="paper"] {
+  /* 지도 층 */
+  --map-ground: #ECE9E1;
+  --map-water: #C6D3D9;
+  --map-green: #DDE2D2;
+  --map-road: #FFFFFF;
+  --map-label: #7A7D80;
+
+  /* UI 층 */
+  --surface-0: #FBFAF6;
+  --surface-1: #F2F0E9;
+  --surface-2: #E5E2D9;
+  --text-1: #15171A;
+  --text-2: #454A50;
+  --text-3: #6B7076;
+  --rule: #D3CFC4;
+  --edge: #15171A;
+  --invert-bg: #15171A;
+  --invert-fg: #FBFAF6;
+
+  /* 신호 색 */
+  --signal-caution: #F2BE00;
+  --signal-caution-text: #7A5C00;
+  --signal-danger: #C8242C;
+  --signal-info: #1D5FC2;
+  --signal-ok: #1D7F47;
+  --focus: #1D5FC2;
+
+  /* 파생 */
+  --hazard-dark: #15171A;
+  --scrim: rgba(0, 0, 0, 0.32);
+  --theme-color-scheme: light;
+}
+
+/* ===== 먹 ===== */
+:root[data-theme="ink"] {
+  --map-ground: #17191C;
+  --map-water: #1F2B33;
+  --map-green: #1C221D;
+  --map-road: #2A2E33;
+  --map-label: #7E8186;
+
+  --surface-0: #121416;
+  --surface-1: #1B1E21;
+  --surface-2: #262A2E;
+  --text-1: #ECEAE3;
+  --text-2: #B4B1A9;
+  --text-3: #8C8981;
+  --rule: #33373C;
+  --edge: #4C5258;
+  --invert-bg: #ECEAE3;
+  --invert-fg: #121416;
+
+  --signal-caution: #F2BE00;
+  --signal-caution-text: #F2C94C;
+  --signal-danger: #FF5C61;
+  --signal-info: #6AA3FF;
+  --signal-ok: #45C27F;
+  --focus: #6AA3FF;
+
+  --hazard-dark: #121416;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --theme-color-scheme: dark;
+}
+
+/* ===== 테마 공통 ===== */
+:root {
+  /* 노선 색 위 자동 대비 글자 (§4.4) */
+  --on-line-light: #FFFFFF;
+  --on-line-dark: #15171A;
+
+  /* 공사 빗금 (§7.3) */
+  --hazard-pattern: repeating-linear-gradient(45deg, var(--signal-caution) 0 6px, var(--hazard-dark) 6px 12px);
+
+  /* 타이포그래피 (§5) */
+  --font-ui: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif;
+  --type-display: 800 20px/26px var(--font-ui);
+  --type-sign: 800 17px/22px var(--font-ui);
+  --type-section: 700 12px/16px var(--font-ui);
+  --type-body: 500 13px/18px var(--font-ui);
+  --type-label: 600 11px/14px var(--font-ui);
+  --type-micro: 600 10px/12px var(--font-ui);
+  --type-metric: 700 16px/20px var(--font-ui);
+
+  /* 간격 (§6) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --edge-inset-top: max(12px, env(safe-area-inset-top));
+  --edge-inset-right: max(12px, env(safe-area-inset-right));
+  --edge-inset-bottom: max(12px, env(safe-area-inset-bottom));
+  --edge-inset-left: max(12px, env(safe-area-inset-left));
+
+  /* 형태 (§6) */
+  --radius: 2px;
+  --line-hair: 1px;
+  --line-strong: 1.5px;
+  --line-emphasis: 2px;
+  --band: 4px;
+  --overlay-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+
+  /* 크기 */
+  --control-height: 40px;
+  --control-height-compact: 36px;
+  --touch-min: 44px;
+  --row-min: 32px;
+  --rail-width-compact: 56px;
+
+  /* 모션 (§13) */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-panel: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-panel: 0ms;
+  }
+}
+
+/* 앱 설정의 모션 감소(body.reduced-motion)도 같은 효과를 낸다. */
+body.reduced-motion {
+  --dur-fast: 0ms;
+  --dur-panel: 0ms;
+}

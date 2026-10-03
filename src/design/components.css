@@ -1,0 +1,574 @@
+/*
+ * Draw Gyotong 기본 컴포넌트
+ * 기준: docs/design/DESIGN_SYSTEM.md §7, §9, §10, §12
+ *
+ * - 모든 클래스는 `dg-` 접두사를 쓴다. 기존 UI CSS와 섞이지 않게 하기 위함이다.
+ * - 요소 선택자(button, input 등)에 전역 스타일을 주지 않는다.
+ * - 색은 tokens.css의 토큰만 참조한다.
+ */
+
+/* ===== 공통 ===== */
+.dg-surface {
+  color-scheme: var(--theme-color-scheme);
+  background: var(--surface-0);
+  color: var(--text-1);
+  font: var(--type-body);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dg-surface :focus-visible,
+.dg-focusable:focus-visible {
+  outline: var(--line-emphasis) solid var(--focus);
+  outline-offset: 2px;
+}
+
+.dg-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dg-text-display { font: var(--type-display); }
+.dg-text-sign { font: var(--type-sign); }
+.dg-text-section { font: var(--type-section); color: var(--text-2); }
+.dg-text-body { font: var(--type-body); }
+.dg-text-label { font: var(--type-label); color: var(--text-2); }
+.dg-text-micro { font: var(--type-micro); color: var(--text-2); }
+.dg-text-metric { font: var(--type-metric); font-variant-numeric: tabular-nums; }
+
+/* ===== Buttons (§12) ===== */
+.dg-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: var(--line-strong) solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-1);
+  font: var(--type-body);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+/* compact 버튼도 44px 터치 영역을 보장한다. */
+.dg-btn--compact { min-height: var(--control-height-compact); }
+.dg-btn--compact::after {
+  content: "";
+  position: absolute;
+  inset: calc((var(--control-height-compact) - var(--touch-min)) / 2) 0;
+}
+
+.dg-btn svg { width: 18px; height: 18px; flex: none; }
+
+.dg-btn--primary { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
+.dg-btn--secondary { background: var(--surface-0); border-color: var(--text-1); }
+.dg-btn--quiet:hover,
+.dg-btn--quiet:active,
+.dg-btn--secondary:active { background: var(--surface-2); }
+.dg-btn--danger { background: var(--signal-danger); color: #FFFFFF; }
+.dg-btn--danger-quiet { color: var(--signal-danger); }
+
+.dg-btn:disabled,
+.dg-btn[aria-disabled="true"] {
+  background: var(--surface-1);
+  border-color: var(--rule);
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+/* 비용 표기: `건설 확정 | 1,240억` */
+.dg-btn__cost {
+  margin-left: 2px;
+  padding-left: 10px;
+  border-left: var(--line-hair) solid currentColor;
+  font: var(--type-metric);
+  font-size: 15px;
+}
+
+/* ===== Segmented control (§12 Inputs) ===== */
+.dg-seg {
+  display: inline-flex;
+  border: var(--line-strong) solid var(--text-1);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.dg-seg__item {
+  min-width: var(--touch-min);
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-right: var(--line-strong) solid var(--text-1);
+  background: var(--surface-0);
+  color: var(--text-1);
+  font: var(--type-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+.dg-seg__item:last-child { border-right: 0; }
+.dg-seg__item[aria-pressed="true"],
+.dg-seg__item[aria-checked="true"] {
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+}
+
+/* ===== Line mark (§7.1) ===== */
+.dg-line-mark {
+  --line-color: var(--text-1);
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius);
+  background: var(--line-color);
+  color: var(--on-line-light);
+  font: 800 12px/1 var(--font-ui);
+}
+.dg-line-mark--on-dark { color: var(--on-line-dark); }
+.dg-line-mark--lg { width: 24px; height: 24px; font-size: 14px; }
+.dg-line-mark--sm { width: 16px; height: 16px; font-size: 10px; }
+.dg-line-mark--plan {
+  background: transparent;
+  border: var(--line-emphasis) dashed var(--line-color);
+  color: var(--text-1);
+}
+.dg-line-mark--building {
+  outline: var(--line-emphasis) dashed var(--signal-caution);
+  outline-offset: 1px;
+}
+
+/* ===== Status tag (§7.2) ===== */
+.dg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 20px;
+  padding: 0 6px;
+  border: var(--line-hair) solid var(--text-2);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-1);
+  font: var(--type-label);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.dg-tag__icon { font-style: normal; line-height: 1; }
+.dg-tag--ok { border-color: var(--signal-ok); }
+.dg-tag--ok .dg-tag__icon { color: var(--signal-ok); }
+.dg-tag--build { background: var(--signal-caution); border-color: var(--signal-caution); color: var(--on-line-dark); }
+.dg-tag--build .dg-tag__icon {
+  --hazard-dark: #15171A;
+  width: 10px;
+  height: 10px;
+  background: var(--hazard-pattern);
+}
+.dg-tag--plan { border-style: dashed; border-color: var(--signal-info); color: var(--signal-info); }
+.dg-tag--paused { border-color: var(--text-2); color: var(--text-2); }
+.dg-tag--error { border-color: var(--signal-danger); color: var(--signal-danger); }
+.dg-tag--express { background: var(--invert-bg); border-color: var(--invert-bg); color: var(--invert-fg); }
+
+/* ===== Hazard (§7.3) ===== */
+.dg-hazard { background: var(--hazard-pattern); }
+
+/* ===== Panel / inspector (§12) ===== */
+.dg-panel {
+  --panel-band: var(--text-1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  color-scheme: var(--theme-color-scheme);
+  background: var(--surface-0);
+  color: var(--text-1);
+  border: var(--line-hair) solid var(--edge);
+  border-top: var(--band) solid var(--panel-band);
+  border-radius: 0 0 var(--radius) var(--radius);
+  font: var(--type-body);
+  font-variant-numeric: tabular-nums;
+}
+.dg-panel--hazard { position: relative; border-top-color: transparent; }
+.dg-panel--hazard::before {
+  --hazard-dark: #15171A;
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--band));
+  left: calc(-1 * var(--line-hair));
+  right: calc(-1 * var(--line-hair));
+  height: var(--band);
+  background: var(--hazard-pattern);
+}
+
+.dg-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border-bottom: var(--line-hair) solid var(--rule);
+  flex: none;
+}
+.dg-panel__icon { width: 18px; height: 18px; flex: none; }
+.dg-panel__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--type-sign);
+}
+.dg-panel__header-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-1); }
+
+.dg-panel__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+.dg-panel__section { padding: var(--space-2) var(--space-3); border-bottom: var(--line-hair) solid var(--rule); }
+.dg-panel__section:last-child { border-bottom: 0; }
+.dg-panel__section-label { margin: 0 0 2px; font: var(--type-section); color: var(--text-2); }
+
+.dg-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: var(--line-emphasis) solid var(--text-1);
+  background: var(--surface-0);
+  flex: none;
+}
+.dg-panel__actions-push { margin-left: auto; }
+
+/* 기획 모드: 구획선을 점선으로 (§8) */
+.dg-planning .dg-panel__section,
+.dg-planning .dg-panel__header { border-bottom-style: dashed; }
+
+/* ===== Icon button (닫기, 줌 등) ===== */
+.dg-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.dg-icon-btn:active { background: var(--surface-2); }
+.dg-icon-btn svg { width: 16px; height: 16px; }
+
+/* ===== Data rows (§12) ===== */
+.dg-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+}
+.dg-row--meter { grid-template-columns: minmax(0, 1fr) 72px auto; }
+.dg-row__label { color: var(--text-1); }
+.dg-row__value { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dg-row__value--metric { font: var(--type-metric); }
+.dg-row__value--ok { color: var(--signal-ok); }
+.dg-row__value--caution { color: var(--signal-caution-text); }
+.dg-row__value--danger { color: var(--signal-danger); }
+
+.dg-meter { position: relative; height: 6px; background: var(--surface-2); }
+.dg-meter__fill { position: absolute; inset: 0 auto 0 0; background: var(--text-1); }
+.dg-meter__fill--over { background: var(--signal-danger); }
+
+/* ===== Inputs (§12) ===== */
+.dg-field { display: grid; gap: var(--space-1); }
+.dg-field__label { font: var(--type-label); color: var(--text-2); }
+.dg-input {
+  min-height: var(--control-height);
+  padding: 0 10px;
+  border: 0;
+  border-bottom: var(--line-strong) solid var(--text-1);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface-1);
+  color: var(--text-1);
+  font: var(--type-body);
+  color-scheme: var(--theme-color-scheme);
+}
+.dg-input:focus-visible { outline: var(--line-emphasis) solid var(--focus); outline-offset: 2px; }
+.dg-field__error { font: var(--type-label); color: var(--signal-danger); }
+
+/* ===== Status strip (§9) ===== */
+.dg-status-strip {
+  display: flex;
+  align-items: stretch;
+  min-height: 36px;
+  padding: 0 var(--edge-inset-right) 0 var(--edge-inset-left);
+  background: var(--surface-0);
+  color: var(--text-1);
+  border-bottom: var(--line-hair) solid var(--edge);
+  font: var(--type-body);
+  font-variant-numeric: tabular-nums;
+}
+.dg-status-strip__cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-3);
+  border-right: var(--line-hair) solid var(--rule);
+  white-space: nowrap;
+}
+.dg-status-strip__cell:first-child { padding-left: 0; }
+.dg-status-strip__cell:last-child { border-right: 0; padding-right: 0; }
+.dg-status-strip__spacer { flex: 1; }
+.dg-status-strip__key { font: var(--type-label); color: var(--text-2); }
+.dg-status-strip__metric { font: var(--type-metric); font-size: 15px; }
+
+/* ===== Mode / tool rail (§9, §10) ===== */
+.dg-rail {
+  width: 128px;
+  background: var(--surface-0);
+  color: var(--text-1);
+  border: var(--line-hair) solid var(--edge);
+  font: var(--type-body);
+}
+.dg-rail--planning,
+.dg-rail--planning .dg-rail__modes,
+.dg-rail--planning .dg-tool { border-style: dashed; }
+
+.dg-rail__modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: var(--line-hair) solid var(--edge); }
+.dg-rail__mode {
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-right: var(--line-hair) solid var(--rule);
+  background: var(--surface-0);
+  color: var(--text-1);
+  font: var(--type-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+.dg-rail__mode:last-child { border-right: 0; }
+.dg-rail__mode[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+
+.dg-tool {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 10px 0 var(--space-3);
+  border: 0;
+  border-bottom: var(--line-hair) solid var(--rule);
+  background: transparent;
+  color: var(--text-1);
+  font: var(--type-body);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.dg-tool:last-child { border-bottom: 0; }
+.dg-tool svg { width: 16px; height: 16px; flex: none; }
+.dg-tool[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
+.dg-tool[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--band);
+  background: var(--invert-fg);
+}
+.dg-tool--destructive { color: var(--signal-danger); }
+.dg-tool:disabled { color: var(--text-3); cursor: not-allowed; }
+
+/* 정밀 작업 중 compact rail (§9) */
+.dg-rail--compact { width: var(--rail-width-compact); }
+.dg-rail--compact .dg-rail__modes { display: none; }
+.dg-rail__mode-now {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 28px;
+  border: 0;
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: var(--type-label);
+  font-weight: 800;
+  cursor: pointer;
+}
+.dg-rail--compact .dg-rail__mode-now { display: flex; }
+.dg-rail--compact .dg-tool {
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  font: var(--type-micro);
+  text-align: center;
+}
+.dg-rail--compact .dg-tool[aria-pressed="true"]::before { width: 3px; }
+
+/* ===== Mode banner / hint (§8, §10) ===== */
+.dg-mode-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: var(--type-body);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.dg-mode-mark { display: inline-block; width: 12px; height: 12px; flex: none; }
+.dg-mode-mark--manage { background: var(--invert-fg); }
+.dg-mode-mark--plan { border: var(--line-strong) dashed var(--signal-info); }
+.dg-mode-mark--build { --hazard-dark: #15171A; background: var(--hazard-pattern); }
+
+.dg-hint {
+  display: inline-block;
+  padding: var(--space-1) 10px;
+  background: var(--surface-0);
+  color: var(--text-1);
+  border: var(--line-hair) solid var(--edge);
+  font: var(--type-body);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ===== Map controls (§9) ===== */
+.dg-map-controls {
+  display: inline-flex;
+  background: var(--surface-0);
+  border: var(--line-hair) solid var(--edge);
+}
+.dg-map-controls--vertical { flex-direction: column; }
+.dg-map-controls > .dg-icon-btn { border-radius: 0; border-right: var(--line-hair) solid var(--rule); }
+.dg-map-controls > .dg-icon-btn:last-child { border-right: 0; }
+.dg-map-controls--vertical > .dg-icon-btn { border-right: 0; border-bottom: var(--line-hair) solid var(--rule); }
+.dg-map-controls--vertical > .dg-icon-btn:last-child { border-bottom: 0; }
+
+/* ===== Overlay tooltip / chooser (§6 깊이) ===== */
+.dg-tooltip {
+  padding: 3px var(--space-2);
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: var(--type-label);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--overlay-shadow);
+}
+
+/* ===== Notifications (§12) ===== */
+.dg-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: var(--type-body);
+  font-weight: 700;
+}
+
+.dg-banner {
+  --banner-signal: var(--signal-info);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-0);
+  color: var(--text-1);
+  border: var(--line-hair) solid var(--edge);
+  border-left: var(--band) solid var(--banner-signal);
+  font: var(--type-body);
+}
+.dg-banner--caution { --banner-signal: var(--signal-caution); }
+.dg-banner--danger { --banner-signal: var(--signal-danger); }
+.dg-banner__icon { color: var(--banner-signal); font-weight: 900; }
+.dg-banner--caution .dg-banner__icon { color: var(--signal-caution-text); }
+.dg-banner__actions { margin-left: auto; display: flex; gap: var(--space-2); }
+
+/* 패널 안 경고 메시지 */
+.dg-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  background: var(--surface-1);
+  border-left: var(--band) solid var(--signal-caution);
+  font: var(--type-body);
+  font-size: 12px;
+}
+.dg-notice--danger { border-left-color: var(--signal-danger); }
+.dg-notice__lead { font-weight: 800; color: var(--signal-caution-text); }
+.dg-notice--danger .dg-notice__lead { color: var(--signal-danger); }
+
+/* ===== Dialog (§12) ===== */
+.dg-scrim {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--edge-inset-top) var(--edge-inset-right) var(--edge-inset-bottom) var(--edge-inset-left);
+  background: var(--scrim);
+}
+.dg-dialog { width: min(440px, 100%); max-height: 100%; }
+
+/* ===== Full-screen workspace (§12) ===== */
+.dg-workspace {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  color-scheme: var(--theme-color-scheme);
+  background: var(--surface-0);
+  color: var(--text-1);
+  font: var(--type-body);
+}
+.dg-workspace__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding: max(4px, env(safe-area-inset-top)) var(--edge-inset-right) 0 var(--edge-inset-left);
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+}
+.dg-workspace__title { font: var(--type-display); font-size: 17px; }
+.dg-workspace__bar .dg-icon-btn { color: var(--invert-fg); }
+.dg-workspace__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--edge-inset-right) var(--edge-inset-bottom) var(--edge-inset-left);
+}
+
+/* ===== Table (§12 Data rows and tables) ===== */
+.dg-table { width: 100%; border-collapse: collapse; font: var(--type-body); font-variant-numeric: tabular-nums; }
+.dg-table th {
+  padding: 6px var(--space-2);
+  border-bottom: var(--line-emphasis) solid var(--text-1);
+  font: var(--type-section);
+  color: var(--text-2);
+  text-align: left;
+}
+.dg-table td { padding: 6px var(--space-2); border-bottom: var(--line-hair) solid var(--rule); }
+.dg-table .dg-num { text-align: right; }
+
+/* ===== Motion (§13) ===== */
+.dg-enter-edge { animation: dg-enter-edge var(--dur-panel) var(--ease-out); }
+@keyframes dg-enter-edge {
+  from { transform: translateX(16px); }
+  to { transform: none; }
+}
