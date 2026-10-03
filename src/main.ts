@@ -1283,47 +1283,41 @@ app.innerHTML = `
       </footer>
     </section>
 
-    <section id="analysisScreen" class="analysis-screen" hidden aria-label="운영 분석 보고서">
-      <header class="analysis-header">
-        <div class="analysis-heading">
-          <span><i aria-hidden="true"></i> OPERATIONS INTELLIGENCE</span>
-          <div><h2>운영 분석 센터</h2><strong id="analysisUpdatedAt">게임 0일차</strong></div>
-          <p>수요·혼잡·수익·시설 용량을 종합해 지금 확인할 운영 과제를 정리합니다.</p>
-        </div>
-        <div class="analysis-header-actions">
-          <button id="refreshAnalysisButton" type="button"><span aria-hidden="true">↻</span> 데이터 새로고침</button>
-          <button id="closeAnalysisButton" class="analysis-close" type="button" aria-label="운영 분석 닫기">×</button>
-        </div>
+    <section id="analysisScreen" class="dg-workspace game-workspace game-analysis" hidden aria-labelledby="analysisTitle">
+      <header class="dg-workspace__bar">
+        <h2 id="analysisTitle" class="dg-workspace__title game-workspace__title">운영 분석</h2>
+        <span id="analysisUpdatedAt" class="game-workspace__sub">게임 1일차</span>
+        <span class="game-workspace__clock" data-workspace-clock></span>
+        <button id="refreshAnalysisButton" class="dg-icon-btn" type="button" aria-label="분석 데이터 새로고침"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M16 10 A6 6 0 1 1 13.5 5.2 M16 3 V6.5 H12.5"/></svg></button>
+        <button id="closeAnalysisButton" class="dg-icon-btn" type="button" aria-label="운영 분석 닫고 지도로"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button>
       </header>
-      <div class="analysis-body">
-        <aside class="analysis-summary">
-          <div class="analysis-score-card">
-            <div class="analysis-score-title"><span>NETWORK HEALTH</span><small>종합 운영 건전성</small></div>
-            <div class="analysis-score-ring"><strong id="analysisHealthScore">100</strong><small>/ 100</small></div>
-            <em id="analysisHealthLabel">안정적</em>
+      <div class="dg-workspace__body game-news__body">
+        <aside class="game-news__aside game-analysis__aside">
+          <div class="game-analysis__health">
+            <span class="dg-panel__section-label">종합 운영 건전성</span>
+            <span class="game-analysis__score"><strong id="analysisHealthScore">100</strong><small>/ 100</small></span>
+            <span id="analysisHealthLabel" class="game-analysis__health-label">안정적</span>
           </div>
-          <div class="analysis-summary-grid">
-            <div class="critical"><i aria-hidden="true">!</i><span>긴급</span><strong id="analysisCriticalCount">0</strong></div>
-            <div class="warning"><i aria-hidden="true">△</i><span>주의</span><strong id="analysisWarningCount">0</strong></div>
-            <div class="info"><i aria-hidden="true">i</i><span>참고</span><strong id="analysisInfoCount">0</strong></div>
-          </div>
-          <label class="analysis-filter"><span>보고서 필터</span><select id="analysisFilter">
+          <div class="dg-row"><span class="dg-row__label"><b class="game-analysis__mark" data-severity="critical" aria-hidden="true">!</b> 긴급</span><strong id="analysisCriticalCount" class="dg-row__value">0</strong></div>
+          <div class="dg-row"><span class="dg-row__label"><b class="game-analysis__mark" data-severity="warning" aria-hidden="true">△</b> 주의</span><strong id="analysisWarningCount" class="dg-row__value">0</strong></div>
+          <div class="dg-row"><span class="dg-row__label"><b class="game-analysis__mark" data-severity="info" aria-hidden="true">i</b> 참고</span><strong id="analysisInfoCount" class="dg-row__value">0</strong></div>
+          <label class="dg-field"><span class="dg-field__label">보기</span><select id="analysisFilter" class="dg-input">
             <option value="active">현재 제안</option>
             <option value="later">나중에 보기</option>
             <option value="all">전체</option>
           </select></label>
-          <div class="analysis-principle"><i aria-hidden="true">◇</i><div><strong>분석은 조언만 제공합니다</strong><span>자금 사용과 노선 변경은 플레이어가 실행할 때만 반영됩니다.</span></div></div>
+          <p class="game-inspector__note">분석은 조언만 제공합니다. 자금 사용과 노선 변경은 직접 실행할 때만 반영됩니다.</p>
         </aside>
-        <div class="analysis-report">
-          <section class="analysis-section urgent">
-            <div class="analysis-section-title"><div><span>PRIORITY ACTIONS</span><h3><i aria-hidden="true">!</i> 우선 대응</h3></div><strong id="analysisUrgentLabel"></strong></div>
-            <div id="analysisUrgentList" class="analysis-list"></div>
+        <div class="game-analysis__report">
+          <section class="game-analysis__section" data-analysis-urgent>
+            <h3 class="dg-panel__section-label">우선 대응 <span id="analysisUrgentLabel" class="game-inspector__section-meta"></span></h3>
+            <div id="analysisUrgentList"></div>
           </section>
-          <section class="analysis-section">
-            <div class="analysis-section-title"><div><span>DAILY OPERATIONS REPORT</span><h3><i aria-hidden="true">≡</i> 운영 제안</h3></div><strong>운영 지표를 기준으로 자동 정렬</strong></div>
-            <div id="analysisReportList" class="analysis-list"></div>
+          <section class="game-analysis__section">
+            <h3 class="dg-panel__section-label">운영 제안 <span class="game-inspector__section-meta">운영 지표 기준 자동 정렬</span></h3>
+            <div id="analysisReportList"></div>
           </section>
-          <div id="analysisEmptyState" class="analysis-empty" hidden><i aria-hidden="true">✓</i><strong>현재 운영 상태가 안정적입니다</strong><span>새로운 추세가 발견되면 이곳에 운영 제안을 표시합니다.</span></div>
+          <p id="analysisEmptyState" class="game-news__empty" hidden><strong>✓ 현재 운영 상태가 안정적입니다</strong><span class="game-inspector__note">새로운 추세가 발견되면 이곳에 운영 제안을 표시합니다.</span></p>
         </div>
       </div>
     </section>
@@ -9964,6 +9958,7 @@ function openAnalysisScreen() {
   renderAnalysisScreen();
   if (analysisScreen) analysisScreen.hidden = false;
   document.body.classList.add("analysis-open");
+  syncWorkspaceClocks();
 }
 
 function closeAnalysisScreen() {
@@ -9984,10 +9979,9 @@ function renderAnalysisScreen() {
   const info = active.filter((suggestion) => suggestion.severity === "info").length;
   const health = Math.max(0, 100 - critical * 18 - warning * 8 - info * 2);
   if (analysisScreen) {
-    analysisScreen.style.setProperty("--analysis-health", String(health));
     analysisScreen.dataset.health = health >= 86 ? "stable" : health >= 65 ? "warning" : "critical";
   }
-  setText(analysisUpdatedAt, `게임 ${analysisStateOwner.current.dayIndex}일차 · ${analysisStateOwner.current.demandHistory.length}일 추세`);
+  setText(analysisUpdatedAt, `${analysisStateOwner.current.demandHistory.length}일 추세 기준`);
   setText(analysisHealthScore, String(health));
   setText(analysisHealthLabel, health >= 86 ? "안정적" : health >= 65 ? "점검 필요" : "집중 개선");
   setText(analysisCriticalCount, String(critical));
@@ -10000,7 +9994,8 @@ function renderAnalysisScreen() {
   if (analysisUrgentList) analysisUrgentList.innerHTML = urgent.map(renderSuggestionCard).join("");
   if (analysisReportList) analysisReportList.innerHTML = reports.map(renderSuggestionCard).join("");
   if (analysisEmptyState) analysisEmptyState.hidden = visible.length > 0;
-  document.querySelector(".analysis-section.urgent")?.toggleAttribute("hidden", urgent.length === 0);
+  document.querySelector("[data-analysis-urgent]")?.toggleAttribute("hidden", urgent.length === 0);
+  syncWorkspaceClocks();
 }
 
 function renderSuggestionCard(suggestion: OperationSuggestion) {
@@ -10012,24 +10007,27 @@ function renderSuggestionCard(suggestion: OperationSuggestion) {
       : suggestion.status === "hidden"
         ? "숨김됨"
         : "현재 제안";
-  return `<article class="analysis-card severity-${suggestion.severity} status-${suggestion.status}" data-suggestion-id="${escapeHtml(suggestion.id)}">
-    <header><div><span class="analysis-severity"><i aria-hidden="true">${severityIcon}</i>${severityLabel}</span><span class="analysis-target">${escapeHtml(suggestion.targetLabel)}</span></div><em>${statusLabel}</em></header>
-    <div class="analysis-card-title"><h4>${escapeHtml(suggestion.title)}</h4><span aria-hidden="true">→</span></div>
-    <dl>
-      <div><dt>원인</dt><dd>${escapeHtml(suggestion.cause)}</dd></div>
-      <div><dt>추천 행동</dt><dd>${escapeHtml(suggestion.recommendation)}</dd></div>
-      <div><dt>예상 효과</dt><dd>${escapeHtml(suggestion.expectedEffect)}</dd></div>
+  const severityTag = suggestion.severity === "critical" ? "dg-tag--error" : "";
+  return `<article class="game-suggestion" data-suggestion-id="${escapeHtml(suggestion.id)}" data-severity="${suggestion.severity}" data-status="${suggestion.status}">
+    <header class="game-news-item__head">
+      <span class="dg-tag ${severityTag}"><i class="dg-tag__icon" aria-hidden="true">${severityIcon}</i>${severityLabel}</span>
+      <h4>${escapeHtml(suggestion.title)}</h4>
+      <span class="game-news-item__time">${statusLabel}</span>
+    </header>
+    <p class="game-suggestion__target">${escapeHtml(suggestion.targetLabel)}</p>
+    <dl class="game-suggestion__facts">
+      <dt>원인</dt><dd>${escapeHtml(suggestion.cause)}</dd>
+      <dt>추천 행동</dt><dd>${escapeHtml(suggestion.recommendation)}</dd>
+      <dt>예상 효과</dt><dd>${escapeHtml(suggestion.expectedEffect)}</dd>
+      <dt>예상 비용</dt><dd>${suggestion.estimatedCost > 0 ? `${formatCost(suggestion.estimatedCost)} (추정)` : "추가 비용 없음"}</dd>
     </dl>
-    <footer>
-      <span><small>예상 비용</small><strong>${suggestion.estimatedCost > 0 ? formatCost(suggestion.estimatedCost) : "추가 비용 없음"}</strong><em>추정치</em></span>
-      <div>
-        ${
-          suggestion.status === "hidden"
-            ? `<button type="button" data-command="restore">다시 표시</button>`
-            : `<button type="button" data-command="hide">숨기기</button><button type="button" data-command="later">나중에 보기</button><button class="primary" type="button" data-command="execute">${escapeHtml(suggestion.actionLabel)}</button>`
-        }
-      </div>
-    </footer>
+    <div class="game-news-item__actions">
+      ${
+        suggestion.status === "hidden"
+          ? `<button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-command="restore">다시 표시</button>`
+          : `<button class="dg-btn dg-btn--quiet dg-btn--compact" type="button" data-command="hide">숨기기</button><button class="dg-btn dg-btn--quiet dg-btn--compact" type="button" data-command="later">나중에 보기</button><button class="dg-btn dg-btn--primary dg-btn--compact" type="button" data-command="execute">${escapeHtml(suggestion.actionLabel)}</button>`
+      }
+    </div>
   </article>`;
 }
 

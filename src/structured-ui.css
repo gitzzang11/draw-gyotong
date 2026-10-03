@@ -513,24 +513,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    rule still carried the centered panel translate, which shifted it half a
    panel left even after right anchoring was applied. */
 
-.analysis-summary-grid {
-  gap: 0 !important;
-  border-top: 1px solid var(--color-border-subtle);
-  border-left: 1px solid var(--color-border-subtle);
-  border-radius: 0 !important;
-  background: transparent !important;
-}
-
-.analysis-summary-grid > * {
-  border: 0 !important;
-  border-right: 1px solid var(--color-border-subtle) !important;
-  border-bottom: 1px solid var(--color-border-subtle) !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.analysis-card,
 .news-item {
   border: 0 !important;
   border-bottom: 1px solid var(--color-border-subtle) !important;
@@ -540,7 +522,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   transform: none !important;
 }
 
-.analysis-card:hover,
 .news-item:hover {
   background: var(--color-surface-1) !important;
 }
@@ -646,14 +627,12 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    Analysis, statistics, news and diagram workspaces
    -------------------------------------------------------------------------- */
 
-.diagram-screen,
-.analysis-screen {
+.diagram-screen {
   background: var(--color-map-void) !important;
   color: var(--color-text-primary) !important;
 }
 
-.diagram-header,
-.analysis-header {
+.diagram-header {
   border-color: var(--color-border-strong) !important;
   border-radius: 0 !important;
   background: var(--color-surface-0) !important;
@@ -662,9 +641,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   -webkit-backdrop-filter: none !important;
 }
 
-.analysis-score-card,
-.analysis-section,
-.analysis-card,
 .statistics-metric-card,
 .news-item,
 .diagram-help,
@@ -677,15 +653,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   transform: none !important;
 }
 
-.analysis-summary {
-  border-color: var(--color-border-strong) !important;
-}
-
-.analysis-score-ring {
-  filter: none !important;
-  box-shadow: none !important;
-}
-
 /* --------------------------------------------------------------------------
    Header geometry repair
 
@@ -694,16 +661,9 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    workspaces and dialog headers cannot push, overlap, or clip their actions.
    -------------------------------------------------------------------------- */
 
-.analysis-heading,
 .diagram-brand,
-.analysis-header-actions,
 .diagram-controls {
   min-width: 0 !important;
-}
-
-.analysis-header-actions {
-  position: static !important;
-  max-width: 100% !important;
 }
 
 .diagram-controls {
@@ -712,13 +672,11 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   scroll-padding-right: 12px;
 }
 
-body .game-shell .analysis-screen > .analysis-header > .analysis-header-actions,
 body .game-shell .diagram-screen > .diagram-header > .diagram-controls {
   position: static !important;
 }
 
-body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
-body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton {
+body .game-shell .diagram-screen > .diagram-header #closeDiagramButton {
   position: absolute !important;
   top: max(14px, env(safe-area-inset-top)) !important;
   right: max(16px, env(safe-area-inset-right)) !important;
@@ -739,15 +697,12 @@ body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton {
     justify-content: flex-start !important;
   }
 
-  body .game-shell .diagram-screen > .diagram-header #closeDiagramButton,
-  body .game-shell .analysis-screen > .analysis-header #closeAnalysisButton {
+  body .game-shell .diagram-screen > .diagram-header #closeDiagramButton {
     top: max(8px, env(safe-area-inset-top)) !important;
     right: max(8px, env(safe-area-inset-right)) !important;
   }
 }
 
-.analysis-principle,
-.analysis-empty,
 .diagram-empty {
   border-color: var(--color-border-subtle) !important;
   border-radius: 4px !important;

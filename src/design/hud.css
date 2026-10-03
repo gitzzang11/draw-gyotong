@@ -521,6 +521,31 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
   .game-stats__split { grid-template-columns: 180px minmax(0, 1fr); gap: var(--space-3); }
 }
 
+/* ===== 운영 분석 (뉴스와 같은 집계 열 + 목록 배치) ===== */
+.game-analysis__health { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: var(--line-strong) solid var(--text-1); }
+.game-analysis__score { display: flex; align-items: baseline; gap: var(--space-1); }
+.game-analysis__score strong { font: var(--type-display); font-size: 32px; line-height: 36px; font-variant-numeric: tabular-nums; }
+.game-analysis__score small { font: var(--type-label); color: var(--text-2); }
+.game-analysis__health-label { font-weight: 800; }
+.game-analysis__health-label::before { content: "● "; color: var(--signal-ok); }
+.game-analysis[data-health="warning"] .game-analysis__health-label::before { content: "△ "; color: var(--signal-caution-text); }
+.game-analysis[data-health="critical"] .game-analysis__health-label::before { content: "✕ "; color: var(--signal-danger); }
+.game-analysis__mark { display: inline-block; width: 18px; text-align: center; }
+.game-analysis__mark[data-severity="critical"] { color: var(--signal-danger); }
+.game-analysis__mark[data-severity="warning"] { color: var(--signal-caution-text); }
+.game-analysis__mark[data-severity="info"] { color: var(--signal-info); }
+.game-analysis__report { display: grid; gap: var(--space-4); max-width: 760px; }
+.game-analysis__section { display: grid; }
+.game-suggestion { padding: var(--space-3) 0; border-top: var(--line-strong) solid var(--text-1); }
+.game-analysis__section .dg-panel__section-label + div > .game-suggestion:first-child { border-top-width: var(--line-hair); }
+.game-suggestion[data-severity="critical"] { border-top-color: var(--signal-danger); }
+.game-suggestion[data-status="hidden"], .game-suggestion[data-status="later"] { color: var(--text-2); }
+.game-suggestion h4 { flex: 1; min-width: 0; margin: 0; font: var(--type-sign); font-size: 16px; line-height: 22px; }
+.game-suggestion__target { margin: 2px 0 var(--space-2); font: var(--type-label); color: var(--text-2); }
+.game-suggestion__facts { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--space-1) var(--space-3); margin: 0; }
+.game-suggestion__facts dt { font: var(--type-label); font-weight: 700; color: var(--text-2); padding-top: 2px; }
+.game-suggestion__facts dd { margin: 0; }
+
 /* ===== 도시 뉴스 ===== */
 .game-news__body { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; gap: var(--space-5); }
 .game-news__aside { position: sticky; top: 0; display: grid; gap: var(--space-2); }
