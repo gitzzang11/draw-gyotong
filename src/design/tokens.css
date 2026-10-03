@@ -36,6 +36,11 @@
   --signal-ok: #1D7F47;
   --focus: #1D5FC2;
 
+  /* 분석 레이어: 인구 밀도 (낮음 → 중간 → 높음) */
+  --density-low: #F7C6E0;
+  --density-mid: #D9469A;
+  --density-high: #6A1B6E;
+
   /* 파생 */
   --hazard-dark: #15171A;
   --scrim: rgba(0, 0, 0, 0.32);
@@ -67,6 +72,10 @@
   --signal-info: #6AA3FF;
   --signal-ok: #45C27F;
   --focus: #6AA3FF;
+
+  --density-low: #4A2050;
+  --density-mid: #C2448F;
+  --density-high: #FFB3DA;
 
   --hazard-dark: #121416;
   --scrim: rgba(0, 0, 0, 0.5);

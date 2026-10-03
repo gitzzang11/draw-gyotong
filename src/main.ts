@@ -15503,9 +15503,10 @@ function renderPopulationDensityCells() {
       weight: 0,
       opacity: 0,
       fillColor: populationDensityColor(density, ramp),
+      // 밀도가 높을수록 진하게: 색과 불투명도를 함께 올린다.
       fillOpacity: resolution === 100
-        ? 0.012 + Math.sqrt(density) * 0.1
-        : 0.035 + Math.sqrt(density) * 0.17,
+        ? 0.04 + Math.sqrt(density) * 0.22
+        : 0.05 + Math.sqrt(density) * 0.24,
       interactive: false,
     }).addTo(populationDensityLayer);
   }
@@ -15518,14 +15519,17 @@ function populationResolutionForZoom(zoom: number) {
   return 1000;
 }
 
-/** 인구 밀도 색 범위. 범례(.game-density-legend)와 같은 호박색 한 계열(밝은 주의색 → 진한 주의 글자색)로 칠해 노선 색과 경쟁하지 않게 한다. */
-function populationDensityRamp(): [RgbTriplet, RgbTriplet] {
+/** 인구 밀도 색 범위 (낮음 → 중간 → 높음). 범례(.game-density-legend)와 같은 분석 레이어 토큰을 쓴다. */
+function populationDensityRamp(): DensityRamp {
   const style = getComputedStyle(document.documentElement);
   return [
-    parseHexRgb(style.getPropertyValue("--signal-caution")) ?? [242, 190, 0],
-    parseHexRgb(style.getPropertyValue("--signal-caution-text")) ?? [138, 106, 0],
+    parseHexRgb(style.getPropertyValue("--density-low")) ?? [247, 198, 224],
+    parseHexRgb(style.getPropertyValue("--density-mid")) ?? [217, 70, 154],
+    parseHexRgb(style.getPropertyValue("--density-high")) ?? [106, 27, 110],
   ];
 }
+
+type DensityRamp = readonly [RgbTriplet, RgbTriplet, RgbTriplet];
 
 type RgbTriplet = readonly [number, number, number];
 
@@ -15536,9 +15540,10 @@ function parseHexRgb(value: string): RgbTriplet | null {
   return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
 }
 
-function populationDensityColor(density: number, [low, high]: [RgbTriplet, RgbTriplet]) {
+function populationDensityColor(density: number, [low, mid, high]: DensityRamp) {
   const progress = Math.min(1, Math.max(0, density));
-  const channel = (index: number) => Math.round(low[index] + (high[index] - low[index]) * progress);
+  const [from, to, local] = progress < 0.5 ? [low, mid, progress * 2] : [mid, high, (progress - 0.5) * 2];
+  const channel = (index: number) => Math.round(from[index] + (to[index] - from[index]) * local);
   return `rgb(${channel(0)} ${channel(1)} ${channel(2)})`;
 }
 
@@ -15731,6 +15736,7 @@ function administrativeToFeature(element: OverpassElement): GeoJsonFeature | nul
 }
 
 function applyLayerVisibility(key: OverlayKey) {
+  if (key === "population") map.getContainer().classList.toggle("map--analysis", overlayState.population);
   const layer = layers[key];
   if (overlayState[key]) {
     if (!map.hasLayer(layer)) layer.addTo(map);

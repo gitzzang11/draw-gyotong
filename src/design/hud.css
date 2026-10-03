@@ -136,7 +136,7 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-layer-panel .dg-panel__section-label { padding: var(--space-2) var(--space-3) var(--space-1); margin: 0; }
 .game-layer-panel .dg-tool { border-top: var(--line-hair) solid var(--rule); border-bottom: 0; }
 .game-layer-sample { width: 20px; height: 0; flex: none; border-top: 4px solid var(--text-2); }
-.game-layer-sample--population { height: 12px; border: var(--line-hair) solid var(--text-2); background: linear-gradient(90deg, transparent, var(--signal-caution)); }
+.game-layer-sample--population { height: 12px; border: var(--line-hair) solid var(--text-2); background: linear-gradient(90deg, var(--density-low), var(--density-mid), var(--density-high)); }
 .game-layer-toggle::after {
   content: "끔";
   margin-left: auto;
@@ -154,7 +154,7 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
   font: var(--type-micro);
   color: var(--text-2);
 }
-.game-density-legend i { height: 8px; background: linear-gradient(90deg, transparent, var(--signal-caution) 40%, var(--signal-caution-text)); }
+.game-density-legend i { height: 8px; background: linear-gradient(90deg, var(--density-low), var(--density-mid), var(--density-high)); }
 
 /* ===== 선택 객체 inspector: 오른쪽 아래 (MOBILE_UX §7.1, §8) =====
    지도 컨트롤 아래에서 화면 아래 여백까지 쓴다. 본문만 스크롤하고 행동 막대는 고정한다. */
@@ -537,6 +537,8 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 :root[data-theme="ink"] .leaflet-container.map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(.4) contrast(.7) brightness(.72); }
 /* 지도 출처(이용 약관): 오른쪽 아래 가장자리에 작게. 열린 inspector가 위를 덮어도 된다. */
 .leaflet-container.map .leaflet-bottom.leaflet-right { right: var(--edge-inset-right); bottom: env(safe-area-inset-bottom, 0px); }
+/* 분석 레이어(인구 밀도)가 켜지면 지도 바탕을 더 흐리게 해 분석 색이 잘 보이게 한다 (§11) */
+.leaflet-container.map.map--analysis .leaflet-tile-pane { opacity: .75; }
 .leaflet-container.map .leaflet-control-attribution { margin: 0; padding: 0 4px; border-radius: 0; background: color-mix(in srgb, var(--surface-0) 85%, transparent); color: var(--text-2); font: var(--type-micro); }
 .leaflet-container.map .leaflet-control-attribution a { color: var(--text-1); }
 
