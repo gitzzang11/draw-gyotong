@@ -178,7 +178,7 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 /* ===== 노선 목록 ===== */
 .game-route-list { display: grid; }
 .game-route-item {
-  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--touch-min);
+  display: flex; align-items: center; justify-content: flex-start; gap: var(--space-2); width: 100%; min-height: var(--touch-min);
   padding: 6px var(--space-3); border: 0; border-top: var(--line-hair) solid var(--rule); border-radius: 0;
   background: transparent; color: var(--text-1); font: var(--type-body); text-align: left; cursor: pointer;
 }
@@ -200,7 +200,7 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-fold__fields { display: grid; gap: var(--space-2); padding-bottom: var(--space-1); }
 .game-service-list { display: grid; }
 .game-service-item {
-  display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--touch-min);
+  display: flex; align-items: center; justify-content: flex-start; gap: var(--space-2); width: 100%; min-height: var(--touch-min);
   padding: 6px var(--space-2); border: 0; border-top: var(--line-hair) solid var(--rule); border-radius: 0;
   background: transparent; color: var(--text-1); font: var(--type-body); text-align: left; cursor: pointer;
 }
@@ -273,6 +273,54 @@ body[data-mode-banner="low"] .game-side-panel { top: calc(var(--hud-top) + var(-
   transition: opacity var(--dur-fast) linear, transform var(--dur-panel) var(--ease-out);
 }
 .game-history-controls .dg-icon-btn:disabled { color: var(--text-3); cursor: not-allowed; }
+
+/* ===== 알림 묶음: 위쪽 가운데, 모드 배너 아래 (DESIGN_SYSTEM §12 Notifications) =====
+   오류 배너, 튜토리얼, 토스트가 겹치지 않게 세로로 쌓는다. */
+.game-notice-stack {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--hud-top) + var(--hud-gap));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(440px, calc(100vw - var(--hud-left-clear) * 2));
+  z-index: 1050;
+  pointer-events: none;
+}
+.game-notice-stack > * { pointer-events: auto; max-width: 100%; }
+body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var(--hud-gap) * 2 + 32px); }
+.game-toast { opacity: 0; transition: opacity var(--dur-fast) linear; pointer-events: none !important; text-align: center; }
+.game-toast.is-visible { opacity: 1; }
+.game-error-banner { width: 100%; }
+
+/* ===== 튜토리얼 ===== */
+.game-tutorial { width: 100%; }
+.game-tutorial__body { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); align-items: start; }
+.game-tutorial__copy { display: grid; gap: 2px; }
+.game-tutorial__copy p { margin: 0; }
+.game-tutorial__copy small { font: var(--type-label); color: var(--text-2); }
+
+/* ===== 아래쪽 작업 막대: 실행 취소 묶음 오른쪽 (정차역 편집, 철거 범위) ===== */
+.game-bottom-bar {
+  position: fixed;
+  left: calc(var(--hud-left-clear) + var(--plate-height) * 2 + 2px + var(--hud-gap));
+  bottom: var(--edge-inset-bottom);
+  max-width: calc(50vw - var(--hud-left-clear) - var(--plate-height) * 2 - var(--hud-gap));
+}
+.game-bottom-bar__summary { min-width: 0; }
+.game-bottom-bar__summary .dg-plate__sub { white-space: normal; }
+.game-bottom-bar__range { gap: var(--space-2); }
+.game-bottom-bar__range input { width: 96px; accent-color: var(--text-1); }
+@media (max-width: 719px) {
+  .game-bottom-bar { left: var(--hud-left-clear); bottom: var(--hud-bottom-clear); max-width: calc(50vw - var(--hud-left-clear) - 4px); }
+}
+
+/* ===== 지도 객체 후보 선택 ===== */
+.game-chooser { z-index: 1100; }
+.game-chooser .dg-dialog { width: min(360px, 100%); max-height: 100%; display: flex; flex-direction: column; }
+.game-chooser__list { overflow-y: auto; }
 
 /* ===== 노선 드래그 중 가장자리 HUD 후퇴 (MOBILE_UX §4) ===== */
 body.route-drawing-hud-proximity .game-plate {

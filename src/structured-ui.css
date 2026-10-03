@@ -292,86 +292,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
   border-bottom-color: rgb(7 19 29 / 96%);
 }
 
-.operating-service-map-edit-bar {
-  position: fixed;
-  right: min(390px, 38vw);
-  bottom: max(72px, calc(env(safe-area-inset-bottom) + 66px));
-  left: max(12px, env(safe-area-inset-left));
-  z-index: 1090;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: max-content;
-  max-width: calc(100vw - min(390px, 38vw) - max(24px, env(safe-area-inset-left)));
-  min-height: 48px;
-  margin-inline: auto;
-  padding: 6px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
-  background: var(--color-surface-0);
-  box-shadow: var(--shadow-md);
-}
-
-.operating-service-map-edit-bar[hidden] {
-  display: none !important;
-}
-
-.operating-service-map-edit-summary {
-  display: grid;
-  gap: 2px;
-  min-width: 150px;
-}
-
-.operating-service-map-edit-summary strong {
-  color: var(--color-accent-strong);
-  font-size: 12px;
-}
-
-.operating-service-map-edit-summary span {
-  color: var(--color-text-secondary);
-  font-size: 10px;
-}
-
-.operating-service-map-edit-bar button {
-  min-width: 58px;
-  min-height: 44px;
-  padding-inline: 12px;
-  border-radius: 5px;
-}
-
-.operating-service-map-edit-bar button.primary {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: #06171c;
-  font-weight: 800;
-}
-
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .operating-service-map-edit-bar {
-    right: min(320px, 38vw);
-    bottom: max(54px, calc(env(safe-area-inset-bottom) + 48px));
-    max-width: calc(100vw - min(320px, 38vw) - max(16px, env(safe-area-inset-left)));
-    min-height: 44px;
-    gap: 4px;
-    padding: 4px;
-  }
-
-  .operating-service-map-edit-summary {
-    min-width: 96px;
-  }
-
-  .operating-service-map-edit-summary span {
-    display: none;
-  }
-
-  .operating-service-map-edit-bar button {
-    min-width: 52px;
-    padding-inline: 8px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .operating-service-stop-glyph.changed {
     animation: none;
@@ -554,8 +474,7 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    -------------------------------------------------------------------------- */
 
 .hud,
-.hud.bottom-right,
-.eraser-size-control {
+.hud.bottom-right {
   border-color: var(--color-border-subtle) !important;
   border-radius: 4px !important;
   background: rgb(10 20 29 / 97%) !important;
@@ -593,16 +512,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 /* --------------------------------------------------------------------------
    Floating inspectors and contextual surfaces — geometry unchanged
    -------------------------------------------------------------------------- */
-
-.tutorial-panel {
-  border-color: var(--color-border-strong) !important;
-  border-radius: 10px !important;
-  background: rgb(10 20 29 / 98%) !important;
-  color: var(--color-text-primary) !important;
-  box-shadow: var(--shadow-lg) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
 
 /* The modify palette belongs to the lower-right thumb zone. Its legacy base
    rule still carried the centered panel translate, which shifted it half a
@@ -698,34 +607,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
 /* Universal close language: every X uses the same rose surface and drawn
    glyph. Existing context rules continue to own only the control size. */
 
-body .game-shell .tutorial-panel {
-  padding-right: max(68px, calc(env(safe-area-inset-right) + 60px)) !important;
-}
-
-body .game-shell .tutorial-panel #tutorialSkipButton {
-  position: absolute !important;
-  top: 12px !important;
-  right: max(12px, env(safe-area-inset-right)) !important;
-  margin: 0 !important;
-  transform: none !important;
-}
-
-.tutorial-step {
-  border-radius: 2px !important;
-  background: var(--color-accent-dim) !important;
-  color: var(--color-accent-strong) !important;
-  box-shadow: none !important;
-}
-
-.tutorial-copy strong {
-  color: var(--color-text-primary) !important;
-}
-
-.tutorial-copy p,
-.tutorial-copy small {
-  color: var(--color-text-secondary) !important;
-}
-
 /* --------------------------------------------------------------------------
    Dialogs and decisions — placement and responsive sheets unchanged
    -------------------------------------------------------------------------- */
@@ -742,7 +623,6 @@ body .game-shell .tutorial-panel #tutorialSkipButton {
 .finance-dialog,
 .planning-dialog,
 .decision-dialog,
-.route-choice-dialog,
 .save-editor-dialog,
 .merge-dialog,
 .plan-conversion-dialog,
@@ -1049,30 +929,6 @@ body .game-shell .dialog-backdrop .dialog-close {
 
 /* Legacy button bundles include ID selectors, so dialog anchors need matching
    specificity to keep their close actions pinned to the heading. */
-body .game-shell .dialog-backdrop :is(
-  #closeColorPickerButton,
-  #closeSettingsButton,
-  #closeFinanceButton,
-  #closeSatisfactionButton,
-  #closeStationManagerButton,
-  #closeDepotManagerButton,
-  #closeConstructionManagerButton,
-  #closePlanningButton,
-  #closePlanConversionButton,
-  #closeRouteChoiceButton,
-  #closeTrainManagerButton,
-  #closeDecisionButton,
-  #closeSaveEditorButton,
-  #closeMergeButton,
-  #closeInGameMenuButton
-) {
-  position: absolute !important;
-  top: 50% !important;
-  right: max(12px, env(safe-area-inset-right)) !important;
-  z-index: 6 !important;
-  margin: 0 !important;
-  transform: translateY(-50%) !important;
-}
 
 @media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   body .game-shell :is(
@@ -1133,24 +989,6 @@ body .game-shell .dialog-backdrop :is(
 }
 
 /* Feedback surfaces */
-.toast,
-.error-banner {
-  border: 1px solid var(--color-border-strong) !important;
-  border-radius: 4px !important;
-  background: var(--color-surface-0) !important;
-  color: var(--color-text-primary) !important;
-  box-shadow: var(--shadow-card) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-.toast {
-  border-left: 3px solid var(--color-accent) !important;
-}
-
-.error-banner {
-  border-left: 3px solid var(--color-danger) !important;
-}
 
 .construction-progress,
 .analysis-progress,

@@ -3,6 +3,7 @@ import "./legacy.css";
 import "./design/tokens.css";
 import "./design/components.css";
 import "./design/hud.css";
+import { lineMarkHtml } from "./ui/inspectorMarkup.ts";
 import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
@@ -980,7 +981,7 @@ app.innerHTML = `
       </button>
     </div>
 
-    <label id="eraserSizeControl" class="hud eraser-size-control" hidden><span>지우개 크기</span><input id="eraserSizeRange" type="range" min="12" max="48" step="4" value="20" aria-label="지우개 크기" /><output id="eraserSizeValue">20</output></label>
+    <label id="eraserSizeControl" class="dg-hud dg-plate game-bottom-bar" hidden><span class="dg-plate__cell dg-plate__key">철거 범위</span><span class="dg-plate__cell game-bottom-bar__range"><input id="eraserSizeRange" type="range" min="12" max="48" step="4" value="20" aria-label="철거 범위" /><output id="eraserSizeValue" class="dg-plate__metric">20</output></span></label>
 
 
 
@@ -1024,13 +1025,13 @@ app.innerHTML = `
       </section>
     </div>
 
-    <section id="operatingServiceMapEditBar" class="hud operating-service-map-edit-bar" aria-label="지도 정차역 편집" hidden>
-      <div class="operating-service-map-edit-summary">
-        <strong id="operatingServiceMapEditCount">정차 0 · 통과 0</strong>
-        <span>역을 터치해 정차 여부를 전환</span>
+    <section id="operatingServiceMapEditBar" class="dg-hud dg-plate game-bottom-bar" aria-label="지도 정차역 편집" hidden>
+      <div class="dg-plate__cell dg-plate__cell--stack game-bottom-bar__summary">
+        <strong id="operatingServiceMapEditCount" class="dg-plate__metric">정차 0 · 통과 0</strong>
+        <span class="dg-plate__sub">역을 탭해 정차·통과 전환 · 기점·종점은 필수</span>
       </div>
-      <button id="cancelOperatingServiceMapEditButton" type="button">취소</button>
-      <button id="applyOperatingServiceMapEditButton" class="primary" type="button">적용</button>
+      <button id="cancelOperatingServiceMapEditButton" class="dg-plate__cell" type="button">취소</button>
+      <button id="applyOperatingServiceMapEditButton" class="dg-plate__cell dg-plate__cell--on" type="button">적용</button>
     </section>
 
     <!-- 노선 목록: 레일 오른쪽 보조 패널 -->
@@ -1061,11 +1062,6 @@ app.innerHTML = `
 
 
 
-    <section id="tutorialPanel" class="tutorial-panel" hidden aria-live="polite">
-      <div class="tutorial-step" id="tutorialStep">01 / 10</div>
-      <div class="tutorial-copy"><strong id="tutorialTitle">지도를 움직여 보세요</strong><p id="tutorialText">한 손가락으로 이동하고 두 손가락으로 확대하세요.</p><small id="tutorialFeedback">직접 조작하면 자동으로 다음 단계로 이동합니다.</small></div>
-      <div class="tutorial-actions"><button id="tutorialNextButton" type="button">확인</button><button id="tutorialSkipButton" class="floating-close-button" type="button" aria-label="튜토리얼 건너뛰기">×</button></div>
-    </section>
 
     <div id="settingsDialog" class="dialog-backdrop" hidden>
       <section class="settings-dialog" role="dialog" aria-modal="true" aria-label="게임 설정">
@@ -1146,8 +1142,18 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="errorBanner" class="error-banner" hidden role="alert"><span id="errorMessage">일시적인 오류가 발생했습니다.</span><button id="errorRetryButton" type="button">재시도</button><button id="errorDismissButton" type="button" aria-label="닫기">×</button></div>
-    <div id="toast" class="toast" hidden role="status"></div>
+    <!-- 알림 묶음: 위쪽 가운데. 오류 배너 → 튜토리얼 → 토스트 순으로 쌓는다 -->
+    <div class="dg-hud game-notice-stack">
+      <div id="errorBanner" class="dg-hud dg-banner dg-banner--danger game-error-banner" hidden role="alert"><span class="dg-banner__icon" aria-hidden="true">✕</span><span id="errorMessage">일시적인 오류가 발생했습니다.</span><span class="dg-banner__actions"><button id="errorRetryButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">재시도</button><button id="errorDismissButton" class="dg-icon-btn" type="button" aria-label="오류 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></span></div>
+      <section id="tutorialPanel" class="dg-hud dg-panel game-tutorial" hidden aria-live="polite" aria-labelledby="tutorialTitle">
+        <div class="dg-panel__section game-tutorial__body">
+          <span class="dg-tag" id="tutorialStep">01 / 10</span>
+          <div class="game-tutorial__copy"><strong id="tutorialTitle" class="dg-text-sign">지도를 움직여 보세요</strong><p id="tutorialText">한 손가락으로 이동하고 두 손가락으로 확대하세요.</p><small id="tutorialFeedback">직접 조작하면 다음 단계가 열립니다.</small></div>
+        </div>
+        <div class="dg-panel__actions"><button id="tutorialSkipButton" class="dg-btn dg-btn--quiet dg-btn--compact" type="button" aria-label="튜토리얼 건너뛰기">건너뛰기</button><button id="tutorialNextButton" class="dg-btn dg-btn--primary dg-btn--compact dg-panel__actions-push" type="button">확인</button></div>
+      </section>
+      <div id="toast" class="dg-hud dg-toast game-toast" hidden role="status"></div>
+    </div>
 
     <!-- 건설·철거 검토: 오른쪽 아래 inspector 자리. 확정은 오른쪽 아래 엄지 위치 (MOBILE_UX §7.2) -->
     <aside id="constructionPreviewPanel" class="dg-hud dg-panel game-inspector game-review" hidden aria-live="polite" aria-labelledby="constructionPreviewTitle">
@@ -1435,10 +1441,10 @@ app.innerHTML = `
       </section>
     </div>
 
-    <div id="routeChoiceDialog" class="dialog-backdrop" hidden>
-      <section class="route-choice-dialog" role="dialog" aria-modal="true" aria-labelledby="routeChoiceTitle">
-        <div class="dialog-heading"><div><span>ROUTE SELECT</span><h2 id="routeChoiceTitle">어느 노선을 선택할까요?</h2></div><button id="closeRouteChoiceButton" class="dialog-close" type="button" aria-label="닫기">×</button></div>
-        <div id="routeChoiceList" class="route-choice-list"></div>
+    <div id="routeChoiceDialog" class="dg-hud dg-scrim game-chooser" hidden>
+      <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="routeChoiceTitle">
+        <header class="dg-panel__header"><h2 id="routeChoiceTitle" class="dg-panel__title">여기서 무엇을 선택할까요?</h2><div class="dg-panel__header-end"><button id="closeRouteChoiceButton" class="dg-icon-btn" type="button" aria-label="선택 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div></header>
+        <div id="routeChoiceList" class="dg-panel__body game-chooser__list"></div>
       </section>
     </div>
 
@@ -3261,10 +3267,20 @@ function activateMapSelection(data: MapSelectionData) {
   }
 }
 
+const mapTargetKindLabels: Record<MapHitCandidate["kind"], string> = {
+  train: "열차",
+  station: "역",
+  transfer: "환승",
+  depot: "차량기지",
+  route: "노선",
+  construction: "공사",
+  blueprint: "계획",
+};
+
 function openMapTargetChoice(candidates: Array<MapHitCandidate & { score: number }>) {
   if (!routeChoiceDialog || !routeChoiceList) return;
   routeChoiceList.innerHTML = candidates.map((candidate, index) =>
-    `<button type="button" data-map-target-index="${index}"><span><strong>${escapeHtml(candidate.label)}</strong><small>${candidate.kind}</small></span></button>`
+    `<button class="game-route-item" type="button" data-map-target-index="${index}"><span class="dg-tag">${mapTargetKindLabels[candidate.kind]}</span><span class="game-route-item__text"><strong>${escapeHtml(candidate.label)}</strong></span></button>`
   ).join("");
   routeChoiceList.querySelectorAll<HTMLButtonElement>("[data-map-target-index]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -12401,7 +12417,7 @@ function openRouteChoice(hitRoutes: RouteLine[]) {
   routeChoiceList.innerHTML = hitRoutes
     .map(
       (route) =>
-        `<button type="button" data-route-id="${route.id}"><i style="background:${route.color}"></i><span><strong>${escapeHtml(route.name)}</strong><small>${route.lengthKm.toFixed(1)}km · ${(route.branches?.length ?? 0)}개 분기</small></span></button>`,
+        `<button class="game-route-item" type="button" data-route-id="${route.id}">${lineMarkHtml(route)}<span class="game-route-item__text"><strong>${escapeHtml(route.name)}</strong><small>${route.lengthKm.toFixed(1)}km · ${(route.branches?.length ?? 0)}개 분기</small></span></button>`,
     )
     .join("");
   routeChoiceList.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
