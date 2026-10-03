@@ -66,7 +66,7 @@ type ManualDiagramState = {
 type ManualTrainFleet = {
   id: string;
   routeId: string;
-  trainType: "metro";
+  trainType: "heavy";
   cars: number;
   sets: number;
   capacity: number;
@@ -324,7 +324,7 @@ function createFleet(id: string, routeId: string): ManualTrainFleet {
   return {
     id,
     routeId,
-    trainType: "metro",
+    trainType: "heavy",
     cars: 6,
     sets: 1,
     capacity: 960,

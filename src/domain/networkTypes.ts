@@ -11,6 +11,8 @@ export interface RouteSegment {
 export interface Branch { id: string; name: string; junctionNodeId: string; terminalNodeId: string; segmentIds: string[]; dispatchWeight: number }
 export interface ServicePattern { id: string; name: string; kind: "local" | "express"; branchIds: string[]; enabled: boolean; dispatchMode: "equal" }
 export interface RouteLine {
+  /** 노선 차종. 한 노선에는 한 차종만 다닌다 (src/domain/trainTypes.ts). 없으면 중전철. */
+  trainType?: import("./trainTypes").TrainType;
   id: string; name: string; color: string; coordinates: Array<[number, number]>; lengthKm: number;
   constructionCost: number; riverCrossings: number; mountainSegments: number; riverMode: ConstructionMode;
   disabledSegments?: number[]; nodes?: RouteNode[]; segments?: RouteSegment[]; branches?: Branch[];

@@ -139,6 +139,7 @@ import {
 } from "./simulation/finance/dailySettlement.ts";
 import { LoanStateOwner } from "./simulation/finance/loanStateOwner.ts";
 import { LayerManager } from "./map/layerManager.ts";
+import { clampCars, defaultCars, normalizeTrainType, roundCost, trainCatalog, type TrainType } from "./domain/trainTypes.ts";
 import { mapPalette } from "./map/mapPalette.ts";
 import { LineRenderer, type LineRenderEntity } from "./map/lineRenderer.ts";
 import {
@@ -228,7 +229,6 @@ type ToolMode =
   | "transfer"
   | "depot"
   | "expressStop";
-type TrainType = "metro" | "commuter" | "express";
 type GameMode = "sandbox" | "career";
 type Difficulty = "easy" | "normal" | "hard";
 type CityId = "seoul" | "busan" | "daejeon" | "gwangju";
@@ -420,11 +420,10 @@ const stationSnapPx = 24;
 const maxHistory = 20;
 const currentSaveSchemaVersion = CURRENT_SAVE_SCHEMA_VERSION;
 const saveDatabaseVersion = 2;
-const trainCatalog: Record<TrainType, { label: string; capacityPerCar: number; pricePerCar: number; maintenancePerCar: number; speedKmh: number }> = {
-  metro: { label: "도시철도", capacityPerCar: 160, pricePerCar: 28, maintenancePerCar: 2.2, speedKmh: 34 },
-  commuter: { label: "광역전철", capacityPerCar: 190, pricePerCar: 34, maintenancePerCar: 2.8, speedKmh: 42 },
-  express: { label: "급행형", capacityPerCar: 150, pricePerCar: 42, maintenancePerCar: 3.4, speedKmh: 54 },
-};
+/** 노선 차종. 저장값이 없거나 옛 값이면 정규화한다. */
+function routeTrainType(route: RouteLine | undefined): TrainType {
+  return normalizeTrainType(route?.trainType);
+}
 const defaultEconomy: EconomyState = {
   cash: 60000,
   fare: 1450,
@@ -1954,7 +1953,6 @@ const draftRouteNameInput = document.querySelector<HTMLInputElement>("#draftRout
 const draftRouteColorInput = document.querySelector<HTMLInputElement>("#draftRouteColorInput");
 const saveRouteSettingsButton = document.querySelector<HTMLButtonElement>("#saveRouteSettingsButton");
 const operationRouteSelect = document.querySelector<HTMLSelectElement>("#operationRouteSelect");
-const trainTypeSelect = document.querySelector<HTMLSelectElement>("#trainTypeSelect");
 const carCountInput = document.querySelector<HTMLInputElement>("#carCountInput");
 const setCountInput = document.querySelector<HTMLInputElement>("#setCountInput");
 const buyTrainButton = document.querySelector<HTMLButtonElement>("#buyTrainButton");
@@ -9141,12 +9139,11 @@ function reconcileLegacyMapTrains() {
     if (!isRouteOperational(route.id) || hasRouteGaps(route) || route.operationPaused || route.visibility === "planning") continue;
     const routeFleets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id);
     const serviceOperations = getRouteServiceOperations(route.id);
-    const hasExpressFleet = routeFleets.some((fleet) => fleet.trainType === "express");
     let genericSetOrdinal = 0;
     const displayedFleetSets = routeFleets.flatMap((fleet) =>
       Array.from({ length: fleet.sets }, (_, setIndex) => {
-        const explicitExpress = fleet.trainType === "express";
-        const fallbackExpress = !hasExpressFleet &&
+        const explicitExpress = false;
+        const fallbackExpress =
           serviceOperations.express.enabled &&
           genericSetOrdinal < serviceOperations.express.trainSets;
         if (!explicitExpress) genericSetOrdinal += 1;
@@ -9340,7 +9337,7 @@ function getFleetCapacityPerSet(fleet: TrainFleet) {
 }
 
 function getFleetMaintenanceCost(fleet: TrainFleet) {
-  return Math.round(trainCatalog[fleet.trainType].maintenancePerCar * fleet.cars * fleet.sets);
+  return roundCost(trainCatalog[fleet.trainType].maintenancePerCar * fleet.cars * fleet.sets);
 }
 
 function updateFleetSetCount(fleet: TrainFleet, sets: number): TrainFleet {
@@ -9351,7 +9348,7 @@ function updateFleetSetCount(fleet: TrainFleet, sets: number): TrainFleet {
     sets: normalizedSets,
     capacity: spec.capacityPerCar * fleet.cars * normalizedSets,
     purchaseCost: spec.pricePerCar * fleet.cars * normalizedSets,
-    maintenanceCost: spec.maintenancePerCar * fleet.cars * normalizedSets,
+    maintenanceCost: roundCost(spec.maintenancePerCar * fleet.cars * normalizedSets),
   };
 }
 
@@ -9367,8 +9364,8 @@ function buyTrainsForSelectedRoute() {
     .filter((depot) => isDepotOperational(depot.id) && depot.connectedRouteIds.includes(route.id))
     .reduce((sum, depot) => sum + depot.capacity, 0);
   const currentSets = operationsState.fleets.filter((fleet) => fleet.routeId === route.id).reduce((sum, fleet) => sum + fleet.sets, 0);
-  const trainType = (trainTypeSelect?.value as TrainType) || "metro";
-  const cars = clampInteger(Number(carCountInput?.value ?? 6), 2, 10);
+  const trainType = routeTrainType(route);
+  const cars = clampCars(trainType, Number(carCountInput?.value ?? defaultCars(trainType)));
   const sets = clampInteger(Number(setCountInput?.value ?? 1), 1, 30);
   if (connectedDepotCapacity === 0) {
     setText(facilityReadout, "차량기지가 노선과 연결되지 않았습니다. 기지 경계를 노선 가까이에 지정해 주세요.");
@@ -9394,7 +9391,7 @@ function buyTrainsForSelectedRoute() {
       sets,
       capacity: spec.capacityPerCar * cars * sets,
       purchaseCost: Math.round(spec.pricePerCar * cars * sets),
-      maintenanceCost: Math.round(spec.maintenancePerCar * cars * sets),
+      maintenanceCost: roundCost(spec.maintenancePerCar * cars * sets),
     },
   ];
   const latestFleet = operationsState.fleets[operationsState.fleets.length - 1];
@@ -9654,8 +9651,8 @@ function refreshOperationSuggestions(force = false) {
       .filter((depot) => depot.connectedRouteIds.includes(route.id))
       .reduce((sum, depot) => sum + depot.capacity, 0);
     const commonFleet = routeFleets[0];
-    const trainType = commonFleet?.trainType ?? "metro";
-    const cars = commonFleet?.cars ?? 6;
+    const trainType = routeTrainType(route);
+    const cars = commonFleet?.cars ?? defaultCars(trainType);
     const costPerSet = trainCatalog[trainType].pricePerCar * cars;
 
     if (operation.dailyDemand > 0 && sets === 0) {
@@ -11892,7 +11889,7 @@ function calculateDailyMaintenance(fleetSource = operationsState.fleets) {
 function calculateDailyMaintenanceBreakdown(fleetSource = operationsState.fleets) {
   const multiplier = getNewsOperatingCostMultiplier();
   return {
-    trains: Math.round(fleetSource.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0) * multiplier),
+    trains: roundCost(fleetSource.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0) * multiplier),
     depots: Math.round(networkState.depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0) * multiplier),
     express: Math.round(operationsState.expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0) * multiplier),
   };
@@ -13085,7 +13082,9 @@ function renderTrainManager() {
   const operation = getOperatingServiceOperation(service);
   const selectedFleet = routeFleets.find((fleet) => fleet.id === selectedTrainFleetId);
   const operatingForecast = calculateDemandResponsiveForecast();
-  const defaultSpec = trainCatalog.metro;
+  const routeType = routeTrainType(route);
+  const defaultSpec = trainCatalog[routeType];
+  const routeDefaultCars = defaultCars(routeType);
   trainPanel.renderView({
     entityId: service.id,
     serviceName: service.name,
@@ -13110,19 +13109,23 @@ function renderTrainManager() {
         addCost: formatCost(Math.round(spec.pricePerCar * fleet.cars)),
       };
     }),
-    // 선택 상자의 기본값(도시철도 6량)과 같은 구입비
-    addCost: formatCost(Math.round(defaultSpec.pricePerCar * 6)),
+    // 선택 상자의 기본값(노선 차종 기본 편성)과 같은 구입비
+    addCost: formatCost(Math.round(defaultSpec.pricePerCar * routeDefaultCars)),
+    trainTypeLabel: defaultSpec.label,
+    trainTypeSummary: `${defaultSpec.capacityPerCar}명/량 · ${defaultSpec.speedKmh}km/h · ${defaultSpec.minCars}~${defaultSpec.maxCars}량`,
+    carOptions: Array.from({ length: defaultSpec.maxCars - defaultSpec.minCars + 1 }, (_, index) => defaultSpec.minCars + index),
+    defaultCars: routeDefaultCars,
   }, handleTrainPanelClick, handleTrainPanelChange);
 }
 
 function handleTrainPanelChange(event: Event) {
   const target = event.target as HTMLSelectElement;
-  if (target.id !== "modalTrainTypeSelect" && target.id !== "modalCarCountSelect") return;
+  if (target.id !== "modalCarCountSelect") return;
   const service = operationsState.services.find((item) => item.id === selectedOperatingServiceId);
   const route = networkState.routes.find((item) => item.id === service?.ownerRouteId);
   if (!route || !service) return;
-  const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
-  const cars = Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? 6);
+  const trainType = routeTrainType(route);
+  const cars = clampCars(trainType, Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? defaultCars(trainType)));
   const spec = trainCatalog[trainType];
   setText(document.querySelector<HTMLElement>("#modalAddFleetButton [data-add-cost]"), formatCost(Math.round(spec.pricePerCar * cars)));
   const previewFleet: TrainFleet = {
@@ -13134,7 +13137,7 @@ function handleTrainPanelChange(event: Event) {
     sets: 1,
     capacity: spec.capacityPerCar * cars,
     purchaseCost: spec.pricePerCar * cars,
-    maintenanceCost: spec.maintenancePerCar * cars,
+    maintenanceCost: roundCost(spec.maintenancePerCar * cars),
   };
   updateOperatingForecastComparison(calculateDemandResponsiveForecast([...operationsState.fleets, previewFleet]));
 }
@@ -13186,8 +13189,8 @@ function handleTrainPanelClick(event: Event) {
     return;
   }
   if (button.dataset.trainAction !== "add") return;
-  const trainType = (document.querySelector<HTMLSelectElement>("#modalTrainTypeSelect")?.value as TrainType) || "metro";
-  const cars = Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? 6);
+  const trainType = routeTrainType(route);
+  const cars = clampCars(trainType, Number(document.querySelector<HTMLSelectElement>("#modalCarCountSelect")?.value ?? defaultCars(trainType)));
   const spec = trainCatalog[trainType];
   const currentRouteSets = operationsState.fleets.filter((fleet) => fleet.serviceId === service.id).reduce((sum, fleet) => sum + fleet.sets, 0);
   if (currentRouteSets >= connectedDepotCapacity) {
@@ -13209,7 +13212,7 @@ function handleTrainPanelClick(event: Event) {
     sets: 1,
     capacity: spec.capacityPerCar * cars,
     purchaseCost,
-    maintenanceCost: Math.round(spec.maintenancePerCar * cars),
+    maintenanceCost: roundCost(spec.maintenancePerCar * cars),
   }]);
   financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - purchaseCost, trainSpent: financeState.economy.trainSpent + purchaseCost };
   redoStack = [];

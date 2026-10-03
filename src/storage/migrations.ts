@@ -4,8 +4,9 @@ import {
   createStationDemandState,
   type DemandZone,
 } from "../demandModel";
+import { legacyRouteTrainType, normalizeTrainType, roundCost, trainCatalog, DEFAULT_TRAIN_TYPE } from "../domain/trainTypes";
 
-export const CURRENT_SAVE_SCHEMA_VERSION = 5;
+export const CURRENT_SAVE_SCHEMA_VERSION = 6;
 
 type AnyRecord = Record<string, any>;
 
@@ -223,7 +224,39 @@ function upgradeVersionedSource(input: AnyRecord): AnyRecord {
   const version2 = version < 2 ? migrateVersion1To2(input) : { ...input };
   const version3 = version < 3 ? migrateVersion2To3(version2) : version2;
   const version4 = version < 4 ? migrateVersion3To4(version3) : version3;
-  return version < 5 ? { ...version4, schemaVersion: 5 } : version4;
+  const version5 = version < 5 ? { ...version4, schemaVersion: 5 } : version4;
+  return version < 6 ? migrateVersion5To6(version5) : version5;
+}
+
+/**
+ * 열차 차종 개편: 노선마다 차종 하나를 정하고(일반 열차가 있으면 중전철, 급행형만 있으면 GTX),
+ * 그 노선의 편성을 노선 차종으로 바꾼다. 편성 차량 수와 구입 기록은 그대로 두고 정원·운영비만 새 차종 값으로 다시 계산한다.
+ */
+function migrateVersion5To6(source: AnyRecord): AnyRecord {
+  const fleets = arrayValue(source.trainFleets).map(asRecord);
+  const routeTypes = new Map<string, ReturnType<typeof normalizeTrainType>>();
+  const routes = arrayValue(source.routes).map((routeValue) => {
+    const route = asRecord(routeValue);
+    const trainType = legacyRouteTrainType(fleets.filter((fleet) => fleet.routeId === route.id).map((fleet) => fleet.trainType));
+    routeTypes.set(String(route.id), trainType);
+    return { ...route, trainType };
+  });
+  return {
+    ...source,
+    schemaVersion: 6,
+    routes,
+    trainFleets: fleets.map((fleet) => {
+      const trainType = routeTypes.get(String(fleet.routeId)) ?? normalizeTrainType(fleet.trainType);
+      const spec = trainCatalog[trainType];
+      const cars = Math.max(1, Math.round(finiteNumber(fleet.cars, spec.minCars)));
+      const sets = Math.max(0, Math.round(finiteNumber(fleet.sets, 0)));
+      return { ...fleet, trainType, capacity: spec.capacityPerCar * cars * sets, maintenanceCost: roundCost(spec.maintenancePerCar * cars * sets) };
+    }),
+    plans: arrayValue(source.plans).map((planValue) => {
+      const plan = asRecord(planValue);
+      return { ...plan, routes: arrayValue(plan.routes).map((routeValue) => ({ trainType: DEFAULT_TRAIN_TYPE, ...asRecord(routeValue) })) };
+    }),
+  };
 }
 
 function migrateVersion1To2(source: AnyRecord): AnyRecord {

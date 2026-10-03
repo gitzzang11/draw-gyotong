@@ -307,7 +307,7 @@ describe("SaveFacade", () => {
 
     await facade.create(representativeSave());
     const loaded = await facade.load("slot-v5");
-    expect(loaded?.schemaVersion).toBe(5);
+    expect(loaded?.schemaVersion).toBe(6);
     expect(loaded?.stations[0].connectedRouteIds).toEqual(["line-a"]);
     expect(loaded?.depots[0].connectedRouteIds).toEqual(["line-a"]);
     expect(loaded?.trainFleets[0]).toMatchObject({ id: "fleet-a", routeId: "line-a", serviceId: "service-a" });

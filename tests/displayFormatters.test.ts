@@ -6,6 +6,8 @@ describe("display formatters", () => {
     expect(formatCost(-1)).toBe("0억");
     expect(formatCost(0)).toBe("0억");
     expect(formatCost(12.5)).toBe("13억");
+    expect(formatCost(0.03)).toBe("300만원");
+    expect(formatCost(0.00001)).toBe("1만원");
     expect(formatCost(12345)).toBe("12,345억");
   });
 

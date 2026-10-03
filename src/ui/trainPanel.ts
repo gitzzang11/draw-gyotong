@@ -25,6 +25,11 @@ export interface TrainPanelView {
   forecastHtml: string;
   fleets: TrainPanelFleet[];
   addCost: string;
+  /** 노선 차종 (노선을 만들 때 정해져 바꿀 수 없다) */
+  trainTypeLabel: string;
+  trainTypeSummary: string;
+  carOptions: number[];
+  defaultCars: number;
 }
 
 export class TrainPanel {
@@ -67,14 +72,9 @@ export class TrainPanel {
           ${fleets}
         </section>
         <section class="dg-panel__section game-save-editor__pair">
-          <label class="dg-field"><span class="dg-field__label">새 편성 차량</span><select id="modalTrainTypeSelect" class="dg-input">
-            <option value="metro">도시철도 (160명/량 · 34km/h)</option>
-            <option value="commuter">광역전철 (190명/량 · 42km/h)</option>
-            <option value="express">급행형 (150명/량 · 54km/h)</option>
-          </select></label>
+          <div class="dg-field"><span class="dg-field__label">노선 차종</span><span class="dg-input game-train__type"><strong>${escapeHtml(view.trainTypeLabel)}</strong><small>${escapeHtml(view.trainTypeSummary)}</small></span></div>
           <label class="dg-field"><span class="dg-field__label">편성당 차량 수</span><select id="modalCarCountSelect" class="dg-input">
-            <option value="4">4량</option><option value="6" selected>6량</option>
-            <option value="8">8량</option><option value="10">10량</option>
+            ${view.carOptions.map((cars) => `<option value="${cars}" ${cars === view.defaultCars ? "selected" : ""}>${cars}량</option>`).join("")}
           </select></label>
         </section>
         ${full ? `<p class="game-inspector__note game-train__full">△ 차량기지 수용량이 가득 찼습니다. 기지를 확장하거나 연결을 확인하세요.</p>` : ""}

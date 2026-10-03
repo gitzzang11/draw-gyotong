@@ -1,5 +1,7 @@
+/** 억 단위. 1억 미만(열차 운영비 등)은 반올림하면 0억이 되므로 만원 단위로 보인다. */
 export function formatCost(cost: number): string {
   if (cost <= 0) return "0억";
+  if (cost < 0.5) return `${Math.max(1, Math.round(cost * 10000)).toLocaleString("ko-KR")}만원`;
   return `${Math.round(cost).toLocaleString("ko-KR")}억`;
 }
 

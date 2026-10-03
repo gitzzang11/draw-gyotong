@@ -125,3 +125,24 @@ describe("save migrations", () => {
     });
   });
 });
+
+describe("train type overhaul (schema 6)", () => {
+  it("gives each route one train type and converts its fleets", () => {
+    const migrated = migrateSaveStateRecord<Record<string, any>>({
+      schemaVersion: 5,
+      meta: { slotId: "slot-train", slotName: "차종", createdAt: 1 },
+      routes: [{ id: "mixed" }, { id: "express-only" }, { id: "empty" }],
+      trainFleets: [
+        { id: "a", routeId: "mixed", trainType: "metro", cars: 6, sets: 2 },
+        { id: "b", routeId: "mixed", trainType: "express", cars: 4, sets: 1 },
+        { id: "c", routeId: "express-only", trainType: "express", cars: 8, sets: 1 },
+      ],
+      plans: [{ id: "plan", routes: [{ id: "planned" }] }],
+    });
+    expect(migrated.routes.map((route: any) => route.trainType)).toEqual(["heavy", "gtx", "heavy"]);
+    expect(migrated.trainFleets.map((fleet: any) => fleet.trainType)).toEqual(["heavy", "heavy", "gtx"]);
+    // 차량 수는 그대로 두고 정원·운영비만 새 차종 값으로 다시 계산한다.
+    expect(migrated.trainFleets[0]).toMatchObject({ cars: 6, sets: 2, capacity: 160 * 6 * 2, maintenanceCost: 0.096 });
+    expect(migrated.plans[0].routes[0].trainType).toBe("heavy");
+  });
+});

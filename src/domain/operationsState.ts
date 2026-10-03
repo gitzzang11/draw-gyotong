@@ -4,7 +4,7 @@ export type TrainFleet = {
   id: string;
   routeId: string;
   serviceId?: string;
-  trainType: "metro" | "commuter" | "express";
+  trainType: import("./trainTypes").TrainType;
   cars: number;
   sets: number;
   capacity: number;
