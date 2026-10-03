@@ -877,49 +877,41 @@ app.innerHTML = `
 
     <section id="map" class="map" aria-label="Korea city rail map"></section>
     
-    <!-- Status strip: 자금·손익·만족·시간·배속·경보 (docs/design/DESIGN_SYSTEM.md §9) -->
-    <header id="statusStrip" class="dg-hud dg-hud--top dg-status-strip game-status-strip" aria-label="운영 상태">
-      <button id="financeStatusButton" class="dg-status-strip__cell game-status-button game-status-finance" type="button" title="자금 및 재정 관리 열기" aria-haspopup="dialog">
-        <span class="dg-status-strip__key game-status-optional-key">자금</span>
-        <strong id="cashReadout" class="dg-status-strip__metric">0 억</strong>
+    <!-- 재정 정보판: 왼쪽 위 (docs/design/MOBILE_UX.md §3) -->
+    <div id="financePlate" class="dg-hud dg-plate game-plate game-plate--finance" role="group" aria-label="재정과 만족도">
+      <button id="financeStatusButton" class="dg-plate__cell" type="button" aria-haspopup="dialog">
+        <span class="dg-plate__key game-optional">자금</span>
+        <strong id="cashReadout" class="dg-plate__metric">0 억</strong>
         <span class="dg-sr-only">일일 순수익</span>
         <span id="dailyNetReadout" class="game-status-net">0 억</span>
       </button>
-      <button id="satisfactionPill" class="dg-status-strip__cell game-status-button" type="button" title="승객 만족도 상세 보기" aria-label="승객 만족도 상세 보기">
+      <button id="satisfactionPill" class="dg-plate__cell" type="button" aria-haspopup="dialog">
         <span id="satisfactionIcon" class="game-satisfaction-mark" aria-hidden="true">●</span>
-        <span class="dg-status-strip__key">만족</span>
-        <strong id="satisfactionReadout">-</strong>
+        <span class="dg-sr-only">승객 만족도</span>
+        <strong id="satisfactionReadout" class="dg-plate__metric">-</strong>
+        <span id="satisfactionLevelReadout" class="dg-plate__key game-optional"></span>
       </button>
-      <div class="dg-status-strip__spacer" aria-hidden="true"></div>
-      <div class="dg-status-strip__cell game-status-clock" aria-label="게임 시간">
-        <span id="gameDayReadout" class="dg-status-strip__key">1일차</span>
-        <strong id="gameClockReadout" class="dg-status-strip__metric">00:00</strong>
+    </div>
+
+    <!-- 시간 정보판: 오른쪽 위 -->
+    <div id="timePlate" class="dg-hud dg-plate game-plate game-plate--time" role="group" aria-label="시간과 시스템">
+      <div class="dg-plate__cell dg-plate__cell--stack">
+        <span id="gameDayReadout" class="dg-plate__sub">1일차</span>
+        <strong id="gameClockReadout" class="dg-plate__metric">00:00</strong>
       </div>
-      <div class="dg-status-strip__cell game-speed" role="group" aria-label="시간 배속">
-        <div class="dg-seg game-speed__seg">
-          <button class="dg-seg__item game-speed__pause" data-speed="0" type="button" aria-pressed="true" aria-label="일시정지">‖</button>
-          <button id="speedMenuButton" class="dg-seg__item game-speed__toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="speedOptions"><span id="speedMenuLabel">배속</span><span aria-hidden="true">▾</span></button>
-          <div id="speedOptions" class="game-speed__options" role="group" aria-label="배속 선택">
-            <button class="dg-seg__item" data-speed="2" type="button" aria-pressed="false">×2</button>
-            <button class="dg-seg__item" data-speed="5" type="button" aria-pressed="false">×5</button>
-            <button class="dg-seg__item" data-speed="10" type="button" aria-pressed="false">×10</button>
-            <button class="dg-seg__item" data-speed="100" type="button" aria-pressed="false">×100</button>
-          </div>
-        </div>
-      </div>
-      <div class="dg-status-strip__cell game-status-actions">
-        <button id="newsButton" class="dg-icon-btn game-news-button" type="button" aria-label="도시 뉴스" title="도시 뉴스">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 15 H16 L14.5 12.5 V8.5 A4.5 4.5 0 0 0 5.5 8.5 V12.5 Z M8.5 17.5 H11.5"/></svg>
-          <span id="newsBadge" class="game-count-badge" hidden>0</span>
-        </button>
-        <button id="helpButton" class="dg-icon-btn" type="button" aria-label="도움말" title="도움말">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15"/><path d="M7.5 7.5 A2.5 2.5 0 1 1 10 10 V11.5 M10 14 V14.5"/></svg>
-        </button>
-        <button id="menuButton" class="dg-icon-btn" type="button" aria-label="메뉴" title="메뉴">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 5 H17 M3 10 H17 M3 15 H17"/></svg>
-        </button>
-      </div>
-    </header>
+      <button id="pauseToggleButton" class="dg-plate__cell dg-plate__cell--icon game-pause-cell" type="button" data-paused="true" aria-label="재생">
+        <svg class="game-icon-pause" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="3.5" height="12"/><rect x="11.5" y="4" width="3.5" height="12"/></svg>
+        <svg class="game-icon-play" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6 4 L16 10 L6 16 Z"/></svg>
+      </button>
+      <button id="speedCycleButton" class="dg-plate__cell game-speed-cell" type="button">×2</button>
+      <button id="newsButton" class="dg-plate__cell dg-plate__cell--icon" type="button" aria-label="도시 뉴스">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 15 H16 L14.5 12.5 V8.5 A4.5 4.5 0 0 0 5.5 8.5 V12.5 Z M8.5 17.5 H11.5"/></svg>
+        <span id="newsBadge" class="dg-count-badge" hidden>0</span>
+      </button>
+      <button id="menuButton" class="dg-plate__cell dg-plate__cell--icon" type="button" aria-label="메뉴">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 5 H17 M3 10 H17 M3 15 H17"/></svg>
+      </button>
+    </div>
 
     <!-- Mode rail: 도구는 다음 단계에서 이 레일 아래로 옮긴다 -->
     <nav id="workspaceModeBar" class="dg-hud dg-rail game-mode-rail" aria-label="작업 모드">
@@ -1678,6 +1670,7 @@ app.innerHTML = `
           </div>
 
           <div class="menu-secondary-actions">
+            <button id="menuOpenHelpButton" class="menu-settings-btn" type="button"><span class="menu-action-icon" aria-hidden="true">?</span><span>도움말 · 튜토리얼</span></button>
             <button id="menuOpenSettingsButton" class="menu-settings-btn" type="button" aria-haspopup="dialog">
               <span class="menu-action-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.03a1.7 1.7 0 0 0-1.87.34l-.06.06h-3.4l-.03-.08a1.7 1.7 0 0 0-1.29-1.1 1.7 1.7 0 0 0-.58 0 1.7 1.7 0 0 0-1.3 1.1l-.02.08H6.07l-.06-.06a1.7 1.7 0 0 0-1.88-.34l-.07.03-1.7-2.94.06-.06A1.7 1.7 0 0 0 2.76 15l-.03-.08v-3.4l.08-.03a1.7 1.7 0 0 0 1.1-1.29 1.7 1.7 0 0 0 0-.58 1.7 1.7 0 0 0-1.1-1.3l-.08-.02V4.9l.06-.06a1.7 1.7 0 0 0 .34-1.88l-.03-.07 2.94-1.7.06.06a1.7 1.7 0 0 0 1.88.34l.08-.03h3.4l.03.08a1.7 1.7 0 0 0 1.29 1.1 1.7 1.7 0 0 0 .58 0 1.7 1.7 0 0 0 1.3-1.1l.02-.08h3.4l.06.06a1.7 1.7 0 0 0 1.88.34l.07-.03 1.7 2.94-.06.06A1.7 1.7 0 0 0 21.24 7l.03.08v3.4l-.08.03a1.7 1.7 0 0 0-1.1 1.29 1.7 1.7 0 0 0 0 .58 1.7 1.7 0 0 0 1.1 1.3l.08.02v1.3Z"/></svg></span><span>환경 설정</span>
             </button>
@@ -1924,7 +1917,7 @@ const tutorialText = byId("tutorialText");
 const tutorialFeedback = byId("tutorialFeedback");
 const tutorialNextButton = document.querySelector<HTMLButtonElement>("#tutorialNextButton");
 const tutorialSkipButton = document.querySelector<HTMLButtonElement>("#tutorialSkipButton");
-const helpButton = document.querySelector<HTMLButtonElement>("#helpButton");
+const helpButton = document.querySelector<HTMLButtonElement>("#menuOpenHelpButton");
 const settingsDialog = byId("settingsDialog");
 const closeSettingsButton = document.querySelector<HTMLButtonElement>("#closeSettingsButton");
 const soundToggle = document.querySelector<HTMLInputElement>("#soundToggle");
@@ -1971,10 +1964,9 @@ const statisticsButton = document.querySelector<HTMLButtonElement>("#statisticsB
 const newsButton = document.querySelector<HTMLButtonElement>("#newsButton");
 const newsBadge = byId("newsBadge");
 const guideButton = document.querySelector<HTMLButtonElement>("#guideButton");
-const timeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-speed]"));
-const speedMenuButton = document.querySelector<HTMLButtonElement>("#speedMenuButton");
-const speedMenuLabel = byId("speedMenuLabel");
-const speedOptions = byId("speedOptions");
+const pauseToggleButton = document.querySelector<HTMLButtonElement>("#pauseToggleButton");
+const speedCycleButton = document.querySelector<HTMLButtonElement>("#speedCycleButton");
+const satisfactionLevelReadout = byId("satisfactionLevelReadout");
 const workspaceModeReadout = byId("workspaceModeReadout");
 const workspaceModeTabs = Array.from(document.querySelectorAll<HTMLButtonElement>("button[data-workspace-mode]"));
 const selectTool = document.querySelector<HTMLButtonElement>("#selectTool");
@@ -2993,7 +2985,10 @@ metroDiagramSvg?.addEventListener("pointerdown", startDiagramStationDrag);
 metroDiagramSvg?.addEventListener("pointermove", moveDiagramStationDrag);
 metroDiagramSvg?.addEventListener("pointerup", finishDiagramStationDrag);
 metroDiagramSvg?.addEventListener("pointercancel", finishDiagramStationDrag);
-helpButton?.addEventListener("click", () => openTutorial(true));
+helpButton?.addEventListener("click", () => {
+  closeInGameMenu();
+  openTutorial(true);
+});
 guideButton?.addEventListener("click", () => openTutorial(true));
 closeSettingsButton?.addEventListener("click", closeSettings);
 if (settingsDialog) bindBackdropDismiss(settingsDialog, closeSettings);
@@ -3025,41 +3020,48 @@ errorRetryButton?.addEventListener("click", () => {
   clearError();
   action?.();
 });
-timeButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    simSpeed = Number(button.dataset.speed ?? "0");
-    gameLoopController.setSpeed(simSpeed);
-    if (simSpeed === 0) gameLoopController.pause();
-    else gameLoopController.resume();
-    if (simSpeed > 0) recordTutorialSignal("timeStarted", false);
-    syncSpeedControls();
-    setSpeedMenuOpen(false);
-    setText(modeLabel, simSpeed === 0 ? "일시정지" : `운영 x${simSpeed}`);
-    updateTutorialProgress();
-    playFeedback("select");
-  });
-});
+/** 배속 순서. 배속 칸을 누를 때마다 다음 값으로 넘어간다(docs/design/DESIGN_SYSTEM.md §9). */
+const speedSteps = [2, 5, 10, 100] as const;
+let lastRunningSpeed: number = speedSteps[0];
 
-speedMenuButton?.addEventListener("click", () => setSpeedMenuOpen(speedMenuButton.getAttribute("aria-expanded") !== "true"));
+function nextSpeedStep(speed: number) {
+  const index = speedSteps.indexOf(speed as (typeof speedSteps)[number]);
+  return speedSteps[(index + 1) % speedSteps.length];
+}
+
+function setSimulationSpeed(nextSpeed: number) {
+  simSpeed = nextSpeed;
+  if (simSpeed > 0) lastRunningSpeed = simSpeed;
+  gameLoopController.setSpeed(simSpeed);
+  if (simSpeed === 0) gameLoopController.pause();
+  else gameLoopController.resume();
+  if (simSpeed > 0) recordTutorialSignal("timeStarted", false);
+  syncSpeedControls();
+  setText(modeLabel, simSpeed === 0 ? "일시정지" : `운영 x${simSpeed}`);
+  updateTutorialProgress();
+  playFeedback("select");
+}
+
+pauseToggleButton?.addEventListener("click", () => setSimulationSpeed(simSpeed === 0 ? lastRunningSpeed : 0));
+// 정지 중에 누르면 다음 배속으로 재개한다.
+speedCycleButton?.addEventListener("click", () => setSimulationSpeed(nextSpeedStep(simSpeed === 0 ? lastRunningSpeed : simSpeed)));
 syncSpeedControls();
-// 상태 표시줄이 큰 글자로 두 줄이 되어도 레일·지도 컨트롤이 그 아래에 오도록 실제 높이를 반영한다.
-const statusStrip = byId("statusStrip");
-if (statusStrip && "ResizeObserver" in window) {
-  new ResizeObserver(() => {
-    document.documentElement.style.setProperty("--hud-top", `${Math.ceil(statusStrip.getBoundingClientRect().bottom)}px`);
-  }).observe(statusStrip);
+
+// 정보판이 큰 글자로 줄바꿈되어도 레일·지도 컨트롤이 그 아래에 오도록 실제 아래쪽 위치를 반영한다.
+const topPlates = [byId("financePlate"), byId("timePlate")].filter((plate): plate is HTMLElement => Boolean(plate));
+if (topPlates.length && "ResizeObserver" in window) {
+  const observer = new ResizeObserver(() => {
+    const bottom = Math.max(...topPlates.map((plate) => plate.getBoundingClientRect().bottom));
+    document.documentElement.style.setProperty("--hud-top", `${Math.ceil(bottom)}px`);
+  });
+  topPlates.forEach((plate) => observer.observe(plate));
 }
 document.addEventListener("pointerdown", (event) => {
-  if (speedMenuButton?.getAttribute("aria-expanded") === "true" && !(event.target as Element).closest(".game-speed")) setSpeedMenuOpen(false);
   const layerMenu = document.querySelector<HTMLDetailsElement>(".game-layer-menu");
   if (layerMenu?.open && !(event.target as Element).closest(".game-layer-menu")) layerMenu.open = false;
 });
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  if (speedMenuButton?.getAttribute("aria-expanded") === "true") {
-    setSpeedMenuOpen(false);
-    speedMenuButton.focus();
-  }
   const layerMenu = document.querySelector<HTMLDetailsElement>(".game-layer-menu");
   if (layerMenu?.open) layerMenu.open = false;
 });
@@ -12076,7 +12078,8 @@ function updateEconomyHud() {
   // 상태는 색과 함께 표식 모양(● △ ✕)과 문구로 구분한다.
   const satisfactionLevel = financeState.economy.satisfaction >= 70 ? "ok" : financeState.economy.satisfaction >= 50 ? "caution" : "danger";
   const satisfactionMark = satisfactionLevel === "ok" ? "●" : satisfactionLevel === "caution" ? "△" : "✕";
-  hudRenderer.update("satisfaction", `${financeState.economy.satisfaction} · ${satisfactionLabel}`);
+  hudRenderer.update("satisfaction", String(financeState.economy.satisfaction));
+  setText(satisfactionLevelReadout, satisfactionLabel);
   if (satisfactionIcon) {
     hudRenderer.update("satisfactionIcon", satisfactionMark);
     satisfactionIcon.dataset.level = satisfactionLevel;
@@ -15718,7 +15721,7 @@ function applyTutorialTarget(target: (typeof tutorialSteps)[number]["target"]) {
                 : target === "opening"
                   ? constructionManagerButton
                   : target === "speed"
-                    ? document.querySelector<HTMLElement>(".game-speed")
+                    ? document.querySelector<HTMLElement>("#timePlate")
                     : statisticsButton;
   targetElement?.classList.add("tutorial-target");
   document.body.dataset.tutorialTarget = target;
@@ -15788,20 +15791,19 @@ function applySettingsToUi() {
   }
 }
 
-/** 배속 버튼의 눌림 상태와 배속 메뉴 라벨을 현재 simSpeed에 맞춘다. */
+/** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */
 function syncSpeedControls() {
-  timeButtons.forEach((button) => {
-    const active = Number(button.dataset.speed ?? "0") === simSpeed;
-    button.setAttribute("aria-pressed", String(active));
-  });
-  setText(speedMenuLabel, simSpeed === 0 ? "배속" : `×${simSpeed}`);
-  speedMenuButton?.setAttribute("aria-label", simSpeed === 0 ? "배속 선택, 일시정지 중" : `배속 선택, 현재 ×${simSpeed}`);
-}
-
-function setSpeedMenuOpen(open: boolean) {
-  if (!speedMenuButton || !speedOptions) return;
-  speedMenuButton.setAttribute("aria-expanded", String(open));
-  speedOptions.dataset.open = String(open);
+  const paused = simSpeed === 0;
+  const shownSpeed = paused ? lastRunningSpeed : simSpeed;
+  if (pauseToggleButton) {
+    pauseToggleButton.dataset.paused = String(paused);
+    pauseToggleButton.classList.toggle("dg-plate__cell--on", paused);
+    pauseToggleButton.setAttribute("aria-label", paused ? `재생, ×${shownSpeed}로 재개` : "일시정지");
+  }
+  if (speedCycleButton) {
+    speedCycleButton.textContent = `×${shownSpeed}`;
+    speedCycleButton.setAttribute("aria-label", `배속 ×${shownSpeed}${paused ? ", 정지 중" : ""}. 누르면 ×${nextSpeedStep(shownSpeed)}`);
+  }
 }
 
 function openSettings() {

@@ -127,114 +127,124 @@ section.block > .body { padding: 16px; }
 }
 .field input:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* ===== Frame (844×390 device) ===== */
-.frame-wrap { width: 100%; aspect-ratio: 844 / 390; position: relative; overflow: hidden; border: 1px solid var(--edge); }
-.frame { position: absolute; left: 0; top: 0; width: 844px; height: 390px; transform-origin: 0 0; overflow: hidden; background: var(--map-ground); }
-.frame > svg.map { position: absolute; inset: 0; }
-.frame-caption { margin: 8px 0 24px; color: var(--text-2); }
+/* ===== Device (실제 CSS px. 넓은 화면에서 확대하지 않는다) ===== */
+.fit { position: relative; margin: 0 0 8px; }
+.fit > .device { transform-origin: 0 0; }
+.device { display: inline-block; padding: 14px; background: #0B0C0E; border-radius: 30px; }
+.screen {
+  --sl: 12px; --sr: 12px; --st: 8px; --sb: 10px;
+  position: relative; overflow: hidden; background: var(--map-ground); border-radius: 14px;
+  font: 600 14px/20px var(--font);
+}
+.screen.s844 { width: 844px; height: 390px; }
+.screen.s640 { width: 640px; height: 360px; }
+.screen.notched { --sl: 40px; }
+.screen > svg.map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.notch { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 28px; height: 150px; background: #0B0C0E; border-radius: 0 18px 18px 0; z-index: 5; }
+.thumb { position: absolute; bottom: -30px; width: 210px; height: 150px; border-radius: 50%; border: 2px dashed rgba(29, 95, 194, .55); background: rgba(29, 95, 194, .06); pointer-events: none; z-index: 4; display: none; }
+.show-thumbs .thumb { display: block; }
+.thumb.l { left: -60px; } .thumb.r { right: -60px; }
+.frame-caption { margin: 4px 0 24px; color: var(--text-2); max-width: 880px; }
 
-.status {
-  position: absolute; left: 0; right: 0; top: 0; height: 36px; display: flex; align-items: stretch;
-  background: var(--surface-0); border-bottom: 1px solid var(--edge); padding: 0 12px; font-size: 12px;
-}
-.status .cell { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-right: 1px solid var(--rule); white-space: nowrap; }
-.status .cell:first-child { padding-left: 0; }
-.status .metric { font-size: 15px; font-weight: 700; }
-.status .k { color: var(--text-2); font-size: 11px; font-weight: 600; }
-.status .pos { color: var(--signal-ok); font-weight: 700; }
-.status .spacer { flex: 1; border: 0; }
-.status .seg { align-self: center; border-width: 1px; }
-.status .seg button { min-height: 26px; padding: 0 8px; font-size: 12px; border-right-width: 1px; }
-.alert-cell { color: var(--signal-caution-text); font-weight: 700; }
-
-.rail {
-  position: absolute; left: 12px; top: 48px; width: 128px; background: var(--surface-0); border: 1px solid var(--edge);
-}
-.rail .modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--edge); }
-.rail .modes button {
-  height: 34px; border: 0; border-right: 1px solid var(--rule); background: var(--surface-0); font-weight: 700; font-size: 12px; padding: 0;
-}
-.rail .modes button:last-child { border-right: 0; }
-.rail .modes button[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
-.rail .tool {
-  display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 0 10px 0 12px; border: 0;
-  border-bottom: 1px solid var(--rule); background: transparent; text-align: left; font-weight: 600; position: relative;
-}
-.rail .tool:last-child { border-bottom: 0; }
-.rail .tool svg { width: 16px; height: 16px; flex: none; }
-.rail .tool[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
-.rail .tool[aria-pressed="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--invert-fg); }
-.rail .tool.destructive { color: var(--signal-danger); }
-.rail.planning, .rail.planning .modes, .rail.planning .tool { border-style: dashed; }
-.rail.compact { width: 56px; }
-.rail.compact .mode-now { display: flex; align-items: center; justify-content: center; gap: 4px; height: 28px; background: var(--invert-bg); color: var(--invert-fg); font-size: 11px; font-weight: 800; }
-.rail.compact .mode-now .mk { width: 8px; height: 8px; background: var(--hazard); --hazard-dark: #15171A; }
-.rail.compact .tool { flex-direction: column; justify-content: center; gap: 2px; height: 44px; padding: 0; font-size: 10px; line-height: 12px; text-align: center; }
-.rail.compact .tool[aria-pressed="true"]::before { width: 3px; }
+/* ===== Corner plates ===== */
+.plate { position: absolute; display: flex; align-items: stretch; height: 48px; background: var(--surface-0); color: var(--text-1); border: 1px solid var(--edge); }
+.plate > * + * { border-left: 1px solid var(--rule); }
+.cell { display: flex; align-items: center; gap: 6px; padding: 0 12px; background: transparent; border: 0; color: inherit; font: inherit; white-space: nowrap; }
+.cell .k { color: var(--text-2); font-size: 12px; font-weight: 700; }
+.cell .m { font-size: 18px; line-height: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cell .net { font-size: 13px; font-weight: 800; color: var(--signal-ok); }
+.cell .mark-ok { color: var(--signal-ok); font-size: 13px; }
+.cell.icon { width: 48px; padding: 0; justify-content: center; position: relative; }
+.cell.icon svg { width: 22px; height: 22px; }
+.cell.stack { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; padding: 0 12px; }
+.cell .day { font-size: 11px; line-height: 13px; color: var(--text-2); font-weight: 700; }
+.cell.speed { min-width: 56px; justify-content: center; font-size: 16px; font-weight: 800; }
+.cell.on { background: var(--invert-bg); color: var(--invert-fg); }
+.badge { position: absolute; top: 5px; right: 5px; min-width: 18px; height: 18px; padding: 0 4px; background: var(--invert-bg); color: var(--invert-fg); font: 800 11px/18px var(--font); text-align: center; }
+.p-finance { left: var(--sl); top: var(--st); }
+.p-time { right: var(--sr); top: var(--st); }
+.p-layer { right: var(--sr); top: calc(var(--st) + 56px); }
+.p-history { left: var(--sl); bottom: var(--sb); }
 
 .banner {
-  position: absolute; top: 48px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px;
-  background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; font-size: 12px; white-space: nowrap;
+  position: absolute; top: calc(var(--st) + 8px); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; font-size: 13px; white-space: nowrap;
 }
+.banner.low { top: calc(var(--st) + 56px); }
 .banner .mk { width: 12px; height: 12px; display: inline-block; }
 .banner .mk.sign { background: var(--invert-fg); }
-.banner .mk.plan { border: 1.5px dashed var(--signal-info); }
 .banner .mk.build { background: var(--hazard); --hazard-dark: #15171A; }
 .hint {
-  position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-  padding: 4px 10px; background: var(--surface-0); border: 1px solid var(--edge); font-size: 12px; font-weight: 600; white-space: nowrap;
+  position: absolute; top: calc(var(--st) + 48px); left: 50%; transform: translateX(-50%);
+  padding: 6px 12px; background: var(--surface-0); border: 1px solid var(--edge); font-size: 13px; font-weight: 700; white-space: nowrap;
 }
 
-.mapctl { position: absolute; right: 12px; top: 48px; display: flex; background: var(--surface-0); border: 1px solid var(--edge); }
-.mapctl button { width: 36px; height: 34px; border: 0; border-right: 1px solid var(--rule); background: transparent; display: grid; place-items: center; }
-.mapctl button:last-child { border-right: 0; }
-.mapctl svg { width: 16px; height: 16px; }
+/* ===== Mobile rail ===== */
+.mrail { position: absolute; left: var(--sl); top: calc(var(--st) + 56px); width: 136px; background: var(--surface-0); color: var(--text-1); border: 1px solid var(--edge); }
+.mrail .modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--edge); }
+.mrail .modes button { height: 40px; border: 0; border-right: 1px solid var(--rule); background: transparent; color: inherit; font: 800 13px var(--font); padding: 0; }
+.mrail .modes button:last-child { border-right: 0; }
+.mrail .modes button[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+.mrail .tool { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 12px; border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: inherit; font: 700 14px var(--font); text-align: left; }
+.mrail .tool:last-child { border-bottom: 0; }
+.mrail .tool svg { width: 20px; height: 20px; flex: none; }
+.mrail .tool[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
+.mrail .tool[aria-pressed="true"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--invert-fg); }
+.mrail .tool.destructive { color: var(--signal-danger); }
+.mrail.compact { width: 64px; }
+.mrail .mode-now { display: flex; align-items: center; justify-content: center; gap: 4px; height: 36px; background: var(--invert-bg); color: var(--invert-fg); font: 800 12px var(--font); }
+.mrail .mode-now .mk { width: 9px; height: 9px; background: var(--invert-fg); }
+.mrail .mode-now .mk.build { background: var(--hazard); --hazard-dark: #15171A; }
+.mrail.compact .tool { flex-direction: column; justify-content: center; gap: 3px; height: 52px; padding: 0; font-size: 11px; line-height: 13px; text-align: center; }
+.mrail.compact .tool[aria-pressed="true"]::before { width: 3px; }
 
-.inspector {
-  position: absolute; right: 12px; bottom: 12px; width: 300px; max-height: 286px;
-  display: flex; flex-direction: column; background: var(--surface-0); border: 1px solid var(--edge);
-  border-top-width: 0;
+/* ===== Inspector / review ===== */
+.insp {
+  position: absolute; right: var(--sr); bottom: var(--sb); width: 316px; max-height: 258px;
+  display: flex; flex-direction: column; background: var(--surface-0); color: var(--text-1); border: 1px solid var(--edge); border-top-width: 0;
 }
-.inspector.wide { width: 336px; max-height: 330px; }
-.inspector .band { height: 4px; background: var(--text-1); flex: none; }
-.inspector header { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--rule); }
-.inspector header .ico { width: 18px; height: 18px; flex: none; }
-.inspector header .name { font-size: 17px; line-height: 22px; font-weight: 800; }
-.inspector header .close { margin-left: auto; width: 32px; height: 32px; border: 0; background: transparent; display: grid; place-items: center; }
-.inspector header .close svg { width: 16px; height: 16px; }
-.inspector .scroll { overflow: hidden; flex: 1; }
-.inspector .sec { padding: 8px 12px; border-bottom: 1px solid var(--rule); }
-.inspector .sec:last-child { border-bottom: 0; }
-.inspector .sec h3 { margin: 0 0 2px; font-size: 12px; line-height: 16px; font-weight: 700; color: var(--text-2); }
-.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 26px; }
-.row .v { text-align: right; font-weight: 700; }
-.row .v.big { font-size: 16px; }
+.insp.tall { max-height: calc(100% - var(--st) - 56px - var(--sb)); width: 340px; }
+.insp .band { height: 4px; background: var(--text-1); flex: none; }
+.insp header { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 0 0 12px; border-bottom: 1px solid var(--rule); }
+.insp header .ico { width: 20px; height: 20px; flex: none; }
+.insp header .name { font-size: 18px; line-height: 24px; font-weight: 800; }
+.insp header .close { margin-left: auto; width: 48px; height: 48px; border: 0; background: transparent; color: inherit; display: grid; place-items: center; }
+.insp header .close svg { width: 18px; height: 18px; }
+.insp .scroll { overflow: hidden; flex: 1; }
+.insp .sec { padding: 6px 12px; border-bottom: 1px solid var(--rule); }
+.insp .sec:last-child { border-bottom: 0; }
+.insp .sec h3 { margin: 2px 0; font-size: 12px; line-height: 16px; font-weight: 800; color: var(--text-2); }
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 30px; font-weight: 600; }
+.row .v { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.row .v.big { font-size: 18px; }
 .row.bar { grid-template-columns: 1fr 72px auto; }
-.meter { height: 6px; background: var(--surface-2); position: relative; }
+.meter { height: 8px; background: var(--surface-2); position: relative; }
 .meter > span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--text-1); }
 .meter > span.over { background: var(--signal-danger); }
-.row .warn { color: var(--signal-caution-text); }
 .row .bad { color: var(--signal-danger); }
 .row .ok { color: var(--signal-ok); }
-.actions { display: flex; gap: 8px; padding: 8px 12px; border-top: 2px solid var(--text-1); flex: none; }
-.actions .push { margin-left: auto; }
-.msg { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-left: 4px solid var(--signal-caution); background: var(--surface-1); font-size: 12px; }
+.acts { display: flex; gap: 8px; padding: 8px 12px; border-top: 2px solid var(--text-1); flex: none; }
+.acts .push { margin-left: auto; }
+.acts .btn { min-height: 48px; font-size: 14px; }
+.acts .btn .cost { font-size: 16px; }
+.msg { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-left: 4px solid var(--signal-caution); background: var(--surface-1); font-size: 13px; }
 .msg b { color: var(--signal-caution-text); }
 
-.draftctl { position: absolute; left: 76px; bottom: 12px; display: flex; background: var(--surface-0); border: 1px solid var(--edge); }
-.draftctl .btn { border-radius: 0; border-right: 1px solid var(--rule); }
-.draftctl .btn:last-child { border-right: 0; }
-.tip {
-  position: absolute; padding: 3px 8px; background: var(--invert-bg); color: var(--invert-fg);
-  font-size: 12px; font-weight: 700; white-space: nowrap;
-}
+.draftbar { position: absolute; left: calc(var(--sl) + 64px + 8px); bottom: var(--sb); display: flex; background: var(--surface-0); color: var(--text-1); border: 1px solid var(--edge); }
+.draftbar .btn { min-height: 48px; border-radius: 0; border: 0; border-right: 1px solid var(--rule); font-size: 14px; }
+.draftbar .btn:last-child { border-right: 0; }
+.tip { position: absolute; padding: 5px 10px; background: var(--invert-bg); color: var(--invert-fg); font-size: 13px; font-weight: 800; white-space: nowrap; }
+
+.view-opts { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 0 0 16px; }
+.view-opts label { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; }
+
 </style>
 </head>
 <body>
 <div class="doc-head">
   <h1>Draw Gyotong · 노선도와 안내사인</h1>
-  <span class="sub">디자인 시안 v0 · DESIGN_SYSTEM.md 기준</span>
+  <span class="sub">디자인 시안 v1 · 모바일 가로 HUD</span>
   <div class="seg" role="group" aria-label="지도 테마">
     <button type="button" data-theme-btn="paper" aria-pressed="true">종이</button>
     <button type="button" data-theme-btn="ink" aria-pressed="false">먹</button>
@@ -243,15 +253,29 @@ section.block > .body { padding: 16px; }
 
 <main>
   <section class="block">
-    <h2>1. 핵심 화면 · 844×390</h2>
+    <h2>1. 모바일 가로 HUD · 실제 크기</h2>
     <div class="body">
-      <p class="note">지도는 인쇄 노선도처럼, UI는 안내판처럼 만듭니다. 채도 높은 색은 노선과 신호에만 씁니다.</p>
-      <div class="frame-wrap"><div class="frame" id="f-explore"></div></div>
-      <p class="frame-caption"><b>A. 관리 · 탐색</b>: 환승역 선택. 지도에는 먹색 외곽선과 기준점 핀이, inspector에는 먹 상단 띠와 노선 기호가 같은 대상을 가리킵니다.</p>
-      <div class="frame-wrap"><div class="frame" id="f-build"></div></div>
-      <p class="frame-caption"><b>B. 공사 · 노선 건설 검토</b>: 도면 재질입니다. 정밀 작업 중이라 tool rail이 축소되어 있습니다. 점선 draft, 사각 handle, 구간 치수, 스냅 고리, 교량 경고 구간이 보입니다. 취소와 되돌리기는 왼쪽 엄지 영역에, 확정과 비용은 오른쪽 엄지 영역에 둡니다.</p>
-      <div class="frame-wrap"><div class="frame" id="f-line"></div></div>
-      <p class="frame-caption"><b>C. 관리 · 노선 inspector</b>: 선택 노선만 원래 대비로 두고 나머지는 낮춥니다. 상단 띠는 노선 색이며, 혼잡 초과는 막대 색과 수치 표기를 함께 씁니다.</p>
+      <p class="note">화면은 확대하지 않은 실제 CSS 픽셀입니다. 844×390은 6.1인치급 폰, 640×360은 소형 폰 가로 화면입니다. 지도를 가리는 전체 폭 띠 대신 네 모서리의 정보판과 왼쪽 가장자리 도구 레일을 씁니다.</p>
+      <div class="view-opts">
+        <label><input type="checkbox" id="thumbToggle"> 엄지 영역 표시</label>
+      </div>
+      <div class="fit"><div class="device"><div class="screen s844" id="f-explore"></div></div></div>
+      <p class="frame-caption"><b>A. 관리 · 탐색 (844×390)</b>
+        <br>· 왼쪽 위: 자금·손익과 만족도 정보판. 누르면 재정·만족도 화면을 엽니다.
+        <br>· 오른쪽 위: 시간 | 일시정지 | 배속(누를 때마다 ×2→×5→×10→×100) | 뉴스 | 메뉴. 드롭다운은 쓰지 않습니다.
+        <br>· 왼쪽 가장자리: 모드 전환과 현재 모드 도구 레일(행 높이 44). 왼손 엄지로 닿습니다.
+        <br>· 왼쪽 아래: 실행 취소·다시 실행. 오른쪽 아래: 선택 객체 inspector와 주 행동(높이 48).</p>
+      <div class="fit"><div class="device"><div class="screen s844" id="f-build"></div></div></div>
+      <p class="frame-caption"><b>B. 공사 · 노선 건설 검토 (844×390)</b>
+        <br>· 정밀 작업 중이라 레일을 64px로 줄입니다. 되돌리기·취소는 왼쪽 아래, <b>건설 확정과 비용</b>은 오른쪽 아래 엄지 위치에 48px 높이로 둡니다.
+        <br>· 거리·비용 tooltip은 손가락에 가리지 않도록 접촉점 옆에 띄웁니다.</p>
+      <div class="fit"><div class="device"><div class="screen s844" id="f-line"></div></div></div>
+      <p class="frame-caption"><b>C. 관리 · 노선 inspector 확장 (844×390)</b>
+        <br>· 여러 수치를 볼 때는 inspector를 위로 확장합니다. 이때 레이어 버튼은 inspector 뒤로 숨고, 시간 정보판은 그대로 보입니다.</p>
+      <div class="fit"><div class="device"><div class="screen s640 notched" id="f-compact"></div></div></div>
+      <p class="frame-caption"><b>D. 소형 폰 + 노치 (640×360)</b>
+        <br>· 노치 쪽 safe area만큼 왼쪽 HUD를 안으로 들입니다. 정보판의 보조 문구(자금, 안정)를 접고 수치와 표식만 남깁니다.
+        <br>· 모드 배너는 정보판 아래로 내리고, 레일은 64px compact를 씁니다.</p>
     </div>
   </section>
 
@@ -392,35 +416,62 @@ function selectionMark(x, y, r) {
     <circle cx="${x}" cy="${y}" r="${r + 4.5}" fill="none" stroke="var(--text-1)" stroke-width="3"/>
     <path d="M${x - 7} ${y - r - 22} H${x + 7} L${x} ${y - r - 9} Z" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="1.5"/>`;
 }
-const rail = (mode, tools, extra = '') => `
-  <nav class="rail ${mode === '기획' ? 'planning' : ''}" aria-label="모드와 도구">
+ICON.pause = '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="5" y="4" width="3.5" height="12"/><rect x="11.5" y="4" width="3.5" height="12"/></svg>';
+ICON.play = '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4 L16 10 L6 16 Z"/></svg>';
+ICON.bell = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M4 15 H16 L14.5 12.5 V8.5 A4.5 4.5 0 0 0 5.5 8.5 V12.5 Z M8.5 17.5 H11.5"/></svg>';
+ICON.menu = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M3 5 H17 M3 10 H17 M3 15 H17"/></svg>';
+ICON.list = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M7 5 H17 M7 10 H17 M7 15 H17 M3 5 H4 M3 10 H4 M3 15 H4"/></svg>';
+ICON.redo = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"><path d="M13 5 L17 9 L13 13 M17 9 H8 A4 4 0 0 0 8 17 H11"/></svg>';
+ICON.more = '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="3" y="9" width="3" height="3"/><rect x="8.5" y="9" width="3" height="3"/><rect x="14" y="9" width="3" height="3"/></svg>';
+
+const lm = (id, size = '') => `<span class="lm ${size} ${id == 3 ? 'dark-text' : ''}" style="background:${LINES[id].color}">${id}</span>`;
+const thumbs = '<div class="thumb l" aria-hidden="true"></div><div class="thumb r" aria-hidden="true"></div>';
+
+function financePlate({ compact = false } = {}) {
+  return `<div class="plate p-finance">
+    <button class="cell" aria-label="자금 12,450억, 일일 순수익 +38.2억. 재정 관리 열기">${compact ? '' : '<span class="k">자금</span>'}<span class="m">12,450억</span><span class="net">▲ ${compact ? '38억' : '38.2억'}</span></button>
+    <button class="cell" aria-label="승객 만족도 75 안정. 상세 보기"><span class="mark-ok">●</span><span class="m">75</span>${compact ? '' : '<span class="k">안정</span>'}</button>
+  </div>`;
+}
+function timePlate({ speed = 2, paused = false, news = 2 } = {}) {
+  return `<div class="plate p-time">
+    <div class="cell stack"><span class="day">4일차</span><span class="m">07:40</span></div>
+    <button class="cell icon ${paused ? 'on' : ''}" aria-pressed="${paused}" aria-label="${paused ? '재생' : '일시정지'}">${paused ? ICON.play : ICON.pause}</button>
+    <button class="cell speed" aria-label="배속 ×${speed}, 누르면 다음 배속">×${speed}</button>
+    <button class="cell icon" aria-label="도시 뉴스, 새 소식 ${news}건">${ICON.bell}${news ? `<span class="badge">${news}</span>` : ''}</button>
+    <button class="cell icon" aria-label="메뉴">${ICON.menu}</button>
+  </div>`;
+}
+const layerPlate = `<div class="plate p-layer"><button class="cell icon" aria-label="지도 레이어">${ICON.layers}</button></div>`;
+const historyPlate = (left = '') => `<div class="plate p-history" ${left ? `style="left:${left}"` : ''}><button class="cell icon" aria-label="실행 취소">${ICON.undo}</button><button class="cell icon" aria-label="다시 실행">${ICON.redo}</button></div>`;
+const manageTools = [{ i:'explore', n:'탐색', on:true }, { i:'list', n:'노선 목록' }, { i:'chart', n:'운영 현황' }, { i:'train', n:'차량' }, { i:'more', n:'더보기' }];
+function rail(mode, tools) {
+  return `<nav class="mrail" aria-label="모드와 도구">
     <div class="modes" role="group" aria-label="모드">${['관리','기획','공사'].map(m => `<button aria-pressed="${m === mode}">${m}</button>`).join('')}</div>
     ${tools.map(t => `<button class="tool ${t.cls || ''}" aria-pressed="${!!t.on}">${ICON[t.i]}${t.n}</button>`).join('')}
-  </nav>${extra}`;
-const status = `
-  <div class="status">
-    <div class="cell"><span class="k">자금</span><span class="metric">12,450억</span></div>
-    <div class="cell"><span class="k">일 손익</span><span class="pos">▲ +38.2억</span></div>
-    <div class="cell alert-cell">△ 경보 2</div>
-    <div class="cell spacer"></div>
-    <div class="cell"><span class="k">2026.10.03</span><span class="metric">07:40</span></div>
-    <div class="seg" role="group" aria-label="배속"><button aria-pressed="false" aria-label="일시정지">‖</button><button aria-pressed="false">1×</button><button aria-pressed="true">2×</button><button aria-pressed="false">4×</button></div>
-  </div>`;
-const mapctl = `<div class="mapctl"><button aria-label="확대">${ICON.plus}</button><button aria-label="축소">${ICON.minus}</button><button aria-label="레이어">${ICON.layers}</button></div>`;
-const lm = (id, size = '') => `<span class="lm ${size} ${id == 3 ? 'dark-text' : ''}" style="background:${LINES[id].color}">${id}</span>`;
+  </nav>`;
+}
+function compactRail(mode, mk, tools) {
+  return `<nav class="mrail compact" aria-label="${mode} 모드 도구">
+    <div class="mode-now"><span class="mk ${mk}"></span>${mode}</div>
+    ${tools.map(t => `<button class="tool ${t.cls || ''}" aria-pressed="${!!t.on}">${ICON[t.i]}${t.short || t.n}</button>`).join('')}
+  </nav>`;
+}
 
-/* ----- Frame A: explore ----- */
+/* ----- A: explore ----- */
 document.getElementById('f-explore').innerHTML = `
   <svg class="map" viewBox="0 0 844 390">${mapBase()}
     ${[1,3,2].map(i => routeSvg(i)).join('')}
     ${STATIONS.map(s => stationSvg(s, { bold: s.n === '중앙' })).join('')}
     ${selectionMark(380, 172, 7.5)}
   </svg>
-  ${status}
-  ${rail('관리', [{ i:'explore', n:'탐색', on:true }, { i:'line', n:'노선 운영' }, { i:'train', n:'차량' }, { i:'chart', n:'분석' }])}
+  ${financePlate()}
   <div class="banner"><span class="mk sign"></span>관리 · 탐색</div>
-  ${mapctl}
-  <aside class="inspector" aria-label="선택: 중앙역">
+  ${timePlate()}
+  ${layerPlate}
+  ${rail('관리', manageTools)}
+  ${historyPlate()}
+  <aside class="insp" aria-label="선택: 중앙역">
     <div class="band"></div>
     <header><span class="ico">${ICON.transfer}</span><span class="name">중앙</span>${lm(1)}${lm(2)}<span class="tag ok"><i>●</i>운행</span>
       <button class="close" aria-label="선택 해제">${ICON.close}</button></header>
@@ -430,75 +481,72 @@ document.getElementById('f-explore').innerHTML = `
         <div class="row bar"><span>대기 승객</span><span class="meter"><span style="width:62%"></span></span><span class="v">1,240명</span></div>
         <div class="row"><span>환승 1 ↔ 2</span><span class="v">도보 2분</span></div>
       </div>
-      <div class="sec"><h3>연결 노선</h3>
-        <div class="row"><span style="display:flex;gap:8px;align-items:center">${lm(1,'l16')}1호선 서원–남항</span><span class="v">배차 5분</span></div>
-        <div class="row"><span style="display:flex;gap:8px;align-items:center">${lm(2,'l16')}2호선 북산–포구</span><span class="v">배차 4분</span></div>
+      <div class="sec">
+        <div class="row"><span style="display:flex;gap:8px;align-items:center">${lm(1,'l16')}1호선 서원–남항</span><span class="v">5분</span></div>
       </div>
     </div>
-    <div class="actions"><button class="btn compact secondary">수요 원인</button><button class="btn compact quiet">이름 변경</button><button class="btn compact quiet push" style="color:var(--signal-danger)">${ICON.demolish}철거…</button></div>
-  </aside>`;
+    <div class="acts"><button class="btn secondary">수요 원인</button><button class="btn quiet">이름</button><button class="btn quiet push" style="color:var(--signal-danger)">철거…</button></div>
+  </aside>
+  ${thumbs}`;
 
-/* ----- Frame B: build review ----- */
+/* ----- B: build review ----- */
 const draft = [[380,172],[290,200],[220,250],[170,310]];
-const seg = (a, b, stroke, extra='') => `<path d="M${a.join(' ')} L${b.join(' ')}" stroke="${stroke}" stroke-width="2.5" stroke-dasharray="7 5" fill="none" ${extra}/>`;
-const dim = (a, b, t, dx = 0, dy = -12) => { const x = (a[0]+b[0])/2 + dx, y = (a[1]+b[1])/2 + dy;
-  return `<text x="${x}" y="${y}" font-size="10" font-weight="700" text-anchor="middle" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" font-family="var(--font)">${t}</text>`; };
+const seg = (a, b, stroke) => `<path d="M${a.join(' ')} L${b.join(' ')}" stroke="${stroke}" stroke-width="2.5" stroke-dasharray="7 5" fill="none"/>`;
+const dimLabel = (a, b, t, dx = 0, dy = -12) => { const x = (a[0]+b[0])/2 + dx, y = (a[1]+b[1])/2 + dy;
+  return `<text x="${x}" y="${y}" font-size="12" font-weight="800" text-anchor="middle" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" font-family="var(--font)">${t}</text>`; };
 document.getElementById('f-build').innerHTML = `
   <svg class="map" viewBox="0 0 844 390">${mapBase()}
     <g opacity=".55">${[1,3,2].map(i => routeSvg(i)).join('')}${STATIONS.map(s => stationSvg(s, { label: s.n === '중앙' })).join('')}</g>
     <g fill="none" stroke-linecap="square">
-      ${seg(draft[0], draft[1], 'var(--text-1)')}
-      ${seg(draft[1], draft[2], 'var(--text-1)')}
+      ${seg(draft[0], draft[1], 'var(--text-1)')}${seg(draft[1], draft[2], 'var(--text-1)')}
       <path d="M${draft[2].join(' ')} L${draft[3].join(' ')}" stroke="var(--signal-caution)" stroke-width="6" opacity=".9"/>
       ${seg(draft[2], draft[3], 'var(--text-1)')}
     </g>
-    ${dim(draft[0], draft[1], '2.2 km', 0, 16)}${dim(draft[1], draft[2], '2.0 km', 16, 8)}
-    <g transform="translate(${(draft[2][0]+draft[3][0])/2 - 16} ${(draft[2][1]+draft[3][1])/2 - 4})">
-      <path d="M0 -9 L9 7 H-9 Z" fill="var(--signal-caution)" stroke="#15171A" stroke-width="1.5"/>
-      <text y="5" text-anchor="middle" font-size="10" font-weight="900" fill="#15171A">!</text>
-      <text x="-13" y="4" text-anchor="end" font-size="10" font-weight="800" fill="var(--signal-caution-text)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" font-family="var(--font)">교량 +180억</text>
+    ${dimLabel(draft[0], draft[1], '2.2 km', 0, 18)}${dimLabel(draft[1], draft[2], '2.0 km', 22, 8)}
+    <g transform="translate(${(draft[2][0]+draft[3][0])/2 - 18} ${(draft[2][1]+draft[3][1])/2 - 4})">
+      <path d="M0 -10 L10 8 H-10 Z" fill="var(--signal-caution)" stroke="#15171A" stroke-width="1.5"/>
+      <text y="6" text-anchor="middle" font-size="11" font-weight="900" fill="#15171A">!</text>
+      <text x="-14" y="5" text-anchor="end" font-size="12" font-weight="800" fill="var(--signal-caution-text)" stroke="var(--map-ground)" stroke-width="3" paint-order="stroke" font-family="var(--font)">교량</text>
     </g>
-    <circle cx="380" cy="172" r="13" fill="none" stroke="var(--text-1)" stroke-width="2.5"/>
-    ${draft.slice(1).map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2" stroke-dasharray="3 2"/><rect x="${x-4}" y="${y-4}" width="8" height="8" fill="var(--text-1)" transform="translate(9 9)"/>`).join('')}
-    <circle cx="170" cy="310" r="22" fill="none" stroke="var(--text-1)" stroke-width="1" stroke-dasharray="2 3"/>
+    <circle cx="380" cy="172" r="14" fill="none" stroke="var(--text-1)" stroke-width="2.5"/>
+    ${draft.slice(1).map(([x,y]) => `<circle cx="${x}" cy="${y}" r="5.5" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="2" stroke-dasharray="3 2"/><rect x="${x+5}" y="${y+5}" width="9" height="9" fill="var(--text-1)"/>`).join('')}
+    <circle cx="170" cy="310" r="24" fill="none" stroke="var(--text-1)" stroke-width="1" stroke-dasharray="2 3"/>
   </svg>
-  ${status}
-  <nav class="rail compact" aria-label="공사 모드 도구 (정밀 작업 중 축소)">
-    <div class="mode-now"><span class="mk"></span>공사</div>
-    ${[{ i:'line', n:'노선', on:true }, { i:'extend', n:'연장' }, { i:'station', n:'역' }, { i:'depot', n:'기지' }, { i:'demolish', n:'철거', cls:'destructive' }].map(t => `<button class="tool ${t.cls || ''}" aria-pressed="${!!t.on}">${ICON[t.i]}${t.n}</button>`).join('')}
-  </nav>
-  <div class="banner" style="left:300px"><span class="mk build"></span>공사 · 노선 건설</div>
-  <div class="hint" style="left:300px">다음 역 위치를 탭하세요 · 두 손가락으로 지도 이동</div>
-  <div class="tip" style="left:188px;top:300px">총 6.2 km · 1,240억</div>
-  ${mapctl}
-  <div class="draftctl"><button class="btn compact quiet">${ICON.undo}되돌리기</button><button class="btn compact quiet">${ICON.close}취소</button></div>
-  <aside class="inspector" aria-label="새 노선 검토" style="width:292px">
+  ${financePlate()}
+  <div class="banner"><span class="mk build"></span>공사 · 노선 건설</div>
+  <div class="hint">다음 역 위치를 탭 · 두 손가락으로 이동</div>
+  ${timePlate()}
+  ${compactRail('공사', 'build', [{ i:'line', n:'노선', on:true }, { i:'extend', n:'연장' }, { i:'station', n:'역' }, { i:'depot', n:'기지' }, { i:'more', n:'더보기' }])}
+  <div class="tip" style="left:200px;top:286px">총 6.2 km · 1,240억</div>
+  <div class="draftbar"><button class="btn quiet">${ICON.undo}되돌리기</button><button class="btn quiet">${ICON.close}취소</button></div>
+  <aside class="insp" aria-label="새 노선 검토" style="width:300px">
     <div class="band" style="background:var(--hazard);--hazard-dark:#15171A"></div>
-    <header><span class="ico">${ICON.line}</span><span class="name">새 노선 검토</span><span class="tag build"><i></i>공사</span></header>
+    <header><span class="ico">${ICON.line}</span><span class="name">새 노선 검토</span><span class="tag build" style="margin-right:12px"><i></i>공사</span></header>
     <div class="scroll">
       <div class="sec">
-        <div class="row"><span>총 길이</span><span class="v">6.2 km</span></div>
-        <div class="row"><span>역</span><span class="v">신규 3 · 환승 1 (중앙)</span></div>
-        <div class="row"><span>예상 기간</span><span class="v">180일</span></div>
+        <div class="row"><span>길이 · 역</span><span class="v">6.2 km · 신규 3 · 환승 1</span></div>
         <div class="row"><span>건설비</span><span class="v big">1,240억</span></div>
         <div class="row"><span>잔액</span><span class="v">12,450 → 11,210억</span></div>
       </div>
-      <div class="sec"><div class="msg"><b>△</b><span><b>교량</b> 한내천 횡단 +180억 · +30일</span></div></div>
+      <div class="sec"><div class="msg"><b>△ 교량</b><span>한내천 횡단 +180억 · +30일</span></div></div>
     </div>
-    <div class="actions"><button class="btn primary push">건설 확정<span class="cost">1,240억</span></button></div>
-  </aside>`;
+    <div class="acts"><button class="btn primary push" style="width:100%;justify-content:space-between">건설 확정<span class="cost">1,240억</span></button></div>
+  </aside>
+  ${thumbs}`;
 
-/* ----- Frame C: line inspector ----- */
+/* ----- C: line inspector expanded ----- */
 document.getElementById('f-line').innerHTML = `
   <svg class="map" viewBox="0 0 844 390">${mapBase()}
     ${routeSvg(1, { dim:true })}${routeSvg(3, { dim:true })}${routeSvg(2, { selected:true })}
     ${STATIONS.map(s => stationSvg(s, { dim: !s.l.includes(2), label: s.l.includes(2), bold: s.l.includes(2) })).join('')}
-    <path d="M${400 - 7} ${212 - 22} H${400 + 7} L400 ${212 - 9} Z" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="1.5"/>
+    <path d="M393 190 H407 L400 203 Z" fill="var(--text-1)" stroke="var(--map-ground)" stroke-width="1.5"/>
   </svg>
-  ${status}
-  ${rail('관리', [{ i:'explore', n:'탐색', on:true }, { i:'line', n:'노선 운영' }, { i:'train', n:'차량' }, { i:'chart', n:'분석' }])}
+  ${financePlate()}
   <div class="banner"><span class="mk sign"></span>관리 · 탐색</div>
-  <aside class="inspector wide" aria-label="선택: 2호선" style="max-height:330px">
+  ${timePlate()}
+  ${rail('관리', manageTools)}
+  ${historyPlate()}
+  <aside class="insp tall" aria-label="선택: 2호선">
     <div class="band" style="background:${LINES[2].color}"></div>
     <header>${lm(2,'l24')}<span class="name">2호선</span><span class="tag ok"><i>●</i>운행</span><span class="tag express">급행</span>
       <button class="close" aria-label="선택 해제">${ICON.close}</button></header>
@@ -511,11 +559,27 @@ document.getElementById('f-line').innerHTML = `
       </div>
       <div class="sec"><h3>수익 · 일</h3>
         <div class="row"><span>운임 수입</span><span class="v ok">+15.5억</span></div>
-        <div class="row"><span>운영·유지비</span><span class="v">−3.1억</span></div>
       </div>
     </div>
-    <div class="actions"><button class="btn compact primary">운영 조정</button><button class="btn compact secondary">연장</button><button class="btn compact quiet push">더보기</button></div>
-  </aside>`;
+    <div class="acts"><button class="btn primary">운영 조정</button><button class="btn secondary">연장</button><button class="btn quiet push">더보기</button></div>
+  </aside>
+  ${thumbs}`;
+
+/* ----- D: compact 640×360 with notch ----- */
+document.getElementById('f-compact').innerHTML = `
+  <svg class="map" viewBox="110 10 640 360">${mapBase()}
+    ${[1,3,2].map(i => routeSvg(i)).join('')}
+    ${STATIONS.map(s => stationSvg(s)).join('')}
+  </svg>
+  <div class="notch" aria-hidden="true"></div>
+  ${financePlate({ compact: true })}
+  ${timePlate({ speed: 5, paused: true, news: 0 })}
+  <div class="banner low"><span class="mk sign"></span>관리 · 탐색</div>
+  ${compactRail('관리', '', [{ i:'explore', n:'탐색', on:true }, { i:'list', n:'노선 목록', short:'노선' }, { i:'chart', n:'운영 현황', short:'운영' }, { i:'more', n:'더보기' }])}
+  ${historyPlate('calc(var(--sl) + 72px)')}
+  ${layerPlate}
+  ${thumbs}`;
+
 
 /* ----- Legend ----- */
 (function legend() {
@@ -562,10 +626,14 @@ document.querySelectorAll('[data-theme-btn]').forEach(b => b.addEventListener('c
 let saved = 'paper'; try { saved = localStorage.getItem('dg-proto-theme') || 'paper'; } catch (e) {}
 setTheme(saved);
 function scaleFrames() {
-  document.querySelectorAll('.frame-wrap').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 844})`; });
+  document.querySelectorAll('.fit').forEach(f => {
+    const d = f.firstElementChild; const s = Math.min(1, f.clientWidth / d.offsetWidth);
+    d.style.transform = s < 1 ? `scale(${s})` : ''; f.style.height = `${d.offsetHeight * s}px`;
+  });
 }
 new ResizeObserver(scaleFrames).observe(document.body);
 scaleFrames();
+document.getElementById('thumbToggle').addEventListener('change', e => document.body.classList.toggle('show-thumbs', e.target.checked));
 </script>
 </body>
 </html>

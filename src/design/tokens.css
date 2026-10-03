@@ -84,13 +84,14 @@
 
   /* 타이포그래피 (§5) */
   --font-ui: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif;
-  --type-display: 800 20px/26px var(--font-ui);
-  --type-sign: 800 17px/22px var(--font-ui);
-  --type-section: 700 12px/16px var(--font-ui);
-  --type-body: 500 13px/18px var(--font-ui);
-  --type-label: 600 11px/14px var(--font-ui);
-  --type-micro: 600 10px/12px var(--font-ui);
-  --type-metric: 700 16px/20px var(--font-ui);
+  /* 가로 모드 폰(CSS 폭 640–960px) 기준. 넓은 화면이라고 키우지 않는다. */
+  --type-display: 800 22px/28px var(--font-ui);
+  --type-sign: 800 18px/24px var(--font-ui);
+  --type-section: 800 12px/16px var(--font-ui);
+  --type-body: 600 14px/20px var(--font-ui);
+  --type-label: 700 12px/16px var(--font-ui);
+  --type-micro: 600 11px/14px var(--font-ui);
+  --type-metric: 800 18px/22px var(--font-ui);
 
   /* 간격 (§6) */
   --space-1: 4px;
@@ -113,11 +114,13 @@
   --overlay-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 
   /* 크기 */
-  --control-height: 40px;
-  --control-height-compact: 36px;
+  --control-height: 48px;
+  --control-height-compact: 44px;
   --touch-min: 44px;
-  --row-min: 32px;
-  --rail-width-compact: 56px;
+  --row-min: 30px;
+  --plate-height: 48px;
+  --rail-width: 136px;
+  --rail-width-compact: 64px;
 
   /* 모션 (§13) */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);

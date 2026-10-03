@@ -303,35 +303,64 @@
 .dg-input:focus-visible { outline: var(--line-emphasis) solid var(--focus); outline-offset: 2px; }
 .dg-field__error { font: var(--type-label); color: var(--signal-danger); }
 
-/* ===== Status strip (§9) ===== */
-.dg-status-strip {
+/* ===== Plate: 모서리 정보판 (§9) ===== */
+.dg-plate {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
-  min-height: 36px;
-  padding: 0 var(--edge-inset-right) 0 var(--edge-inset-left);
+  min-height: var(--plate-height);
   background: var(--surface-0);
   color: var(--text-1);
-  border-bottom: var(--line-hair) solid var(--edge);
+  border: var(--line-hair) solid var(--edge);
   font: var(--type-body);
   font-variant-numeric: tabular-nums;
 }
-.dg-status-strip__cell {
+.dg-plate__cell {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: var(--plate-height);
+  margin: 0;
   padding: 0 var(--space-3);
-  border-right: var(--line-hair) solid var(--rule);
+  border: 0;
+  border-left: var(--line-hair) solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   white-space: nowrap;
 }
-.dg-status-strip__cell:first-child { padding-left: 0; }
-.dg-status-strip__cell:last-child { border-right: 0; padding-right: 0; }
-.dg-status-strip__spacer { flex: 1; }
-.dg-status-strip__key { font: var(--type-label); color: var(--text-2); }
-.dg-status-strip__metric { font: var(--type-metric); font-size: 15px; }
+.dg-plate__cell:first-child { border-left: 0; }
+button.dg-plate__cell { cursor: pointer; }
+button.dg-plate__cell:active { background: var(--surface-2); }
+.dg-plate__cell--icon { justify-content: center; width: var(--plate-height); padding: 0; }
+.dg-plate__cell--icon svg { width: 22px; height: 22px; }
+.dg-plate__cell--stack { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+.dg-plate__cell--on,
+button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); }
+.dg-plate__key { font: var(--type-label); color: var(--text-2); }
+.dg-plate__sub { font: var(--type-micro); font-weight: 700; color: var(--text-2); }
+.dg-plate__metric { font: var(--type-metric); }
+
+.dg-count-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius);
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font: 800 11px/18px var(--font-ui);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ===== Mode / tool rail (§9, §10) ===== */
 .dg-rail {
-  width: 128px;
+  width: var(--rail-width);
   background: var(--surface-0);
   color: var(--text-1);
   border: var(--line-hair) solid var(--edge);
@@ -343,14 +372,15 @@
 
 .dg-rail__modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: var(--line-hair) solid var(--edge); }
 .dg-rail__mode {
-  min-height: 36px;
+  min-height: 40px;
   padding: 0;
   border: 0;
   border-right: var(--line-hair) solid var(--rule);
   background: var(--surface-0);
   color: var(--text-1);
   font: var(--type-body);
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
 }
 .dg-rail__mode:last-child { border-right: 0; }
@@ -361,7 +391,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
   width: 100%;
   min-height: var(--touch-min);
   padding: 0 10px 0 var(--space-3);
@@ -375,7 +405,7 @@
   cursor: pointer;
 }
 .dg-tool:last-child { border-bottom: 0; }
-.dg-tool svg { width: 16px; height: 16px; flex: none; }
+.dg-tool svg { width: 20px; height: 20px; flex: none; }
 .dg-tool[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
 .dg-tool[aria-pressed="true"]::before {
   content: "";
@@ -396,7 +426,7 @@
   justify-content: center;
   gap: var(--space-1);
   width: 100%;
-  min-height: 28px;
+  min-height: 36px;
   border: 0;
   background: var(--invert-bg);
   color: var(--invert-fg);
@@ -408,7 +438,8 @@
 .dg-rail--compact .dg-tool {
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  min-height: 52px;
+  gap: 3px;
   padding: 0;
   font: var(--type-micro);
   text-align: center;
@@ -420,12 +451,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 28px;
+  min-height: 32px;
   padding: 0 var(--space-3);
   background: var(--invert-bg);
   color: var(--invert-fg);
   font: var(--type-body);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -441,8 +472,8 @@
   color: var(--text-1);
   border: var(--line-hair) solid var(--edge);
   font: var(--type-body);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 /* ===== Map controls (§9) ===== */
