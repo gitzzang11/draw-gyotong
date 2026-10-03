@@ -3,7 +3,7 @@ import "./legacy.css";
 import "./design/tokens.css";
 import "./design/components.css";
 import "./design/hud.css";
-import { lineMarkHtml, metricRowsHtml } from "./ui/inspectorMarkup.ts";
+import { lineMarkHtml, lineMarkLabel, metricRowsHtml } from "./ui/inspectorMarkup.ts";
 import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThemeColorMeta, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
@@ -148,7 +148,7 @@ import {
   type StationRenderEntity,
   type TransferConnectionEntity,
 } from "./map/stationRenderer.ts";
-import { TrainRenderer, type TrainRenderEntity } from "./map/trainRenderer.ts";
+import { TRAIN_SYMBOL_LABELS, TRAIN_SYMBOL_STYLES, TrainRenderer, type TrainRenderEntity, type TrainSymbolStyle } from "./map/trainRenderer.ts";
 import { DepotRenderer } from "./map/depotRenderer.ts";
 import {
   buildConstructionRenderEntities,
@@ -330,6 +330,8 @@ type GameSettings = {
   autoSaveEnabled: boolean;
   autoSaveIntervalSeconds: 30 | 60 | 180 | 300;
   mapTheme: MapTheme;
+  /** 지도 위 열차 모양 */
+  trainStyle: TrainSymbolStyle;
 };
 
 type SaveState = {
@@ -595,6 +597,7 @@ const defaultSettings: GameSettings = {
   autoSaveEnabled: true,
   autoSaveIntervalSeconds: 30,
   mapTheme: "paper",
+  trainStyle: "capsule",
 };
 const fallbackSaveKey = "draw-gyotong-save-slots-v1";
 const localRecoveryStateKey = "draw-gyotong-state";
@@ -1081,6 +1084,10 @@ app.innerHTML = `
             <div class="game-setting-row">
               <label class="game-setting-row__text" for="mapThemeSelect"><strong>지도 테마</strong><small>종이: 밝은 지도(기본) · 먹: 어두운 지도</small></label>
               <select class="dg-input game-setting-row__select" id="mapThemeSelect">${MAP_THEMES.map((theme) => `<option value="${theme}">${MAP_THEME_LABELS[theme]}</option>`).join("")}</select>
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="trainStyleSelect"><strong>열차 모양</strong><small>캡슐: 진행 방향으로 눕힘 · 편성: 칸 수 표시 · 노선 배지: 노선 번호</small></label>
+              <select class="dg-input game-setting-row__select" id="trainStyleSelect">${TRAIN_SYMBOL_STYLES.map((style) => `<option value="${style}">${TRAIN_SYMBOL_LABELS[style]}</option>`).join("")}</select>
             </div>
             <div class="game-setting-row">
               <label class="game-setting-row__text" for="reducedMotionToggle"><strong>모션 감소</strong><small>화면 전환과 애니메이션 축소</small></label>
@@ -1927,6 +1934,7 @@ const soundToggle = document.querySelector<HTMLInputElement>("#soundToggle");
 const hapticsToggle = document.querySelector<HTMLInputElement>("#hapticsToggle");
 const performanceSelect = document.querySelector<HTMLSelectElement>("#performanceSelect");
 const mapThemeSelect = document.querySelector<HTMLSelectElement>("#mapThemeSelect");
+const trainStyleSelect = document.querySelector<HTMLSelectElement>("#trainStyleSelect");
 const reducedMotionToggle = document.querySelector<HTMLInputElement>("#reducedMotionToggle");
 const sandboxConstructionTimeToggle = document.querySelector<HTMLInputElement>("#sandboxConstructionTimeToggle");
 const autoStationNamingToggle = document.querySelector<HTMLInputElement>("#autoStationNamingToggle");
@@ -3029,6 +3037,12 @@ saveRouteSettingsButton?.addEventListener("click", saveRouteSettings);
 soundToggle?.addEventListener("change", () => updateSettings({ soundEnabled: Boolean(soundToggle.checked) }));
 hapticsToggle?.addEventListener("change", () => updateSettings({ hapticsEnabled: Boolean(hapticsToggle.checked) }));
 performanceSelect?.addEventListener("change", () => updateSettings({ performanceMode: performanceSelect.value === "battery" ? "battery" : "balanced" }));
+trainStyleSelect?.addEventListener("change", () => {
+  const style = TRAIN_SYMBOL_STYLES.find((item) => item === trainStyleSelect.value) ?? "capsule";
+  updateSettings({ trainStyle: style });
+  trainRenderer.clear();
+  requestUpdate("full");
+});
 mapThemeSelect?.addEventListener("change", () => {
   updateSettings({ mapTheme: normalizeMapTheme(mapThemeSelect.value) });
   // 테마 토큰으로 칠하는 지도 기호를 새 테마 색으로 다시 그린다. 렌더러는 바뀐 객체만 다시 칠하므로 비우고 전체 갱신한다.
@@ -9132,6 +9146,7 @@ function reconcileMapTrains() {
         label: `${service.name} ${displayedTrain.setNumber}편성 열차`,
         title: `${service.name} · ${displayedTrain.fleet.cars}량 ${displayedTrain.setNumber}편성`,
         state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
+        ...trainSymbolFields(ownerRoute, routePoints, position, travelProgress, progress <= 0.5, displayedTrain.fleet.cars),
       });
     }
   }
@@ -9207,6 +9222,7 @@ function reconcileLegacyMapTrains() {
         label: `${route.name} ${displayedTrain.setNumber}편성 열차`,
         title: `${route.name} · ${displayedTrain.fleet.cars}량 ${displayedTrain.setNumber}편성`,
         state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
+        ...trainSymbolFields(route, routePoints, position, travelProgress, progress <= 0.5, displayedTrain.fleet.cars),
       });
     }
   }
@@ -9218,6 +9234,31 @@ function reconcileLegacyMapTrains() {
 }
 
 
+
+// 열차 기호는 매 프레임 갱신되므로 노선 혼잡 여부는 0.5초 동안 재사용한다.
+const routeCrowdingCache = new Map<string, { at: number; crowded: boolean }>();
+function isRouteCrowdedCached(routeId: string) {
+  const now = performance.now();
+  const cached = routeCrowdingCache.get(routeId);
+  if (cached && now - cached.at < 500) return cached.crowded;
+  const crowded = calculateRouteOperation(routeId).crowding >= 1;
+  routeCrowdingCache.set(routeId, { at: now, crowded });
+  return crowded;
+}
+
+/** 지도 열차 기호에 넣는 값: 설정한 모양, 화면 기준 진행 방향, 편성 량수, 노선 혼잡, 노선 표기 */
+function trainSymbolFields(route: RouteLine, routePoints: LatLng[], position: LatLng, travelProgress: number, forward: boolean, cars: number) {
+  const ahead = interpolateAlongRoute(routePoints, Math.min(1, Math.max(0, travelProgress + (forward ? 0.004 : -0.004))));
+  const from = map.latLngToContainerPoint(position);
+  const to = map.latLngToContainerPoint(ahead);
+  return {
+    style: settings.trainStyle,
+    headingDeg: from.distanceTo(to) > 0.01 ? (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI : 0,
+    cars,
+    crowded: isRouteCrowdedCached(route.id),
+    lineLabel: lineMarkLabel(route.name),
+  };
+}
 
 function getTrainServicePaths(route: RouteLine) {
   const trunk = route.coordinates.map(([lat, lng]) => L.latLng(lat, lng));
@@ -15931,7 +15972,7 @@ function loadSettings(): GameSettings {
   try {
     const saved = localStorage.getItem("draw-gyotong-settings");
     const loaded: GameSettings = { ...defaultSettings, ...(saved ? (JSON.parse(saved) as Partial<GameSettings>) : {}) };
-    return { ...loaded, mapTheme: normalizeMapTheme(loaded.mapTheme) };
+    return { ...loaded, mapTheme: normalizeMapTheme(loaded.mapTheme), trainStyle: TRAIN_SYMBOL_STYLES.includes(loaded.trainStyle) ? loaded.trainStyle : "capsule" };
   } catch {
     return { ...defaultSettings };
   }
@@ -15961,6 +16002,7 @@ function applySettingsToUi() {
   if (hapticsToggle) hapticsToggle.checked = settings.hapticsEnabled;
   if (performanceSelect) performanceSelect.value = settings.performanceMode;
   if (mapThemeSelect) mapThemeSelect.value = settings.mapTheme;
+  if (trainStyleSelect) trainStyleSelect.value = settings.trainStyle;
   if (reducedMotionToggle) reducedMotionToggle.checked = settings.reducedMotion;
   if (sandboxConstructionTimeToggle) sandboxConstructionTimeToggle.checked = settings.sandboxConstructionTime;
   if (autoStationNamingToggle) autoStationNamingToggle.checked = settings.autoStationNaming;
