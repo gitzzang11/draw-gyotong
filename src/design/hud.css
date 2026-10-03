@@ -522,13 +522,14 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 }
 
 /* ===== 지도 바탕 (DESIGN_SYSTEM §3, §4.1, §9) =====
-   원본 타일(OSM·지형·철도 오버레이)은 타일 pane 하나에서 무채색화해 지도 층 토큰 범위에 맞춘다.
-   종이: 회색조 → 대비 축소 → 밝게 (바탕 ≈ --map-ground, 수면 ≈ --map-water)
-   먹: 회색조 → 반전 → 대비 축소 → 어둡게 (바탕 ≈ #17191C, 지명 ≈ --map-label)
+   원본 타일(OSM·지형·철도 오버레이)은 타일 pane 하나에서 채도를 낮춰 노선보다 눈에 띄지 않게 한다.
+   완전 흑백은 칙칙해서(사용자 피드백) 수면·녹지·도로의 색 기운은 남긴다.
+   종이: 채도 45% → 약간 따뜻하게 → 대비 축소
+   먹: 반전 + 색상 180° 회전(색 유지) → 채도 40% → 대비 축소 → 어둡게
    벡터 레이어(노선·역·열차)는 다른 pane이라 영향받지 않는다. */
 .leaflet-container.map { background: var(--map-ground); font-family: var(--font-ui); }
-.leaflet-container.map .leaflet-tile-pane { filter: grayscale(1) sepia(.08) contrast(.62) brightness(1.14); }
-:root[data-theme="ink"] .leaflet-container.map .leaflet-tile-pane { filter: grayscale(1) invert(1) contrast(.6) brightness(.6); }
+.leaflet-container.map .leaflet-tile-pane { filter: saturate(.45) sepia(.06) contrast(.88) brightness(1.03); }
+:root[data-theme="ink"] .leaflet-container.map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(.4) contrast(.7) brightness(.72); }
 .leaflet-container.map .leaflet-control-attribution { background: var(--surface-0); color: var(--text-2); font: var(--type-micro); }
 .leaflet-container.map .leaflet-control-attribution a { color: var(--text-1); }
 

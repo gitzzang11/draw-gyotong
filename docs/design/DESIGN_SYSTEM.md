@@ -256,9 +256,9 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 
 ## 11. 지도 렌더링 규칙
 
-- 지도 바탕은 인쇄 지도처럼 저채도·저대비로 둔다. 원본 타일의 색을 그대로 쓰지 않고 테마 토큰에 맞춰 무채색화한다. 구현 방식(타일 제공자 교체 또는 타일 필터)은 성능과 이용 약관을 검토해 정하되, 결과는 `4.1 지도 층` 토큰 범위에 맞춘다.
-- 지형·철도 오버레이도 같은 무채색 처리를 따른다. 다른 레이어가 노선 색보다 눈에 띄면 안 된다.
-- 구현: 타일 pane 하나에 CSS 필터를 건다(종이 `grayscale(1) sepia(.08) contrast(.62) brightness(1.14)`, 먹 `grayscale(1) invert(1) contrast(.6) brightness(.6)`). 지형·철도 타일도 같은 pane이라 함께 처리된다(`src/design/hud.css` 지도 바탕).
+- 지도 바탕은 인쇄 지도처럼 저채도·저대비로 둔다. 원본 타일의 색을 그대로 쓰지 않되, 완전 흑백으로 만들지 않고 수면·녹지·도로의 색 기운을 낮은 채도로 남긴다(흑백은 칙칙하다는 피드백). 구현 방식(타일 제공자 교체 또는 타일 필터)은 성능과 이용 약관을 검토해 정하되, 결과는 `4.1 지도 층` 토큰 범위에 맞춘다.
+- 지형·철도 오버레이도 같은 저채도 처리를 따른다. 다른 레이어가 노선 색보다 눈에 띄면 안 된다.
+- 구현: 타일 pane 하나에 CSS 필터를 건다(종이 `saturate(.45) sepia(.06) contrast(.88) brightness(1.03)`, 먹 `invert(1) hue-rotate(180deg) saturate(.4) contrast(.7) brightness(.72)`). 지형·철도 타일도 같은 pane이라 함께 처리된다(`src/design/hud.css` 지도 바탕).
 - 벡터 배경 레이어(행정 경계, 토지 이용)는 지도 층 토큰을 읽어 칠하고 테마를 바꾸면 `resetStyle()`로 다시 칠한다. 인구 밀도는 호박색 한 계열(`--signal-caution` → `--signal-caution-text`)과 불투명도로 표현하고 범례도 같은 범위를 쓴다.
 - 지도 위 편집 안내(편집 점, 삭제 기준점, 철거 범위, 끊긴 구간, 기지 연결, 산악 구간·교량·터널 표시)는 `themeTokenColor`로 신호 토큰을 읽어 칠한다: 위험·철거 `--signal-danger`, 공사·지형 비용 `--signal-caution`, 편집 점·터널·기획 `--signal-info`, 연결 가능 `--signal-ok`. 노선 색 외의 고정 색을 새로 쓰지 않는다.
 - 노선은 굵은 실선 + 바탕색 casing으로 그린다. 선택되지 않은 노선끼리 발광하거나 그림자를 갖지 않는다.
@@ -379,7 +379,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - 의미 없는 gradient, neon glow, 빛 번짐
 - UI 강조색으로 노선 색과 경쟁하는 채도 높은 색(시안·보라 등) 사용
 - 노선 색을 버튼·장식 배경으로 빌려 쓰는 것
-- 원본 지도 타일의 채도를 그대로 노출하는 것
+- 원본 지도 타일의 채도를 그대로 노출하거나, 반대로 완전 흑백으로 만드는 것
 - 공사 빗금을 공사 외 상태나 장식에 쓰는 것
 - 큰 hero 영역과 비어 있는 여백
 - 하단 탭 중심의 일반 모바일 앱 구조
