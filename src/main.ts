@@ -2674,6 +2674,12 @@ selectTool?.addEventListener("click", () => setTool("pan"));
 manageLineTool?.addEventListener("click", () => {
   toggleLeftRouteWindow();
 });
+// 노선 목록은 닫기 버튼·다른 패널 열기·노선 선택 등 여러 경로로 닫히므로 패널의 hidden 상태를 그대로 버튼에 반영한다.
+if (manageLineTool && leftRouteWindow) {
+  const syncManageLineTool = () => manageLineTool.setAttribute("aria-pressed", String(!leftRouteWindow.hidden));
+  new MutationObserver(syncManageLineTool).observe(leftRouteWindow, { attributes: true, attributeFilter: ["hidden"] });
+  syncManageLineTool();
+}
 closeLeftRouteWindowButton?.addEventListener("click", closeLeftRouteWindow);
 leftRouteNewButton?.addEventListener("click", () => {
   closeLeftRouteWindow();
