@@ -1700,14 +1700,18 @@ const baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
   updateWhenIdle: true,
   updateWhenZooming: false,
   keepBuffer: 3,
-  attribution: "&copy; OpenStreetMap contributors",
+  attribution: "&copy; <a href='https://www.openstreetmap.org/copyright' target='_blank' rel='noopener'>OpenStreetMap</a> 기여자",
 }).addTo(map);
+
+// 타일 이용 약관상 지도 출처를 항상 보인다. 켜진 레이어의 출처만 Leaflet이 모아 표시한다.
+L.control.attribution({ position: "bottomright", prefix: false }).addTo(map);
 
 const terrainLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
   subdomains: ["a", "b", "c"],
   maxZoom: 17,
   noWrap: true,
   opacity: 0.38,
+  attribution: "지형: &copy; <a href='https://opentopomap.org' target='_blank' rel='noopener'>OpenTopoMap</a> (CC-BY-SA)",
   crossOrigin: true,
   updateWhenIdle: true,
   keepBuffer: 2,
@@ -1718,6 +1722,7 @@ const railLayer = L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}
   maxZoom: 19,
   noWrap: true,
   opacity: 0.5,
+  attribution: "철도: &copy; <a href='https://www.openrailwaymap.org' target='_blank' rel='noopener'>OpenRailwayMap</a> (CC-BY-SA)",
   crossOrigin: true,
   updateWhenIdle: true,
   keepBuffer: 2,

@@ -530,7 +530,9 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .leaflet-container.map { background: var(--map-ground); font-family: var(--font-ui); }
 .leaflet-container.map .leaflet-tile-pane { filter: saturate(.45) sepia(.06) contrast(.88) brightness(1.03); }
 :root[data-theme="ink"] .leaflet-container.map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(.4) contrast(.7) brightness(.72); }
-.leaflet-container.map .leaflet-control-attribution { background: var(--surface-0); color: var(--text-2); font: var(--type-micro); }
+/* 지도 출처(이용 약관): 오른쪽 아래 가장자리에 작게. 열린 inspector가 위를 덮어도 된다. */
+.leaflet-container.map .leaflet-bottom.leaflet-right { right: var(--edge-inset-right); bottom: env(safe-area-inset-bottom, 0px); }
+.leaflet-container.map .leaflet-control-attribution { margin: 0; padding: 0 4px; border-radius: 0; background: color-mix(in srgb, var(--surface-0) 85%, transparent); color: var(--text-2); font: var(--type-micro); }
 .leaflet-container.map .leaflet-control-attribution a { color: var(--text-1); }
 
 /* ===== 지도 기호·레이블 (DESIGN_SYSTEM §11) ===== */
