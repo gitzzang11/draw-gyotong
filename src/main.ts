@@ -2833,6 +2833,8 @@ menuOpenSettingsButton?.addEventListener("click", () => {
 menuReturnTitleButton?.addEventListener("click", () => {
   closeInGameMenu();
   if (startScreen) startScreen.hidden = false;
+  // 게임을 시작할 때 열려 있던 안내판은 닫고 타이틀로 돌아온다.
+  showTitleSheet(null);
   renderStartScreen();
 });
 menuResumeGameButton?.addEventListener("click", closeInGameMenu);
@@ -2898,11 +2900,30 @@ newGameButton?.addEventListener("click", () => {
 });
 const continueSlotMeta = byId("continueSlotMeta");
 const loadSlotCount = byId("loadSlotCount");
-/** 시작 화면 안내판(새 게임·불러오기)을 연다. 한 번에 하나만 열린다. */
+/**
+ * 시작 화면 안내판(새 게임·불러오기)을 연다. 한 번에 하나만 열린다.
+ * 열 때 웹 기록을 하나 쌓아, 안드로이드 뒤로가기(Capacitor는 웹 기록 뒤로가기로 처리)·브라우저 뒤로가기로 안내판부터 닫히게 한다 (MOBILE_UX §9).
+ */
 function openTitleSheet(name: string | null) {
+  const wasOpen = Boolean(startScreen?.querySelector("[data-title-panel]:not([hidden])"));
+  if (name && !wasOpen) history.pushState({ titleSheet: name }, "");
+  if (!name && wasOpen && history.state?.titleSheet) {
+    history.back();
+    return;
+  }
+  showTitleSheet(name);
+}
+
+function showTitleSheet(name: string | null) {
   startScreen?.querySelectorAll<HTMLElement>("[data-title-panel]").forEach((panel) => (panel.hidden = panel.dataset.titlePanel !== name));
   startScreen?.querySelectorAll<HTMLElement>("[data-title-open]").forEach((item) => item.setAttribute("aria-expanded", String(item.dataset.titleOpen === name)));
 }
+window.addEventListener("popstate", () => {
+  if (startScreen?.querySelector("[data-title-panel]:not([hidden])")) showTitleSheet(null);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && startScreen && !startScreen.hidden && startScreen.querySelector("[data-title-panel]:not([hidden])")) openTitleSheet(null);
+});
 startScreen?.addEventListener("click", (event) => {
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-title-open], [data-title-close], [data-title-settings]");
   if (!target) return;
@@ -8461,7 +8482,7 @@ function renderStartScreen() {
   renderCityOptions();
   if (!slotList) return;
   if (slotSummaries.length === 0) {
-    slotList.innerHTML = `<p class="game-news__empty"><strong>저장된 세이브가 없습니다</strong><span class="game-inspector__note">오른쪽에서 새 게임을 시작하세요.</span></p>`;
+    slotList.innerHTML = `<p class="game-news__empty"><strong>저장된 세이브가 없습니다</strong><span class="game-inspector__note">메뉴의 새 게임으로 시작하세요.</span></p>`;
     if (continueButton) continueButton.disabled = true;
     setText(continueSlotMeta, "저장된 세이브 없음");
     setText(loadSlotCount, "");
