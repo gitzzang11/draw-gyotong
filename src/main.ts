@@ -109,7 +109,7 @@ import { ListenerRegistry } from "./ui/listenerRegistry.ts";
 import { bindBackdropDismiss } from "./ui/backdropDismiss.ts";
 import { HudRenderer } from "./ui/hudRenderer.ts";
 import { installKeyboardPreview } from "./ui/keyboardPreview.ts";
-import { installExitMotion } from "./ui/exitMotion.ts";
+import { animateHeightChange, installExitMotion } from "./ui/exitMotion.ts";
 import { PanelManager } from "./ui/panelManager.ts";
 import { StationPanel } from "./ui/stationPanel.ts";
 import { LinePanel } from "./ui/linePanel.ts";
@@ -2664,8 +2664,10 @@ for (const type of ["pointerdown", "pointerup", "pointercancel"] as const) {
 // compact 화면에서 검토 중에는 노선 설정을 머리글만 남기고, 필요할 때 펼친다.
 const routeSettingsExpandButton = document.querySelector<HTMLButtonElement>("#routeSettingsExpandButton");
 routeSettingsExpandButton?.addEventListener("click", () => {
-  const expanded = routeSettingsCard?.classList.toggle("is-expanded") ?? false;
-  routeSettingsExpandButton.setAttribute("aria-expanded", String(expanded));
+  animateHeightChange(routeSettingsCard, () => {
+    const expanded = routeSettingsCard?.classList.toggle("is-expanded") ?? false;
+    routeSettingsExpandButton.setAttribute("aria-expanded", String(expanded));
+  });
 });
 window.addEventListener("resize", () => layoutRailTools());
 document.addEventListener("pointerdown", (event) => {
@@ -2768,7 +2770,7 @@ function syncConstructionPreviewMinimized() {
 }
 minimizeConstructionPreviewButton?.addEventListener("click", () => {
   constructionPreviewMinimized = !constructionPreviewMinimized;
-  syncConstructionPreviewMinimized();
+  animateHeightChange(constructionPreviewPanel, syncConstructionPreviewMinimized);
   playFeedback("select");
 });
 // 접은 상태에서도 확인할 경고가 있다는 것을 머리글에 개수로 보인다(비용이 드는 확정 전 영향 표시).

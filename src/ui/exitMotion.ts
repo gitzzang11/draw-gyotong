@@ -66,3 +66,22 @@ export function installExitMotion() {
     },
   });
 }
+
+/**
+ * 접기·펼치기처럼 표면의 높이가 바뀌는 변경을 부드럽게 보인다(§13 빠른 상태 전환).
+ * 바꾸기 전후 높이를 재고 그 사이를 짧게 잇는다. 모션 감소이거나 보이지 않으면 바로 바꾼다.
+ */
+export function animateHeightChange(element: HTMLElement | null | undefined, mutate: () => void) {
+  if (!element || !motionAllowed() || element.getClientRects().length === 0) {
+    mutate();
+    return;
+  }
+  const from = element.getBoundingClientRect().height;
+  mutate();
+  const to = element.getBoundingClientRect().height;
+  if (Math.abs(from - to) < 1) return;
+  element.animate(
+    [{ height: `${from}px`, overflow: "hidden" }, { height: `${to}px`, overflow: "hidden" }],
+    { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+  );
+}
