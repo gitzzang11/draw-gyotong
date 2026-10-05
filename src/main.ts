@@ -14244,7 +14244,7 @@ function openMergeDialog(merge: PendingMerge) {
       ${renderConnectionTargetCard(escapeHtml(second.name), escapeHtml(second.color), merge.second.atStart ? "시점" : "종점", "B")}
       <div class="dg-row"><span class="dg-row__label">연결 거리</span><span class="dg-row__value">${merge.bridgeLengthKm.toFixed(2)}km</span></div>
       <div class="dg-row"><span class="dg-row__label">예상 비용</span><span class="dg-row__value dg-row__value--metric">${formatCost(merge.bridgeCost)}</span></div>
-      <div class="dg-row"><span class="dg-row__label">예상 공기</span><span class="dg-row__value">${formatConstructionDuration(Math.max(1, Math.round(merge.bridgeLengthKm * baseConstructionDaysPerKm)))}</span></div>
+      <div class="dg-row"><span class="dg-row__label">완공</span><span class="dg-row__value">확정 즉시</span></div>
       <div class="dg-row"><span class="dg-row__label">환승 연결</span><span class="dg-row__value${transferStationIds ? " dg-row__value--ok" : ""}">${transferStationIds ? "● 사용 가능" : "대상 역 없음"}</span></div>`;
   }
   if (mergeChoiceList) {
