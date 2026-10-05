@@ -4565,6 +4565,9 @@ function renderConstructionPanel() {
   constructionPreviewPanel.dataset.reviewMode = planningMode ? "planning" : "construction";
   constructionPreviewPanel.dataset.reviewTool = constructionDraft.kind;
   setText(constructionPreviewKicker, planningMode ? "기획" : "공사");
+  // 철거 검토가 제목을 바꾸므로 건설 쪽 검토도 열 때마다 종류에 맞는 제목을 다시 쓴다.
+  const reviewTitles: Record<ConstructionDraftKind, string> = { route: "건설 검토", extension: "연장 검토", branch: "분기 검토", repair: "복구 검토", edit: "수정 검토", depot: "기지 검토" };
+  setText(constructionPreviewTitle, reviewTitles[constructionDraft.kind]);
   // 공사 모드의 일반 안내 문장은 숨기고, 기획 모드에서는 자금이 차감되지 않는다는 결과만 알린다.
   setText(constructionPreviewSubtitle, planningMode ? "기획안에만 추가 · 자금 차감 없음" : "");
   if (constructionPreviewSubtitle) constructionPreviewSubtitle.hidden = !planningMode;
