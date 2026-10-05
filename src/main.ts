@@ -2771,6 +2771,14 @@ function syncConstructionPreviewAlert() {
   constructionPreviewAlert.textContent = errors > 0 ? `✕ 확인 ${errors}${cautions > 0 ? ` · △ ${cautions}` : ""}` : `△ 주의 ${cautions}`;
 }
 if (constructionWarnings) new MutationObserver(syncConstructionPreviewAlert).observe(constructionWarnings, { childList: true });
+// 철거 검토가 닫히거나(확정·취소·도구 전환) 다른 검토로 바뀌면 드래그 범위 표시도 지운다.
+if (constructionPreviewPanel) {
+  new MutationObserver(() => {
+    if (!constructionPreviewPanel.hidden && constructionPreviewPanel.dataset.reviewTool === "eraser") return;
+    pendingEraserStroke = null;
+    clearDemolitionRange();
+  }).observe(constructionPreviewPanel, { attributes: true, attributeFilter: ["hidden", "data-review-tool"] });
+}
 syncConstructionPreviewMinimized();
 cancelConstructionButton?.addEventListener("click", cancelActiveReview);
 confirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
@@ -3526,6 +3534,9 @@ function onPointerDown(event: PointerEvent) {
     if (!planningMode) {
       const station = findNearestStationAtPoint(point, Math.max(22, eraserRadiusPx + 4));
       if (station) {
+        // 역 하나를 눌러 철거할 때도 검토 동안 대상 역 둘레를 표시한다.
+        pendingEraserStroke = [L.latLng(station.position[0], station.position[1])];
+        demolitionRangeMeters = Math.max(22, eraserRadiusPx + 4) * metersPerPixel();
         requestStationDemolition(station);
         return;
       }
@@ -3880,11 +3891,40 @@ function beginEraserStroke(event: PointerEvent, point: L.Point) {
   setText(facilityReadout, planningMode ? "지울 계획 시설을 가로질러 드래그하세요" : "철거할 건설 시설을 가로질러 드래그하세요");
 }
 
+// 철거 검토가 열려 있는 동안 드래그한 범위를 지도에 남겨 둔다. 폭은 실제 판정 반경(eraserRadiusPx + 8)과 같고,
+// 검토 중 확대·축소해도 같은 땅 범위를 가리키도록 미터로 기억해 두고 다시 계산한다.
+const demolitionRangeLayer = L.layerGroup().addTo(map);
+let pendingEraserStroke: L.LatLng[] | null = null;
+let demolitionRangeMeters = 0;
+
+function showDemolitionRange(stroke: L.LatLng[]) {
+  demolitionRangeLayer.clearLayers();
+  const color = themeTokenColor("--signal-danger", "#C8242C");
+  if (stroke.length === 1) {
+    L.circle(stroke[0], { radius: demolitionRangeMeters, color, weight: 2, opacity: 0.9, dashArray: "6 4", fillColor: color, fillOpacity: 0.22, interactive: false }).addTo(demolitionRangeLayer);
+    return;
+  }
+  const weight = Math.max(2, (demolitionRangeMeters * 2) / metersPerPixel());
+  L.polyline(stroke, { color, weight, opacity: 0.22, lineCap: "round", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+  L.polyline(stroke, { color, weight: 2, opacity: 0.9, dashArray: "6 4", interactive: false }).addTo(demolitionRangeLayer);
+}
+
+function clearDemolitionRange() {
+  demolitionRangeLayer.clearLayers();
+}
+
+map.on("zoomend", () => {
+  if (demolitionReview && pendingEraserStroke) showDemolitionRange(pendingEraserStroke);
+});
+
 function finishEraserStroke(points: L.Point[]) {
+  pendingEraserStroke = null;
   if (points.length < 2) {
     if (points[0]) selectDeletePoint(points[0]);
     return;
   }
+  pendingEraserStroke = points.map((point) => map.containerPointToLatLng(point));
+  demolitionRangeMeters = (eraserRadiusPx + 8) * metersPerPixel();
   if (planningMode) requestPlannedAssetsErase(points);
   else requestBuiltAssetsErase(points);
 }
@@ -4593,6 +4633,7 @@ function openDemolitionReview(review: DemolitionReview) {
   if (!constructionPreviewPanel) return;
   if (constructionDraft) cancelConstructionDraft();
   demolitionReview = review;
+  if (pendingEraserStroke) showDemolitionRange(pendingEraserStroke);
   document.body.classList.add("construction-reviewing");
   constructionPreviewPanel.hidden = false;
   constructionPreviewPanel.dataset.reviewMode = review.planning ? "planning" : "construction";
