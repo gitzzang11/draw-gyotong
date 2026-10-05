@@ -53,7 +53,7 @@ import {
   type StationDemandState,
 } from "./demandModel.ts";
 import { applyRealPopulationDensity, getRealPopulationCells } from "./populationDensity.ts";
-import { DirtyUpdateScheduler, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
+import { DirtyUpdateScheduler, domainsForUpdate, type UpdateDomain, type UpdateReason } from "./updateScheduler.ts";
 import type { Branch, ConstructionMode, Depot, RouteLine, RouteNode, RouteNodeKind, RouteSegment, ServicePattern, Station, TransferGroup } from "./domain/networkTypes.ts";
 import { NetworkState } from "./domain/networkState.ts";
 import { ConstructionState } from "./domain/constructionState.ts";
@@ -4907,6 +4907,28 @@ function createConstructionProjectFromDraft(draft: ConstructionDraft, selectedId
   };
 }
 
+/**
+ * 샌드박스(공사 기간 끔)에서는 건설이 즉시 끝나야 한다. 튜토리얼이 안내하는 동안만 공사 기간을 쓰는데,
+ * 튜토리얼을 건너뛰거나 끝내면 그때 만든 공사가 게임 시간이 흘러야만 끝나는 상태로 남았다.
+ * 튜토리얼 안내가 끝난 샌드박스에서는 남은 공사를 바로 끝낸다: 기지·역은 운영, 노선·연장 등은 개통 준비(튜토리얼과 같은 처리).
+ */
+function finishSandboxConstruction() {
+  if (metaState.current.mode !== "sandbox" || settings.sandboxConstructionTime || isTutorialGuidedBuild()) return false;
+  const pending = constructionState.projects.filter((project) => project.status === "planned" || project.status === "scheduled" || project.status === "building");
+  if (pending.length === 0) return false;
+  const today = analysisStateOwner.current.dayIndex;
+  const pendingIds = new Set(pending.map((project) => project.id));
+  constructionState.replaceProjects(constructionState.projects.map((project) => {
+    if (!pendingIds.has(project.id)) return project;
+    const finished = { ...project, elapsedDays: project.durationDays + project.delayDays, expectedCompletionDay: today };
+    return project.kind === "depot" || project.kind === "station"
+      ? { ...finished, status: "operating" as const, openedAtDay: today }
+      : { ...finished, status: "opening-ready" as const };
+  }));
+  pruneFinishedPlans();
+  return true;
+}
+
 function usesConstructionTimeline() {
   return metaState.current.mode === "career" || (metaState.current.mode === "sandbox" && settings.sandboxConstructionTime) || isTutorialGuidedBuild();
 }
@@ -8822,6 +8844,10 @@ function requestUpdateDomains(domains: readonly UpdateDomain[], selectedId?: str
 function flushUpdates(selectedId?: string) {
   const domains = new Set<UpdateDomain>(updateScheduler.consume());
   if (domains.size === 0) return;
+  if (finishSandboxConstruction()) {
+    for (const domain of domainsForUpdate("construction-progress")) domains.add(domain);
+    for (const domain of domainsForUpdate("network-structure")) domains.add(domain);
+  }
   try {
     if (selectedRouteId && !networkState.routes.some((route) => route.id === selectedRouteId)) selectedRouteId = null;
     if (selectedId && networkState.routes.some((route) => route.id === selectedId)) selectedRouteId = selectedId;
@@ -16428,6 +16454,7 @@ function updateSettings(patch: Partial<GameSettings>) {
   localStorage.setItem("draw-gyotong-settings", JSON.stringify(settings));
   applySettingsToUi();
   if ("autoSaveEnabled" in patch || "autoSaveIntervalSeconds" in patch) startAutoSave();
+  if ("sandboxConstructionTime" in patch) requestUpdate("construction-progress");
   playFeedback("select");
 }
 
