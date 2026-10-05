@@ -247,6 +247,8 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-review[data-review-mode="planning"] .game-review__tag { background: var(--surface-0); border-style: dashed; border-color: var(--signal-info); color: var(--signal-info); }
 .game-review[data-review-tool="eraser"] .game-review__tag { background: var(--surface-0); border-color: var(--signal-danger); color: var(--signal-danger); }
 .game-review__warnings { display: grid; gap: var(--space-1); }
+/* 검토 창의 안내(i)는 작게: 판단에 필요한 주의·확인 필요보다 덜 눈에 띄게 한다. */
+.game-review__warnings .dg-notice--info { padding: 2px var(--space-2); background: transparent; font: var(--type-label); color: var(--text-2); }
 .game-review__cost { font: var(--type-metric); white-space: nowrap; }
 /* 최소화: 머리글과 확정 줄만 남겨 지도를 가리지 않는다. 경고 개수는 접혔을 때만 머리글에 보인다. */
 .game-review .dg-panel__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

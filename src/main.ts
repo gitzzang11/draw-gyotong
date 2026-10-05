@@ -1207,7 +1207,6 @@ app.innerHTML = `
           <div class="dg-row"><span id="previewDurationLabel" class="dg-row__label">예상 공기</span><span id="previewDuration" class="dg-row__value">0일</span></div>
           </section>
           <section class="dg-panel__section">
-            <h3 class="dg-panel__section-label">세부</h3>
           <div class="dg-row"><span id="previewLengthLabel" class="dg-row__label">총 길이</span><span id="previewLength" class="dg-row__value">0m</span></div>
           <div class="dg-row"><span id="previewBaseCostLabel" class="dg-row__label">기본 건설비</span><span id="previewBaseCost" class="dg-row__value">0억</span></div>
           <div class="dg-row"><span id="previewMountainLabel" class="dg-row__label">산악 구간</span><span id="previewMountain" class="dg-row__value">없음</span></div>
@@ -4475,19 +4474,12 @@ function renderConstructionPanel() {
   document.body.classList.add("construction-reviewing");
   const analysis = constructionDraft.analysis;
   constructionPreviewPanel.hidden = false;
-  const reviewCopy: Record<ConstructionDraftKind, { title: string; planningDescription: string; constructionDescription: string }> = {
-    route: { title: "노선 건설 검토", planningDescription: "새 노선 설계를 현재 기획안에 추가합니다.", constructionDescription: "새 노선의 비용과 공사 조건을 확인하세요." },
-    extension: { title: "연장 검토", planningDescription: "선택한 노선의 연장 설계를 기획안에 추가합니다.", constructionDescription: "선택한 노선의 실제 연장 공사를 검토합니다." },
-    branch: { title: "분기 검토", planningDescription: "새 분기 설계를 현재 기획안에 추가합니다.", constructionDescription: "새 분기의 연결과 공사 조건을 확인하세요." },
-    repair: { title: "복구 검토", planningDescription: "단절 구간 복구 설계를 기획안에 반영합니다.", constructionDescription: "단절된 구간을 실제로 복구합니다." },
-    edit: { title: "노선 수정 검토", planningDescription: "변경한 선형을 현재 기획안에 반영합니다.", constructionDescription: "경로 수정에 따른 비용과 영향을 확인하세요." },
-    depot: { title: "차량기지 검토", planningDescription: "차량기지 부지와 연결 계획을 기획안에 추가합니다.", constructionDescription: "차량기지의 부지·연결·공사비를 확인하세요." },
-  };
-  const copy = reviewCopy[constructionDraft.kind];
   constructionPreviewPanel.dataset.reviewMode = planningMode ? "planning" : "construction";
   constructionPreviewPanel.dataset.reviewTool = constructionDraft.kind;
   setText(constructionPreviewKicker, planningMode ? "기획" : "공사");
-  setText(constructionPreviewSubtitle, planningMode ? `${copy.planningDescription} 자금은 아직 차감되지 않습니다.` : copy.constructionDescription);
+  // 공사 모드의 일반 안내 문장은 숨기고, 기획 모드에서는 자금이 차감되지 않는다는 결과만 알린다.
+  setText(constructionPreviewSubtitle, planningMode ? "기획안에만 추가 · 자금 차감 없음" : "");
+  if (constructionPreviewSubtitle) constructionPreviewSubtitle.hidden = !planningMode;
   setText(previewTotalCostLabel, planningMode ? "계획 예상비" : "예상 총비용");
   setText(previewBalanceLabel, planningMode ? "현재 단계" : "건설 후 잔액");
   setText(previewDurationLabel, planningMode ? "예상 공기" : "예상 공기");
@@ -4514,11 +4506,27 @@ function renderConstructionPanel() {
   );
   setText(previewStationCount, `${analysis.stationInstallCount}개`);
   setText(previewDepotConnection, analysis.depotConnected ? "연결됨" : constructionDraft.kind === "depot" ? "단독 건설" : "미연결");
+  // 펼친 상태의 정보량을 줄인다: 확정 줄 비용과 겹치는 행, 값이 없는 행, 경고와 겹치는 행은 숨긴다.
+  const showRow = (value: HTMLElement | null, visible: boolean) => {
+    const row = value?.closest<HTMLElement>(".dg-row");
+    if (row) row.hidden = !visible;
+  };
+  showRow(previewTotalCost, false);
+  // 길이와 공기는 한 줄로 합친다.
+  setText(previewDurationLabel, "길이 · 공기");
+  setText(previewDuration, `${previewLength?.textContent ?? ""} · ${formatConstructionDuration(analysis.durationDays)}`);
+  showRow(previewLength, false);
+  showRow(previewBalance, !planningMode);
+  showRow(previewBaseCost, analysis.baseCost !== analysis.totalCost);
+  showRow(previewMountain, analysis.mountainLengthKm > 0);
+  showRow(previewRiverCount, analysis.riverCrossings.length > 0);
+  showRow(previewStationCount, analysis.stationInstallCount > 0);
+  showRow(previewDepotConnection, constructionDraft.kind === "depot");
   renderRiverChoices();
   if (constructionWarnings) {
     constructionWarnings.innerHTML =
       analysis.warnings.length === 0
-        ? `<div class="dg-notice dg-notice--ok"><span class="dg-notice__lead">✓</span><span>건설 가능한 계획입니다</span></div>`
+        ? ""
         : analysis.warnings
             .map((warning) => {
               const lead = warning.severity === "error" ? "✕ 확인 필요" : warning.severity === "warning" ? "△ 주의" : "i 안내";
@@ -4526,6 +4534,7 @@ function renderConstructionPanel() {
               return `<div class="dg-notice${variant}"><span class="dg-notice__lead">${lead}</span><span>${escapeHtml(warning.message)}</span></div>`;
             })
             .join("");
+    constructionWarnings.hidden = analysis.warnings.length === 0;
   }
   const blocked = analysis.warnings.some((warning) => warning.severity === "error");
   if (confirmConstructionButton) {
@@ -4612,12 +4621,19 @@ function openDemolitionReview(review: DemolitionReview) {
   setText(previewRiverCount, `${review.stationCount}개`);
   setText(previewStationCount, `${review.depotCount}개`);
   setText(previewDepotConnection, review.planning ? "건설 완료 시설" : "범위 밖 시설");
+  // 철거는 되돌릴 수 없으므로 대상 행을 모두 보인다(확정 줄 비용과 겹치는 첫 행만 숨김).
+  if (constructionPreviewSubtitle) constructionPreviewSubtitle.hidden = false;
+  [previewTotalCost, previewBalance, previewDuration, previewLength, previewBaseCost, previewMountain, previewRiverCount, previewStationCount, previewDepotConnection].forEach((value) => {
+    const row = value?.closest<HTMLElement>(".dg-row");
+    if (row) row.hidden = value === previewTotalCost;
+  });
   if (riverChoiceList) {
     riverChoiceList.hidden = true;
     riverChoiceList.innerHTML = "";
   }
   if (constructionWarnings) {
     constructionWarnings.innerHTML = `<div class="dg-notice dg-notice--danger"><span class="dg-notice__lead">△ 삭제 주의</span><span>${escapeHtml(review.description)}</span></div>`;
+    constructionWarnings.hidden = false;
   }
   if (confirmConstructionButton) {
     confirmConstructionButton.disabled = false;
