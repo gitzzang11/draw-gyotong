@@ -399,6 +399,10 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 .dg-rail--planning .dg-tool { border-style: dashed; }
 
 .dg-rail__modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: var(--line-hair) solid var(--edge); }
+/* 레일 칸은 레일 틀에 꼭 맞는 각진 행이다. legacy 전역 button 규칙(둥근 모서리·그림자·hover 들림)을 받지 않게 끊는다. */
+.dg-rail__mode,
+.dg-rail__mode-now,
+.dg-tool { border-radius: 0; box-shadow: none; transform: none; }
 .dg-rail__mode {
   min-height: 40px;
   padding: 0;
