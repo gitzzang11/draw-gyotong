@@ -990,7 +990,6 @@ app.innerHTML = `
             <input id="draftRouteColorInput" type="color" value="#3277ff" tabindex="-1" aria-hidden="true" hidden />
             <button type="button" class="dg-btn dg-btn--secondary dg-btn--compact game-color-trigger" data-open-color-picker="draftRouteColorInput"><span class="game-color-swatch" aria-hidden="true"></span><span data-color-value>#3277FF</span><span class="game-color-trigger__action" aria-hidden="true">›</span><span class="dg-sr-only">색 바꾸기</span></button>
           </div>
-          <button id="saveRouteSettingsButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">설정 적용</button>
         </section>
       </div>
     </section>
@@ -1968,7 +1967,6 @@ draftRouteTrainTypeSelect?.addEventListener("change", () => {
   draftRouteTrainType = normalizeTrainType(draftRouteTrainTypeSelect.value);
   requestUpdate("blueprint-preview");
 });
-const saveRouteSettingsButton = document.querySelector<HTMLButtonElement>("#saveRouteSettingsButton");
 const operationRouteSelect = document.querySelector<HTMLSelectElement>("#operationRouteSelect");
 const carCountInput = document.querySelector<HTMLInputElement>("#carCountInput");
 const setCountInput = document.querySelector<HTMLInputElement>("#setCountInput");
@@ -3054,7 +3052,9 @@ guideButton?.addEventListener("click", () => openTutorial(true));
 closeSettingsButton?.addEventListener("click", closeSettings);
 if (settingsDialog) bindBackdropDismiss(settingsDialog, closeSettings);
 closeRouteSettingsButton?.addEventListener("click", () => setTool("pan"));
-saveRouteSettingsButton?.addEventListener("click", saveRouteSettings);
+// 노선 이름과 색은 따로 적용 버튼 없이 바로 반영한다.
+draftRouteNameInput?.addEventListener("input", applyDraftRouteName);
+draftRouteColorInput?.addEventListener("input", applyDraftRouteColor);
 soundToggle?.addEventListener("change", () => updateSettings({ soundEnabled: Boolean(soundToggle.checked) }));
 hapticsToggle?.addEventListener("change", () => updateSettings({ hapticsEnabled: Boolean(hapticsToggle.checked) }));
 performanceSelect?.addEventListener("change", () => updateSettings({ performanceMode: performanceSelect.value === "battery" ? "battery" : "balanced" }));
@@ -16213,18 +16213,18 @@ function showRouteSettingsTarget(
   }
 }
 
-function saveRouteSettings() {
-  const nextName = draftRouteNameInput?.value.trim() ?? "";
+function applyDraftRouteName() {
+  draftRouteName = draftRouteNameInput?.value.trim() ?? "";
+  setText(routeSettingsHeaderName, draftRouteName || "노선 설정");
+}
+
+function applyDraftRouteColor() {
   const nextColor = draftRouteColorInput?.value;
-  if (!nextColor || !/^#[0-9a-f]{6}$/i.test(nextColor)) {
-    showError("노선 색상을 선택해 주세요.");
-    return;
-  }
-  draftRouteName = nextName;
+  if (!nextColor || !/^#[0-9a-f]{6}$/i.test(nextColor)) return;
   selectedColor = nextColor;
+  routeSettingsHeaderSwatch?.style.setProperty("background-color", nextColor);
   recordTutorialSignal("colorSelected");
-  showToast(nextName ? `“${nextName}” 노선 설정을 적용했습니다.` : "노선 색상을 적용했습니다.");
-  playFeedback("confirm");
+  playFeedback("select");
 }
 
 async function updateCacheReadout() {
