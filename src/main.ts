@@ -2674,13 +2674,23 @@ document.addEventListener("keydown", (event) => {
   modifyToolsButton?.focus();
 });
 workspaceModeTabs.forEach((tab) => tab.addEventListener("click", () => setWorkspaceMode(tab.dataset.workspaceMode as WorkspaceMode)));
-selectTool?.addEventListener("click", () => setTool("pan"));
+selectTool?.addEventListener("click", () => {
+  // 노선 목록이 열려 있으면 닫고 탐색으로 돌아온다.
+  if (leftRouteWindow && !leftRouteWindow.hidden) closeLeftRouteWindow();
+  setTool("pan");
+});
 manageLineTool?.addEventListener("click", () => {
   toggleLeftRouteWindow();
 });
 // 노선 목록은 닫기 버튼·다른 패널 열기·노선 선택 등 여러 경로로 닫히므로 패널의 hidden 상태를 그대로 버튼에 반영한다.
 if (manageLineTool && leftRouteWindow) {
-  const syncManageLineTool = () => manageLineTool.setAttribute("aria-pressed", String(!leftRouteWindow.hidden));
+  // 노선 목록이 열려 있는 동안에는 노선 목록만 눌린 상태로 보이고, 탐색은 눌림 표시를 내려놓는다.
+  const syncManageLineTool = () => {
+    manageLineTool.setAttribute("aria-pressed", String(!leftRouteWindow.hidden));
+    const exploring = activeTool === "pan" && leftRouteWindow.hidden;
+    selectTool?.setAttribute("aria-pressed", String(exploring));
+    selectTool?.classList.toggle("active", exploring);
+  };
   new MutationObserver(syncManageLineTool).observe(leftRouteWindow, { attributes: true, attributeFilter: ["hidden"] });
   syncManageLineTool();
 }
@@ -12504,7 +12514,7 @@ function setTool(tool: ToolMode) {
   }
   toolButtons.forEach((button) => {
     const isActive =
-      (button === selectTool && tool === "pan") ||
+      (button === selectTool && tool === "pan" && Boolean(leftRouteWindow?.hidden ?? true)) ||
       (button === routeTool && tool === "route") ||
       (button === extendTool && tool === "extend") ||
       (button === editTool && tool === "edit") ||
