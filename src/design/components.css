@@ -238,7 +238,7 @@
 }
 .dg-panel__header-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-1); }
 
-.dg-panel__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.dg-panel__body { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 
 .dg-panel__section { padding: var(--space-2) var(--space-3); border-bottom: var(--line-hair) solid var(--rule); }
 .dg-panel__section:last-child { border-bottom: 0; }
@@ -296,7 +296,9 @@
 .dg-meter__fill--over { background: var(--signal-danger); }
 
 /* ===== Inputs (§12) ===== */
-.dg-field { display: grid; gap: var(--space-1); }
+/* 열을 minmax(0, 1fr)로 두어 긴 선택지가 있는 select가 박스 폭을 밀어내 가로 스크롤을 만들지 않게 한다. */
+.dg-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+select.dg-input { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
 .dg-field__label { font: var(--type-label); color: var(--text-2); }
 .dg-input {
   min-height: var(--control-height);
@@ -616,7 +618,7 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 .dg-workspace__body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow-x: hidden; overflow-y: auto;
   padding: var(--space-4) var(--edge-inset-right) var(--edge-inset-bottom) var(--edge-inset-left);
 }
 
