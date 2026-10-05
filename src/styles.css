@@ -8,63 +8,27 @@
 :root {
   --c-bg: #07090E;
   --c-bg-glass: rgba(10, 14, 23, 0.88);
-  --c-panel: rgba(18, 24, 38, 0.85);
-  --c-panel-solid: #121927;
-  --c-panel-hover: #1E293B;
   --c-border: rgba(255, 255, 255, 0.14);
   --c-border-light: rgba(255, 255, 255, 0.22);
-  --c-border-glow: rgba(0, 242, 254, 0.4);
 
   /* 역할별 색상 팔레트: 상태 색을 직접 입력하지 말고 이 변수를 재사용한다. */
-  --c-cyan: #00F2FE;
   --c-primary: #00F2FE;
   --c-primary-glow: rgba(0, 242, 254, 0.4);
-
-  --c-purple: #A855F7;
-  --c-violet: #8B5CF6;
-  --c-secondary: #6366F1;
-  --c-purple-glow: rgba(168, 85, 247, 0.4);
-
-  --c-emerald: #059669;
-  --c-mint: #34D399;
-  --c-success: #10B981;
-  --c-success-glow: rgba(16, 185, 129, 0.4);
-
-  --c-amber: #F59E0B;
-  --c-gold: #FBBF24;
-  --c-coral: #FF7E5F;
-  --c-warning: #F59E0B;
-  --c-warning-glow: rgba(245, 158, 11, 0.4);
-
-  --c-ruby: #F43F5E;
-  --c-crimson: #E11D48;
   --c-danger: #EF4444;
-  --c-danger-glow: rgba(239, 68, 68, 0.4);
-
-  --c-blue: #3B82F6;
-  --c-azure: #06B6D4;
-  --c-sapphire: #2563EB;
   
   --c-text-main: #F8FAFC;
   --c-text-muted: #94A3B8;
-  --c-text-dim: #64748B;
-  
-  --glass-blur: blur(16px) saturate(180%);
   --glass-blur-dense: blur(24px) saturate(200%);
   
   --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.18);
-  --shadow-glow: 0 0 24px var(--c-primary-glow);
   --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
   
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  --radius-xl: 24px;
   --radius-full: 9999px;
 
   /* 모바일 터치 공통 토큰: 터치 영역/간격/눌림 피드백은 여기 한 곳에서 관리한다. */
-  --touch-target: 44px;
-  --touch-target-gap: 6px;
   --press-scale: 0.97;
   --press-transition: 120ms cubic-bezier(0.16, 1, 0.3, 1);
   
@@ -683,32 +647,19 @@ tr:hover td {
 :root {
   --c-bg: #090d12;
   --c-bg-glass: rgba(11, 16, 22, 0.94);
-  --c-panel: #111820;
-  --c-panel-solid: #111820;
-  --c-panel-hover: #18222c;
   --c-border: rgba(191, 211, 222, 0.16);
   --c-border-light: rgba(220, 237, 244, 0.28);
-  --c-border-strong: rgba(220, 237, 244, 0.4);
   --c-primary: #55d9c0;
   --c-primary-glow: rgba(85, 217, 192, 0.22);
-  --c-planning: #b89cff;
-  --c-construction: #f6c453;
-  --c-success: #55d9c0;
-  --c-warning: #f6c453;
   --c-danger: #ff6b78;
   --c-text-main: #edf5f7;
   --c-text-muted: #a4b4bc;
-  --c-text-dim: #71818a;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
-  --radius-xl: 18px;
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.42), 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.28);
-  --shadow-glow: 0 0 0 1px rgba(85, 217, 192, 0.2), 0 8px 22px rgba(0, 0, 0, 0.3);
-  --glass-blur: blur(10px);
   --glass-blur-dense: blur(14px);
-  --ui-gap: 8px;
 }
 
 html,
@@ -891,11 +842,6 @@ button:where(:not([class*="dg-"])):active,
    Mobile uses a single, predictable bottom-sheet language for contextual
    screens instead of scattering desktop side panels across the map.
 ------------------------------------------------------------------------- */
-@media (max-width: 700px) {
-  .game-shell {
-    --mobile-dock-height: 52px;
-  }
-}
 
 /* 실행 취소/다시 실행 버튼도 터치 영역을 확보한다. */
 
@@ -1017,17 +963,6 @@ button:where(:not([class*="dg-"])):active,
 
 /* Mobile HUD scale: reduce the top status bar and bottom tool dock while
    preserving their scroll and touch behavior. */
-@media (max-width: 700px) {
-  .game-shell {
-    --mobile-dock-height: 44px;
-  }
-}
-
-@media (max-width: 700px) and (orientation: landscape) {
-  .game-shell {
-    --mobile-dock-height: 38px;
-  }
-}
 
 /* -------------------------------------------------------------------------
    FINAL MOBILE SAFETY OVERRIDES
@@ -1067,9 +1002,6 @@ button:where(:not([class*="dg-"])):active,
    breakpoints miss it. Height plus orientation identifies the compact phone
    viewport without shrinking ordinary desktop windows. */
 @media (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  .game-shell {
-    --mobile-dock-height: 38px;
-  }
 
   /* Floating tools stay above the dock and each list owns its own scroll. */
 
@@ -1082,26 +1014,6 @@ button:where(:not([class*="dg-"])):active,
    Every dismiss action uses one size and one visual X glyph. Minimize and
    delete controls intentionally keep their own semantics and appearance.
 ------------------------------------------------------------------------- */
-:root {
-  --close-button-size: 40px;
-  --close-icon-size: 22px;
-  --floating-close-button-size: 32px;
-  --floating-close-glyph-size: 14px;
-  --floating-minimized-close-size: 28px;
-  --floating-minimized-close-glyph-size: 12px;
-}
-
-@media (max-width: 700px),
-  (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
-  :root {
-    --close-button-size: 44px;
-    --close-icon-size: 22px;
-    --floating-close-button-size: 36px;
-    --floating-close-glyph-size: 15px;
-    --floating-minimized-close-size: 30px;
-    --floating-minimized-close-glyph-size: 13px;
-  }
-}
 
 /* -------------------------------------------------------------------------
    FLOATING WINDOW CLOSE CONTROL

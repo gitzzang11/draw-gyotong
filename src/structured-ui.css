@@ -18,51 +18,24 @@
   --color-text-muted: #687c85;
   --color-accent: #25d0d6;
   --color-accent-strong: #58f0e8;
-  --color-accent-dim: #123f45;
-  --color-info: #4da3ff;
-  --color-success: #49c987;
-  --color-warning: #f2b84b;
   --color-danger: #ff6577;
 
   /* Bridge the legacy token names to the current design-system palette. */
   --c-bg: var(--color-map-void);
   --c-bg-glass: rgb(10 20 29 / 97%);
-  --c-panel: var(--color-surface-0);
-  --c-panel-solid: var(--color-surface-0);
-  --c-panel-hover: var(--color-surface-2);
   --c-border: var(--color-border-subtle);
   --c-border-light: var(--color-border-strong);
-  --c-border-glow: var(--color-accent);
-  --c-cyan: var(--color-accent);
   --c-primary: var(--color-accent);
   --c-primary-glow: transparent;
-  --c-secondary: var(--color-info);
-  --c-emerald: var(--color-success);
-  --c-mint: var(--color-success);
-  --c-success: var(--color-success);
-  --c-success-glow: transparent;
-  --c-amber: var(--color-warning);
-  --c-gold: var(--color-warning);
-  --c-warning: var(--color-warning);
-  --c-warning-glow: transparent;
-  --c-ruby: var(--color-danger);
-  --c-crimson: var(--color-danger);
   --c-danger: var(--color-danger);
-  --c-danger-glow: transparent;
-  --c-blue: var(--color-info);
-  --c-azure: var(--color-accent);
   --c-text-main: var(--color-text-primary);
   --c-text-muted: var(--color-text-secondary);
-  --c-text-dim: var(--color-text-muted);
-  --glass-blur: none;
   --glass-blur-dense: none;
   --shadow-lg: 0 8px 24px rgb(0 0 0 / 34%);
-  --shadow-glow: none;
   --shadow-card: 0 5px 16px rgb(0 0 0 / 24%);
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
-  --radius-xl: 12px;
   --radius-full: 8px;
   --font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-serif;
   color-scheme: dark;
@@ -131,28 +104,6 @@ textarea:where(:not([class*="dg-"])) {
 input:where(:not([class*="dg-"]))::placeholder,
 textarea:where(:not([class*="dg-"]))::placeholder {
   color: var(--color-text-muted) !important;
-}
-
-.leaflet-control-zoom,
-.leaflet-control-layers,
-.leaflet-bar {
-  border: 1px solid var(--color-border-subtle) !important;
-  border-radius: 8px !important;
-  background: var(--color-surface-0) !important;
-  box-shadow: var(--shadow-card) !important;
-}
-
-.leaflet-bar a,
-.leaflet-bar a:hover {
-  border: 0 !important;
-  border-bottom: 1px solid var(--color-border-subtle) !important;
-  border-radius: 0 !important;
-  background: var(--color-surface-0) !important;
-  color: var(--color-text-primary) !important;
-}
-
-.leaflet-bar a:last-child {
-  border-bottom: 0 !important;
 }
 
 /* --------------------------------------------------------------------------

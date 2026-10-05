@@ -10,4 +10,3 @@
 @import "leaflet/dist/leaflet.css" layer(legacy);
 @import "./styles.css" layer(legacy);
 @import "./structured-ui.css" layer(legacy);
-@import "./mobile-system-menu.css" layer(legacy);
