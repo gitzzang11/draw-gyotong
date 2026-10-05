@@ -1195,7 +1195,8 @@ app.innerHTML = `
         <svg class="dg-panel__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 15 L9 9 H17"/><circle cx="3" cy="15" r="1.5"/><circle cx="17" cy="9" r="1.5"/></svg>
         <h2 id="constructionPreviewTitle" class="dg-panel__title">건설 검토</h2>
         <span id="constructionPreviewKicker" class="dg-tag game-review__tag">공사</span>
-        <div class="dg-panel__header-end"><button id="closeConstructionPreviewButton" class="dg-icon-btn" type="button" aria-label="검토 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+        <span id="constructionPreviewAlert" class="dg-tag game-review__alert" hidden></span>
+        <div class="dg-panel__header-end"><button id="minimizeConstructionPreviewButton" class="dg-icon-btn game-review__minimize" type="button" aria-expanded="true" aria-controls="constructionPreviewDetails" aria-label="검토 창 접기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 8 L10 13 L15 8"/></svg></button><button id="closeConstructionPreviewButton" class="dg-icon-btn" type="button" aria-label="검토 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
       </header>
       <div class="game-inspector__content">
         <div id="constructionPreviewDetails" class="dg-panel__body">
@@ -2037,6 +2038,8 @@ const constructionPreviewTitle = byId("constructionPreviewTitle");
 const constructionPreviewKicker = byId("constructionPreviewKicker");
 const constructionPreviewSubtitle = byId("constructionPreviewSubtitle");
 const closeConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#closeConstructionPreviewButton");
+const minimizeConstructionPreviewButton = document.querySelector<HTMLButtonElement>("#minimizeConstructionPreviewButton");
+const constructionPreviewAlert = byId("constructionPreviewAlert");
 const constructionPreviewDetails = byId("constructionPreviewDetails");
 const previewTotalCostLabel = byId("previewTotalCostLabel");
 const previewBalanceLabel = byId("previewBalanceLabel");
@@ -2747,6 +2750,29 @@ confirmPlanConversionButton?.addEventListener("click", confirmPlanConversion);
 undoButton?.addEventListener("click", undo);
 redoButton?.addEventListener("click", redo);
 closeConstructionPreviewButton?.addEventListener("click", cancelActiveReview);
+// 건설 검토 창 최소화: 머리글과 확정 줄(취소·비용·확정)만 남긴다. 한 번 접으면 다음 검토도 접힌 채로 연다.
+let constructionPreviewMinimized = false;
+function syncConstructionPreviewMinimized() {
+  constructionPreviewPanel?.classList.toggle("game-review--minimized", constructionPreviewMinimized);
+  minimizeConstructionPreviewButton?.setAttribute("aria-expanded", String(!constructionPreviewMinimized));
+  minimizeConstructionPreviewButton?.setAttribute("aria-label", constructionPreviewMinimized ? "검토 창 펼치기" : "검토 창 접기");
+}
+minimizeConstructionPreviewButton?.addEventListener("click", () => {
+  constructionPreviewMinimized = !constructionPreviewMinimized;
+  syncConstructionPreviewMinimized();
+  playFeedback("select");
+});
+// 접은 상태에서도 확인할 경고가 있다는 것을 머리글에 개수로 보인다(비용이 드는 확정 전 영향 표시).
+function syncConstructionPreviewAlert() {
+  if (!constructionWarnings || !constructionPreviewAlert) return;
+  const errors = constructionWarnings.querySelectorAll(".dg-notice--danger").length;
+  const cautions = constructionWarnings.querySelectorAll(".dg-notice:not(.dg-notice--danger):not(.dg-notice--ok):not(.dg-notice--info)").length;
+  constructionPreviewAlert.hidden = errors + cautions === 0;
+  constructionPreviewAlert.classList.toggle("dg-tag--error", errors > 0);
+  constructionPreviewAlert.textContent = errors > 0 ? `✕ 확인 ${errors}${cautions > 0 ? ` · △ ${cautions}` : ""}` : `△ 주의 ${cautions}`;
+}
+if (constructionWarnings) new MutationObserver(syncConstructionPreviewAlert).observe(constructionWarnings, { childList: true });
+syncConstructionPreviewMinimized();
 cancelConstructionButton?.addEventListener("click", cancelActiveReview);
 confirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());
 headerConfirmConstructionButton?.addEventListener("click", () => void confirmActiveReview());

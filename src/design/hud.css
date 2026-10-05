@@ -248,6 +248,15 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-review[data-review-tool="eraser"] .game-review__tag { background: var(--surface-0); border-color: var(--signal-danger); color: var(--signal-danger); }
 .game-review__warnings { display: grid; gap: var(--space-1); }
 .game-review__cost { font: var(--type-metric); white-space: nowrap; }
+/* 최소화: 머리글과 확정 줄만 남겨 지도를 가리지 않는다. 경고 개수는 접혔을 때만 머리글에 보인다. */
+.game-review .dg-panel__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-review__alert { flex: none; white-space: nowrap; }
+.game-review:not(.game-review--minimized) .game-review__alert { display: none; }
+.game-review__minimize svg { transition: transform var(--dur-fast) var(--ease-out); }
+.game-review--minimized .game-review__minimize svg { transform: rotate(180deg); }
+.game-review--minimized #constructionPreviewDetails { display: none; }
+.game-review--minimized .dg-panel__header { border-bottom: 0; }
+.game-review--minimized .dg-panel__icon { display: none; }
 
 /* ===== 보조 패널: 레일 오른쪽 위 (노선 설정 등) ===== */
 .game-side-panel {
