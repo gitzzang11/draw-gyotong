@@ -394,9 +394,11 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
   border: var(--line-hair) solid var(--edge);
   font: var(--type-body);
 }
-.dg-rail--planning,
+/* 기획 재질: 레일 틀은 점선. 모드 탭 묶음·도구 칸은 굵기를 정한 아래쪽 구분선만 점선으로 바꾼다
+   (border-style 전체를 바꾸면 굵기를 정하지 않은 변에 기본 3px 테두리가 생긴다). */
+.dg-rail--planning { border-style: dashed; }
 .dg-rail--planning .dg-rail__modes,
-.dg-rail--planning .dg-tool { border-style: dashed; }
+.dg-rail--planning .dg-tool { border-bottom-style: dashed; }
 
 .dg-rail__modes { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: var(--line-hair) solid var(--edge); }
 /* 레일 칸은 레일 틀에 꼭 맞는 각진 행이다. legacy 전역 button 규칙(둥근 모서리·그림자·hover 들림)을 받지 않게 끊는다. */
