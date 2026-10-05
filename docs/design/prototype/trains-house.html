@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>열차 집 모양 시안</title>
+<!-- 지도 위 열차 기호 "집 모양" 시안: 실제 크기(확대 없음). 기존 A 캡슐과 비교 + D1·D2·D3, 종이·먹 -->
+<style>
+  body { margin: 0; padding: 20px; background: #2b2d30; color: #ddd; font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; }
+  h1 { font-size: 16px; margin: 0 0 6px; } p { font-size: 13px; color: #aaa; margin: 0 0 14px; max-width: 900px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(2, 420px); gap: 14px 18px; }
+  .card h2 { font-size: 13px; margin: 0 0 6px; color: #eee; } .card h2 small { color: #aaa; font-weight: 400; }
+  svg { display: block; width: 420px; height: 200px; border-radius: 10px; }
+  .paper { --g:#ECE9E1; --w:#C6D3D9; --s:#FBFAF6; --k:#15171A; --k2:#6B7076; }
+  .ink { --g:#17191C; --w:#1F2B33; --s:#121416; --k:#ECEAE3; --k2:#8C8981; }
+  .bg { fill: var(--g); } .water { fill: none; stroke: var(--w); stroke-width: 26; }
+  .casing { fill: none; stroke: var(--s); stroke-width: 11; stroke-linecap: round; stroke-linejoin: round; }
+  .line { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+  .st { fill: var(--s); stroke: var(--k); stroke-width: 2.5; }
+  .lbl { font: 800 11px sans-serif; fill: var(--k); paint-order: stroke; stroke: var(--s); stroke-width: 3; }
+  .note { font: 600 10px sans-serif; fill: var(--k2); }
+  .scale { margin-top: 18px; }
+  .scale svg { height: 90px; }
+</style>
+</head>
+<body>
+<h1>열차 기호 "집 모양" 시안 — 지도 위 실제 크기</h1>
+<p>집(오각형) 모양은 뾰족한 머리가 진행 방향을 가리키도록 선로 방향으로 회전합니다. 각 칸에서 일반(→) · 급행(대각선 아래로) · 혼잡(왼쪽으로, 2호선) 열차를 함께 보여 줍니다. 비교용으로 지금의 A 캡슐을 첫 칸에 두었습니다. 위쪽은 종이 테마, 아래쪽은 먹 테마입니다.</p>
+
+<svg id="map" style="display:none" aria-hidden="true"><g>
+  <rect class="bg" width="420" height="200"/>
+  <path class="water" d="M-10 170 C 120 140 260 190 430 150"/>
+  <path class="casing" d="M20 60 H 200 L 280 140 H 410"/><path class="line" stroke="#1D5FC2" d="M20 60 H 200 L 280 140 H 410"/>
+  <path class="casing" d="M120 190 V 110 L 190 40 H 410"/><path class="line" stroke="#1E8A47" d="M120 190 V 110 L 190 40 H 410"/>
+  <circle class="st" cx="60" cy="60" r="6"/><circle class="st" cx="200" cy="60" r="6"/><circle class="st" cx="340" cy="140" r="6"/><circle class="st" cx="150" cy="80" r="8"/><circle class="st" cx="330" cy="40" r="6"/>
+  <text class="lbl" x="48" y="48">시청</text><text class="lbl" x="326" y="160">잠실</text>
+</g></svg>
+
+<!-- 공통 기호 정의: 머리가 +x(오른쪽)를 향한 상태로 그리고, 쓸 때 회전한다 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <!-- D1 집: 몸통 노선색, 바탕색 테두리 + 먹 외곽선 -->
+  <g id="d1-local">
+    <path d="M-12 -6 H6 L13 0 L6 6 H-12 Z" fill="none" stroke="var(--k)" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-12 -6 H6 L13 0 L6 6 H-12 Z" fill="currentColor" stroke="var(--s)" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+  <!-- D2 집 + 앞창: 머리 쪽에 먹 앞창(운전실) -->
+  <g id="d2-local">
+    <path d="M-12 -6 H6 L13 0 L6 6 H-12 Z" fill="none" stroke="var(--k)" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-12 -6 H6 L13 0 L6 6 H-12 Z" fill="currentColor" stroke="var(--s)" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M4 -3.6 L8.6 0 L4 3.6 Z" fill="var(--k)"/>
+  </g>
+  <!-- D3 화살 집: 머리를 더 길게, 꼬리는 반듯하게. 멀리서도 방향이 가장 잘 보임 -->
+  <g id="d3-local">
+    <path d="M-11 -5.5 H2 L13 0 L2 5.5 H-11 Z" fill="none" stroke="var(--k)" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-11 -5.5 H2 L13 0 L2 5.5 H-11 Z" fill="currentColor" stroke="var(--s)" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+  <!-- 급행 표식: 몸통 가운데 먹 띠 두 줄 (A 캡슐과 같은 약속) -->
+  <path id="express" d="M-6 -5 V5 M-2 -5 V5" stroke="var(--k)" stroke-width="2"/>
+  <!-- 혼잡 표식 -->
+  <g id="crowd"><path d="M0 -7 L7 5 H-7 Z" fill="#F2BE00" stroke="var(--k)" stroke-width="1.2"/><text x="-1.6" y="3.5" font-size="8" font-weight="900" fill="#15171A">!</text></g>
+</defs></svg>
+
+<div class="grid" id="paperGrid">
+  <!-- 비교: 지금 A 캡슐 -->
+  <div class="card paper"><h2>비교 · 지금 A 캡슐 <small>둥근 캡슐 + 앞쪽 먹 머리</small></h2>
+    <svg viewBox="0 0 420 200" data-map>
+      <g transform="translate(110 60)"><rect x="-13" y="-5.5" width="26" height="11" rx="5.5" fill="#1D5FC2" stroke="var(--s)" stroke-width="2"/><rect x="-14.5" y="-7" width="29" height="14" rx="7" fill="none" stroke="var(--k)" stroke-width="1.5"/><path d="M6 -4 A 5 4 0 0 1 6 4 Z" fill="var(--k)"/></g>
+      <g transform="translate(240 100) rotate(45)"><rect x="-13" y="-5.5" width="26" height="11" rx="5.5" fill="#1D5FC2" stroke="var(--s)" stroke-width="2"/><rect x="-14.5" y="-7" width="29" height="14" rx="7" fill="none" stroke="var(--k)" stroke-width="1.5"/><path d="M6 -4 A 5 4 0 0 1 6 4 Z" fill="var(--k)"/><path d="M-6 -5 V5 M-2 -5 V5" stroke="var(--k)" stroke-width="2"/></g>
+      <g transform="translate(260 40) rotate(180)"><rect x="-13" y="-5.5" width="26" height="11" rx="5.5" fill="#1E8A47" stroke="var(--s)" stroke-width="2"/><rect x="-14.5" y="-7" width="29" height="14" rx="7" fill="none" stroke="var(--k)" stroke-width="1.5"/><path d="M6 -4 A 5 4 0 0 1 6 4 Z" fill="var(--k)"/></g>
+      <use href="#crowd" x="260" y="22"/>
+      <text class="note" x="10" y="192">방향은 앞쪽 먹 머리로만 보임 — 작게 보면 앞뒤가 헷갈림</text>
+    </svg>
+  </div>
+
+  <!-- D1 -->
+  <div class="card paper"><h2>D1. 집 <small>뾰족한 머리 = 진행 방향, 몸통은 노선 색</small></h2>
+    <svg viewBox="0 0 420 200" data-map>
+      <use href="#d1-local" transform="translate(110 60)" color="#1D5FC2"/>
+      <g transform="translate(240 100) rotate(45)"><use href="#d1-local" color="#1D5FC2"/><use href="#express"/></g>
+      <use href="#d1-local" transform="translate(260 40) rotate(180)" color="#1E8A47"/>
+      <use href="#crowd" x="260" y="22"/>
+      <text class="note" x="10" y="192">가장 단순한 집 모양 — 머리 모양만으로 방향이 바로 읽힘</text>
+    </svg>
+  </div>
+
+  <!-- D2 -->
+  <div class="card paper"><h2>D2. 집 + 앞창 <small>머리 쪽에 먹 앞창(운전실)</small></h2>
+    <svg viewBox="0 0 420 200" data-map>
+      <use href="#d2-local" transform="translate(110 60)" color="#1D5FC2"/>
+      <g transform="translate(240 100) rotate(45)"><use href="#d2-local" color="#1D5FC2"/><use href="#express"/></g>
+      <use href="#d2-local" transform="translate(260 40) rotate(180)" color="#1E8A47"/>
+      <use href="#crowd" x="260" y="22"/>
+      <text class="note" x="10" y="192">앞창이 있어 열차답고, 노선 색이 밝아도 머리가 또렷함</text>
+    </svg>
+  </div>
+
+  <!-- D3 -->
+  <div class="card paper"><h2>D3. 화살 집 <small>머리를 길게 뺀 화살형</small></h2>
+    <svg viewBox="0 0 420 200" data-map>
+      <use href="#d3-local" transform="translate(110 60)" color="#1D5FC2"/>
+      <g transform="translate(240 100) rotate(45)"><use href="#d3-local" color="#1D5FC2"/><use href="#express"/></g>
+      <use href="#d3-local" transform="translate(260 40) rotate(180)" color="#1E8A47"/>
+      <use href="#crowd" x="260" y="22"/>
+      <text class="note" x="10" y="192">멀리서도 방향이 가장 잘 보임 — 대신 열차보다 화살표에 가까움</text>
+    </svg>
+  </div>
+</div>
+
+<h1 style="margin-top:18px">먹 테마</h1>
+<div class="grid" id="inkCopies"></div>
+
+<h1 class="scale">작게 볼 때 (축소 단계, 기호 70%)</h1>
+<p>노선이 여러 개 지나는 곳에서 줄어든 크기로 겹쳐 보일 때입니다. 왼쪽부터 A 캡슐 · D1 · D2 · D3.</p>
+<div class="grid" style="grid-template-columns: repeat(4, 200px)">
+  <div class="card paper"><svg viewBox="0 0 200 90" style="width:200px">
+    <rect class="bg" width="200" height="90"/><path class="casing" d="M10 45 H190"/><path class="line" stroke="#1D5FC2" d="M10 45 H190"/>
+    <g transform="translate(60 45) scale(.7)"><rect x="-13" y="-5.5" width="26" height="11" rx="5.5" fill="#1D5FC2" stroke="var(--s)" stroke-width="2"/><rect x="-14.5" y="-7" width="29" height="14" rx="7" fill="none" stroke="var(--k)" stroke-width="1.5"/><path d="M6 -4 A 5 4 0 0 1 6 4 Z" fill="var(--k)"/></g>
+    <g transform="translate(120 45) scale(.7) rotate(180)"><rect x="-13" y="-5.5" width="26" height="11" rx="5.5" fill="#1D5FC2" stroke="var(--s)" stroke-width="2"/><rect x="-14.5" y="-7" width="29" height="14" rx="7" fill="none" stroke="var(--k)" stroke-width="1.5"/><path d="M6 -4 A 5 4 0 0 1 6 4 Z" fill="var(--k)"/></g>
+  </svg></div>
+  <div class="card paper"><svg viewBox="0 0 200 90" style="width:200px">
+    <rect class="bg" width="200" height="90"/><path class="casing" d="M10 45 H190"/><path class="line" stroke="#1D5FC2" d="M10 45 H190"/>
+    <use href="#d1-local" transform="translate(60 45) scale(.7)" color="#1D5FC2"/><use href="#d1-local" transform="translate(120 45) scale(.7) rotate(180)" color="#1D5FC2"/>
+  </svg></div>
+  <div class="card paper"><svg viewBox="0 0 200 90" style="width:200px">
+    <rect class="bg" width="200" height="90"/><path class="casing" d="M10 45 H190"/><path class="line" stroke="#1D5FC2" d="M10 45 H190"/>
+    <use href="#d2-local" transform="translate(60 45) scale(.7)" color="#1D5FC2"/><use href="#d2-local" transform="translate(120 45) scale(.7) rotate(180)" color="#1D5FC2"/>
+  </svg></div>
+  <div class="card paper"><svg viewBox="0 0 200 90" style="width:200px">
+    <rect class="bg" width="200" height="90"/><path class="casing" d="M10 45 H190"/><path class="line" stroke="#1D5FC2" d="M10 45 H190"/>
+    <use href="#d3-local" transform="translate(60 45) scale(.7)" color="#1D5FC2"/><use href="#d3-local" transform="translate(120 45) scale(.7) rotate(180)" color="#1D5FC2"/>
+  </svg></div>
+</div>
+
+<script>
+  // 각 칸에 공통 지도 배경을 깔고, 먹 테마 복사본을 만든다.
+  const base = document.querySelector("#map > g");
+  document.querySelectorAll("svg[data-map]").forEach((svg) => svg.prepend(base.cloneNode(true)));
+  const ink = document.getElementById("inkCopies");
+  document.querySelectorAll("#paperGrid .card").forEach((card) => {
+    const copy = card.cloneNode(true);
+    copy.classList.replace("paper", "ink");
+    ink.appendChild(copy);
+  });
+</script>
+</body>
+</html>
