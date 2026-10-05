@@ -5111,6 +5111,7 @@ function updateConstructionProjectsForDay() {
       ? { ...project, openedAtDay: analysisStateOwner.current.dayIndex }
       : project,
   ));
+  pruneFinishedPlans();
   for (const started of startedBlueprints) {
     updatePlan(started.planId, (plan) => ({
       ...plan,
@@ -5214,6 +5215,169 @@ function renderConstructionManager() {
     .join("");
 }
 
+// ===== 공사 취소 =====
+// 공사 예정·공사 중인 공사만 취소한다(개통 준비·운영 중은 완공된 시설이라 철거 도구를 쓴다).
+// 환급은 실제로 낸 사업비(baseCost) 중 남은 공정만큼이다. 기획안에서 착공한 시설은 기획안의 "아직 짓지 않은 설계"로 되돌린다.
+const cancellableProjectStatuses = new Set<ConstructionProjectStatus>(["planned", "scheduled", "building"]);
+
+type ConstructionCancelPlan = {
+  projects: ConstructionProject[];
+  removeRouteIds: string[];
+  removeStationIds: string[];
+  removeDepotIds: string[];
+};
+
+function constructionProjectProgress(project: ConstructionProject) {
+  return clampNumber(project.elapsedDays / Math.max(1, project.durationDays + project.delayDays), 0, 1);
+}
+
+function constructionProjectRefund(project: ConstructionProject) {
+  return Math.round(Math.max(0, project.baseCost) * (1 - constructionProjectProgress(project)));
+}
+
+function isConnectionConstructionProject(project: ConstructionProject) {
+  return Boolean(project.blueprintId && constructionState.plans.some((plan) => plan.connections?.some((item) => item.id === project.blueprintId)));
+}
+
+function planConstructionCancel(project: ConstructionProject): ConstructionCancelPlan | { reason: string } {
+  if (!cancellableProjectStatuses.has(project.status)) return { reason: "이미 완공된 공사입니다. 철거 도구를 쓰세요." };
+  const dependent = constructionState.projects.find((item) => item.dependsOnProjectId === project.id && cancellableProjectStatuses.has(item.status));
+  if (dependent) return { reason: `이어지는 공사 “${dependent.name}”을 먼저 취소하세요.` };
+  // 완공 때 망에 반영되는 공사: 공사만 없애면 된다.
+  if (project.pendingExtension || project.junctionBlueprint || project.pendingPlanAddition || (project.kind === "plan" && isConnectionConstructionProject(project))) {
+    return { projects: [project], removeRouteIds: [], removeStationIds: [], removeDepotIds: [] };
+  }
+  // 착공할 때 새로 생긴 노선: 노선과 그 노선만 쓰는 역을 지우고, 같은 노선의 다른 진행 중 공사도 함께 취소한다.
+  if (project.kind === "route" || (project.kind === "plan" && !project.blueprintId)) {
+    const routeId = project.routeIds[0];
+    if (!routeId || !networkState.routes.some((route) => route.id === routeId)) return { reason: "공사 대상 노선을 찾을 수 없습니다." };
+    const related = constructionState.projects.filter((item) => item.routeIds.includes(routeId) && ["route", "plan", "extension", "branch"].includes(item.kind));
+    if (related.some((item) => !cancellableProjectStatuses.has(item.status))) return { reason: "같은 노선의 일부 구간이 이미 완공됐습니다. 철거 도구를 쓰세요." };
+    const removeStationIds = networkState.stations
+      .filter((station) => station.connectedRouteIds.length === 1 && station.connectedRouteIds[0] === routeId)
+      .map((station) => station.id);
+    const siblings = constructionState.projects.filter((item) =>
+      item.id !== project.id &&
+      cancellableProjectStatuses.has(item.status) &&
+      (related.includes(item) || item.stationIds.some((id) => removeStationIds.includes(id))));
+    return { projects: [project, ...siblings], removeRouteIds: [routeId], removeStationIds, removeDepotIds: [] };
+  }
+  if (project.kind === "depot" && project.depotIds.length > 0) {
+    return { projects: [project], removeRouteIds: [], removeStationIds: [], removeDepotIds: project.depotIds };
+  }
+  if (project.kind === "station" && project.stationIds.length > 0) {
+    return { projects: [project], removeRouteIds: [], removeStationIds: project.stationIds, removeDepotIds: [] };
+  }
+  return { reason: "기존 노선에 이미 반영된 공사(경로 수정·복구·분기)입니다. 철거 도구를 쓰세요." };
+}
+
+function requestConstructionCancel(project: ConstructionProject) {
+  const plan = planConstructionCancel(project);
+  if ("reason" in plan) {
+    showError(plan.reason);
+    return;
+  }
+  const refund = plan.projects.reduce((sum, item) => sum + constructionProjectRefund(item), 0);
+  const routeNames = plan.removeRouteIds.map((id) => networkState.routes.find((route) => route.id === id)?.name).filter(Boolean);
+  const depotNames = plan.removeDepotIds.map((id) => networkState.depots.find((depot) => depot.id === id)?.name).filter(Boolean);
+  const effects = [
+    routeNames.length > 0 ? `노선 ${routeNames.join(", ")} 삭제` : "",
+    plan.removeStationIds.length > 0 ? `역 ${plan.removeStationIds.length}개 삭제` : "",
+    depotNames.length > 0 ? `차량기지 ${depotNames.join(", ")} 삭제` : "",
+    plan.projects.length > 1 ? `함께 취소되는 공사 ${plan.projects.length - 1}건` : "",
+    plan.projects.some((item) => item.sourcePlanId) ? "기획안 설계로 되돌림" : "",
+  ].filter(Boolean);
+  const progress = Math.round(constructionProjectProgress(project) * 100);
+  openDecisionDialog(
+    `“${project.name}” 공사를 취소할까요?`,
+    `진행률 ${progress}% · 환급 ${formatCost(refund)}(남은 공정만큼)${effects.length > 0 ? ` · ${effects.join(" · ")}` : ""}. 이미 진행한 공정의 비용은 돌려받지 못합니다.`,
+    "공사 취소",
+    () => cancelConstructionProjects(plan, refund),
+    "danger",
+    "공사 취소",
+  );
+}
+
+function cancelConstructionProjects(plan: ConstructionCancelPlan, refund: number) {
+  pushHistory();
+  const cancelled = plan.projects;
+  const cancelledIds = new Set(cancelled.map((item) => item.id));
+  const removedRoutes = new Set(plan.removeRouteIds);
+  const removedStations = new Set(plan.removeStationIds);
+  const removedDepots = new Set(plan.removeDepotIds);
+  networkState.routes = networkState.routes.filter((route) => !removedRoutes.has(route.id));
+  networkState.stations = networkState.stations
+    .filter((station) => !removedStations.has(station.id))
+    .map((station) => station.connectedRouteIds.some((id) => removedRoutes.has(id))
+      ? { ...station, connectedRouteIds: station.connectedRouteIds.filter((id) => !removedRoutes.has(id)) }
+      : station);
+  networkState.transfers = networkState.transfers.map((transfer) => ({ ...transfer, stationIds: transfer.stationIds.filter((id) => !removedStations.has(id)) }));
+  networkState.depots = networkState.depots
+    .filter((depot) => !removedDepots.has(depot.id))
+    .map((depot) => depot.connectedRouteIds.some((id) => removedRoutes.has(id))
+      ? { ...depot, connectedRouteIds: depot.connectedRouteIds.filter((id) => !removedRoutes.has(id)) }
+      : depot);
+  operationsState.expressConfigs = operationsState.expressConfigs
+    .filter((config) => !removedRoutes.has(config.routeId))
+    .map((config) => ({ ...config, stopStationIds: config.stopStationIds.filter((id) => !removedStations.has(id)) }));
+  constructionState.replaceProjects(constructionState.projects
+    .filter((item) => !cancelledIds.has(item.id))
+    .map((item) => ({
+      ...item,
+      routeIds: item.routeIds.filter((id) => !removedRoutes.has(id)),
+      stationIds: item.stationIds.filter((id) => !removedStations.has(id)),
+      depotIds: item.depotIds.filter((id) => !removedDepots.has(id)),
+    })));
+  // 기획안에서 착공한 시설은 기획안의 아직 짓지 않은 설계로 되돌린다.
+  constructionState.replacePlans(constructionState.plans.map((item) => {
+    const touched = cancelled.some((project) => project.sourcePlanId === item.id) ||
+      item.routes.some((route) => route.actualRouteId && removedRoutes.has(route.actualRouteId)) ||
+      item.stations.some((station) => station.actualStationId && removedStations.has(station.actualStationId)) ||
+      item.depots.some((depot) => depot.actualDepotId && removedDepots.has(depot.actualDepotId));
+    if (!touched) return item;
+    return recalculatePlan({
+      ...item,
+      routes: item.routes.map((route) => {
+        let completedSegmentIds = route.completedSegmentIds;
+        let actualRouteId = route.actualRouteId;
+        for (const project of cancelled) {
+          const addition = project.pendingPlanAddition;
+          if (addition?.route.id === route.id) completedSegmentIds = completedSegmentIds.filter((id) => !addition.segmentIds.includes(id));
+          if (project.blueprintId === route.id) completedSegmentIds = [];
+        }
+        if (actualRouteId && removedRoutes.has(actualRouteId)) {
+          completedSegmentIds = [];
+          actualRouteId = undefined;
+        }
+        return { ...route, completedSegmentIds, actualRouteId };
+      }),
+      stations: item.stations.map((station) => station.actualStationId && removedStations.has(station.actualStationId)
+        ? { ...station, completed: false, actualStationId: undefined }
+        : station),
+      depots: item.depots.map((depot) => depot.actualDepotId && removedDepots.has(depot.actualDepotId)
+        ? { ...depot, completed: false, actualDepotId: undefined }
+        : depot),
+      connections: (item.connections ?? []).map((connection) => cancelled.some((project) => project.blueprintId === connection.id)
+        ? { ...connection, status: "approved" as const, projectId: undefined }
+        : connection),
+    });
+  }));
+  financeState.economy = {
+    ...financeState.economy,
+    cash: financeState.economy.cash + refund,
+    constructionSpent: Math.max(0, financeState.economy.constructionSpent - refund),
+  };
+  cleanupTransferData();
+  synchronizeGraphReferences();
+  if (selectedRouteId && removedRoutes.has(selectedRouteId)) selectedRouteId = null;
+  redoStack = [];
+  requestStateSave("immediate");
+  requestUpdates(["network-structure", "plan-conversion", "construction-progress"]);
+  renderConstructionManager();
+  showToast(`공사 ${cancelled.length}건을 취소했습니다 · ${formatCost(refund)} 환급`);
+  playFeedback("confirm");
+}
+
 function renderConstructionProjectCard(project: ConstructionProject) {
   const labels: Record<ConstructionProjectStatus, string> = {
     planned: "계획",
@@ -5229,6 +5393,7 @@ function renderConstructionProjectCard(project: ConstructionProject) {
     project.events.length > 0
       ? `<ul class="game-inspector__list">${project.events.map((event) => `<li>${event.applied ? "✓ " : "△ "}${escapeHtml(event.message)}</li>`).join("")}</ul>`
       : "";
+  const cancelPlan = planConstructionCancel(project);
   const statusTag = project.status === "operating" ? "dg-tag--ok" : project.status === "planned" ? "dg-tag--plan" : project.status === "opening-ready" ? "dg-tag--express" : "dg-tag--build";
   return `<section class="dg-panel__section game-project" data-project-id="${project.id}">
     <div class="game-project__head"><span class="dg-tag ${statusTag}"><i class="dg-tag__icon" aria-hidden="true"></i>${labels[project.status]}</span><strong>${escapeHtml(project.name)}</strong><span class="dg-row__value">${Math.round(progress * 100)}%</span></div>
@@ -5241,7 +5406,9 @@ function renderConstructionProjectCard(project: ConstructionProject) {
     <div class="game-project__actions">
       <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-focus-project>지도에서 보기</button>
       ${project.status === "opening-ready" ? `<button class="dg-btn dg-btn--primary dg-btn--compact" type="button" data-open-project ${ready ? "" : "disabled"}>노선 개통</button>` : ""}
+      ${cancellableProjectStatuses.has(project.status) && !("reason" in cancelPlan) ? `<button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-cancel-project>공사 취소</button>` : ""}
     </div>
+    ${cancellableProjectStatuses.has(project.status) && "reason" in cancelPlan ? `<p class="game-inspector__note">공사 취소 불가 · ${escapeHtml(cancelPlan.reason)}</p>` : ""}
   </section>`;
 }
 
@@ -5252,6 +5419,10 @@ function handleConstructionManagerClick(event: Event) {
   if (!button || !project) return;
   if (button.hasAttribute("data-open-project")) {
     openConstructionProject(project.id);
+    return;
+  }
+  if (button.hasAttribute("data-cancel-project")) {
+    requestConstructionCancel(project);
     return;
   }
   const action = button.dataset.projectAction;
@@ -5319,6 +5490,7 @@ async function openConstructionProject(projectId: string) {
     redoStack = [];
     renderConstructionManager();
     requestUpdate("network-structure", project.routeIds[0]);
+    pruneFinishedPlans();
     showToast(`${project.name} 운행을 시작했습니다.`);
     playFeedback("confirm");
   } catch (error) {
@@ -8528,7 +8700,7 @@ async function confirmPlanConversion() {
     }
     constructionState.replacePlans(constructionState.plans.map((item) => item.id === plan.id ? recalculatePlan(item) : item));
     const convertedPlan = constructionState.plans.find((item) => item.id === plan.id);
-    const planCompleted = convertedPlan ? isPlanFullyConverted(convertedPlan) : false;
+    const planCompleted = convertedPlan ? isPlanFullyConverted(convertedPlan) && !planHasActiveConstruction(convertedPlan.id) : false;
     if (planCompleted) {
       constructionState.replacePlans(constructionState.plans.filter((item) => item.id !== plan.id));
       if (activePlanId === plan.id) activePlanId = null;
@@ -8543,7 +8715,11 @@ async function confirmPlanConversion() {
     // Converting a plan changes both the real network and the blueprint layer.
     // Refresh them atomically so completed plan dashes cannot remain over the built line.
     requestUpdate("plan-conversion");
-    showToast(planCompleted ? "계획 전체를 실제 건설로 전환해 목록에서 정리했습니다." : "선택한 계획 항목을 실제 건설로 전환했습니다.");
+    showToast(planCompleted
+      ? "계획 전체를 실제 건설로 전환해 목록에서 정리했습니다."
+      : convertedPlan && isPlanFullyConverted(convertedPlan)
+        ? "계획 전체를 착공했습니다. 공사가 모두 끝나면 기획 목록에서 정리됩니다."
+        : "선택한 계획 항목을 실제 건설로 전환했습니다.");
     playFeedback("confirm");
   } catch (error) {
     stateRecoveryCoordinator.recover(before, {
@@ -8584,6 +8760,20 @@ function groupContiguousPlanSegments(route: PlannedRoute, selected: RouteSegment
   }
   if (current.length > 0) groups.push(current);
   return groups;
+}
+
+/** 이 기획안에서 착공해 아직 개통·완료되지 않은 공사가 있는지 */
+function planHasActiveConstruction(planId: string) {
+  return constructionState.projects.some((project) => project.sourcePlanId === planId && project.status !== "operating");
+}
+
+/** 모두 착공했고 그 공사도 모두 끝난 기획안을 목록에서 정리한다. */
+function pruneFinishedPlans() {
+  const finished = constructionState.plans.filter((plan) => isPlanFullyConverted(plan) && !planHasActiveConstruction(plan.id));
+  if (finished.length === 0) return;
+  const finishedIds = new Set(finished.map((plan) => plan.id));
+  constructionState.replacePlans(constructionState.plans.filter((plan) => !finishedIds.has(plan.id)));
+  if (activePlanId && finishedIds.has(activePlanId)) activePlanId = null;
 }
 
 function isPlanFullyConverted(plan: ConstructionPlan) {
