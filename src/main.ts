@@ -1344,6 +1344,16 @@ app.innerHTML = `
       <div id="depotManagerContent" class="game-inspector__content"></div>
     </aside>
 
+    <!-- 열차 정보: 지도에서 열차를 누르면 오른쪽 아래 inspector 자리에 연다 -->
+    <aside id="trainInfoCard" class="dg-hud dg-panel game-inspector" hidden aria-labelledby="trainInfoTitle">
+      <header class="dg-panel__header">
+        <span id="trainInfoSwatch" class="game-color-swatch" aria-hidden="true"></span>
+        <h2 id="trainInfoTitle" class="dg-panel__title">열차</h2>
+        <div class="dg-panel__header-end"><button id="closeTrainInfoButton" class="dg-icon-btn" type="button" aria-label="열차 정보 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+      </header>
+      <div id="trainInfoContent" class="game-inspector__content"></div>
+    </aside>
+
     <section id="statisticsScreen" class="dg-workspace game-workspace game-stats" hidden aria-labelledby="statisticsNetworkTitle">
       <header class="dg-workspace__bar">
         <h2 id="statisticsNetworkTitle" class="dg-workspace__title game-workspace__title">서울 철도망</h2>
@@ -2323,6 +2333,9 @@ const uiListeners = new ListenerRegistry();
 const panelManager = new PanelManager(uiListeners);
 if (stationManagerDialog) panelManager.register({ id: "station", element: stationManagerDialog, content: stationManagerContent });
 if (depotManagerDialog) panelManager.register({ id: "depot", element: depotManagerDialog, content: depotManagerContent });
+const trainInfoCard = byId("trainInfoCard");
+const trainInfoContent = byId("trainInfoContent");
+if (trainInfoCard) panelManager.register({ id: "train-info", element: trainInfoCard, content: trainInfoContent });
 if (rightLineControlCard) panelManager.register({ id: "line", element: rightLineControlCard });
 if (leftRouteWindow) panelManager.register({ id: "route-list", element: leftRouteWindow, content: leftRouteList });
 if (trainManagerDialog) panelManager.register({ id: "train", element: trainManagerDialog, content: trainManagerContent });
@@ -2488,6 +2501,13 @@ type TrainHitTarget = {
   setNumber: number;
   label: string;
   position: [number, number];
+  /** 열차 정보 inspector용: 운행 계통, 상태, 진행 방향(경로 끝 쪽이면 true), 경로상 위치(0~1), 경로, 정차역 */
+  serviceId?: string;
+  state?: TrainRenderEntity["state"];
+  forward?: boolean;
+  travelProgress?: number;
+  path?: Array<[number, number]>;
+  stopStationIds?: string[];
 };
 type MapSelectionData =
   | { kind: "train"; target: TrainHitTarget }
@@ -2760,6 +2780,7 @@ fundPlanWithLoanButton?.addEventListener("click", fundPlanWithLoan);
 confirmPlanConversionButton?.addEventListener("click", confirmPlanConversion);
 undoButton?.addEventListener("click", undo);
 redoButton?.addEventListener("click", redo);
+document.getElementById("closeTrainInfoButton")?.addEventListener("click", () => closeTrainInfo());
 closeConstructionPreviewButton?.addEventListener("click", cancelActiveReview);
 // 건설 검토 창 최소화: 머리글과 확정 줄(취소·비용·확정)만 남긴다. 한 번 접으면 다음 검토도 접힌 채로 연다.
 let constructionPreviewMinimized = false;
@@ -3398,8 +3419,8 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
 
 function activateMapSelection(data: MapSelectionData) {
   if (data.kind === "train") {
-    selectRoute(data.target.routeId);
-    openTrainManagerForFleet(data.target.fleetId, data.target.setNumber);
+    selectRoute(data.target.routeId, false);
+    openTrainInfo(data.target.key);
   } else if (data.kind === "station") {
     openStationManager(data.stationId);
   } else if (data.kind === "depot") {
@@ -9547,6 +9568,12 @@ function reconcileMapTrains() {
         setNumber: displayedTrain.setNumber,
         label: `${service.name} ${displayedTrain.setNumber}편성`,
         position: [position.lat, position.lng],
+        serviceId: service.id,
+        state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
+        forward: progress <= 0.5,
+        travelProgress,
+        path: service.pathCoordinates,
+        stopStationIds: operation.stopStationIds,
       });
       trainEntities.push({
         id: key,
@@ -9565,6 +9592,7 @@ function reconcileMapTrains() {
   for (const key of trainHitTargets.keys()) {
     if (!visibleKeys.has(key)) trainHitTargets.delete(key);
   }
+  refreshTrainInfoIfOpen();
 }
 
 function reconcileLegacyMapTrains() {
@@ -13454,6 +13482,144 @@ function closeLineManager() {
   linePanel.close();
 }
 
+// ===== 열차 정보 =====
+// 지도에서 누른 열차 한 편성의 정보. 열차는 계속 움직이므로 열려 있는 동안 0.5초마다 다시 그린다.
+// 혼잡도는 열차별 승객 수가 아니라 노선 평균이라 그렇게 표시한다(데이터 정확성).
+let selectedTrainKey: string | null = null;
+let trainInfoRenderedAt = 0;
+
+function openTrainInfo(key: string) {
+  selectedTrainKey = key;
+  renderTrainInfo();
+  playFeedback("select");
+}
+
+function closeTrainInfo() {
+  selectedTrainKey = null;
+  panelManager.close("train-info");
+}
+
+function refreshTrainInfoIfOpen() {
+  if (!selectedTrainKey || panelManager.current?.kind !== "train-info") return;
+  const now = performance.now();
+  if (now - trainInfoRenderedAt < 500) return;
+  renderTrainInfo();
+}
+
+/** 경로(0~1) 위에서 좌표가 있는 위치: 각 구간에 수직으로 투영해 가장 가까운 점까지의 누적 거리 비율 */
+function pathFraction(path: LatLng[], point: LatLng) {
+  if (path.length < 2) return 0;
+  // 짧은 구간이라 위도 보정한 평면 좌표(미터)로 투영한다.
+  const k = Math.cos((point.lat * Math.PI) / 180);
+  const xy = (latLng: LatLng) => [latLng.lng * 111320 * k, latLng.lat * 110540] as const;
+  const [px, py] = xy(point);
+  let total = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  let bestAlong = 0;
+  for (let index = 1; index < path.length; index += 1) {
+    const [ax, ay] = xy(path[index - 1]);
+    const [bx, by] = xy(path[index]);
+    const dx = bx - ax;
+    const dy = by - ay;
+    const length = Math.hypot(dx, dy);
+    const t = length > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (length * length))) : 0;
+    const distance = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestAlong = total + t * length;
+    }
+    total += length;
+  }
+  return total > 0 ? bestAlong / total : 0;
+}
+
+function renderTrainInfo() {
+  if (!selectedTrainKey || !trainInfoContent) return;
+  trainInfoRenderedAt = performance.now();
+  const target = trainHitTargets.get(selectedTrainKey);
+  const fleet = operationsState.fleets.find((item) => item.id === (target?.fleetId ?? selectedTrainKey?.split(":")[1]));
+  const route = networkState.routes.find((item) => item.id === (target?.routeId ?? fleet?.routeId));
+  if (!fleet || !route) {
+    closeTrainInfo();
+    return;
+  }
+  const service = operationsState.services.find((item) => item.id === (target?.serviceId ?? fleet.serviceId));
+  const spec = trainCatalog[fleet.trainType];
+  const setNumber = target?.setNumber ?? Number(selectedTrainKey.split(":")[2] ?? 0);
+  setText(byId("trainInfoTitle"), `${route.name} ${setNumber}편성`);
+  byId("trainInfoSwatch")?.style.setProperty("background-color", route.color);
+
+  // 위치·방향에서 다음 역과 행선(종착역) 계산
+  let stateLabel = "지도에서 보이지 않음";
+  let nextStopLabel = "-";
+  let destinationLabel = "-";
+  if (target?.path && target.stopStationIds && target.travelProgress !== undefined) {
+    const path = target.path.map(([lat, lng]) => L.latLng(lat, lng));
+    const here = L.latLng(...target.position);
+    const stops = target.stopStationIds
+      .map((id) => networkState.stations.find((station) => station.id === id))
+      .filter((station): station is Station => Boolean(station))
+      .map((station) => ({ station, fraction: pathFraction(path, L.latLng(...station.position)) }));
+    const progress = target.travelProgress;
+    const forward = target.forward !== false;
+    const ahead = stops
+      .filter((stop) => (forward ? stop.fraction > progress + 0.001 : stop.fraction < progress - 0.001))
+      .sort((a, b) => (forward ? a.fraction - b.fraction : b.fraction - a.fraction));
+    const terminal = [...stops].sort((a, b) => (forward ? b.fraction - a.fraction : a.fraction - b.fraction))[0];
+    const atStation = stops.find((stop) => map.distance(here, L.latLng(...stop.station.position)) <= 35);
+    destinationLabel = terminal ? `${terminal.station.name} 방면` : "-";
+    if (target.state === "turning") {
+      stateLabel = "종착역 회차";
+      // 회차 중에는 이제 갈 반대쪽 종착역이 행선이다.
+      const sorted = [...stops].sort((a, b) => a.fraction - b.fraction);
+      const opposite = progress > 0.5 ? sorted[0] : sorted.at(-1);
+      destinationLabel = opposite ? `${opposite.station.name} 방면` : destinationLabel;
+      nextStopLabel = atStation ? `${atStation.station.name} (회차 중)` : "-";
+    } else if (target.state === "stopped" && atStation) {
+      stateLabel = "역 정차";
+      nextStopLabel = `${atStation.station.name} (정차 중)`;
+    } else {
+      stateLabel = "운행 중";
+      nextStopLabel = ahead[0] ? ahead[0].station.name : terminal ? terminal.station.name : "-";
+    }
+  }
+  const crowding = calculateRouteOperation(route.id).crowding;
+  const row = (label: string, value: string) => `<div class="dg-row"><span class="dg-row__label">${label}</span><span class="dg-row__value">${escapeHtml(value)}</span></div>`;
+  const html = `
+    <div class="dg-panel__body">
+      <section class="dg-panel__section game-inspector__identity">
+        <div class="game-inspector__tags"><span class="dg-tag">${escapeHtml(spec.label)}</span><span class="game-inspector__muted">${escapeHtml(service?.name ?? "운행 계통 없음")}</span></div>
+      </section>
+      <section class="dg-panel__section">
+        ${row("상태", stateLabel)}
+        ${row("행선", destinationLabel)}
+        ${row("다음 역", nextStopLabel)}
+      </section>
+      <section class="dg-panel__section">
+        ${row("편성", `${fleet.cars}량 · ${setNumber}번째 편성`)}
+        ${row("정원", `${(spec.capacityPerCar * fleet.cars).toLocaleString("ko-KR")}명`)}
+        ${row("평균 속도", `${spec.speedKmh}km/h`)}
+        ${row("노선 혼잡도 (노선 평균)", Number.isFinite(crowding) ? `${Math.round(crowding * 100)}%` : "-")}
+      </section>
+    </div>
+    <div class="dg-panel__actions">
+      <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-train-info-action="route">노선 보기</button>
+      <button class="dg-btn dg-btn--primary dg-btn--compact dg-panel__actions-push" type="button" data-train-info-action="fleet">편성 관리</button>
+    </div>`;
+  panelManager.render("train-info", selectedTrainKey, html);
+  panelManager.bind("train-info", "actions", trainInfoContent, "click", (event) => {
+    const action = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-train-info-action]")?.dataset.trainInfoAction;
+    if (action === "route") {
+      closeTrainInfo();
+      selectRoute(route.id);
+      openLineManager();
+    } else if (action === "fleet") {
+      closeTrainInfo();
+      openTrainManagerForFleet(fleet.id, setNumber);
+    }
+  });
+}
+
 function openTrainManagerModal() {
   if (!selectedOperatingServiceId || !operationsState.services.some((service) => service.id === selectedOperatingServiceId)) {
     showToast("먼저 관리할 운행 계통을 선택하세요.");
@@ -13467,6 +13633,9 @@ function openTrainManagerModal() {
 function openTrainManagerForFleet(fleetId: string, setNumber: number) {
   selectedTrainFleetId = fleetId;
   selectedTrainSetNumber = setNumber;
+  // 편성이 속한 운행 계통을 함께 고른다(고르지 않으면 "선택된 운행 계통이 없습니다"만 보임).
+  const fleetServiceId = operationsState.fleets.find((fleet) => fleet.id === fleetId)?.serviceId;
+  if (fleetServiceId) selectedOperatingServiceId = fleetServiceId;
   showTrainManagerModal();
 }
 
