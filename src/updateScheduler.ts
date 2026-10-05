@@ -54,10 +54,11 @@ const dependencies: Record<UpdateReason, readonly UpdateDomain[]> = {
   "route-style": ["map-lines", "map-stations", "map-trains", "map-selection", "hud-status", "active-panel", "storage"],
   "fleet-service": ["capacity", "congestion", "finance", "map-trains", "hud-status", "active-panel", "storage"],
   fare: ["demand", "congestion", "finance", "hud-finance", "hud-status", "active-panel", "storage"],
+  // 노선 연결·철거처럼 망 구조가 바뀌면 건설비·환급으로 자금도 바뀌므로 자금 정보판도 다시 그린다.
   "network-structure": [
     "network", "routes", "demand", "capacity", "congestion", "finance",
     "map-lines", "map-stations", "map-trains", "map-depots", "map-selection",
-    "hud-status", "active-panel", "storage",
+    "hud-finance", "hud-status", "active-panel", "storage",
   ],
   // Zoom changes affect layer visibility as well as the terrain/tile LOD.
   viewport: ["map-stations", "map-trains", "map-lod"],

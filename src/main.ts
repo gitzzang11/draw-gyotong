@@ -7958,6 +7958,24 @@ function reconcileBlueprints() {
         renderExtensionEndpointHandle(L.latLng(...route.coordinates[route.coordinates.length - 1]), route.color);
       }
     }
+    // 기획안의 노선 연결 설계(아직 짓지 않은 것)도 기획 선으로 보인다. 비용 계산과 같은 곡선(두 끝점 사이 smoothCoordinateBridge)으로 그린다.
+    for (const connection of (plan.connections ?? []).filter((item) => item.status === "draft" || item.status === "approved" || item.status === "scheduled")) {
+      const coordinates = connection.coordinates ?? [];
+      if (coordinates.length < 2) continue;
+      const start = coordinates[0];
+      const end = coordinates[coordinates.length - 1];
+      const sourceRoute = plan.routes.find((route) => route.id === connection.sourceEntityId) ?? networkState.routes.find((route) => route.id === connection.sourceLineId);
+      entities.push({
+        id: `blueprint:connection:${plan.id}:${connection.id}`,
+        kind: "route",
+        points: smoothCoordinateBridge([start.lat, start.lng], [end.lat, end.lng]),
+        color: sourceRoute?.color ?? "#56636b",
+        selected: isActive,
+        canDelete: false,
+        valid: true,
+        name: "연결",
+      });
+    }
     for (const transfer of plan.transfers.filter((item) => !item.completed)) {
       const transferPoints = [
         ...transfer.stationIds.map((id) => plan.stations.find((station) => station.id === id)).filter(Boolean).map((station) => (station as PlannedStation).position),
@@ -14053,6 +14071,22 @@ function beginConnectionDrawing(event: PointerEvent, point: L.Point) {
   setText(facilityReadout, "연결할 다른 노선 끝점까지 드래그하세요");
 }
 
+/**
+ * 연결 작업 한 번을 끝낸다. 확정이면 완료로, 아니면 취소로 기록하고, 연결 도구가 켜져 있으면 다음 연결을 받을 새 작업을 연다.
+ * 끝내지 않으면 작업이 "진행 중"으로 남아 도구·모드 전환 때마다 "진행 중인 설계가 있습니다" 확인이 뜬다.
+ */
+function endConnectionSession(outcome: "completed" | "cancelled") {
+  const session = routePlanningController.session;
+  if (session?.tool !== "connect") return;
+  if (outcome === "completed" && session.stage === "reviewing") {
+    routePlanningController.transition("committing");
+    routePlanningController.transition("completed");
+  } else if (routePlanningController.isInProgress) {
+    routePlanningController.cancel();
+  }
+  if (activeTool === "merge") routePlanningController.start("connect", createId("route-planning"));
+}
+
 function finishConnectionDrawing(
   points: L.Point[],
   source: PlannedRouteMergeEndpoint | RouteMergeEndpoint | null,
@@ -14063,7 +14097,7 @@ function finishConnectionDrawing(
     ? findNearestPlannedRouteEndpoint(releasePoint, 56, source.routeId)
     : findNearestRouteEndpoint(releasePoint, 56, undefined, source.routeId);
   if (!target || target.routeId === source.routeId) {
-    routePlanningController.connectionTargetMissed();
+    endConnectionSession("cancelled");
     setText(facilityReadout, "다른 노선의 연결 가능한 끝점에 놓으세요");
     return;
   }
@@ -14101,6 +14135,8 @@ function finishConnectionDrawing(
       estimatedDuration: Math.max(1, Math.round(bridgeLength * baseConstructionDaysPerKm)),
       existing: plan.connections ?? [],
     });
+    // 끝점 연결 작도는 여기서 끝난다. 이후는 확인 창에서 확정하거나 닫을 뿐이다.
+    endConnectionSession("completed");
     openDecisionDialog(
       `${first.name} ↔ ${second.name} 연결 설계`,
       `물리적 선로 ${bridgeLength.toFixed(2)}km · 예상 ${formatCost(connection.estimatedCost)}. 확정 전에는 실제 네트워크가 변경되지 않습니다.`,
@@ -14109,9 +14145,13 @@ function finishConnectionDrawing(
         updatePlan(plan.id, (item) => ({ ...item, connections: [...(item.connections ?? []), connection] }));
         requestStateSave();
         renderPlanningDialog();
+        if (activeTool === "merge") updateRouteSettingsCard(activeTool);
         requestUpdate("blueprint-preview");
         showToast("물리적 선로 연결 설계를 저장했습니다. 실제 네트워크는 공사 완료 전까지 변경되지 않습니다.");
       },
+      // 기획안에 설계를 더하는 일이라 위험(빨강) 확인이 아니라 건설 검토 모양으로 연다.
+      "build",
+      "연결 설계 검토",
     );
     return;
   }
@@ -14228,10 +14268,13 @@ function openMergeDialog(merge: PendingMerge) {
 }
 
 function closeMergeDialog() {
+  endConnectionSession("cancelled");
   pendingMerge = null;
   connectionDialogMode = null;
   dialogManager.close("connection");
   if (confirmMergeButton) confirmMergeButton.disabled = false;
+  // 연결이 끝나거나 취소되면 노선 설정의 연결 대상 안내를 처음 단계로 되돌린다.
+  if (activeTool === "merge") updateRouteSettingsCard(activeTool);
   requestUpdate("selection", selectedRouteId ?? undefined);
 }
 
@@ -14310,6 +14353,7 @@ async function confirmMergeAsTransfer() {
     await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
+    endConnectionSession("completed");
     closeMergeDialog();
     renderStationManagerIfOpen();
     showToast("두 노선은 유지하고 끝점 역을 환승으로 연결했습니다.");
@@ -14391,9 +14435,8 @@ async function confirmRouteMerge() {
     await flushStateSave();
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
-    pendingMerge = null;
-    connectionDialogMode = null;
-    if (mergeDialog) mergeDialog.hidden = true;
+    endConnectionSession("completed");
+    closeMergeDialog();
     selectRoute(first.id, false);
     requestUpdate("network-structure", first.id);
     showToast(`${merged.name}으로 연결했습니다 · ${formatCost(bridgeCost)} 반영`);
