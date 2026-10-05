@@ -580,6 +580,14 @@ type DemolitionReview = {
   description: string;
   confirmLabel: string;
   confirm: () => void;
+  /** 검토 동안 지도에 강조할 철거 대상: 노선 구간, 역 위치, 기지 경계 */
+  targets?: DemolitionTargets;
+};
+
+type DemolitionTargets = {
+  segments: Array<Array<[number, number]>>;
+  stations: Array<[number, number]>;
+  depots: Array<Array<[number, number]>>;
 };
 
 type RouteRepair = {
@@ -2775,7 +2783,6 @@ if (constructionWarnings) new MutationObserver(syncConstructionPreviewAlert).obs
 if (constructionPreviewPanel) {
   new MutationObserver(() => {
     if (!constructionPreviewPanel.hidden && constructionPreviewPanel.dataset.reviewTool === "eraser") return;
-    pendingEraserStroke = null;
     clearDemolitionRange();
   }).observe(constructionPreviewPanel, { attributes: true, attributeFilter: ["hidden", "data-review-tool"] });
 }
@@ -3534,9 +3541,6 @@ function onPointerDown(event: PointerEvent) {
     if (!planningMode) {
       const station = findNearestStationAtPoint(point, Math.max(22, eraserRadiusPx + 4));
       if (station) {
-        // 역 하나를 눌러 철거할 때도 검토 동안 대상 역 둘레를 표시한다.
-        pendingEraserStroke = [L.latLng(station.position[0], station.position[1])];
-        demolitionRangeMeters = Math.max(22, eraserRadiusPx + 4) * metersPerPixel();
         requestStationDemolition(station);
         return;
       }
@@ -3891,40 +3895,48 @@ function beginEraserStroke(event: PointerEvent, point: L.Point) {
   setText(facilityReadout, planningMode ? "지울 계획 시설을 가로질러 드래그하세요" : "철거할 건설 시설을 가로질러 드래그하세요");
 }
 
-// 철거 검토가 열려 있는 동안 드래그한 범위를 지도에 남겨 둔다. 폭은 실제 판정 반경(eraserRadiusPx + 8)과 같고,
-// 검토 중 확대·축소해도 같은 땅 범위를 가리키도록 미터로 기억해 두고 다시 계산한다.
+// 철거 검토가 열려 있는 동안 실제로 철거되는 노선 구간·역·기지를 지도에 강조한다.
 const demolitionRangeLayer = L.layerGroup().addTo(map);
-let pendingEraserStroke: L.LatLng[] | null = null;
-let demolitionRangeMeters = 0;
 
-function showDemolitionRange(stroke: L.LatLng[]) {
+function showDemolitionTargets(targets: DemolitionTargets) {
   demolitionRangeLayer.clearLayers();
-  const color = themeTokenColor("--signal-danger", "#C8242C");
-  if (stroke.length === 1) {
-    L.circle(stroke[0], { radius: demolitionRangeMeters, color, weight: 2, opacity: 0.9, dashArray: "6 4", fillColor: color, fillOpacity: 0.22, interactive: false }).addTo(demolitionRangeLayer);
-    return;
+  const danger = themeTokenColor("--signal-danger", "#C8242C");
+  const casing = themeTokenColor("--surface-0", "#FFFFFF");
+  for (const segment of targets.segments) {
+    L.polyline(segment, { color: casing, weight: 14, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: danger, weight: 8, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
   }
-  const weight = Math.max(2, (demolitionRangeMeters * 2) / metersPerPixel());
-  L.polyline(stroke, { color, weight, opacity: 0.22, lineCap: "round", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
-  L.polyline(stroke, { color, weight: 2, opacity: 0.9, dashArray: "6 4", interactive: false }).addTo(demolitionRangeLayer);
+  for (const polygon of targets.depots) {
+    L.polygon(polygon, { color: danger, weight: 3, dashArray: "6 4", fillColor: danger, fillOpacity: 0.25, interactive: false }).addTo(demolitionRangeLayer);
+  }
+  for (const position of targets.stations) {
+    L.circleMarker(position, { radius: 9, color: danger, weight: 4, fillColor: casing, fillOpacity: 1, interactive: false }).addTo(demolitionRangeLayer);
+  }
 }
 
 function clearDemolitionRange() {
   demolitionRangeLayer.clearLayers();
 }
 
-map.on("zoomend", () => {
-  if (demolitionReview && pendingEraserStroke) showDemolitionRange(pendingEraserStroke);
-});
+/** 노선별 철거 구간 번호를 지도 좌표 구간 목록으로 바꾼다. */
+function demolitionSegments(routes: ReadonlyArray<{ id: string; coordinates: ReadonlyArray<[number, number]> }>, routeHits: Map<string, Set<number>>) {
+  const segments: Array<Array<[number, number]>> = [];
+  for (const [routeId, hits] of routeHits) {
+    const route = routes.find((item) => item.id === routeId);
+    if (!route) continue;
+    for (const index of hits) {
+      const pair = route.coordinates.slice(index, index + 2);
+      if (pair.length === 2) segments.push(pair);
+    }
+  }
+  return segments;
+}
 
 function finishEraserStroke(points: L.Point[]) {
-  pendingEraserStroke = null;
   if (points.length < 2) {
     if (points[0]) selectDeletePoint(points[0]);
     return;
   }
-  pendingEraserStroke = points.map((point) => map.containerPointToLatLng(point));
-  demolitionRangeMeters = (eraserRadiusPx + 8) * metersPerPixel();
   if (planningMode) requestPlannedAssetsErase(points);
   else requestBuiltAssetsErase(points);
 }
@@ -4041,6 +4053,11 @@ function requestPlannedAssetsErase(points: L.Point[]) {
     description: "드래그 범위의 계획 시설만 삭제합니다. 이미 건설된 계획 항목은 그대로 유지됩니다.",
     confirmLabel: "계획 삭제 확정",
     confirm: () => erasePlannedAssets(plan.id, selection),
+    targets: {
+      segments: demolitionSegments(plan.routes, selection.routeHits),
+      stations: plan.stations.filter((station) => selection.stationIds.has(station.id)).map((station) => station.position),
+      depots: plan.depots.filter((depot) => selection.depotIds.has(depot.id)).map((depot) => depot.polygon),
+    },
   });
 }
 
@@ -4165,6 +4182,11 @@ function requestBuiltAssetsErase(points: L.Point[]) {
     description: "드래그 범위의 실제 건설 시설을 철거합니다. 환승역은 관리상 하나의 역으로 함께 처리됩니다.",
     confirmLabel: "철거 확정",
     confirm: () => demolishBuiltAssets(selection),
+    targets: {
+      segments: demolitionSegments(networkState.routes, selection.routeHits),
+      stations: networkState.stations.filter((station) => selection.stationIds.has(station.id)).map((station) => station.position),
+      depots: networkState.depots.filter((depot) => selection.depotIds.has(depot.id)).map((depot) => depot.polygon),
+    },
   });
 }
 
@@ -4280,6 +4302,11 @@ function requestStationDemolition(station: Station) {
     description: connectedRoutes.length > 0 ? `${connectedRoutes.join(", ")} 운행과 환승 연결에서 이 역을 제거합니다.` : "이 역의 환승 연결을 함께 정리합니다.",
     confirmLabel: memberIds.length > 1 ? "환승역 철거 확정" : "역 철거 확정",
     confirm: () => demolishStations(memberIds),
+    targets: {
+      segments: [],
+      stations: networkState.stations.filter((item) => memberIds.includes(item.id)).map((item) => item.position),
+      depots: [],
+    },
   });
 }
 
@@ -4633,7 +4660,8 @@ function openDemolitionReview(review: DemolitionReview) {
   if (!constructionPreviewPanel) return;
   if (constructionDraft) cancelConstructionDraft();
   demolitionReview = review;
-  if (pendingEraserStroke) showDemolitionRange(pendingEraserStroke);
+  if (review.targets) showDemolitionTargets(review.targets);
+  else clearDemolitionRange();
   document.body.classList.add("construction-reviewing");
   constructionPreviewPanel.hidden = false;
   constructionPreviewPanel.dataset.reviewMode = review.planning ? "planning" : "construction";
