@@ -3900,24 +3900,42 @@ const demolitionRangeLayer = L.layerGroup().addTo(map);
 
 // 인쇄 지도의 "철거 예정" 표기: 대상 노선을 바탕색으로 흐리게 덮고 가는 위험색 점선을 얹는다.
 // 역은 작은 ✕ 표식, 기지는 점선 경계. 색만이 아니라 점선·✕ 모양으로도 철거 대상임을 알린다.
+// 굵기는 노선 렌더러(lineRenderer)의 확대 단계별 굵기에 맞춘다. 멀리서 볼 때 노선보다 굵은 띠가 생기지 않게 한다.
+const demolitionStyleByLod = {
+  // 멀리서는 역 기호를 그리지 않으므로 ✕ 표식도 두지 않는다(mark 0).
+  overview: { cover: 7, dash: 2, dashArray: "4 4", mark: 0 },
+  district: { cover: 10, dash: 2.5, dashArray: "6 5", mark: 14 },
+  build: { cover: 14, dash: 3, dashArray: "8 6", mark: 18 },
+} as const;
+let demolitionTargetsShown: DemolitionTargets | null = null;
+
 function showDemolitionTargets(targets: DemolitionTargets) {
+  demolitionTargetsShown = targets;
   demolitionRangeLayer.clearLayers();
+  const style = demolitionStyleByLod[getLodMode(map.getZoom())];
   const danger = themeTokenColor("--signal-danger", "#C8242C");
   const ground = themeTokenColor("--surface-0", "#FFFFFF");
   for (const segment of targets.segments) {
-    L.polyline(segment, { color: ground, weight: 14, opacity: 0.72, lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
-    L.polyline(segment, { color: danger, weight: 3, opacity: 1, dashArray: "8 6", lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: ground, weight: style.cover, opacity: 0.72, lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: danger, weight: style.dash, opacity: 1, dashArray: style.dashArray, lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
   }
   for (const polygon of targets.depots) {
     L.polygon(polygon, { color: danger, weight: 2, dashArray: "6 4", fillColor: danger, fillOpacity: 0.08, interactive: false }).addTo(demolitionRangeLayer);
   }
-  const mark = L.divIcon({ className: "game-demolish-mark", html: "<span aria-hidden=\"true\">✕</span>", iconSize: [18, 18], iconAnchor: [9, 9] });
+  if (style.mark === 0) return;
+  const half = style.mark / 2;
+  const mark = L.divIcon({ className: `game-demolish-mark game-demolish-mark--${style.mark}`, html: "<span aria-hidden=\"true\">✕</span>", iconSize: [style.mark, style.mark], iconAnchor: [half, half] });
   for (const position of targets.stations) {
     L.marker(position, { icon: mark, interactive: false, keyboard: false, zIndexOffset: 900 }).addTo(demolitionRangeLayer);
   }
 }
 
+map.on("zoomend", () => {
+  if (demolitionTargetsShown && demolitionRangeLayer.getLayers().length > 0) showDemolitionTargets(demolitionTargetsShown);
+});
+
 function clearDemolitionRange() {
+  demolitionTargetsShown = null;
   demolitionRangeLayer.clearLayers();
 }
 
