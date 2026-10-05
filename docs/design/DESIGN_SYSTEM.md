@@ -371,6 +371,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - easing은 짧은 ease-out(`cubic-bezier(.2,.8,.2,1)`)만 쓴다. 탄성·바운스 금지.
 - 장식용 looping animation은 금지한다. 열차 이동과 공사 진행처럼 시뮬레이션 상태를 표현하는 모션은 허용한다.
 - `prefers-reduced-motion`에서는 slide를 즉시 전환으로 대체하고 pulse를 제거한다.
+- 구현: 표면이 보이게 될 때 붙은 가장자리에서 `translate`로 미끄러져 들어온다(오른쪽 inspector·시작 화면 안내판 ←, 왼쪽 보조 패널·더보기 →, 대화상자·전체 화면·아래 막대 ↑, 배너·튜토리얼 ↓, `--dur-panel`). 닫을 때는 `src/ui/exitMotion.ts`가 `.is-leaving`으로 같은 쪽으로 빠지는 이탈(`--dur-exit` 140ms)을 보인 뒤 숨긴다(이탈 중에도 `hidden`은 true). 버튼·탭·목록 행의 색 변화와 레일 폭 변화는 `--dur-fast`/`--dur-panel` 전환. 모두 `src/design/components.css` Motion 구획.
 - 터치 입력, 스냅 성공, 건설 확정에는 시각 피드백을 기본으로 하고 사운드·진동은 설정 가능하게 한다.
 
 ## 14. 접근성과 품질 기준

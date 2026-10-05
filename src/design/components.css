@@ -391,6 +391,7 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
   display: flex;
   flex-direction: column;
   width: var(--rail-width);
+  transition: width var(--dur-panel) var(--ease-out);
   background: var(--surface-0);
   color: var(--text-1);
   border: var(--line-hair) solid var(--edge);
@@ -636,9 +637,59 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 .dg-table td, .dg-table tbody th { padding: 6px var(--space-2); border-bottom: var(--line-hair) solid var(--rule); text-align: left; }
 .dg-table .dg-num { text-align: right; }
 
-/* ===== Motion (§13) ===== */
-.dg-enter-edge { animation: dg-enter-edge var(--dur-panel) var(--ease-out); }
-@keyframes dg-enter-edge {
-  from { transform: translateX(16px); }
-  to { transform: none; }
+/* ===== Motion (§13) =====
+   안내판이 넘어가듯 짧고 단단하게: 붙어 있는 가장자리에서 미끄러져 들어오고(불투명 그대로), 나갈 때는 같은 쪽으로 빠지며 사라진다.
+   진입은 표면이 보이게 될 때(display: none → 보임) CSS 애니메이션이 한 번 돈다. 이탈은 src/ui/exitMotion.ts가
+   .is-leaving을 붙인 뒤 --dur-exit 후에 실제로 숨긴다. 위치 지정용 transform과 겹치지 않도록 translate 속성을 쓴다.
+   모션 감소에서는 --dur-* 가 0ms가 되어 즉시 전환된다. */
+:root { --dur-exit: 140ms; }
+@media (prefers-reduced-motion: reduce) { :root { --dur-exit: 0ms; } }
+body.reduced-motion { --dur-exit: 0ms; }
+
+@keyframes dg-in-right { from { translate: 24px 0; } }
+@keyframes dg-in-left { from { translate: -24px 0; } }
+@keyframes dg-in-up { from { translate: 0 16px; } }
+@keyframes dg-in-down { from { translate: 0 -12px; } }
+@keyframes dg-scrim-in { from { background-color: transparent; } }
+@keyframes dg-out-right { to { translate: 24px 0; opacity: 0; } }
+@keyframes dg-out-left { to { translate: -24px 0; opacity: 0; } }
+@keyframes dg-out-down { to { translate: 0 16px; opacity: 0; } }
+@keyframes dg-scrim-out { to { background-color: transparent; } }
+
+.dg-enter-edge { animation: dg-in-right var(--dur-panel) var(--ease-out); }
+
+/* 진입 */
+.game-inspector:not([hidden]),
+.game-title__sheet:not([hidden]) { animation: dg-in-right var(--dur-panel) var(--ease-out); }
+.game-side-panel:not([hidden]),
+.game-rail-overflow:not([hidden]) { animation: dg-in-left var(--dur-panel) var(--ease-out); }
+.dg-workspace:not([hidden]),
+.game-bottom-bar:not([hidden]) { animation: dg-in-up var(--dur-panel) var(--ease-out); }
+.dg-scrim:not([hidden]) { animation: dg-scrim-in var(--dur-fast) linear; }
+.dg-scrim:not([hidden]) > .dg-panel { animation: dg-in-up var(--dur-panel) var(--ease-out); }
+.dg-banner:not([hidden]),
+.game-tutorial:not([hidden]) { animation: dg-in-down var(--dur-panel) var(--ease-out); }
+
+/* 이탈 */
+.is-leaving { pointer-events: none !important; }
+.game-inspector.is-leaving,
+.game-title__sheet.is-leaving { animation: dg-out-right var(--dur-exit) var(--ease-out) forwards; }
+.game-side-panel.is-leaving,
+.game-rail-overflow.is-leaving { animation: dg-out-left var(--dur-exit) var(--ease-out) forwards; }
+.dg-workspace.is-leaving,
+.game-bottom-bar.is-leaving { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
+.dg-scrim.is-leaving { animation: dg-scrim-out var(--dur-exit) linear forwards; }
+.dg-scrim.is-leaving > .dg-panel { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
+
+/* 빠른 상태 전환: 눌림·선택 표시가 툭 바뀌지 않게 */
+.dg-tool,
+.dg-rail__mode,
+.dg-seg__item,
+.dg-plate__cell,
+.dg-icon-btn,
+.game-route-item,
+.game-service-item,
+.game-title__item,
+.game-slot__main {
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }

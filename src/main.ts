@@ -109,6 +109,7 @@ import { ListenerRegistry } from "./ui/listenerRegistry.ts";
 import { bindBackdropDismiss } from "./ui/backdropDismiss.ts";
 import { HudRenderer } from "./ui/hudRenderer.ts";
 import { installKeyboardPreview } from "./ui/keyboardPreview.ts";
+import { installExitMotion } from "./ui/exitMotion.ts";
 import { PanelManager } from "./ui/panelManager.ts";
 import { StationPanel } from "./ui/stationPanel.ts";
 import { LinePanel } from "./ui/linePanel.ts";
@@ -2699,7 +2700,8 @@ if (manageLineTool && leftRouteWindow) {
     selectTool?.setAttribute("aria-pressed", String(exploring));
     selectTool?.classList.toggle("active", exploring);
   };
-  new MutationObserver(syncManageLineTool).observe(leftRouteWindow, { attributes: true, attributeFilter: ["hidden"] });
+  // 닫힐 때 이탈 모션(.is-leaving) 동안에도 hidden은 이미 true이므로 class 변화에도 바로 맞춘다.
+  new MutationObserver(syncManageLineTool).observe(leftRouteWindow, { attributes: true, attributeFilter: ["hidden", "class"] });
   syncManageLineTool();
 }
 closeLeftRouteWindowButton?.addEventListener("click", closeLeftRouteWindow);
@@ -2784,7 +2786,7 @@ if (constructionPreviewPanel) {
   new MutationObserver(() => {
     if (!constructionPreviewPanel.hidden && constructionPreviewPanel.dataset.reviewTool === "eraser") return;
     clearDemolitionRange();
-  }).observe(constructionPreviewPanel, { attributes: true, attributeFilter: ["hidden", "data-review-tool"] });
+  }).observe(constructionPreviewPanel, { attributes: true, attributeFilter: ["hidden", "class", "data-review-tool"] });
 }
 syncConstructionPreviewMinimized();
 cancelConstructionButton?.addEventListener("click", cancelActiveReview);
@@ -3194,6 +3196,7 @@ layerButtons.forEach((button) => {
 
 // 가상키보드가 입력칸을 가릴 때 입력 중인 내용을 화면 가운데에 보여 준다.
 installKeyboardPreview();
+installExitMotion();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => undefined));
@@ -14347,16 +14350,24 @@ function finishConnectionDrawing(
       smoothCoordinateBridge([firstPoint.lat, firstPoint.lng], [secondPoint.lat, secondPoint.lng])
         .map(([lat, lng]) => L.latLng(lat, lng)),
     );
-    const connection = createConnectionBlueprint({
-      id: createId("connection-blueprint"),
-      source: { id: source.routeId, type: "blueprint-endpoint", lineId: first.rootLineId ?? first.id, endpoint: source.atStart ? "start" : "end" },
-      target: { id: target.routeId, type: "blueprint-endpoint", lineId: second.rootLineId ?? second.id, endpoint: target.atStart ? "start" : "end" },
-      connectionType: "physical-track",
-      coordinates: snappedConnectionCoordinates,
-      estimatedCost: Math.round(bridgeLength * baseCostPerKm),
-      estimatedDuration: Math.max(1, Math.round(bridgeLength * baseConstructionDaysPerKm)),
-      existing: plan.connections ?? [],
-    });
+    let connection: ConnectionBlueprint;
+    try {
+      connection = createConnectionBlueprint({
+        id: createId("connection-blueprint"),
+        source: { id: source.routeId, type: "blueprint-endpoint", lineId: first.rootLineId ?? first.id, endpoint: source.atStart ? "start" : "end" },
+        target: { id: target.routeId, type: "blueprint-endpoint", lineId: second.rootLineId ?? second.id, endpoint: target.atStart ? "start" : "end" },
+        connectionType: "physical-track",
+        coordinates: snappedConnectionCoordinates,
+        estimatedCost: Math.round(bridgeLength * baseCostPerKm),
+        estimatedDuration: Math.max(1, Math.round(bridgeLength * baseConstructionDaysPerKm)),
+        existing: plan.connections ?? [],
+      });
+    } catch {
+      // 같은 두 끝점 사이에 이미 연결 설계가 있으면 만들 수 없다. 오류로 끊기지 않게 안내하고 끝낸다.
+      endConnectionSession("cancelled");
+      showToast("두 노선 끝점 사이에 이미 연결 설계가 있습니다.");
+      return;
+    }
     // 끝점 연결 작도는 여기서 끝난다. 이후는 확인 창에서 확정하거나 닫을 뿐이다.
     endConnectionSession("completed");
     openDecisionDialog(

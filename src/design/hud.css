@@ -288,7 +288,7 @@ body[data-mode-banner="low"] .game-side-panel { top: calc(var(--hud-top) + var(-
   position: fixed;
   left: var(--hud-left-clear);
   bottom: var(--edge-inset-bottom);
-  transition: opacity var(--dur-fast) linear, transform var(--dur-panel) var(--ease-out);
+  transition: opacity var(--dur-fast) linear, transform var(--dur-panel) var(--ease-out), left var(--dur-panel) var(--ease-out);
 }
 .game-history-controls .dg-icon-btn:disabled { color: var(--text-3); cursor: not-allowed; }
 
@@ -309,8 +309,8 @@ body[data-mode-banner="low"] .game-side-panel { top: calc(var(--hud-top) + var(-
 }
 .game-notice-stack > * { pointer-events: auto; max-width: 100%; }
 body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var(--hud-gap) * 2 + 32px); }
-.game-toast { opacity: 0; transition: opacity var(--dur-fast) linear; pointer-events: none !important; text-align: center; }
-.game-toast.is-visible { opacity: 1; }
+.game-toast { opacity: 0; translate: 0 -6px; transition: opacity var(--dur-fast) linear, translate var(--dur-panel) var(--ease-out); pointer-events: none !important; text-align: center; }
+.game-toast.is-visible { opacity: 1; translate: 0 0; }
 .game-error-banner { width: 100%; }
 
 /* ===== 튜토리얼 ===== */
@@ -820,7 +820,9 @@ body.route-drawing-hud-proximity .game-history-controls {
   transform: translateY(var(--route-drawing-bottom-shift, 0px));
 }
 /* 노선 설정 상자는 드래그하는 동안만 숨긴다(손을 떼면 다시 보임). 그리는 자리를 가리지 않게 한다. */
-body.route-drawing-hud-proximity #routeSettingsCard { visibility: hidden; opacity: 0; }
+#routeSettingsCard { transition: opacity var(--dur-fast) linear, visibility 0s linear 0s, left var(--dur-panel) var(--ease-out); }
+body.route-drawing-hud-proximity #routeSettingsCard { visibility: hidden; opacity: 0; transition: opacity var(--dur-fast) linear, visibility 0s linear var(--dur-fast); }
+.game-side-panel { transition: left var(--dur-panel) var(--ease-out); }
 
 /* ===== 튜토리얼 강조 ===== */
 .dg-hud .tutorial-target,
