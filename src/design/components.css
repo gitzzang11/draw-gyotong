@@ -440,13 +440,6 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
 .dg-tool:last-child { border-bottom: 0; }
 .dg-tool svg { width: 20px; height: 20px; flex: none; }
 .dg-tool[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
-.dg-tool[aria-pressed="true"]::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: var(--band);
-  background: var(--invert-fg);
-}
 .dg-tool--destructive { color: var(--signal-danger); }
 .dg-tool:disabled { color: var(--text-3); cursor: not-allowed; }
 
@@ -479,7 +472,6 @@ button.dg-plate__cell[aria-pressed="true"] { background: var(--invert-bg); color
   font: var(--type-micro);
   text-align: center;
 }
-.dg-rail--compact .dg-tool[aria-pressed="true"]::before { width: 3px; }
 
 /* ===== Mode banner / hint (§8, §10) ===== */
 .dg-mode-banner {

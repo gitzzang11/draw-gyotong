@@ -87,7 +87,7 @@
 상위 모드, 활성 도구, 선택 객체는 각각 다른 위치와 형태로 표현한다.
 
 - **Mode**: tool rail 상단 세그먼트 반전 + 모드 재질 표식(사인·트레이싱·도면)
-- **Tool**: 반전 행과 왼쪽 표시 막대가 있는 pressed control + 지도 위 compact mode banner
+- **Tool**: 레일 폭을 꽉 채운 반전 행(pressed control) + 지도 위 compact mode banner
 - **Selection**: 지도 객체 먹색 외곽선/기준점 핀 + inspector 상단 띠와 header
 
 도구가 활성화된 상태에서 객체를 탭했을 때는 선택보다 도구 동작을 우선하되, 대상이 무엇인지 preview에서 분명히 보여 준다. 단순 탐색 도구에서는 탭이 선택, 빈 지도 탭이 선택 해제로 동작한다.
