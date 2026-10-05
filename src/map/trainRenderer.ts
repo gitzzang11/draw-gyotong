@@ -20,9 +20,9 @@ export interface TrainRenderEntity {
   lineLabel?: string;
 }
 
-export const TRAIN_SYMBOL_STYLES = ["capsule", "consist", "badge"] as const;
+export const TRAIN_SYMBOL_STYLES = ["capsule", "consist", "badge", "house"] as const;
 export type TrainSymbolStyle = (typeof TRAIN_SYMBOL_STYLES)[number];
-export const TRAIN_SYMBOL_LABELS: Record<TrainSymbolStyle, string> = { capsule: "캡슐", consist: "편성", badge: "노선 배지" };
+export const TRAIN_SYMBOL_LABELS: Record<TrainSymbolStyle, string> = { capsule: "캡슐", consist: "편성", badge: "노선 배지", house: "집" };
 
 export class TrainRenderer {
   private readonly trains: EntityRenderer<TrainRenderEntity, L.Marker>;
@@ -93,6 +93,10 @@ export class TrainRenderer {
     if (style === "badge") {
       // 회전하지 않는 노선 배지 + 진행 방향 화살표
       body = `<span class="train-badge${prefersDarkText(entity.color) ? " train-badge--dark-text" : ""}"><b>${escapeAttribute(express ? "급" : entity.lineLabel ?? "")}</b></span><span class="train-badge__dir" aria-hidden="true"></span>`;
+    } else if (style === "house") {
+      // 집(오각형) 모양: 뾰족한 머리가 진행 방향. 먹 외곽선 위에 바탕색 테두리의 노선 색 몸통 (시안 trains-house.html D1)
+      const shape = "M-12 -6 H6 L13 0 L6 6 H-12 Z";
+      body = `<svg class="train-house" viewBox="-16 -10 32 20" width="32" height="20" aria-hidden="true"><path class="train-house__outline" d="${shape}"/><path class="train-house__body" d="${shape}"/>${express ? `<path class="train-house__express" d="M-6 -5 V5 M-2 -5 V5"/>` : ""}</svg>`;
     } else if (style === "consist") {
       // 객차 칸 수는 편성 2량당 1칸 (최대 5칸)
       const segments = Math.min(5, Math.max(1, Math.ceil((entity.cars ?? 2) / 2)));

@@ -1095,7 +1095,7 @@ app.innerHTML = `
               <select class="dg-input game-setting-row__select" id="mapThemeSelect">${MAP_THEMES.map((theme) => `<option value="${theme}">${MAP_THEME_LABELS[theme]}</option>`).join("")}</select>
             </div>
             <div class="game-setting-row">
-              <label class="game-setting-row__text" for="trainStyleSelect"><strong>열차 모양</strong><small>캡슐: 진행 방향으로 눕힘 · 편성: 칸 수 표시 · 노선 배지: 노선 번호</small></label>
+              <label class="game-setting-row__text" for="trainStyleSelect"><strong>열차 모양</strong><small>캡슐: 진행 방향으로 눕힘 · 편성: 칸 수 표시 · 노선 배지: 노선 번호 · 집: 뾰족한 머리가 진행 방향</small></label>
               <select class="dg-input game-setting-row__select" id="trainStyleSelect">${TRAIN_SYMBOL_STYLES.map((style) => `<option value="${style}">${TRAIN_SYMBOL_LABELS[style]}</option>`).join("")}</select>
             </div>
             <div class="game-setting-row">

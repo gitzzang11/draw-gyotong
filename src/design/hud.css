@@ -653,6 +653,10 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .train-service-express .train-consist::after { position: absolute; top: 50%; right: 3px; left: 3px; height: 2px; margin-top: -1px; background: var(--text-1); content: ""; }
 .train-badge { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 3px; border: 2px solid var(--surface-0); border-radius: 50%; outline: 1.5px solid var(--text-1); background: var(--train-color, var(--text-2)); color: #FFFFFF; font: 800 11px/1 var(--font-ui); }
 .train-badge--dark-text { color: #15171A; }
+.train-house { display: block; overflow: visible; transform: rotate(var(--heading, 0deg)); }
+.train-house__outline { fill: none; stroke: var(--text-1); stroke-width: 5; stroke-linejoin: round; }
+.train-house__body { fill: var(--train-color, var(--text-2)); stroke: var(--surface-0); stroke-width: 2; stroke-linejoin: round; }
+.train-house__express { fill: none; stroke: var(--text-1); stroke-width: 2; }
 .train-service-express .train-badge { border-radius: var(--radius); }
 .train-crowded .train-badge { outline: 3px solid var(--signal-caution); }
 .train-badge__dir { position: absolute; inset: 0; transform: rotate(var(--heading, 0deg)); }
