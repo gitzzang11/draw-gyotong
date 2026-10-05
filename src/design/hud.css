@@ -819,6 +819,8 @@ body.route-drawing-hud-proximity .game-history-controls {
   opacity: var(--route-drawing-bottom-opacity, 1);
   transform: translateY(var(--route-drawing-bottom-shift, 0px));
 }
+/* 노선 설정 상자는 드래그하는 동안만 숨긴다(손을 떼면 다시 보임). 그리는 자리를 가리지 않게 한다. */
+body.route-drawing-hud-proximity #routeSettingsCard { visibility: hidden; opacity: 0; }
 
 /* ===== 튜토리얼 강조 ===== */
 .dg-hud .tutorial-target,
