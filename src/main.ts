@@ -8829,7 +8829,10 @@ function flushUpdates(selectedId?: string) {
     document.body.classList.toggle("has-route-selection", Boolean(selectedRouteId));
     document.body.dataset.activeTool = activeTool;
     syncRailDensity();
-    if (domains.has("network")) refreshTransferMetrics();
+    if (domains.has("network")) {
+      refreshDepotConnections();
+      refreshTransferMetrics();
+    }
     if (domains.has("demand") || domains.has("congestion")) measureTask("demand", ensureDemandSimulation);
     if (domains.has("network") || domains.has("routes") || domains.has("capacity")) updateOperationRouteOptions();
     if (domains.has("routes") || domains.has("map-lines") || domains.has("map-selection")) {
@@ -14878,8 +14881,7 @@ function findNearestGraphNodeId(route: RouteLine | undefined, point: LatLng) {
 }
 
 function depotTouchesRoute(depot: Depot, route: RouteLine) {
-  const polygon = depot.polygon.map(([lat, lng]) => map.latLngToContainerPoint(L.latLng(lat, lng)));
-  return routeTouchesDepotArea(route, polygon, 30 / metersPerPixel());
+  return routeNearPolygonMeters(route, depot.polygon.map(([lat, lng]) => L.latLng(lat, lng)), 30);
 }
 
 function cleanupTransferData() {
@@ -15083,16 +15085,44 @@ function findNearestRouteEndpoint(point: L.Point, thresholdPx: number, preferred
   return best ? { routeId: best.routeId, atStart: best.atStart, endpoint: best.endpoint } : null;
 }
 
+/**
+ * 차량기지와 노선의 연결을 다시 계산한다. 연결은 기지를 지을 때만 정해져서, 나중에 노선을 기지까지 연장하거나
+ * 기지 옆에 새 노선을 깔아도 연결되지 않았다(기지가 "안 지어진 것"처럼 보임). 건설 때와 같은 30m 규칙으로 새로 닿은 노선을 더하고,
+ * 사라진 노선은 뺀다. 기존 연결은 유지한다.
+ */
+function refreshDepotConnections() {
+  const routeIds = new Set(networkState.routes.map((route) => route.id));
+  let changed = false;
+  const depots = networkState.depots.map((depot) => {
+    const near = findRoutesNearPolygon(depot.polygon.map(([lat, lng]) => L.latLng(lat, lng)), 30);
+    const next = Array.from(new Set([...depot.connectedRouteIds.filter((id) => routeIds.has(id)), ...near]));
+    if (next.length === depot.connectedRouteIds.length && next.every((id, index) => id === depot.connectedRouteIds[index])) return depot;
+    changed = true;
+    return { ...depot, connectedRouteIds: next };
+  });
+  if (changed) networkState.depots = depots;
+}
+
 function findRoutesNearPolygon(points: LatLng[], thresholdM: number) {
-  const polygonPoints = points.map((point) => map.latLngToContainerPoint(point));
-  const thresholdPx = thresholdM / metersPerPixel();
   return networkState.routes
-    .filter((route) => routeTouchesDepotArea(route, polygonPoints, thresholdPx))
+    .filter((route) => routeNearPolygonMeters(route, points, thresholdM))
     .map((route) => route.id);
 }
 
-function routeTouchesDepotArea(route: RouteLine, polygon: L.Point[], thresholdPx: number) {
-  const routePoints = route.coordinates.map(([lat, lng]) => map.latLngToContainerPoint(L.latLng(lat, lng)));
+/**
+ * 노선이 기지 경계 안을 지나거나 thresholdM 안에 닿는지.
+ * 화면 픽셀 좌표는 Leaflet이 정수로 반올림해 멀리 볼 때(1px ≈ 30m) 30m 판정이 틀어지므로,
+ * 확대 단계와 상관없이 같은 결과가 나오도록 반올림 없는 메르카토르 미터 좌표에서 판정한다.
+ */
+function routeNearPolygonMeters(route: Pick<RouteLine, "coordinates">, points: LatLng[], thresholdM: number) {
+  if (points.length === 0) return false;
+  const project = (latLng: LatLng) => L.CRS.EPSG3857.project(latLng);
+  const latitude = points.reduce((sum, point) => sum + point.lat, 0) / points.length;
+  const threshold = thresholdM / Math.cos((latitude * Math.PI) / 180);
+  return routeTouchesDepotArea(route.coordinates.map(([lat, lng]) => project(L.latLng(lat, lng))), points.map(project), threshold);
+}
+
+function routeTouchesDepotArea(routePoints: L.Point[], polygon: L.Point[], thresholdPx: number) {
   for (let routeIndex = 1; routeIndex < routePoints.length; routeIndex += 1) {
     const start = routePoints[routeIndex - 1];
     const end = routePoints[routeIndex];
@@ -15401,10 +15431,7 @@ function isDraftDepotConnected(points: LatLng[], routeId?: string) {
     mountainSegments: 0,
     riverMode: "bridge" as const,
   };
-  return networkState.depots.some((depot) => {
-    const polygon = depot.polygon.map(([lat, lng]) => map.latLngToContainerPoint(L.latLng(lat, lng)));
-    return routeTouchesDepotArea(draftRoute, polygon, 30 / metersPerPixel());
-  });
+  return networkState.depots.some((depot) => routeNearPolygonMeters(draftRoute, depot.polygon.map(([lat, lng]) => L.latLng(lat, lng)), 30));
 }
 
 /** 작도 중인 노선의 차종. 연장·편집은 대상 노선(실제·계획) 차종, 새 노선은 노선 설정에서 고른 차종. */
@@ -16760,3 +16787,4 @@ function byId(id: string) {
 function setText(element: HTMLElement | null, value: string) {
   if (element) element.textContent = value;
 }
+
