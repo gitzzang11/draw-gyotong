@@ -842,3 +842,6 @@ body.route-drawing-hud-proximity .game-history-controls {
   .game-plate .dg-plate__cell--icon { padding: 0; }
   .game-speed-cell { min-width: 52px; }
 }
+
+/* 철거 검토 중 철거 대상 역 표식 (DESIGN_SYSTEM 건설·철거 검토) */
+.game-demolish-mark { display: grid; place-items: center; box-sizing: border-box; border: 2px solid var(--signal-danger); border-radius: var(--radius); background: var(--surface-0); color: var(--signal-danger); font: 800 11px/1 var(--font-ui); }

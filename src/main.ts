@@ -3898,19 +3898,22 @@ function beginEraserStroke(event: PointerEvent, point: L.Point) {
 // 철거 검토가 열려 있는 동안 실제로 철거되는 노선 구간·역·기지를 지도에 강조한다.
 const demolitionRangeLayer = L.layerGroup().addTo(map);
 
+// 인쇄 지도의 "철거 예정" 표기: 대상 노선을 바탕색으로 흐리게 덮고 가는 위험색 점선을 얹는다.
+// 역은 작은 ✕ 표식, 기지는 점선 경계. 색만이 아니라 점선·✕ 모양으로도 철거 대상임을 알린다.
 function showDemolitionTargets(targets: DemolitionTargets) {
   demolitionRangeLayer.clearLayers();
   const danger = themeTokenColor("--signal-danger", "#C8242C");
-  const casing = themeTokenColor("--surface-0", "#FFFFFF");
+  const ground = themeTokenColor("--surface-0", "#FFFFFF");
   for (const segment of targets.segments) {
-    L.polyline(segment, { color: casing, weight: 14, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
-    L.polyline(segment, { color: danger, weight: 8, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: ground, weight: 14, opacity: 0.72, lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: danger, weight: 3, opacity: 1, dashArray: "8 6", lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
   }
   for (const polygon of targets.depots) {
-    L.polygon(polygon, { color: danger, weight: 3, dashArray: "6 4", fillColor: danger, fillOpacity: 0.25, interactive: false }).addTo(demolitionRangeLayer);
+    L.polygon(polygon, { color: danger, weight: 2, dashArray: "6 4", fillColor: danger, fillOpacity: 0.08, interactive: false }).addTo(demolitionRangeLayer);
   }
+  const mark = L.divIcon({ className: "game-demolish-mark", html: "<span aria-hidden=\"true\">✕</span>", iconSize: [18, 18], iconAnchor: [9, 9] });
   for (const position of targets.stations) {
-    L.circleMarker(position, { radius: 9, color: danger, weight: 4, fillColor: casing, fillOpacity: 1, interactive: false }).addTo(demolitionRangeLayer);
+    L.marker(position, { icon: mark, interactive: false, keyboard: false, zIndexOffset: 900 }).addTo(demolitionRangeLayer);
   }
 }
 
