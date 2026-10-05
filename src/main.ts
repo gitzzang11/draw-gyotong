@@ -3419,7 +3419,7 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
 
 function activateMapSelection(data: MapSelectionData) {
   if (data.kind === "train") {
-    selectRoute(data.target.routeId, false);
+    // 열차를 누르면 그 열차 정보만 연다(노선 선택·강조는 하지 않는다).
     openTrainInfo(data.target.key);
   } else if (data.kind === "station") {
     openStationManager(data.stationId);
@@ -13484,7 +13484,7 @@ function closeLineManager() {
 
 // ===== 열차 정보 =====
 // 지도에서 누른 열차 한 편성의 정보. 열차는 계속 움직이므로 열려 있는 동안 0.5초마다 다시 그린다.
-// 혼잡도는 열차별 승객 수가 아니라 노선 평균이라 그렇게 표시한다(데이터 정확성).
+// 그 열차에 관한 정보만 보인다(노선 전체 수치·노선 이동은 넣지 않는다).
 let selectedTrainKey: string | null = null;
 let trainInfoRenderedAt = 0;
 
@@ -13583,7 +13583,6 @@ function renderTrainInfo() {
       nextStopLabel = ahead[0] ? ahead[0].station.name : terminal ? terminal.station.name : "-";
     }
   }
-  const crowding = calculateRouteOperation(route.id).crowding;
   const row = (label: string, value: string) => `<div class="dg-row"><span class="dg-row__label">${label}</span><span class="dg-row__value">${escapeHtml(value)}</span></div>`;
   const html = `
     <div class="dg-panel__body">
@@ -13599,21 +13598,15 @@ function renderTrainInfo() {
         ${row("편성", `${fleet.cars}량 · ${setNumber}번째 편성`)}
         ${row("정원", `${(spec.capacityPerCar * fleet.cars).toLocaleString("ko-KR")}명`)}
         ${row("평균 속도", `${spec.speedKmh}km/h`)}
-        ${row("노선 혼잡도 (노선 평균)", Number.isFinite(crowding) ? `${Math.round(crowding * 100)}%` : "-")}
       </section>
     </div>
     <div class="dg-panel__actions">
-      <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-train-info-action="route">노선 보기</button>
       <button class="dg-btn dg-btn--primary dg-btn--compact dg-panel__actions-push" type="button" data-train-info-action="fleet">편성 관리</button>
     </div>`;
   panelManager.render("train-info", selectedTrainKey, html);
   panelManager.bind("train-info", "actions", trainInfoContent, "click", (event) => {
     const action = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-train-info-action]")?.dataset.trainInfoAction;
-    if (action === "route") {
-      closeTrainInfo();
-      selectRoute(route.id);
-      openLineManager();
-    } else if (action === "fleet") {
+    if (action === "fleet") {
       closeTrainInfo();
       openTrainManagerForFleet(fleet.id, setNumber);
     }
