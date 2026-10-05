@@ -9052,6 +9052,7 @@ async function deleteSaveSlot(slotId: string) {
       autoSaveTimer = 0;
       hasActiveGameSession = false;
       resetWorld();
+      setWorkspaceMode("management");
       metaState.reset(createDefaultMeta());
       if (startScreen) startScreen.hidden = false;
       renderAll();
@@ -9126,6 +9127,8 @@ function getUnlockedCityIds() {
 
 async function createNewGame(mode: GameMode, difficulty: Difficulty, cityId: CityId, slotName: string) {
   resetWorld();
+  // resetWorld는 기획 상태(planningMode)만 끄므로 화면의 작업 모드도 관리로 맞춘다. 맞추지 않으면 "기획" 화면에서 도구가 실제 건설로 동작한다.
+  setWorkspaceMode("management");
   hasActiveGameSession = true;
   const now = Date.now();
   metaState.replace({
