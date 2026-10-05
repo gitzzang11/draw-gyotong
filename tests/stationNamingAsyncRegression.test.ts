@@ -156,7 +156,7 @@ function conversionContext(retainPlan = false, initialName = "임시 이름") {
   constructionState.plans[0].stations[0].name = initialName;
   const networkState: { stations: Station[]; routes: []; depots: [] } = { stations: [], routes: [], depots: [] };
   const errors: string[] = [];
-  const context = applicationContext(["refineAutomaticStationName", "confirmPlanConversion", "isPlanFullyConverted"], {
+  const context = applicationContext(["refineAutomaticStationName", "confirmPlanConversion", "isPlanFullyConverted", "planHasActiveConstruction", "pruneFinishedPlans"], {
     networkState, constructionState,
     findNearbyOsmStationName: () => nameLookup,
     getActivePlan: () => constructionState.plans[0],

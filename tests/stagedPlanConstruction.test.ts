@@ -81,7 +81,7 @@ function application(plan = fixture(), timeline = false, flushStateSave = async 
     showError: (message: string) => errors.push(message),
     stateRecoveryCoordinator: { recover: noop },
   });
-  const names = ["confirmPlanConversion", "calculatePlanConversionCost", "groupContiguousPlanSegments", "isPlanFullyConverted", "recalculatePlan", "rebuildRouteGraph", "upsertEqualBranchPattern", "calculateLengthKmPrecise", "findNearestGraphNodeId", "createPlanConstructionProjects", "createStagedPlanConstructionProject", "openConstructionProject", "getOpeningRequirements", "hasRouteGaps", "isRouteOperational", "isStationOperational", "isDepotOperational", "getPlannedExtensionSegments", "getPlannedExtensionCoordinates", "createLineExtensionPayload", "applyPendingLineExtension", "createPendingExtensionProject"];
+  const names = ["confirmPlanConversion", "calculatePlanConversionCost", "groupContiguousPlanSegments", "isPlanFullyConverted", "planHasActiveConstruction", "pruneFinishedPlans", "recalculatePlan", "rebuildRouteGraph", "upsertEqualBranchPattern", "calculateLengthKmPrecise", "findNearestGraphNodeId", "createPlanConstructionProjects", "createStagedPlanConstructionProject", "openConstructionProject", "getOpeningRequirements", "hasRouteGaps", "isRouteOperational", "isStationOperational", "isDepotOperational", "getPlannedExtensionSegments", "getPlannedExtensionCoordinates", "createLineExtensionPayload", "applyPendingLineExtension", "createPendingExtensionProject"];
   runInContext(ts.transpileModule(names.map((name) => declarations.get(name)).join("\n"), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   return {
     constructionState, networkState, financeState, operationsState, errors,
