@@ -17,7 +17,7 @@ export interface StationNameMatch {
 }
 
 const namingCategories = [
-  { source: "railway", radius: 1000, matches: (tags: Record<string, string>) => /^(station|halt|tram_stop)$/.test(tags.railway ?? "") },
+  { source: "railway", radius: 500, matches: (tags: Record<string, string>) => /^(station|halt|tram_stop)$/.test(tags.railway ?? "") },
   { source: "area", radius: 850, matches: (tags: Record<string, string>) => /^(suburb|quarter|neighbourhood|village)$/.test(tags.place ?? "") },
   { source: "facility", radius: 600, matches: (tags: Record<string, string>) => /^(university|hospital|townhall|marketplace|library|school)$/.test(tags.amenity ?? "") },
   { source: "park", radius: 450, matches: (tags: Record<string, string>) => tags.leisure === "park" },

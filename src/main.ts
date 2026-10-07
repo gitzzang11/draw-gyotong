@@ -6555,7 +6555,7 @@ async function findNearbyOsmStationName(position: [number, number]) {
       [600, '["historic"]'],
       [300, '["highway"]'],
     ] as const;
-    const railwayQuery = `[out:json][timeout:8];nwr(around:1000,${lat},${lng})["railway"~"^(station|halt|tram_stop)$"];out center tags;`;
+    const railwayQuery = `[out:json][timeout:8];nwr(around:500,${lat},${lng})["railway"~"^(station|halt|tram_stop)$"];out center tags;`;
     const fallbackQuery = `[out:json][timeout:8];(${fallbackCategories.flatMap(([radius, filter]) =>
       ["name", "name:ko"].map((nameTag) => `nwr(around:${radius},${lat},${lng})["${nameTag}"]${filter};`),
     ).join("\n")});out center tags;`;

@@ -12,7 +12,7 @@ function feature(name: string, tags: Record<string, string>, distance: number): 
 }
 
 const categories = [
-  { source: "railway", radius: 1000, tags: { railway: "station" }, values: ["station", "halt", "tram_stop"], key: "railway" },
+  { source: "railway", radius: 500, tags: { railway: "station" }, values: ["station", "halt", "tram_stop"], key: "railway" },
   { source: "area", radius: 850, tags: { place: "suburb" }, values: ["suburb", "quarter", "neighbourhood", "village"], key: "place" },
   { source: "facility", radius: 600, tags: { amenity: "university" }, values: ["university", "hospital", "townhall", "marketplace", "library", "school"], key: "amenity" },
   { source: "park", radius: 450, tags: { leisure: "park" }, values: ["park"], key: "leisure" },
@@ -21,46 +21,46 @@ const categories = [
 ] as const;
 
 describe("automatic station naming", () => {
-  it("chooses an actual station 900 meters away before every other kind of nearby POI", () => {
+  it("chooses an actual station 450 meters away before every other kind of nearby POI", () => {
     const elements = [
       ...categories.slice(1).map(({ tags }) => feature("Nearby POI", tags, 10)),
-      feature("실제역", { railway: "station" }, 900),
+      feature("실제역", { railway: "station" }, 450),
     ];
 
     const result = selectAutomaticStationName(origin, elements);
 
     expect(result).toMatchObject({ name: "실제", source: "railway" });
-    expect(result?.distanceMeters).toBeCloseTo(900, 6);
+    expect(result?.distanceMeters).toBeCloseTo(450, 6);
   });
 
-  it("chooses the closer actual station at 901 meters before one at 999 meters", () => {
-    const elements = [feature("가까워보이는역", { railway: "station" }, 999), feature("하늘역", { railway: "station" }, 901)];
+  it("chooses the closer actual station at 401 meters before one at 499 meters", () => {
+    const elements = [feature("가까워보이는역", { railway: "station" }, 499), feature("하늘역", { railway: "station" }, 401)];
 
     expect(selectAutomaticStationName(origin, elements)).toMatchObject({ name: "하늘", source: "railway" });
   });
 
-  it("includes an actual station on the 1000 meter boundary", () => {
-    const result = selectAutomaticStationName(origin, [feature("경계역", { railway: "station" }, 1000)]);
+  it("includes an actual station on the 500 meter boundary", () => {
+    const result = selectAutomaticStationName(origin, [feature("경계역", { railway: "station" }, 500)]);
 
     expect(result).toMatchObject({ name: "경계", source: "railway" });
-    expect(result?.distanceMeters).toBeCloseTo(1000, 6);
+    expect(result?.distanceMeters).toBeCloseTo(500, 6);
   });
 
-  it("uses a fallback area when the actual station is outside one kilometer", () => {
+  it("uses a fallback area when the actual station is outside 500 meters", () => {
     expect(selectAutomaticStationName(origin, [
-      feature("밖의역", { railway: "station" }, 1001), feature("동네", { place: "quarter" }, 50),
+      feature("밖의역", { railway: "station" }, 501), feature("동네", { place: "quarter" }, 50),
     ])).toMatchObject({ name: "동네", source: "area" });
   });
 
   it("examines an actual station after more than 48 nonrailway features", () => {
     const elements = Array.from({ length: 50 }, (_, id) => ({ ...feature(`POI ${id}`, { amenity: "school" }, 10), id }));
-    elements.push({ ...feature("마지막역", { railway: "station" }, 900), id: 50 });
+    elements.push({ ...feature("마지막역", { railway: "station" }, 450), id: 50 });
 
     expect(selectAutomaticStationName(origin, elements)).toMatchObject({ name: "마지막", source: "railway" });
   });
 
-  it("classifies combined railway and place metadata as railway with its full one kilometer radius", () => {
-    expect(selectAutomaticStationName(origin, [feature("복합역", { railway: "station", place: "suburb" }, 1000)]))
+  it("classifies combined railway and place metadata as railway with its full 500 meter radius", () => {
+    expect(selectAutomaticStationName(origin, [feature("복합역", { railway: "station", place: "suburb" }, 500)]))
       .toMatchObject({ name: "복합", source: "railway" });
   });
 
@@ -184,6 +184,6 @@ describe("automatic station naming", () => {
 
   it("returns null when no valid candidate exists", () => {
     expect(selectAutomaticStationName(origin, [])).toBeNull();
-    expect(selectAutomaticStationName(origin, [feature("밖의역", { railway: "station" }, 1001)])).toBeNull();
+    expect(selectAutomaticStationName(origin, [feature("밖의역", { railway: "station" }, 501)])).toBeNull();
   });
 });
