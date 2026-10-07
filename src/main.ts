@@ -16662,20 +16662,11 @@ function applySettingsToUi() {
 }
 
 /**
- * 레일은 좁은 화면이거나, 지도에 실제로 작도를 시작해 확정·취소 전인 동안만 좁힌다.
- * 도구를 고르기만 한 상태에서는 넓은 레일을 유지한다(DESIGN_SYSTEM §Tool rail).
+ * 레일은 항상 좁은 세로형(아이콘 위 + 짧은 이름, 폭 64)이다. 넓은 가로형보다 깔끔하고 지도를 덜 가린다(사용자 결정).
+ * 모드 전환은 맨 위 현재 모드 칸을 눌러 펼친다.
  */
 function railShouldBeCompact() {
-  if (compactRailQuery.matches) return true;
-  if (activeTool === "pan") return false;
-  return activePointerId !== null
-    || constructionDraft !== null
-    || routePlanningController.isInProgress
-    || activeExtension !== null
-    || activeBranch !== null
-    || activeRepair !== null
-    || activePlanningContinuation !== null
-    || activeHandleMove !== null;
+  return true;
 }
 
 // 검토 창이 열린 채 지도를 끌어 옮기는 동안에도 상자·검토 창을 숨겨 지도를 가리지 않는다.
