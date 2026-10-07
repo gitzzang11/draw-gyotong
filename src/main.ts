@@ -16678,8 +16678,15 @@ function railShouldBeCompact() {
     || activeHandleMove !== null;
 }
 
+// 검토 창이 열린 채 지도를 끌어 옮기는 동안에도 상자·검토 창을 숨겨 지도를 가리지 않는다.
+let mapPanning = false;
+map.on("dragstart", () => { mapPanning = true; syncRailDensity(); });
+map.on("dragend", () => { mapPanning = false; syncRailDensity(); });
+
 /** 작도 상태가 바뀌어 레일 밀도가 달라질 때만 레일을 다시 배치한다. */
 function syncRailDensity() {
+  // 지도에서 도구로 드래그하는 동안(손가락을 누르고 있는 동안)에는 노선 설정 상자·검토 창을 숨긴다(hud.css map-dragging).
+  document.body.classList.toggle("map-dragging", mapPanning || (activePointerId !== null && activeTool !== "pan"));
   if (!workspaceModeBar) return;
   if (workspaceModeBar.classList.contains("dg-rail--compact") !== railShouldBeCompact()) syncRail();
 }

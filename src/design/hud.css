@@ -825,7 +825,12 @@ body.route-drawing-hud-proximity .game-history-controls {
 }
 /* 노선 설정 상자는 드래그하는 동안만 숨긴다(손을 떼면 다시 보임). 그리는 자리를 가리지 않게 한다. */
 #routeSettingsCard { transition: opacity var(--dur-fast) linear, visibility 0s linear 0s, left var(--dur-panel) var(--ease-out); }
-body.route-drawing-hud-proximity #routeSettingsCard { visibility: hidden; opacity: 0; transition: opacity var(--dur-fast) linear, visibility 0s linear var(--dur-fast); }
+/* 지도에서 드래그하는 동안 노선 설정 상자와 검토 창(건설·연장·분기·철거·기지)을 숨기고, 손을 떼면 다시 보인다. */
+#constructionPreviewPanel { transition: opacity var(--dur-fast) linear, visibility 0s linear 0s; }
+body.map-dragging #routeSettingsCard,
+body.map-dragging #constructionPreviewPanel,
+body.route-drawing-hud-proximity #routeSettingsCard,
+body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) linear, visibility 0s linear var(--dur-fast); }
 .game-side-panel { transition: left var(--dur-panel) var(--ease-out); }
 
 /* ===== 튜토리얼 강조 ===== */
