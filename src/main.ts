@@ -930,7 +930,7 @@ app.innerHTML = `
         <button id="analysisButton" class="dg-tool" data-rail-tool type="button" aria-label="운영 분석 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 3 V17 H17 M6 13 L9 9 L12 11 L16 5"/></svg><span>운영 분석</span><em id="analysisBadge" class="dg-count-badge" hidden>0</em></button>
         <button id="manageMapTool" class="dg-tool" data-rail-tool type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="miter" aria-hidden="true"><path d="M2 5 L7 3 L13 5 L18 3 V15 L13 17 L7 15 L2 17 Z M7 3 V15 M13 5 V17"/></svg><span>노선도</span></button>
         <button id="planOverviewButton" class="dg-tool" data-rail-tool type="button" aria-label="계획 목록 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 3 H17 V17 H3 Z M6 7 L8 9 L11 6 M6 13 H14"/></svg><span>계획 목록</span></button>
-        <button id="constructionOverviewButton" class="dg-tool" data-rail-tool type="button" aria-label="공사 현황 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 17 H17 M5 17 V9 L10 5 L15 9 V17 M8 17 V12 H12 V17"/></svg><span>공사 현황</span></button>
+        <button id="constructionOverviewButton" class="dg-tool" data-rail-tool type="button" aria-label="공사 목록 열기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M3 17 H17 M5 17 V9 L10 5 L15 9 V17 M8 17 V12 H12 V17"/></svg><span>공사 목록</span></button>
         <!-- 현재 어떤 모드에서도 노출하지 않는 도구. 기능 연결을 유지하려고 남겨 둔다. -->
         <button id="expressButton" class="dg-tool" data-rail-tool type="button" aria-pressed="false" aria-label="급행 운행 설정" hidden><span id="expressButtonLabel">급행 해금</span></button>
         <button id="planningModeButton" class="dg-tool" data-rail-tool type="button" aria-pressed="false" hidden><span>계획</span></button>
@@ -1402,7 +1402,7 @@ app.innerHTML = `
       <section class="dg-panel dg-dialog" role="dialog" aria-modal="true" aria-labelledby="constructionManagerTitle">
         <header class="dg-panel__header">
           <h2 id="constructionManagerTitle" class="dg-panel__title">공사·개통 현황</h2>
-          <div class="dg-panel__header-end"><button id="closeConstructionManagerButton" class="dg-icon-btn" type="button" aria-label="공사 현황 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
+          <div class="dg-panel__header-end"><button id="closeConstructionManagerButton" class="dg-icon-btn" type="button" aria-label="공사 목록 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
         </header>
         <div class="dg-panel__body">
           <p class="dg-panel__section game-inspector__note">커리어 모드에서는 공사가 끝난 뒤 개통 조건을 확인합니다. 샌드박스 건설은 즉시 운영됩니다.</p>
@@ -2024,8 +2024,9 @@ const compactRailQuery = window.matchMedia("(max-width: 719px)");
 /** 모드별 레일 도구. 앞에 둘수록 우선순위가 높고, 자리가 부족하면 뒤에서부터 더보기로 옮긴다. */
 const railToolIds: Record<WorkspaceMode, string[]> = {
   management: ["selectTool", "manageLineTool", "manageOperationsTool", "analysisButton", "manageMapTool"],
-  planning: ["selectTool", "routeTool", "stationTool", "transferTool", "depotTool", "extendTool", "branchTool", "mergeTool", "eraserTool", "planOverviewButton"],
-  construction: ["selectTool", "transferTool", "eraserTool", "branchTool", "mergeTool", "constructionOverviewButton"],
+  // 기획·공사에서는 탐색 버튼 대신 목록을 맨 위에 둔다. 탐색은 켜진 도구를 다시 누르거나 취소하면(도구가 없을 때) 자동으로 된다.
+  planning: ["planOverviewButton", "routeTool", "stationTool", "transferTool", "depotTool", "extendTool", "branchTool", "mergeTool", "eraserTool"],
+  construction: ["constructionOverviewButton", "transferTool", "eraserTool", "branchTool", "mergeTool"],
 };
 const workspaceModeShortNames: Record<WorkspaceMode, string> = { management: "관리", planning: "기획", construction: "공사" };
 const workspaceModeMarks: Record<WorkspaceMode, string> = { management: "manage", planning: "plan", construction: "build" };
@@ -16394,7 +16395,7 @@ const tutorialSteps = [
   { title: "차량기지 범위를 지정하세요", text: "기지 버튼을 누르고 차량기지 경계를 그리세요. 노선 옆에 두면 연결되고, 떨어진 곳에도 단독 건설할 수 있습니다.", target: "depot" },
   { title: "노선 연결 여부를 확인하세요", text: "노선 가까이는 연결된 상태로, 떨어진 곳은 단독 건설로 표시됩니다. 두 경우 모두 건설할 수 있습니다.", target: "depot" },
   { title: "열차를 구매하고 배정하세요", text: "첫 노선을 선택한 상태에서 편성 수와 차량 수를 확인하고 구매하세요.", target: "train" },
-  { title: "첫 노선을 개통하세요", text: "공사 현황에서 네 가지 개통 조건을 확인하고 노선 개통을 누르세요.", target: "opening" },
+  { title: "첫 노선을 개통하세요", text: "공사 목록에서 네 가지 개통 조건을 확인하고 노선 개통을 누르세요.", target: "opening" },
   { title: "시간을 흐르게 하세요", text: "하단의 x2, x5, x10 또는 x100을 눌러 운행을 시작하세요.", target: "speed" },
   { title: "첫 수익을 확인하세요", text: "하루 운행이 끝날 때까지 기다리세요. 첫 운임 수익이 기록되면 완료됩니다.", target: "revenue" },
 ] as const;
@@ -16555,7 +16556,7 @@ function getTutorialFeedback(step: number) {
   if (step === 4) return "기지 경계는 노선 가까이에 충분한 면적으로 그려 주세요.";
   if (step === 5) return depot ? "차량기지가 첫 노선과 연결되지 않았습니다. 경계를 노선 가까이에 다시 지정해 주세요." : "먼저 차량기지 범위를 지정하세요.";
   if (step === 6) return "연결된 차량기지가 준비되었습니다. 하단 구매 버튼으로 열차를 배정하세요.";
-  if (step === 7) return "공사 현황을 열고 차량기지·열차·역·운행 경로가 모두 충족됐는지 확인하세요.";
+  if (step === 7) return "공사 목록을 열고 차량기지·열차·역·운행 경로가 모두 충족됐는지 확인하세요.";
   if (step === 8) return "하단 시간 배속에서 x1 이상을 선택하세요.";
   return financeState.economy.demand <= 0
     ? "승객 수요가 없습니다. 노선 개통과 역 연결 상태를 확인하세요."
