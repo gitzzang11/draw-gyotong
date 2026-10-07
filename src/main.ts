@@ -3413,13 +3413,24 @@ function updateToolHover() {
         hovered = true;
       }
     }
+  } else if (activeTool === "merge" && planningMode) {
+    // 연결은 노선 끝점에서 끌어 시작하므로, 시작할 수 있는 끝점에 고리를 두고 그 노선을 띠로 강조한다(판정 거리는 연결 시작과 같음).
+    const source = findNearestPlanningConnectEndpoint(point, 36);
+    if (source) {
+      const planned = source.kind === "planned" ? getActivePlan(false)?.routes.find((item) => item.id === source.routeId) : undefined;
+      const actual = source.kind === "actual" ? networkState.routes.find((item) => item.id === source.routeId) : undefined;
+      if (planned) drawRouteHover([planned.coordinates.map(([lat, lng]) => L.latLng(lat, lng))], planned.color);
+      if (actual) drawRouteHover(getRoutePaths(actual), actual.color);
+      L.circleMarker(map.containerPointToLatLng(source.endpoint), { radius: 14, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false, pane: "mapGuidePane" }).addTo(toolHoverLayer);
+      hovered = true;
+    }
   }
   if (hovered) map.getContainer().style.cursor = "pointer";
 }
 
 map.getContainer().addEventListener("pointermove", (event) => {
   if (event.pointerType !== "mouse" || !finePointer?.matches) return;
-  if (activeTool !== "extend" && activeTool !== "branch") {
+  if (activeTool !== "extend" && activeTool !== "branch" && activeTool !== "merge") {
     if (toolHoverLayer.getLayers().length > 0) clearToolHover();
     return;
   }
