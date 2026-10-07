@@ -64,9 +64,20 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
   overflow: hidden;
 }
 .game-mode-rail > * { flex-shrink: 0; }
+/* 모드와 도구를 두 상자로 나눈다: 위 모드 상자(현재 모드 칸 또는 펼친 모드 목록), 아래 도구 상자. 사이는 지도가 보이는 틈.
+   테두리는 안쪽 1px 외곽선으로 그려 마지막 도구의 구분선과 겹치게 한다. */
+.game-mode-rail { gap: 6px; border: 0; background: transparent; }
+.game-mode-rail .dg-rail__mode-now,
+.game-mode-rail .dg-rail__modes,
+.game-rail-tools { outline: var(--line-hair) solid var(--edge); outline-offset: calc(var(--line-hair) * -1); }
+.game-mode-rail .dg-rail__modes,
+.game-rail-tools { background: var(--surface-0); }
+.game-mode-rail.dg-rail--planning .dg-rail__mode-now,
+.game-mode-rail.dg-rail--planning .dg-rail__modes,
+.game-mode-rail.dg-rail--planning .game-rail-tools { outline-style: dashed; }
 .game-rail-tools { display: flex; flex-direction: column; }
 .game-rail-tools .dg-tool { border-bottom: var(--line-hair) solid var(--rule); }
-.game-mode-rail .game-rail-more { border-top: var(--line-hair) solid var(--rule); border-bottom: 0; }
+.game-mode-rail .game-rail-more { border-bottom: var(--line-hair) solid var(--rule); }
 .game-mode-rail:not(.dg-rail--compact) .dg-rail__modes { border-bottom: var(--line-hair) solid var(--edge); }
 
 /* compact 레일에서 현재 모드 칸을 누르면 모드 선택을 세로로 펼친다 */

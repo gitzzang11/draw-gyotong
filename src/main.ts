@@ -16719,6 +16719,8 @@ function layoutRailTools() {
     button.hidden = !modeButtons.includes(button);
   });
   modeButtons.forEach((button) => railTools.append(button));
+  // 더보기도 도구 상자 안 맨 아래에 둔다(모드 상자와 도구 상자를 나눠 그린다).
+  railTools.append(modifyToolsButton);
   modifyToolsButton.hidden = true;
   const overflows = () => workspaceModeBar.scrollHeight > workspaceModeBar.clientHeight + 1;
   if (overflows()) {
