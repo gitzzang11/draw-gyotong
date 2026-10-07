@@ -80,14 +80,21 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
 .game-mode-rail .game-rail-more { border-bottom: var(--line-hair) solid var(--rule); }
 .game-mode-rail:not(.dg-rail--compact) .dg-rail__modes { border-bottom: var(--line-hair) solid var(--edge); }
 
-/* compact 레일에서 현재 모드 칸을 누르면 모드 선택을 세로로 펼친다 */
+/* 현재 모드 칸을 누르면 모드 목록이 현재 모드 칸 자리에서 아래로 펼쳐지며 도구 상자 위를 덮는다.
+ * 모드를 바꿀 때는 도구를 쓰지 않으므로 도구를 밀어내지 않고 덮는다(레일 높이·도구 위치 그대로). 현재 모드가 맨 위. */
+.game-mode-rail { position: fixed; }
 .game-mode-rail.dg-rail--compact.game-mode-rail--modes-open .dg-rail__modes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
   display: grid;
   grid-template-columns: 1fr;
-  border-bottom: var(--line-hair) solid var(--edge);
+  box-shadow: var(--overlay-shadow);
+  animation: game-rail-modes-open var(--dur-panel) var(--ease-out);
 }
-/* 펼치면 현재 모드 칸 자리에 목록이 열리고, 현재 모드가 맨 위에 온다 */
-.game-mode-rail.dg-rail--compact.game-mode-rail--modes-open .dg-rail__mode-now { display: none; }
+@keyframes game-rail-modes-open { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 .game-mode-rail .dg-rail__mode[aria-selected="true"] { order: -1; }
 .game-mode-rail.dg-rail--compact .dg-rail__mode {
   min-height: var(--touch-min);
