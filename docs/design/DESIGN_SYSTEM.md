@@ -371,7 +371,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - easing은 짧은 ease-out(`cubic-bezier(.2,.8,.2,1)`)만 쓴다. 탄성·바운스 금지.
 - 장식용 looping animation은 금지한다. 열차 이동과 공사 진행처럼 시뮬레이션 상태를 표현하는 모션은 허용한다.
 - `prefers-reduced-motion`에서는 slide를 즉시 전환으로 대체하고 pulse를 제거한다.
-- 호버는 마우스처럼 정확히 가리키는 장치에서만(`@media (hover: hover) and (pointer: fine)`) 바탕을 한 단계(`--surface-2`, 반전 바탕은 조금 밝게) 바꾼다. 터치에서는 누른 뒤 호버가 남으므로 켜지 않는다. 들썩임(translate)·그림자·발광 없음, 선택·눌림 상태 칸은 그대로. 예전 전역 `button:hover`(1px 들썩임)는 제거했다.
+- 호버는 마우스처럼 정확히 가리키는 장치에서만(`@media (hover: hover) and (pointer: fine)`) 바탕을 한 단계(`--surface-2`, 반전 바탕은 조금 밝게) 바꾼다. 터치에서는 누른 뒤 호버가 남으므로 켜지 않는다. 들썩임(translate)·그림자·발광 없음, 선택·눌림 상태 칸은 그대로. 예전 전역 `button:hover`(1px 들썩임)는 제거했다. 캔버스로 그리는 지도 대상은 마우스 위치로 찾아 강조한다: 연장 도구에서 고른 노선 끝점 핸들 위는 `--text-1` 고리(반경 14), 그 밖의 노선 위는 노선 전체를 노선 색 반투명 띠(18px, .32)로, 분기 도구는 분기를 시작할 수 있는 노선 전체를 같은 띠로 강조하고 커서를 pointer로 바꾼다.
 - 구현: 표면이 보이게 될 때 붙은 가장자리에서 `translate`로 미끄러져 들어온다(오른쪽 inspector·시작 화면 안내판 ←, 왼쪽 보조 패널·더보기 →, 대화상자·전체 화면·아래 막대 ↑, 배너·튜토리얼 ↓, `--dur-panel`). 닫을 때는 `src/ui/exitMotion.ts`가 `.is-leaving`으로 같은 쪽으로 빠지는 이탈(`--dur-exit` 140ms)을 보인 뒤 숨긴다(이탈 중에도 `hidden`은 true). 버튼·탭·목록 행의 색 변화와 레일 폭 변화는 `--dur-fast`/`--dur-panel` 전환. 모두 `src/design/components.css` Motion 구획. 접기·펼치기(건설 검토 최소화, compact 노선 설정 펼침)는 `animateHeightChange`로 바뀌기 전후 높이 사이를 180ms로 잇는다.
 - 터치 입력, 스냅 성공, 건설 확정에는 시각 피드백을 기본으로 하고 사운드·진동은 설정 가능하게 한다.
 

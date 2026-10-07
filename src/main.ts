@@ -3335,6 +3335,87 @@ function findExtendTargetAtPoint(point: L.Point, pointerType: string): { kind: "
   return null;
 }
 
+// ===== 도구 호버 (마우스 전용, §13) =====
+// 지도는 캔버스로 그려 CSS 호버가 닿지 않으므로, 마우스 위치에서 대상을 찾아 강조를 따로 그린다.
+// - 연장: 고른 노선의 끝점 핸들 위면 고리로 강조, 그 밖에서는 누르면 고를 수 있는 노선 전체를 강조
+// - 분기: 분기를 시작할 수 있는 노선(기획은 계획 노선, 공사는 운영 노선) 전체를 강조
+const toolHoverLayer = L.layerGroup().addTo(map);
+const finePointer = window.matchMedia?.("(hover: hover) and (pointer: fine)");
+let toolHoverFrame = 0;
+let toolHoverPoint: L.Point | null = null;
+
+function clearToolHover() {
+  toolHoverLayer.clearLayers();
+  map.getContainer().style.cursor = "";
+}
+
+function drawRouteHover(paths: LatLng[][], color: string) {
+  for (const path of paths) {
+    if (path.length < 2) continue;
+    L.polyline(path, { color, weight: 18, opacity: 0.32, lineCap: "round", lineJoin: "round", interactive: false }).addTo(toolHoverLayer);
+  }
+}
+
+function updateToolHover() {
+  toolHoverFrame = 0;
+  clearToolHover();
+  const point = toolHoverPoint;
+  if (!point || activePointerId !== null || mapPanning) return;
+  const threshold = 16;
+  let hovered = false;
+  if (activeTool === "extend" && planningMode) {
+    const target = extendTargetRoute();
+    if (target && target.coordinates.length >= 2) {
+      const ends = [target.coordinates[0], target.coordinates[target.coordinates.length - 1]].map(([lat, lng]) => L.latLng(lat, lng));
+      const end = ends.find((latLng) => map.latLngToContainerPoint(latLng).distanceTo(point) <= threshold);
+      if (end) {
+        L.circleMarker(end, { radius: 14, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false }).addTo(toolHoverLayer);
+        hovered = true;
+      }
+    }
+    if (!hovered) {
+      const picked = findExtendTargetAtPoint(point, "mouse");
+      const route = picked?.kind === "actual"
+        ? networkState.routes.find((item) => item.id === picked.id)
+        : picked ? getActivePlan(false)?.routes.find((item) => item.id === picked.id) : undefined;
+      if (route) {
+        drawRouteHover([route.coordinates.map(([lat, lng]) => L.latLng(lat, lng))], route.color);
+        hovered = true;
+      }
+    }
+  } else if (activeTool === "branch") {
+    if (planningMode) {
+      const snap = findNearestPlannedRoutePoint(point);
+      if (snap && snap.distancePx <= threshold) {
+        drawRouteHover([snap.route.coordinates.map(([lat, lng]) => L.latLng(lat, lng))], snap.route.color);
+        hovered = true;
+      }
+    } else {
+      const route = findRoutesAtPoint(point, threshold)[0];
+      if (route) {
+        drawRouteHover(getRoutePaths(route), route.color);
+        hovered = true;
+      }
+    }
+  }
+  if (hovered) map.getContainer().style.cursor = "pointer";
+}
+
+map.getContainer().addEventListener("pointermove", (event) => {
+  if (event.pointerType !== "mouse" || !finePointer?.matches) return;
+  if (activeTool !== "extend" && activeTool !== "branch") {
+    if (toolHoverLayer.getLayers().length > 0) clearToolHover();
+    return;
+  }
+  toolHoverPoint = containerPointFromEvent(event);
+  if (!toolHoverFrame) toolHoverFrame = requestAnimationFrame(updateToolHover);
+});
+map.getContainer().addEventListener("pointerleave", () => {
+  toolHoverPoint = null;
+  clearToolHover();
+});
+map.getContainer().addEventListener("pointerdown", () => clearToolHover());
+
 function findPlanningRouteContinuation(point: L.Point, thresholdPx = 56): PlanningRouteContinuation | null {
   if (!planningMode || activeTool !== "extend") return null;
   // 연장은 고른 노선의 끝점에서만 시작한다.
@@ -16866,6 +16947,7 @@ function closeSettings() {
 
 function updateRouteSettingsCard(tool: ToolMode) {
   if (tool !== "extend") extendTarget = null;
+  clearToolHover();
   const shouldShow = tool === "route" || tool === "extend" || tool === "branch" || tool === "merge";
   if (!routeSettingsCard) return;
   routeSettingsCard.hidden = !shouldShow;
@@ -16887,8 +16969,10 @@ function updateRouteSettingsCard(tool: ToolMode) {
   if (draftRouteTrainTypeField) draftRouteTrainTypeField.hidden = tool !== "route";
   if (draftRouteTrainTypeSelect) draftRouteTrainTypeSelect.value = draftRouteTrainType;
   setColorPickerValue(draftRouteColorInput, selectedColor);
-  setText(routeSettingsHeaderName, tool === "extend" ? "연장할 노선" : draftRouteName || "노선 설정");
-  routeSettingsHeaderSwatch?.style.setProperty("background-color", selectedColor);
+  // 연장·분기·연결은 대상 노선을 고르는 상자이므로 제목을 도구에 맞춘다(새 노선 이름은 노선 건설에서만).
+  const targetTitles: Partial<Record<ToolMode, string>> = { extend: "연장할 노선", branch: "분기할 노선", merge: "연결할 노선" };
+  setText(routeSettingsHeaderName, targetTitles[tool] ?? (draftRouteName || "노선 설정"));
+  routeSettingsHeaderSwatch?.style.setProperty("background-color", tool === "route" ? selectedColor : "var(--text-3)");
   renderExtendTargetList();
   const target = tool === "extend" ? extendTargetRoute() : null;
   if (target && extendTarget) {
