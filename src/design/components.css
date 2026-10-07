@@ -78,7 +78,6 @@
 
 .dg-btn--primary { background: var(--invert-bg); color: var(--invert-fg); font-weight: 800; }
 .dg-btn--secondary { background: var(--surface-0); border-color: var(--text-1); }
-.dg-btn--quiet:hover,
 .dg-btn--quiet:active,
 .dg-btn--secondary:active { background: var(--surface-2); }
 .dg-btn--danger { background: var(--signal-danger); color: #FFFFFF; }
@@ -681,6 +680,29 @@ body.reduced-motion { --dur-exit: 0ms; }
 .dg-scrim.is-leaving { animation: dg-scrim-out var(--dur-exit) linear forwards; }
 .dg-scrim.is-leaving > .dg-panel { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
 
+/* 마우스 호버 (§13): 마우스처럼 정확히 가리키는 장치에서만. 터치에서는 누른 뒤 호버가 남는 문제가 있어 켜지 않는다.
+ * 안내판처럼 바탕만 한 단계 진하게 바꾼다(들썩임·그림자·발광 없음). 선택·눌림 상태인 칸은 그대로 둔다. */
+@media (hover: hover) and (pointer: fine) {
+  .dg-tool:not([aria-pressed="true"]):not(:disabled):hover,
+  .dg-rail__mode:not([aria-selected="true"]):hover,
+  .dg-seg__item:not([aria-pressed="true"]):not(:disabled):hover,
+  button.dg-plate__cell:not([aria-pressed="true"]):not(.dg-plate__cell--on):not(:disabled):hover,
+  .dg-icon-btn:not(:disabled):hover,
+  .dg-btn--secondary:not(:disabled):hover,
+  .dg-btn--quiet:not(:disabled):hover,
+  .dg-btn--danger-quiet:not(:disabled):hover,
+  .game-route-item:not([aria-pressed="true"]):not(:disabled):hover,
+  .game-service-item:not([aria-pressed="true"]):hover,
+  .game-slot__main:hover,
+  .game-title__item:not(.game-title__item--primary):not(:disabled):hover { background-color: var(--surface-2); }
+  /* 반전(검은) 바탕 버튼은 바탕을 조금 밝게 */
+  .dg-btn--primary:not(:disabled):hover,
+  .dg-rail__mode-now:hover,
+  .game-title__item--primary:hover { background-color: color-mix(in srgb, var(--invert-bg) 82%, var(--invert-fg)); }
+  .dg-btn--danger:not(:disabled):hover { background-color: color-mix(in srgb, var(--signal-danger) 85%, #000000); }
+  button, [role="button"] { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
 /* 빠른 상태 전환: 눌림·선택 표시가 툭 바뀌지 않게 */
 .dg-tool,
 .dg-rail__mode,

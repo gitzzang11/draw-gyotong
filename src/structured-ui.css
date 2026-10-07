@@ -69,13 +69,6 @@ button,
     transform 100ms ease;
 }
 
-button:hover,
-.ops-button:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface-2);
-  box-shadow: none;
-  transform: none;
-}
 
 button:active,
 .ops-button:active {
@@ -189,13 +182,6 @@ textarea:where(:not([class*="dg-"]))::placeholder {
    specificity to keep their close actions pinned to the heading. */
 
 /* Feedback surfaces */
-
-@media (hover: none) {
-  button:hover,
-  .ops-button:hover {
-    transform: none !important;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,

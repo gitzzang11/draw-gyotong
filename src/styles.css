@@ -89,13 +89,6 @@ button svg,
   margin: 0 !important;
 }
 
-button:hover,
-.ops-button:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: var(--c-border-light);
-  color: var(--c-text-main);
-  transform: translateY(-1px);
-}
 
 button:focus-visible,
 input:focus-visible,
@@ -683,10 +676,6 @@ button,
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-button:hover,
-.ops-button:hover {
-  transform: translateY(-1px);
-}
 
 button:active,
 .ops-button:active {
@@ -756,12 +745,6 @@ button:where(:not([class*="dg-"])):active,
 }
 
 /* 터치 전용 기기는 hover가 탭에 고정되므로 hover 리프트 효과를 제거한다. */
-@media (hover: none) {
-  button:hover,
-  .ops-button:hover {
-    transform: none !important;
-  }
-}
 
 /* 역 라벨 툴팁: 다크 HUD 톤에 맞춰 읽기 쉽게 다듬는다. */
 

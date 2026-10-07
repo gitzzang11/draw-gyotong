@@ -735,9 +735,9 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-title__item small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: auto; font: var(--type-label); font-weight: 600; color: var(--text-2); text-align: right; }
 .game-title__item[aria-expanded="true"] { background: var(--surface-2); }
 /* 터치 기기에서는 마지막으로 누른 항목에 hover가 남으므로 마우스가 있을 때만 강조 */
-@media (hover: hover) { .game-title__item:hover { background: var(--surface-2); } }
+
 .game-title__item--primary { min-height: 50px; background: var(--invert-bg); color: var(--invert-fg); }
-.game-title__item--primary:hover { background: var(--invert-bg); }
+
 .game-title__item--primary small { color: inherit; opacity: .85; }
 .game-title__item:disabled { cursor: not-allowed; background: var(--surface-1); color: var(--text-3); }
 .game-title__no { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border: var(--line-strong) solid currentColor; border-radius: 50%; font-size: 12px; }
