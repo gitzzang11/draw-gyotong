@@ -22,7 +22,9 @@ export interface PlannedRoute {
   transferEffect: number;
   actualExtension?: { routeId: string; atStart: boolean };
   actualRouteId?: string;
-  operationKind?: "new-line" | "extension";
+  operationKind?: "new-line" | "extension" | "branch";
+  /** 운영 노선에서 나가는 분기(기획 모드 분기 도구). 기획 전환 때 분기점·지선 공사로 만든다. */
+  actualBranch?: { routeId: string; junction: [number, number]; junctionBlueprint?: JunctionBlueprint };
   rootLineId?: string;
   targetLineId?: string;
   parentBlueprintId?: string;

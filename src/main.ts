@@ -174,6 +174,7 @@ import {
   createConnectionBlueprint,
   splitSegmentAtJunction,
   type ConnectionBlueprint,
+  type ConnectionEntityType,
   type JunctionBlueprint,
 } from "./routeBlueprints.ts";
 import {
@@ -507,7 +508,11 @@ type PendingMerge = {
   second: RouteMergeEndpoint;
   bridgeLengthKm: number;
   bridgeCost: number;
+  /** 기획 모드 연결: 끝점이 운영 노선인지 계획 노선인지와 연결 선 좌표. 확정하면 기획안에 연결 설계로 넣는다. */
+  plan?: { firstKind: "actual" | "planned"; secondKind: "actual" | "planned"; coordinates: Array<{ lat: number; lng: number }> };
 };
+
+type PlanningConnectEndpoint = RouteMergeEndpoint & { kind: "actual" | "planned" };
 
 type ConstructionDraftKind = "route" | "extension" | "branch" | "repair" | "edit" | "depot";
 type ConstructionWarningSeverity = "info" | "warning" | "error";
@@ -2040,7 +2045,7 @@ const railToolIds: Record<WorkspaceMode, string[]> = {
   management: ["selectTool", "manageLineTool", "manageOperationsTool", "analysisButton", "manageMapTool"],
   // 기획·공사에서는 탐색 버튼 대신 목록을 맨 위에 둔다. 탐색은 켜진 도구를 다시 누르거나 취소하면(도구가 없을 때) 자동으로 된다.
   planning: ["planOverviewButton", "routeTool", "stationTool", "transferTool", "depotTool", "extendTool", "branchTool", "mergeTool", "eraserTool"],
-  construction: ["constructionOverviewButton", "transferTool", "eraserTool", "branchTool", "mergeTool"],
+  construction: ["constructionOverviewButton", "transferTool", "eraserTool"],
 };
 const workspaceModeShortNames: Record<WorkspaceMode, string> = { management: "관리", planning: "기획", construction: "공사" };
 const workspaceModeMarks: Record<WorkspaceMode, string> = { management: "manage", planning: "plan", construction: "build" };
@@ -3388,7 +3393,7 @@ function updateToolHover() {
         hovered = true;
       }
     }
-  } else if (activeTool === "branch" && pendingBranchJunction && !planningMode) {
+  } else if (activeTool === "branch" && pendingBranchJunction) {
     // 분기점(점선 원)을 만든 뒤에는 그 분기점에서 드래그하므로 분기점만 강조한다.
     const junction = L.latLng(pendingBranchJunction.position.lat, pendingBranchJunction.position.lng);
     if (map.latLngToContainerPoint(junction).distanceTo(point) <= threshold + 4) {
@@ -3396,12 +3401,11 @@ function updateToolHover() {
       hovered = true;
     }
   } else if (activeTool === "branch") {
-    if (planningMode) {
-      const snap = findNearestPlannedRoutePoint(point);
-      if (snap && snap.distancePx <= threshold) {
-        drawRouteHover([snap.route.coordinates.map(([lat, lng]) => L.latLng(lat, lng))], snap.route.color);
-        hovered = true;
-      }
+    // 기획 모드 분기는 계획 노선과 운영 노선 모두에서 시작할 수 있다.
+    const snap = planningMode ? findNearestPlannedRoutePoint(point) : null;
+    if (snap && snap.distancePx <= threshold) {
+      drawRouteHover([snap.route.coordinates.map(([lat, lng]) => L.latLng(lat, lng))], snap.route.color);
+      hovered = true;
     } else {
       const route = findRoutesAtPoint(point, threshold)[0];
       if (route) {
@@ -3805,15 +3809,17 @@ function onPointerDown(event: PointerEvent) {
     }
   }
   if (activeTool === "branch") {
-    if (planningMode) {
-      const snap = findNearestPlannedRoutePoint(point);
-      if (!snap || snap.distancePx > 56) {
-        setText(facilityReadout, "계획 노선 위에서 분기를 시작하세요");
-        return;
-      }
-      activePlanningBranch = { routeId: snap.route.id, junction: map.latLngToContainerPoint(snap.latLng), junctionLatLng: snap.latLng, color: snap.route.color };
-      selectedColor = snap.route.color;
-      showRouteSettingsTarget(snap.route, "planned");
+    // 분기는 기획 모드에서만 한다. 계획 노선 위면 계획 노선의 분기, 운영 노선 위면 분기점 방식의 운영 노선 분기를 기획안에 넣는다.
+    const plannedSnap = planningMode ? findNearestPlannedRoutePoint(point) : null;
+    const actualSnapForBranch = planningMode ? findNearestRoutePoint(point, selectedRouteId ?? undefined) : null;
+    const usePlannedBranch = Boolean(
+      plannedSnap && plannedSnap.distancePx <= 56 && !pendingBranchJunction &&
+      (!actualSnapForBranch || actualSnapForBranch.distancePx > 34 || plannedSnap.distancePx <= actualSnapForBranch.distancePx),
+    );
+    if (usePlannedBranch && plannedSnap) {
+      activePlanningBranch = { routeId: plannedSnap.route.id, junction: map.latLngToContainerPoint(plannedSnap.latLng), junctionLatLng: plannedSnap.latLng, color: plannedSnap.route.color };
+      selectedColor = plannedSnap.route.color;
+      showRouteSettingsTarget(plannedSnap.route, "planned");
     } else {
     const snap = findNearestRoutePoint(point, selectedRouteId ?? undefined);
     if (!snap || snap.distancePx > 34) {
@@ -4086,7 +4092,7 @@ function onPointerUp(event: PointerEvent) {
   if (activeTool === "route" || activeTool === "extend") finishRouteDrawing(finishedPoints, extension);
   if (activeTool === "reconnect") finishRepairDrawing(finishedPoints, repair);
   if (activeTool === "branch") {
-    if (planningMode) finishPlanningBranchDrawing(finishedPoints, planningBranch);
+    if (planningBranch) finishPlanningBranchDrawing(finishedPoints, planningBranch);
     else finishBranchDrawing(finishedPoints, branch);
   }
   if (activeTool === "merge") finishConnectionDrawing(finishedPoints, connectionSource);
@@ -5013,18 +5019,7 @@ async function confirmConstructionDraft() {
   }
   const before = cloneState();
   try {
-    const deferExtension = usesConstructionTimeline() && draft.kind === "extension" && Boolean(draft.extension);
-    const deferJunctionBranch = usesConstructionTimeline() && draft.kind === "branch" && Boolean(draft.branch?.junctionBlueprint);
-    const selectedId = deferExtension
-      ? draft.extension!.routeId
-      : deferJunctionBranch
-        ? draft.branch!.routeId
-        : applyConstructionDraft(draft);
-    captureTutorialConstruction(draft.kind, selectedId);
-    if (usesConstructionTimeline()) {
-      constructionState.replaceProjects([...constructionState.projects, createConstructionProjectFromDraft(draft, selectedId)]);
-      applyTutorialConstructionBoost(draft.kind, selectedId);
-    }
+    const selectedId = commitConstructionDraft(draft);
     financeState.economy = {
       ...financeState.economy,
       cash: financeState.economy.cash - draft.analysis.totalCost,
@@ -5066,6 +5061,26 @@ async function confirmConstructionDraft() {
     showError("건설 처리 중 문제가 발생해 모든 변경을 되돌렸습니다.");
     console.error(error);
   }
+}
+
+/**
+ * 공사 초안을 실제 망·공사 일정에 반영한다(자금은 부르는 쪽이 처리). 공사 모드 확정과 기획 전환(운영 노선 분기)이 함께 쓴다.
+ * 공사 기간을 쓰면 연장·분기점 분기는 완공 때 반영하고, 나머지는 바로 반영한 뒤 공사 일정을 만든다.
+ */
+function commitConstructionDraft(draft: ConstructionDraft, projectExtras: Partial<ConstructionProject> = {}) {
+  const deferExtension = usesConstructionTimeline() && draft.kind === "extension" && Boolean(draft.extension);
+  const deferJunctionBranch = usesConstructionTimeline() && draft.kind === "branch" && Boolean(draft.branch?.junctionBlueprint);
+  const selectedId = deferExtension
+    ? draft.extension!.routeId
+    : deferJunctionBranch
+      ? draft.branch!.routeId
+      : applyConstructionDraft(draft);
+  captureTutorialConstruction(draft.kind, selectedId);
+  if (usesConstructionTimeline()) {
+    constructionState.replaceProjects([...constructionState.projects, { ...createConstructionProjectFromDraft(draft, selectedId), ...projectExtras }]);
+    applyTutorialConstructionBoost(draft.kind, selectedId);
+  }
+  return selectedId;
 }
 
 function applyConstructionDraft(draft: ConstructionDraft) {
@@ -7881,6 +7896,38 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
         completed: false,
       };
       updatePlan(plan.id, (item) => ({ ...item, depots: [...item.depots, depot] }));
+    } else if (draft.kind === "branch" && draft.branch) {
+      // 운영 노선에서 나가는 분기: 기획안에 "운영 노선 분기"로 저장하고, 기획 전환 때 분기점·지선 공사로 만든다.
+      const targetRoute = networkState.routes.find((route) => route.id === draft.branch?.routeId);
+      if (!targetRoute) throw new Error("Branch target route missing");
+      const graph = createGraphForDraftPath(draft, createId("node"));
+      const expectedDemand = estimatePlannedRouteDemand(draft.points);
+      const plannedBranch: PlannedRoute = {
+        id: createId("planned-route"),
+        name: `${targetRoute.name} 지선`,
+        color: targetRoute.color,
+        trainType: routeTrainType(targetRoute),
+        coordinates: draft.points.map((point) => [roundCoord(point.lat), roundCoord(point.lng)]),
+        segments: graph.segments,
+        completedSegmentIds: [],
+        expectedCost: draft.analysis.totalCost,
+        constructionDays: draft.analysis.durationDays,
+        expectedDemand,
+        expectedRevenue: Math.round((expectedDemand * financeState.economy.fare * 365) / 100000000),
+        transferEffect: estimatePlannedTransferEffect(draft.points),
+        operationKind: "branch",
+        rootLineId: targetRoute.id,
+        targetLineId: targetRoute.id,
+        actualBranch: {
+          routeId: targetRoute.id,
+          junction: [roundCoord(draft.branch.junctionLatLng.lat), roundCoord(draft.branch.junctionLatLng.lng)],
+          junctionBlueprint: draft.branch.junctionBlueprint,
+        },
+        branches: [],
+      };
+      updatePlan(plan.id, (item) => ({ ...item, routes: [...item.routes, plannedBranch] }));
+      pendingBranchJunction = null;
+      mapLayers.clear("edit-guide");
     } else if (draft.kind === "branch" && draft.planningBranch) {
       const targetRoute = plan.routes.find((route) => route.id === draft.planningBranch?.routeId);
       if (!targetRoute) throw new Error("Planned branch target missing");
@@ -8040,7 +8087,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   const hints: Record<WorkspaceMode, string[]> = {
     management: ["지도를 이동하거나 시설을 선택", "운영·노선 정보를 확인"],
     planning: ["건설 전 설계안을 자유롭게 편집", "설계안은 비용이 차감되지 않음"],
-    construction: ["기존 노선 분기·연결 또는 시설 철거", "실제 노선을 선택해 공사 범위와 비용을 검토"],
+    construction: ["공사 목록·환승 해제·시설 철거", "분기·연결은 기획 모드에서 기획안으로"],
   };
   setHint(hints[nextMode]);
   requestUpdate("route-style", selectedRouteId ?? undefined);
@@ -8719,6 +8766,34 @@ async function confirmPlanConversion() {
     for (const plannedRoute of plan.routes) {
       const selectedIds = selection.filter((item) => item.kind === "segment" && item.routeId === plannedRoute.id).map((item) => item.assetId);
       if (selectedIds.length === 0) continue;
+      if (plannedRoute.actualBranch) {
+        // 운영 노선 분기: 공사 모드 분기와 같은 처리(분기점 → 지선, 공사 기간이 있으면 완공 때 반영).
+        if (selectedIds.length !== plannedRoute.segments.length) throw new Error("An actual-route branch must be built as a complete route.");
+        const targetRoute = networkState.routes.find((route) => route.id === plannedRoute.actualBranch?.routeId);
+        if (!targetRoute) throw new Error("Branch target route is missing.");
+        const points = plannedRoute.coordinates.map(([lat, lng]) => L.latLng(lat, lng));
+        const junctionLatLng = L.latLng(...plannedRoute.actualBranch.junction);
+        const analysis = analyzeConstruction("branch", points, targetRoute.id, []);
+        analysis.totalCost = plannedRoute.segments.reduce((sum, segment) => sum + segment.constructionCost, 0);
+        analysis.durationDays = plannedRoute.constructionDays;
+        commitConstructionDraft({
+          id: createId("draft"),
+          kind: "branch",
+          points,
+          routeId: targetRoute.id,
+          branch: { routeId: targetRoute.id, junction: map.latLngToContainerPoint(junctionLatLng), junctionLatLng, junctionBlueprint: plannedRoute.actualBranch.junctionBlueprint },
+          analysis,
+        }, {
+          sourcePlanId: plan.id,
+          blueprintId: plannedRoute.id,
+          name: plannedRoute.name,
+          // 계획 연장처럼 기획안에 보인 공기를 그대로 쓴다.
+          durationDays: Math.max(1, plannedRoute.constructionDays),
+          expectedCompletionDay: analysisStateOwner.current.dayIndex + Math.max(1, plannedRoute.constructionDays),
+        });
+        actualRouteByBlueprint.set(plannedRoute.id, targetRoute.id);
+        continue;
+      }
       if (plannedRoute.parentBlueprintId) {
         if (selectedIds.length !== plannedRoute.segments.length) throw new Error("A chained extension must be built as a complete route.");
         const parent = plan.routes.find((route) => route.id === plannedRoute.parentBlueprintId);
@@ -13075,7 +13150,8 @@ function setTool(tool: ToolMode) {
   const allowedTools: Record<WorkspaceMode, ToolMode[]> = {
     management: ["pan", "expressStop"],
     planning: ["pan", "route", "extend", "station", "transfer", "depot", "eraser", "branch", "merge"],
-    construction: ["pan", "transfer", "eraser", "branch", "merge"],
+    // 분기·연결은 기획 모드로 합쳤다(운영 노선도 기획안을 거쳐 착공).
+    construction: ["pan", "transfer", "eraser"],
   };
   if (!allowedTools[workspaceMode].includes(tool)) {
     const targetMode = ["route", "extend", "station", "transfer", "depot", "branch", "merge"].includes(tool)
@@ -13156,8 +13232,8 @@ function setTool(tool: ToolMode) {
       ? ["계획 시설 지우개", ["지울 계획 시설을 가로질러 드래그", "확정 후 계속 다른 범위를 삭제"]]
       : ["시설 철거", ["철거할 실제 시설을 가로질러 드래그", "범위와 영향을 검토 후 확정"]],
     reconnect: ["노선 수정", ["붉은 수정 지점에서 시작", "반대쪽 지점까지 드래그"]],
-    branch: planningMode ? ["계획 분기", ["계획 노선 위에서 시작", "확정 후 계속 다른 분기 추가"]] : ["분기 건설", ["기존 노선 위에서 시작", "완공 후 균등 배차"]],
-    merge: planningMode ? ["계획 노선 연결", ["첫 계획 노선 끝점 선택", "다른 계획 노선 끝점 선택", "자금 차감 없이 하나의 설계안으로 정리"]] : ["노선 연결", ["첫 노선 끝점 선택", "다른 노선 끝점 선택", "거리와 비용을 확인한 뒤 확정"]],
+    branch: planningMode ? ["분기", ["노선 위에서 시작", "운영 노선은 분기점부터"]] : ["분기 건설", ["기존 노선 위에서 시작", "완공 후 균등 배차"]],
+    merge: planningMode ? ["노선 연결", ["끝점에서 끝점까지 드래그", "병합·환승 선택"]] : ["노선 연결", ["첫 노선 끝점 선택", "다른 노선 끝점 선택", "거리와 비용을 확인한 뒤 확정"]],
     station: ["역 배치", ["완성 노선 위 터치", "가까운 노선 자동 연결"]],
     transfer: planningMode
       ? ["수동 환승 계획", ["첫 번째 기존역 또는 계획역 선택", "두 번째 역 선택", "계획에 환승 연결 저장"]]
@@ -14624,7 +14700,7 @@ function splitFleetBetweenRoutes(firstId: string, secondId: string) {
 function beginConnectionDrawing(event: PointerEvent, point: L.Point) {
   if (activePointerId !== null) return;
   const source = planningMode
-    ? findNearestPlannedRouteEndpoint(point, event.pointerType === "touch" ? 56 : 36)
+    ? findNearestPlanningConnectEndpoint(point, event.pointerType === "touch" ? 56 : 36)
     : findNearestRouteEndpoint(point, event.pointerType === "touch" ? 56 : 36);
   if (!source) {
     setText(facilityReadout, "연결할 노선 끝점에서 대상까지 드래그하세요");
@@ -14636,14 +14712,15 @@ function beginConnectionDrawing(event: PointerEvent, point: L.Point) {
   captureDrawingPointer(event.pointerId);
   map.dragging.disable();
   mapLayers.clear("construction-preview");
-  const route = planningMode
+  const sourceKind: "actual" | "planned" = "kind" in source ? (source as PlanningConnectEndpoint).kind : "actual";
+  const route = sourceKind === "planned"
     ? getActivePlan(false)?.routes.find((item) => item.id === source.routeId)
     : networkState.routes.find((item) => item.id === source.routeId);
-  if (route) showRouteSettingsTarget(route, planningMode ? "planned" : "actual");
+  if (route) showRouteSettingsTarget(route, sourceKind);
   routePlanningController.beginDrawing({
     sourceEntityId: source.routeId,
-    sourceLineId: planningMode ? undefined : source.routeId,
-    sourceBlueprintId: planningMode ? source.routeId : undefined,
+    sourceLineId: sourceKind === "actual" ? source.routeId : undefined,
+    sourceBlueprintId: sourceKind === "planned" ? source.routeId : undefined,
   });
   previewPolyline = L.polyline(
     [map.containerPointToLatLng(source.endpoint)],
@@ -14675,7 +14752,7 @@ function finishConnectionDrawing(
   if (!source) return;
   const releasePoint = points.at(-1) ?? source.endpoint;
   const target = planningMode
-    ? findNearestPlannedRouteEndpoint(releasePoint, 56, source.routeId)
+    ? findNearestPlanningConnectEndpoint(releasePoint, 56, source.routeId)
     : findNearestRouteEndpoint(releasePoint, 56, undefined, source.routeId);
   if (!target || target.routeId === source.routeId) {
     endConnectionSession("cancelled");
@@ -14698,50 +14775,25 @@ function finishConnectionDrawing(
     draftCoordinates: snappedConnectionCoordinates,
   });
   if (planningMode) {
-    const plan = getActivePlan(false);
-    const first = plan?.routes.find((route) => route.id === source.routeId);
-    const second = plan?.routes.find((route) => route.id === target.routeId);
-    if (!plan || !first || !second) return;
-    const bridgeLength = calculateLengthKmPrecise(
+    // 기획 모드 연결: 운영·계획 노선 끝점을 잇고, 연결 방식(노선 병합·환승 연결)을 골라 기획안에 넣는다.
+    const firstKind = "kind" in source ? (source as PlanningConnectEndpoint).kind : "planned";
+    const secondKind = "kind" in target ? (target as PlanningConnectEndpoint).kind : "planned";
+    const bridgeLengthKm = calculateLengthKmPrecise(
       smoothCoordinateBridge([firstPoint.lat, firstPoint.lng], [secondPoint.lat, secondPoint.lng])
         .map(([lat, lng]) => L.latLng(lat, lng)),
     );
-    let connection: ConnectionBlueprint;
-    try {
-      connection = createConnectionBlueprint({
-        id: createId("connection-blueprint"),
-        source: { id: source.routeId, type: "blueprint-endpoint", lineId: first.rootLineId ?? first.id, endpoint: source.atStart ? "start" : "end" },
-        target: { id: target.routeId, type: "blueprint-endpoint", lineId: second.rootLineId ?? second.id, endpoint: target.atStart ? "start" : "end" },
-        connectionType: "physical-track",
-        coordinates: snappedConnectionCoordinates,
-        estimatedCost: Math.round(bridgeLength * baseCostPerKm),
-        estimatedDuration: Math.max(1, Math.round(bridgeLength * baseConstructionDaysPerKm)),
-        existing: plan.connections ?? [],
-      });
-    } catch {
-      // 같은 두 끝점 사이에 이미 연결 설계가 있으면 만들 수 없다. 오류로 끊기지 않게 안내하고 끝낸다.
-      endConnectionSession("cancelled");
-      showToast("두 노선 끝점 사이에 이미 연결 설계가 있습니다.");
-      return;
-    }
-    // 끝점 연결 작도는 여기서 끝난다. 이후는 확인 창에서 확정하거나 닫을 뿐이다.
-    endConnectionSession("completed");
-    openDecisionDialog(
-      `${first.name} ↔ ${second.name} 연결 설계`,
-      `물리적 선로 ${bridgeLength.toFixed(2)}km · 예상 ${formatCost(connection.estimatedCost)}. 확정 전에는 실제 네트워크가 변경되지 않습니다.`,
-      "연결 설계 확정",
-      () => {
-        updatePlan(plan.id, (item) => ({ ...item, connections: [...(item.connections ?? []), connection] }));
-        requestStateSave();
-        renderPlanningDialog();
-        if (activeTool === "merge") updateRouteSettingsCard(activeTool);
-        requestUpdate("blueprint-preview");
-        showToast("물리적 선로 연결 설계를 저장했습니다. 실제 네트워크는 공사 완료 전까지 변경되지 않습니다.");
-      },
-      // 기획안에 설계를 더하는 일이라 위험(빨강) 확인이 아니라 건설 검토 모양으로 연다.
-      "build",
-      "연결 설계 검토",
+    const bridgeCost = Math.round(
+      bridgeLengthKm * baseCostPerKm * cityConfigs[metaState.current.cityId].constructionMultiplier *
+      difficultyConfigs[metaState.current.difficulty].costMultiplier,
     );
+    pendingMerge = {
+      first: { routeId: source.routeId, atStart: source.atStart, endpoint: source.endpoint },
+      second: { routeId: target.routeId, atStart: target.atStart, endpoint: target.endpoint },
+      bridgeLengthKm,
+      bridgeCost,
+      plan: { firstKind, secondKind, coordinates: snappedConnectionCoordinates },
+    };
+    openMergeDialog(pendingMerge);
     return;
   }
   const bridgeLengthKm = calculateLengthKmPrecise(
@@ -14791,6 +14843,27 @@ function renderMergeGuide() {
   }).addTo(editGuideLayer);
 }
 
+/** 기획 모드 연결: 운영 노선과 계획 노선 끝점 중 가장 가까운 것 */
+function findNearestPlanningConnectEndpoint(point: L.Point, thresholdPx: number, excludedRouteId?: string): PlanningConnectEndpoint | null {
+  const planned = findNearestPlannedRouteEndpoint(point, thresholdPx, excludedRouteId);
+  const actual = findNearestRouteEndpoint(point, thresholdPx, undefined, excludedRouteId);
+  const plannedDistance = planned ? point.distanceTo(planned.endpoint) : Number.POSITIVE_INFINITY;
+  const actualDistance = actual ? point.distanceTo(actual.endpoint) : Number.POSITIVE_INFINITY;
+  if (planned && plannedDistance <= actualDistance) return { routeId: planned.routeId, atStart: planned.atStart, endpoint: planned.endpoint, kind: "planned" };
+  if (actual) return { routeId: actual.routeId, atStart: actual.atStart, endpoint: actual.endpoint, kind: "actual" };
+  return null;
+}
+
+/** 연결 대화상자에 보일 노선 정보(운영 또는 계획 노선) */
+function connectRouteInfo(routeId: string, kind: "actual" | "planned") {
+  if (kind === "planned") {
+    const route = getActivePlan(false)?.routes.find((item) => item.id === routeId);
+    return route ? { id: route.id, name: route.name, color: route.color, trainType: normalizeTrainType(route.trainType), lineId: route.rootLineId ?? route.id } : null;
+  }
+  const route = networkState.routes.find((item) => item.id === routeId);
+  return route ? { id: route.id, name: route.name, color: route.color, trainType: routeTrainType(route), lineId: route.id } : null;
+}
+
 function findNearestPlannedRouteEndpoint(point: L.Point, thresholdPx: number, excludedRouteId?: string): PlannedRouteMergeEndpoint | null {
   const plan = getActivePlan(false);
   let best: { endpoint: PlannedRouteMergeEndpoint; distance: number } | null = null;
@@ -14809,13 +14882,14 @@ function findNearestPlannedRouteEndpoint(point: L.Point, thresholdPx: number, ex
 }
 
 function openMergeDialog(merge: PendingMerge) {
-  const first = networkState.routes.find((route) => route.id === merge.first.routeId);
-  const second = networkState.routes.find((route) => route.id === merge.second.routeId);
+  const first = connectRouteInfo(merge.first.routeId, merge.plan?.firstKind ?? "actual");
+  const second = connectRouteInfo(merge.second.routeId, merge.plan?.secondKind ?? "actual");
   if (!first || !second || !mergeDialog) return;
   connectionDialogMode = "merge";
+  const planned = Boolean(merge.plan);
   const transferStationIds = getMergeTransferStationIds(merge);
   // 한 노선에는 한 차종만 다닌다. 차종이 다르면 하나로 잇지 않고 환승 연결만 고를 수 있다.
-  const sameTrainType = routeTrainType(first) === routeTrainType(second);
+  const sameTrainType = first.trainType === second.trainType;
   const choiceModel = getConnectionChoices({
     canMerge: sameTrainType,
     canTransfer: Boolean(transferStationIds),
@@ -14825,7 +14899,7 @@ function openMergeDialog(merge: PendingMerge) {
     mergeDescription,
     sameTrainType
       ? `${first.name}과 ${second.name}의 끝점이 만났습니다. 연결 결과를 선택하세요.`
-      : `${first.name}(${trainCatalog[routeTrainType(first)].label})과 ${second.name}(${trainCatalog[routeTrainType(second)].label})은 차종이 달라 한 노선으로 이을 수 없습니다. 환승 연결만 가능합니다.`,
+      : `${first.name}(${trainCatalog[first.trainType].label})과 ${second.name}(${trainCatalog[second.trainType].label})은 차종이 달라 한 노선으로 이을 수 없습니다. 환승 연결만 가능합니다.`,
   );
   if (mergeConnectionSummary) {
     mergeConnectionSummary.innerHTML = `
@@ -14833,7 +14907,8 @@ function openMergeDialog(merge: PendingMerge) {
       ${renderConnectionTargetCard(escapeHtml(second.name), escapeHtml(second.color), merge.second.atStart ? "시점" : "종점", "B")}
       <div class="dg-row"><span class="dg-row__label">연결 거리</span><span class="dg-row__value">${merge.bridgeLengthKm.toFixed(2)}km</span></div>
       <div class="dg-row"><span class="dg-row__label">예상 비용</span><span class="dg-row__value dg-row__value--metric">${formatCost(merge.bridgeCost)}</span></div>
-      <div class="dg-row"><span class="dg-row__label">완공</span><span class="dg-row__value">확정 즉시</span></div>
+      <div class="dg-row"><span class="dg-row__label">완공</span><span class="dg-row__value">${planned ? "기획안에 추가 · 착공 후 공사 기간" : "확정 즉시"}</span></div>
+      ${planned ? `<div class="dg-row"><span class="dg-row__label">병합 후 이름·색</span><span class="dg-row__value">${escapeHtml(first.name)}(A)</span></div>` : ""}
       <div class="dg-row"><span class="dg-row__label">환승 연결</span><span class="dg-row__value${transferStationIds ? " dg-row__value--ok" : ""}">${transferStationIds ? "● 사용 가능" : "대상 역 없음"}</span></div>`;
   }
   if (mergeChoiceList) {
@@ -14843,13 +14918,14 @@ function openMergeDialog(merge: PendingMerge) {
         renderConnectionChoice(choice.id, escapeHtml(choice.title), escapeHtml(choice.description), choice.id === choiceModel.defaultChoice)
       ).join("")}`;
   }
-  if (mergeLegacyFields) mergeLegacyFields.hidden = false;
+  // 기획 연결의 병합 결과 이름·색은 A 노선을 따른다(병합은 완공 때 적용).
+  if (mergeLegacyFields) mergeLegacyFields.hidden = planned;
   if (mergeNameSelect) mergeNameSelect.innerHTML = `<option value="${first.id}">${escapeHtml(first.name)}</option><option value="${second.id}">${escapeHtml(second.name)}</option>`;
   if (mergeColorSelect)
     mergeColorSelect.innerHTML = `<option value="${first.id}" style="color:${first.color}">${escapeHtml(first.name)} 색상</option><option value="${second.id}" style="color:${second.color}">${escapeHtml(second.name)} 색상</option>`;
   if (confirmMergeButton) {
     confirmMergeButton.disabled = false;
-    confirmMergeButton.textContent = "노선 병합 확정";
+    confirmMergeButton.textContent = planned ? "기획안에 추가" : "노선 병합 확정";
   }
   dialogManager.open("connection");
   bindConnectionDialogListeners();
@@ -14880,10 +14956,12 @@ function bindConnectionDialogListeners() {
       const input = (event.target as HTMLElement).closest<HTMLInputElement>("input[name='connectionChoice']");
       if (!input) return;
       selectedConnectionChoice = input.value as typeof selectedConnectionChoice;
-      if (mergeLegacyFields) mergeLegacyFields.hidden = selectedConnectionChoice !== "merge";
+      if (mergeLegacyFields) mergeLegacyFields.hidden = selectedConnectionChoice !== "merge" || Boolean(pendingMerge?.plan);
       if (confirmMergeButton) {
         confirmMergeButton.textContent =
-          selectedConnectionChoice === "merge"
+          pendingMerge?.plan && selectedConnectionChoice !== "cross"
+            ? "기획안에 추가"
+            : selectedConnectionChoice === "merge"
             ? "노선 병합 확정"
             : selectedConnectionChoice === "transfer"
               ? "환승 연결 확정"
@@ -14899,6 +14977,10 @@ async function confirmConnectionDialog() {
     if (confirmMergeButton) confirmMergeButton.disabled = true;
     try {
       if (!pendingMerge) return;
+      if (pendingMerge.plan && selectedConnectionChoice !== "cross") {
+        savePlannedConnection(pendingMerge);
+        return;
+      }
       if (selectedConnectionChoice === "cross") {
         closeMergeDialog();
         showToast("노선을 연결하지 않고 별도 노선으로 유지했습니다.");
@@ -14913,6 +14995,57 @@ async function confirmConnectionDialog() {
       if (confirmMergeButton && mergeDialog && !mergeDialog.hidden) confirmMergeButton.disabled = false;
     }
   });
+}
+
+/** 기획 모드 연결 확정: 고른 방식(노선 병합 = line-merge, 환승 연결 = transfer)으로 기획안에 연결 설계를 넣는다. */
+function savePlannedConnection(merge: PendingMerge) {
+  const planInfo = merge.plan;
+  const plan = getActivePlan(true);
+  const first = planInfo ? connectRouteInfo(merge.first.routeId, planInfo.firstKind) : null;
+  const second = planInfo ? connectRouteInfo(merge.second.routeId, planInfo.secondKind) : null;
+  if (!planInfo || !plan || !first || !second) return;
+  const transfer = selectedConnectionChoice === "transfer";
+  const stationIds = transfer ? getMergeTransferStationIds(merge) : null;
+  if (transfer && !stationIds) {
+    showError("환승으로 이을 두 역을 찾을 수 없습니다.");
+    return;
+  }
+  const endpointTarget = (routeId: string, kind: "actual" | "planned", lineId: string, atStart: boolean) => ({
+    id: routeId,
+    type: (kind === "planned" ? "blueprint-endpoint" : "line-endpoint") as ConnectionEntityType,
+    lineId,
+    endpoint: (atStart ? "start" : "end") as "start" | "end",
+  });
+  let connection: ConnectionBlueprint;
+  try {
+    connection = createConnectionBlueprint({
+      id: createId("connection-blueprint"),
+      source: transfer
+        ? { id: stationIds![0], type: "station", lineId: first.lineId }
+        : endpointTarget(first.id, planInfo.firstKind, first.lineId, merge.first.atStart),
+      target: transfer
+        ? { id: stationIds![1], type: "station", lineId: second.lineId }
+        : endpointTarget(second.id, planInfo.secondKind, second.lineId, merge.second.atStart),
+      connectionType: transfer ? "transfer" : "line-merge",
+      coordinates: planInfo.coordinates,
+      estimatedCost: transfer ? 0 : merge.bridgeCost,
+      estimatedDuration: transfer ? 1 : Math.max(1, Math.round(merge.bridgeLengthKm * baseConstructionDaysPerKm)),
+      existing: plan.connections ?? [],
+    });
+  } catch {
+    showError("두 노선 사이에 이미 같은 방식의 연결 설계가 있거나 이 방식으로 이을 수 없습니다.");
+    return;
+  }
+  if (transfer) connection = { ...connection, sourceStationId: stationIds![0], targetStationId: stationIds![1], sourceLineId: first.lineId, targetLineId: second.lineId };
+  updatePlan(plan.id, (item) => ({ ...item, connections: [...(item.connections ?? []), connection] }));
+  requestStateSave();
+  renderPlanningDialog();
+  requestUpdate("blueprint-preview");
+  endConnectionSession("completed");
+  closeMergeDialog();
+  showToast(transfer
+    ? `${first.name} ↔ ${second.name} 환승 연결 설계를 기획안에 넣었습니다.`
+    : `${first.name} ↔ ${second.name} 노선 병합 설계를 기획안에 넣었습니다. 착공해 공사가 끝나면 하나의 노선이 됩니다.`);
 }
 
 function redesignConnection() {
