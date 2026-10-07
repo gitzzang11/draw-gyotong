@@ -3383,6 +3383,13 @@ function updateToolHover() {
         hovered = true;
       }
     }
+  } else if (activeTool === "branch" && pendingBranchJunction && !planningMode) {
+    // 분기점(점선 원)을 만든 뒤에는 그 분기점에서 드래그하므로 분기점만 강조한다.
+    const junction = L.latLng(pendingBranchJunction.position.lat, pendingBranchJunction.position.lng);
+    if (map.latLngToContainerPoint(junction).distanceTo(point) <= threshold + 4) {
+      L.circleMarker(junction, { radius: 16, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false }).addTo(toolHoverLayer);
+      hovered = true;
+    }
   } else if (activeTool === "branch") {
     if (planningMode) {
       const snap = findNearestPlannedRoutePoint(point);
@@ -3836,7 +3843,7 @@ function onPointerDown(event: PointerEvent) {
       });
       openDecisionDialog(
         "이 선로 위치에 분기점을 만들까요?",
-        "명시적 junction을 먼저 만든 뒤 같은 위치에서 지선 경로를 드래그합니다. 역은 자동으로 생성되지 않습니다.",
+        "분기점을 먼저 만든 뒤, 그 자리에서 지선 경로를 드래그합니다. 역은 자동으로 생기지 않습니다.",
         "분기점 만들기",
         () => {
           pendingBranchJunction = junction;
@@ -5824,7 +5831,7 @@ function appendPhysicalConnectionSegment(connection: ConnectionBlueprint, source
   const lengthKm = segment.lengthKm;
   const branch: Branch = {
     id: branchId,
-    name: `${targetRoute.name} connection`,
+    name: `${targetRoute.name} 연결선`,
     junctionNodeId: sourceNode.id,
     terminalNodeId,
     segmentIds: [segmentId],
@@ -8882,7 +8889,7 @@ async function confirmPlanConversion() {
       const durationDays = Math.max(1, connection.estimatedDuration);
       const project: ConstructionProject = {
         id: projectId,
-        name: `${connection.connectionType} connection`,
+        name: `${networkState.routes.find((route) => route.id === sourceRouteId)?.name ?? "노선"} ↔ ${networkState.routes.find((route) => route.id === targetRouteId)?.name ?? "노선"} 연결`,
         kind: "plan",
         status: usesConstructionTimeline() ? "scheduled" : "opening-ready",
         routeIds: [sourceRouteId, targetRouteId].filter((id): id is string => Boolean(id)),
