@@ -16716,9 +16716,15 @@ function layoutRailTools() {
     modifyToolsButton.hidden = false;
     for (let index = modeButtons.length - 1; index > 0 && overflows(); index -= 1) railOverflowTools.prepend(modeButtons[index]);
   }
+  // 더보기 안의 도구가 켜져 있으면 그 도구가 더보기 자리를 차지한다(같은 높이라 레일 길이는 그대로).
+  // 도구를 끄면(다시 누르거나 취소) 다음 배치에서 더보기 안으로 돌아가고 더보기가 다시 보인다.
   const overflowActive = railOverflowTools.querySelector<HTMLButtonElement>("[aria-pressed=\"true\"]");
-  modifyToolsButton.setAttribute("aria-pressed", String(Boolean(overflowActive)));
-  setText(railMoreLabel, overflowActive?.querySelector("span")?.textContent ?? "더보기");
+  if (overflowActive && !modifyToolsButton.hidden) {
+    modifyToolsButton.before(overflowActive);
+    modifyToolsButton.hidden = true;
+  }
+  modifyToolsButton.setAttribute("aria-pressed", "false");
+  setText(railMoreLabel, "더보기");
   if (modifyToolsButton.hidden && modifyToolsCard) modifyToolsCard.hidden = true;
 }
 
