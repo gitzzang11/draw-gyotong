@@ -990,6 +990,7 @@ app.innerHTML = `
           <p id="routeSettingsTargetKicker" class="dg-panel__section-label">수정 대상</p>
           <div class="game-inspector__route"><span id="routeSettingsTargetSwatch" class="game-color-swatch game-color-swatch--target" aria-hidden="true"></span><strong id="routeSettingsTargetName">노선을 선택하세요</strong></div>
           <p id="routeSettingsTargetMeta" class="game-inspector__note">지도에서 대상 노선을 선택하면 여기에 표시됩니다.</p>
+          <div id="routeSettingsTargetList" class="game-route-list game-route-picker" role="group" aria-label="연장할 노선" hidden></div>
         </section>
         <section id="routeSettingsEditFields" class="dg-panel__section game-side-panel__fields">
           <label id="draftRouteTrainTypeField" class="dg-field"><span class="dg-field__label">차종 (건설 후 변경 불가)</span><select id="draftRouteTrainTypeSelect" class="dg-input">${TRAIN_TYPES.map((type) => `<option value="${type}"${type === DEFAULT_TRAIN_TYPE ? " selected" : ""}>${trainCatalog[type].label} · ${trainCatalog[type].minCars}~${trainCatalog[type].maxCars}량 · ${trainCatalog[type].speedKmh}km/h</option>`).join("")}</select></label>
@@ -1977,6 +1978,14 @@ const routeSettingsTargetKicker = byId("routeSettingsTargetKicker");
 const routeSettingsTargetSwatch = byId("routeSettingsTargetSwatch");
 const routeSettingsTargetName = byId("routeSettingsTargetName");
 const routeSettingsTargetMeta = byId("routeSettingsTargetMeta");
+const routeSettingsTargetList = byId("routeSettingsTargetList");
+routeSettingsTargetList?.addEventListener("click", (event) => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-extend-target-id]");
+  const kind = button?.dataset.extendTargetKind;
+  const id = button?.dataset.extendTargetId;
+  if (!id || (kind !== "actual" && kind !== "planned")) return;
+  setExtendTarget({ kind, id });
+});
 const routeSettingsEditFields = byId("routeSettingsEditFields");
 const draftRouteNameInput = document.querySelector<HTMLInputElement>("#draftRouteNameInput");
 const draftRouteColorInput = document.querySelector<HTMLInputElement>("#draftRouteColorInput");
@@ -3266,12 +3275,75 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden" && hasActiveGameSession) void saveCurrentSlot("백그라운드 저장");
 });
 
+// ===== 연장 대상 =====
+// 연장 도구는 먼저 연장할 노선을 고른다(노선 설정 상자의 목록 또는 지도에서 노선 탭). 고른 노선의 끝점에서만 드래그해 연장한다.
+// 연장은 대상 노선의 이름·색을 그대로 따르므로 이름·색 입력은 보이지 않는다.
+let extendTarget: { kind: "actual" | "planned"; id: string } | null = null;
+
+function extendTargetRoute(): (RouteLine | PlannedRoute) | null {
+  if (!extendTarget) return null;
+  const route = extendTarget.kind === "actual"
+    ? networkState.routes.find((item) => item.id === extendTarget?.id)
+    : getActivePlan(false)?.routes.find((item) => item.id === extendTarget?.id);
+  return route ?? null;
+}
+
+function setExtendTarget(target: { kind: "actual" | "planned"; id: string }) {
+  extendTarget = target;
+  const route = extendTargetRoute();
+  if (!route) {
+    extendTarget = null;
+    renderExtendTargetList();
+    return;
+  }
+  showRouteSettingsTarget(route, target.kind);
+  setText(routeSettingsTargetMeta, "노선 끝의 둥근 점에서 드래그해 연장하세요.");
+  renderExtendTargetList();
+  requestUpdate("blueprint-preview");
+  setText(facilityReadout, `${route.name}의 끝점에서 드래그해 연장하세요`);
+  playFeedback("select");
+}
+
+function renderExtendTargetList() {
+  const list = routeSettingsTargetList;
+  if (!list) return;
+  list.hidden = activeTool !== "extend";
+  if (list.hidden) return;
+  const planned = (getActivePlan(false)?.routes ?? []).filter((route) => route.coordinates.length >= 2);
+  const actual = networkState.routes.filter((route) => route.coordinates.length >= 2);
+  const item = (route: Pick<RouteLine, "id" | "name" | "color">, kind: "actual" | "planned") => {
+    const selected = extendTarget?.kind === kind && extendTarget.id === route.id;
+    return `<button class="game-route-item" type="button" data-extend-target-kind="${kind}" data-extend-target-id="${escapeHtml(route.id)}" aria-pressed="${selected}">${lineMarkHtml(route)}<span class="game-route-item__text"><strong>${escapeHtml(route.name)}</strong><small>${kind === "actual" ? "운영 노선" : "계획 노선"}</small></span></button>`;
+  };
+  const html = [...actual.map((route) => item(route, "actual")), ...planned.map((route) => item(route, "planned"))].join("")
+    || `<p class="game-inspector__note">연장할 노선이 없습니다.</p>`;
+  if (list.innerHTML !== html) list.innerHTML = html;
+}
+
+/** 지도에서 누른 곳의 노선(운영·계획 중 가장 가까운 것) */
+function findExtendTargetAtPoint(point: L.Point, pointerType: string): { kind: "actual" | "planned"; id: string } | null {
+  const threshold = pointerType === "touch" ? 24 : 16;
+  const actual = findRoutesAtPoint(point, threshold)[0];
+  const plannedSnap = findNearestPlannedRoutePoint(point);
+  const planned = plannedSnap && plannedSnap.distancePx <= threshold ? plannedSnap : null;
+  if (actual && planned) {
+    const actualDistance = nearestScreenPathDistance(point, actual.coordinates);
+    return actualDistance <= planned.distancePx ? { kind: "actual", id: actual.id } : { kind: "planned", id: planned.route.id };
+  }
+  if (actual) return { kind: "actual", id: actual.id };
+  if (planned) return { kind: "planned", id: planned.route.id };
+  return null;
+}
+
 function findPlanningRouteContinuation(point: L.Point, thresholdPx = 56): PlanningRouteContinuation | null {
   if (!planningMode || activeTool !== "extend") return null;
+  // 연장은 고른 노선의 끝점에서만 시작한다.
+  if (!extendTarget) return null;
   const candidates: PlanningRouteContinuation[] = [];
   const plan = getActivePlan(false);
   for (const route of plan?.routes ?? []) {
     if (route.coordinates.length < 2) continue;
+    if (extendTarget.kind !== "planned" || extendTarget.id !== route.id) continue;
     const basePoints = route.coordinates.map(([lat, lng]) => L.latLng(lat, lng));
     candidates.push({ atStart: true, anchor: map.latLngToContainerPoint(basePoints[0]), basePoints, plannedRouteId: route.id, color: route.color });
     candidates.push({ atStart: false, anchor: map.latLngToContainerPoint(basePoints[basePoints.length - 1]), basePoints, plannedRouteId: route.id, color: route.color });
@@ -3279,6 +3351,7 @@ function findPlanningRouteContinuation(point: L.Point, thresholdPx = 56): Planni
   if (activeTool === "extend") {
     for (const route of networkState.routes) {
       if (route.coordinates.length < 2) continue;
+      if (extendTarget.kind !== "actual" || extendTarget.id !== route.id) continue;
       const start = L.latLng(route.coordinates[0][0], route.coordinates[0][1]);
       const endCoordinate = route.coordinates[route.coordinates.length - 1];
       const end = L.latLng(endCoordinate[0], endCoordinate[1]);
@@ -3535,7 +3608,12 @@ function onPointerDown(event: PointerEvent) {
     mapSelectionGestureController.begin(event.pointerId, event.pointerType, point);
     return;
   }
-  const planningContinuation = findPlanningRouteContinuation(point);
+  let planningContinuation = findPlanningRouteContinuation(point);
+  // 연장: 고른 노선 끝점 근처라도 다른 노선의 선 위를 누르면(끝점에서 20px 넘게 떨어짐) 그 노선을 고르는 것으로 본다.
+  if (planningMode && activeTool === "extend" && planningContinuation && point.distanceTo(planningContinuation.anchor) > 20) {
+    const picked = findExtendTargetAtPoint(point, event.pointerType);
+    if (picked && (picked.kind !== extendTarget?.kind || picked.id !== extendTarget?.id)) planningContinuation = null;
+  }
   if (constructionDraft && activePointerId === null && !planningContinuation) {
     map.dragging.enable();
     return;
@@ -3610,7 +3688,15 @@ function onPointerDown(event: PointerEvent) {
   if (activeTool === "extend") {
     if (planningMode) {
       if (!planningContinuation) {
-        setText(facilityReadout, "계획 노선의 시작점 또는 끝점에서 드래그하세요");
+        // 끝점이 아닌 곳을 누르면: 노선 위면 그 노선을 연장 대상으로 고른다.
+        const picked = findExtendTargetAtPoint(point, event.pointerType);
+        if (picked) {
+          map.dragging.enable();
+          setExtendTarget(picked);
+          return;
+        }
+        setText(facilityReadout, extendTarget ? "고른 노선의 끝점에서 드래그하세요" : "연장할 노선을 목록이나 지도에서 먼저 고르세요");
+        map.dragging.enable();
         return;
       }
     } else {
@@ -8185,7 +8271,8 @@ function reconcileBlueprints() {
           name: route.name,
         });
       }
-      if (planningMode && (activeTool === "extend" || activeTool === "merge") && isActive && remainingSegments.length > 0) {
+      const showPlannedHandles = activeTool === "merge" || (activeTool === "extend" && extendTarget?.kind === "planned" && extendTarget.id === route.id);
+      if (planningMode && showPlannedHandles && isActive && remainingSegments.length > 0) {
         renderExtensionEndpointHandle(L.latLng(...route.coordinates[0]), route.color);
         renderExtensionEndpointHandle(L.latLng(...route.coordinates[route.coordinates.length - 1]), route.color);
       }
@@ -8255,7 +8342,7 @@ function reconcileBlueprints() {
   }
   blueprintRenderer.reconcileEntities(entities);
   if (planningMode && activeTool === "extend") {
-    for (const route of networkState.routes.filter((route) => route.coordinates.length >= 2)) {
+    for (const route of networkState.routes.filter((route) => route.coordinates.length >= 2 && extendTarget?.kind === "actual" && extendTarget.id === route.id)) {
       renderExtensionEndpointHandle(L.latLng(...route.coordinates[0]), route.color);
       renderExtensionEndpointHandle(L.latLng(...route.coordinates[route.coordinates.length - 1]), route.color);
     }
@@ -12970,7 +13057,7 @@ function setTool(tool: ToolMode) {
   const labels: Record<ToolMode, [string, string[]]> = {
     pan: ["지도 탐색", ["한 손가락 이동", "핀치 줌"]],
     route: ["노선 건설", ["드래그로 노선", "확정 후 같은 도구로 계속 건설"]],
-    extend: planningMode ? ["계획 노선 연장", ["계획 노선의 시작점 또는 끝점에서 시작", "확정 후 다른 끝점에서 계속 연장"]] : ["노선 연장", ["기존 노선의 끝점에서 시작", "끝점을 누른 뒤 드래그"]],
+    extend: planningMode ? ["노선 연장", ["연장할 노선을 목록이나 지도에서 고르기", "고른 노선의 끝점에서 드래그"]] : ["노선 연장", ["기존 노선의 끝점에서 시작", "끝점을 누른 뒤 드래그"]],
     edit: ["경로 편집", ["노선 선택 후 핸들 드래그", "비용·환급 자동 계산"]],
     eraser: planningMode
       ? ["계획 시설 지우개", ["지울 계획 시설을 가로질러 드래그", "확정 후 계속 다른 범위를 삭제"]]
@@ -16778,6 +16865,7 @@ function closeSettings() {
 }
 
 function updateRouteSettingsCard(tool: ToolMode) {
+  if (tool !== "extend") extendTarget = null;
   const shouldShow = tool === "route" || tool === "extend" || tool === "branch" || tool === "merge";
   if (!routeSettingsCard) return;
   routeSettingsCard.hidden = !shouldShow;
@@ -16785,11 +16873,12 @@ function updateRouteSettingsCard(tool: ToolMode) {
   routeSettingsCard.dataset.context = tool;
   const hasTargetContext = tool === "extend" || tool === "branch" || tool === "merge";
   if (routeSettingsTarget) routeSettingsTarget.hidden = !hasTargetContext;
-  if (routeSettingsEditFields) routeSettingsEditFields.hidden = tool === "branch" || tool === "merge";
+  // 연장·분기·연결은 대상 노선의 이름·색·차종을 따르므로 입력을 보이지 않는다.
+  if (routeSettingsEditFields) routeSettingsEditFields.hidden = tool !== "route";
   if (hasTargetContext) {
     setText(routeSettingsTargetKicker, tool === "extend" ? "연장 대상" : tool === "branch" ? "분기 대상" : "연결 대상");
     setText(routeSettingsTargetName, "노선을 선택하세요");
-    setText(routeSettingsTargetMeta, tool === "merge" ? "첫 번째 노선의 끝점을 선택하세요." : "지도에서 수정할 노선을 선택하세요.");
+    setText(routeSettingsTargetMeta, tool === "merge" ? "첫 번째 노선의 끝점을 선택하세요." : tool === "extend" ? "아래 목록이나 지도에서 연장할 노선을 고르세요." : "지도에서 수정할 노선을 선택하세요.");
     routeSettingsTarget?.style.setProperty("--target-route-color", "#64748b");
     routeSettingsTargetSwatch?.style.setProperty("--target-route-color", "#64748b");
   }
@@ -16798,8 +16887,15 @@ function updateRouteSettingsCard(tool: ToolMode) {
   if (draftRouteTrainTypeField) draftRouteTrainTypeField.hidden = tool !== "route";
   if (draftRouteTrainTypeSelect) draftRouteTrainTypeSelect.value = draftRouteTrainType;
   setColorPickerValue(draftRouteColorInput, selectedColor);
-  setText(routeSettingsHeaderName, draftRouteName || "노선 설정");
+  setText(routeSettingsHeaderName, tool === "extend" ? "연장할 노선" : draftRouteName || "노선 설정");
   routeSettingsHeaderSwatch?.style.setProperty("background-color", selectedColor);
+  renderExtendTargetList();
+  const target = tool === "extend" ? extendTargetRoute() : null;
+  if (target && extendTarget) {
+    showRouteSettingsTarget(target, extendTarget.kind);
+    setText(routeSettingsHeaderName, "연장할 노선");
+    setText(routeSettingsTargetMeta, "노선 끝의 둥근 점에서 드래그해 연장하세요.");
+  }
 }
 
 function showRouteSettingsTarget(
