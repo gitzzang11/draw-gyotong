@@ -2713,6 +2713,39 @@ document.addEventListener("keydown", (event) => {
   setRailModesOpen(false);
   railModeNowButton.focus();
 });
+// 이름 칸에서 엔터를 누르면 옆의 저장 버튼을 누른 것과 같게 한다(바로 반영되는 칸은 입력만 마친다).
+// 한글 조합 중 엔터는 조합을 끝내는 키이므로, 조합이 끝난 뒤(compositionend) 저장한다.
+const enterSaveTargets: Record<string, string | null> = {
+  lineNameInput: "#saveLineManagerButton",
+  stationManagerName: '[data-station-manager-action="save-name"]',
+  planNameInput: "#savePlanButton",
+  networkTitleInput: "#saveNetworkTitleButton",
+  draftRouteNameInput: null,
+};
+function submitNameInput(input: HTMLInputElement) {
+  const selector = enterSaveTargets[input.id];
+  if (selector === undefined || input.readOnly) return;
+  if (selector === null) {
+    input.blur();
+    return;
+  }
+  const button = (input.closest(".dg-panel, .dg-dialog, section") ?? document).querySelector<HTMLButtonElement>(selector)
+    ?? document.querySelector<HTMLButtonElement>(selector);
+  if (button && !button.disabled && !button.hidden) button.click();
+}
+document.addEventListener("keydown", (event) => {
+  const input = event.target;
+  if (event.key !== "Enter" || !(input instanceof HTMLInputElement) || !(input.id in enterSaveTargets)) return;
+  event.preventDefault();
+  if (event.isComposing) {
+    const afterComposition = () => setTimeout(() => submitNameInput(input), 0);
+    input.addEventListener("compositionend", afterComposition, { once: true });
+    // 조합 종료가 오지 않으면 다음 입력의 조합 종료에 저장되지 않게 대기를 거둔다.
+    setTimeout(() => input.removeEventListener("compositionend", afterComposition), 1000);
+    return;
+  }
+  submitNameInput(input);
+});
 compactRailQuery.addEventListener("change", () => syncRail());
 // 작도 시작(첫 터치)·끝을 레일 밀도에 바로 반영한다. 작도 처리기가 상태를 바꾼 뒤 확인한다.
 for (const type of ["pointerdown", "pointerup", "pointercancel"] as const) {
