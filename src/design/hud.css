@@ -75,6 +75,9 @@ body.game-rail-compact { --hud-left-clear: calc(var(--edge-inset-left) + var(--r
   grid-template-columns: 1fr;
   border-bottom: var(--line-hair) solid var(--edge);
 }
+/* 펼치면 현재 모드 칸 자리에 목록이 열리고, 현재 모드가 맨 위에 온다 */
+.game-mode-rail.dg-rail--compact.game-mode-rail--modes-open .dg-rail__mode-now { display: none; }
+.game-mode-rail .dg-rail__mode[aria-selected="true"] { order: -1; }
 .game-mode-rail.dg-rail--compact .dg-rail__mode {
   min-height: var(--touch-min);
   border-right: 0;

@@ -2671,12 +2671,15 @@ modifyToolsButton?.addEventListener("click", () => {
   modifyToolsCard.hidden = !modifyToolsCard.hidden;
   modifyToolsButton.setAttribute("aria-expanded", String(!modifyToolsCard.hidden));
 });
-railModeNowButton?.addEventListener("click", () => {
-  const open = railModeNowButton.getAttribute("aria-expanded") !== "true";
-  railModeNowButton.setAttribute("aria-expanded", String(open));
-  workspaceModeBar?.classList.toggle("game-mode-rail--modes-open", open);
-  layoutRailTools();
-});
+// 모드 선택 펼치기·접기: 레일 높이를 부드럽게 바꾼다. 펼친 목록은 현재 모드가 맨 위(현재 모드 칸 자리)에 온다(hud.css).
+function setRailModesOpen(open: boolean) {
+  animateHeightChange(workspaceModeBar, () => {
+    railModeNowButton?.setAttribute("aria-expanded", String(open));
+    workspaceModeBar?.classList.toggle("game-mode-rail--modes-open", open);
+    layoutRailTools();
+  });
+}
+railModeNowButton?.addEventListener("click", () => setRailModesOpen(railModeNowButton.getAttribute("aria-expanded") !== "true"));
 compactRailQuery.addEventListener("change", () => syncRail());
 // 작도 시작(첫 터치)·끝을 레일 밀도에 바로 반영한다. 작도 처리기가 상태를 바꾼 뒤 확인한다.
 for (const type of ["pointerdown", "pointerup", "pointercancel"] as const) {
@@ -2705,7 +2708,15 @@ document.addEventListener("keydown", (event) => {
   modifyToolsButton?.setAttribute("aria-expanded", "false");
   modifyToolsButton?.focus();
 });
-workspaceModeTabs.forEach((tab) => tab.addEventListener("click", () => setWorkspaceMode(tab.dataset.workspaceMode as WorkspaceMode)));
+workspaceModeTabs.forEach((tab) => tab.addEventListener("click", () => {
+  const mode = tab.dataset.workspaceMode as WorkspaceMode;
+  // 이미 선택된 모드를 누르면 목록만 접는다(도구·작도를 초기화하지 않는다).
+  if (mode === workspaceMode) {
+    setRailModesOpen(false);
+    return;
+  }
+  animateHeightChange(workspaceModeBar, () => setWorkspaceMode(mode));
+}));
 selectTool?.addEventListener("click", () => {
   // 노선 목록이 열려 있으면 닫고 탐색으로 돌아온다.
   if (leftRouteWindow && !leftRouteWindow.hidden) closeLeftRouteWindow();
