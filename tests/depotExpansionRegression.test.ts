@@ -183,6 +183,24 @@ describe("depot manager expansion confirmation", () => {
 });
 
 describe("depot expansion persistence", () => {
+  it("plays the construction result only after a successful save, and stays silent on failure", async () => {
+    const { context } = depotContext();
+    const sounds: string[] = [];
+    context.playFeedback = (kind: string) => sounds.push(kind);
+    let finishSave!: () => void;
+    context.flushStateSave = () => new Promise<void>((resolve) => { finishSave = resolve; });
+    const action = context.expandDepot("depot");
+    expect(sounds).toEqual([]);
+    finishSave();
+    await action;
+    expect(sounds).toEqual(["build"]);
+
+    sounds.length = 0;
+    context.flushStateSave = async () => { throw new Error("disk full"); };
+    await context.expandDepot("depot");
+    expect(sounds).toEqual([]);
+  });
+
   it("restores depot fields, cash, spending and history after storage fails", async () => {
     const { context, snapshot, errors, toasts } = depotContext();
     const before = snapshot();

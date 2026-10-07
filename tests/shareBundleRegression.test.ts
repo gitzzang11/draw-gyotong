@@ -189,6 +189,7 @@ function clonedPlan(operation: "import" | "duplicate", original = plan()) {
   const constructionState = { plans: [original], replacePlans(values: ConstructionPlan[]) { this.plans = values; } };
   const context = applicationContext(["recalculatePlan", "cloneImportedPlan", "duplicateActivePlan"], {
     constructionState, getActivePlan: () => constructionState.plans[0], activePlanId: original.id, redoStack: [],
+    playFeedback: () => {},
   });
   if (operation === "import") return { original, copy: context.cloneImportedPlan(original) as ConstructionPlan };
   context.duplicateActivePlan();

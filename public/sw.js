@@ -4,7 +4,7 @@ const TILE_CACHE = `${CACHE_VERSION}-tiles`;
 
 // 앱 화면을 띄우는 최소 파일은 설치 시 미리 저장한다. 지도 타일은 용량이 크므로
 // 사용자가 실제로 본 영역만 fetch 이벤트에서 별도 캐시에 쌓는다.
-const APP_SHELL = ["/", "/manifest.webmanifest"];
+const APP_SHELL = ["/", "/manifest.webmanifest", "/audio/ui-click.wav", "/audio/plan-pencil.wav", "/audio/build-rail.wav", "/audio/demolish-debris.wav"];
 const TILE_HOSTS = new Set([
   "tile.openstreetmap.org",
   "a.tile.openstreetmap.org",

@@ -1,4 +1,6 @@
 import L, { type GeoJSON, type LatLng, type LatLngExpression, type TileLayer } from "leaflet";
+import { SoundFeedback, type SoundKind } from "./audio/soundFeedback.ts";
+import { bindUiSoundFeedback } from "./audio/uiSoundFeedback.ts";
 import "./legacy.css";
 import "./design/tokens.css";
 import "./design/components.css";
@@ -1235,11 +1237,11 @@ app.innerHTML = `
         <div class="dg-panel__actions">
           <button id="cancelConstructionButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
           <strong id="headerPreviewCost" class="game-review__cost dg-panel__actions-push">0억</strong>
-          <button id="confirmConstructionButton" class="dg-btn dg-btn--primary" type="button" disabled>건설 확정</button>
+          <button id="confirmConstructionButton" data-sound="result" class="dg-btn dg-btn--primary" type="button" disabled>건설 확정</button>
         </div>
       </div>
       <!-- 이전 최소화 머리글용 확정 버튼. 동작 연결을 유지하려고 숨겨 둔다. -->
-      <button id="headerConfirmConstructionButton" class="dg-hook" type="button" hidden>건설 확정</button>
+      <button id="headerConfirmConstructionButton" data-sound="result" class="dg-hook" type="button" hidden>건설 확정</button>
     </aside>
 
     <section id="diagramScreen" class="dg-workspace game-workspace game-diagram" hidden aria-labelledby="diagramTitle">
@@ -1504,7 +1506,7 @@ app.innerHTML = `
           <button id="cancelPlanConversionButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">취소</button>
           <button id="fundPlanWithLoanButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button" hidden>대출 받기…</button>
           <strong id="planConversionCost" class="game-review__cost dg-panel__actions-push">0억</strong>
-          <button id="confirmPlanConversionButton" class="dg-btn dg-btn--primary" type="button"><span>선택 항목 건설</span></button>
+          <button id="confirmPlanConversionButton" data-sound="result" class="dg-btn dg-btn--primary" type="button"><span>선택 항목 건설</span></button>
         </div>
       </section>
     </div>
@@ -2507,7 +2509,11 @@ let selectedStatisticsStationId = "";
 let autoSaveTimer = 0;
 let settings: GameSettings = loadSettings();
 applyDocumentTheme();
-let audioContext: AudioContext | null = null;
+const soundFeedback = new SoundFeedback({
+  enabled: () => settings.soundEnabled,
+  visible: () => !document.hidden,
+});
+bindUiSoundFeedback(document, soundFeedback);
 let toastTimer = 0;
 let trainInteractionLockedUntil = 0;
 let loadingComplete = false;
@@ -3662,6 +3668,7 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
 }
 
 function activateMapSelection(data: MapSelectionData) {
+  playFeedback("select");
   if (data.kind === "train") {
     // 열차를 누르면 그 열차 정보만 연다(노선 선택·강조는 하지 않는다).
     openTrainInfo(data.target.key);
@@ -4439,7 +4446,7 @@ function erasePlannedAssets(
   renderPlanningDialog();
   requestUpdate("blueprint-preview");
   showToast("드래그 범위의 계획 시설을 삭제했습니다.");
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function getBuiltEraseSelection(stroke: L.Point[]) {
@@ -4584,7 +4591,7 @@ function demolishBuiltAssets(selection: { routeHits: Map<string, Set<number>>; s
   requestStateSave("immediate");
   requestUpdate("network-structure", selectedRouteId ?? undefined);
   showToast(`범위 안의 건설 시설을 철거했습니다${refund > 0 ? ` · ${formatCost(refund)} 환급` : ""}.`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function findNearestStationAtPoint(point: L.Point, thresholdPx: number) {
@@ -4631,7 +4638,7 @@ function demolishStations(stationIds: string[]) {
   requestStateSave("immediate");
   requestUpdate("network-structure", selectedRouteId ?? undefined);
   showToast(`${removedIds.size}개 역을 철거했습니다.`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function finishRouteDrawing(points: L.Point[], extension: RouteExtension | null = null) {
@@ -4651,6 +4658,7 @@ function finishRouteDrawing(points: L.Point[], extension: RouteExtension | null 
     plannedExtension,
     plannedRouteExtension,
   });
+  playFeedback("select");
 }
 
 function finishBranchDrawing(points: L.Point[], branch: RouteBranchDraft | null) {
@@ -4661,6 +4669,7 @@ function finishBranchDrawing(points: L.Point[], branch: RouteBranchDraft | null)
     return;
   }
   stageRouteDraft("branch", latLngs, { branch });
+  playFeedback("select");
 }
 
 function finishPlanningBranchDrawing(points: L.Point[], branch: PlanningBranchDraft | null) {
@@ -4670,6 +4679,7 @@ function finishPlanningBranchDrawing(points: L.Point[], branch: PlanningBranchDr
   }
   const latLngs = points.map((point) => map.containerPointToLatLng(point));
   stageRouteDraft("branch", latLngs, { planningBranch: branch });
+  playFeedback("select");
 }
 
 function finishRepairDrawing(points: L.Point[], repair: RouteRepair | null) {
@@ -4686,6 +4696,7 @@ function finishRepairDrawing(points: L.Point[], repair: RouteRepair | null) {
   }
   const latLngs = snappedPoints.map((point) => map.containerPointToLatLng(point));
   stageRouteDraft("repair", latLngs, { repair });
+  playFeedback("select");
 }
 
 function finishDepotDrawing(points: L.Point[]) {
@@ -4697,6 +4708,7 @@ function finishDepotDrawing(points: L.Point[]) {
   const connectedRouteIds = findRoutesNearPolygon(latLngs, 30);
   const connectedPlannedRouteIds = planningMode ? findPlannedRoutesNearPolygon(latLngs, 30) : [];
   stageDepotDraft(latLngs, connectedRouteIds, connectedPlannedRouteIds);
+  playFeedback("select");
 }
 
 function prepareDraftAnalysis(analysis: ConstructionAnalysis) {
@@ -5021,6 +5033,7 @@ function openDemolitionReview(review: DemolitionReview) {
     headerConfirmConstructionButton.disabled = false;
     headerConfirmConstructionButton.textContent = review.confirmLabel;
   }
+  playFeedback("select");
 }
 
 function cancelDemolitionReview() {
@@ -5031,6 +5044,7 @@ function cancelDemolitionReview() {
 }
 
 function cancelActiveReview() {
+  if (demolitionReview || constructionDraft) playFeedback("cancel");
   if (demolitionReview) {
     cancelDemolitionReview();
     return;
@@ -5104,7 +5118,7 @@ async function confirmConstructionDraft() {
     if (routePlanningController.session?.stage === "committing") {
       routePlanningController.transition("completed");
     }
-    playFeedback("confirm");
+    playFeedback("build");
   } catch (error) {
     document.body.classList.remove("construction-reviewing");
     constructionDraft = null;
@@ -5691,7 +5705,7 @@ function cancelConstructionProjects(plan: ConstructionCancelPlan, refund: number
   requestUpdates(["network-structure", "plan-conversion", "construction-progress"]);
   renderConstructionManager();
   showToast(`공사 ${cancelled.length}건을 취소했습니다 · ${formatCost(refund)} 환급`);
-  playFeedback("confirm");
+  playFeedback("cancel");
 }
 
 function renderConstructionProjectCard(project: ConstructionProject) {
@@ -6710,6 +6724,7 @@ function selectTransferStation(point: L.Point) {
   selectedPlannedStationIds = selectedManualTransferEndpoints.filter((item) => item.kind === "planned").map((item) => item.id);
   const label = endpoint.kind === "actual" ? actual?.name ?? "기존역" : planned?.name ?? "계획역";
   if (selectedManualTransferEndpoints.length < 2) {
+    playFeedback("select");
     setText(facilityReadout, `${label} 선택 · 연결할 두 번째 역을 선택하세요`);
     requestUpdate("selection", endpoint.kind === "actual" ? endpoint.id : undefined);
     return;
@@ -6721,6 +6736,7 @@ function selectTransferStation(point: L.Point) {
   if (plannedStationIds.length === 0) {
     createTransferGroup(actualStationIds, false);
     showToast("기존역 환승 그룹을 만들었습니다.");
+    playFeedback("build");
   } else if (plan) {
     const selectedPoints = [
       ...actualStationIds.map((id) => networkState.stations.find((station) => station.id === id)).filter(Boolean).map((station) => L.latLng((station as Station).position[0], (station as Station).position[1])),
@@ -6740,6 +6756,7 @@ function selectTransferStation(point: L.Point) {
         transfers: [...item.transfers, { id: createId("planned-transfer"), stationIds: plannedStationIds, actualStationIds, expectedEffect: Math.round(Math.max(4, 22 - distance / 80)), completed: false }],
       }));
     showToast(duplicate ? "이미 같은 환승 계획이 있습니다." : "환승 계획을 추가했습니다.");
+    playFeedback(duplicate ? "select" : "plan");
   }
   selectedManualTransferEndpoints = [];
   selectedTransferStationIds = [];
@@ -6768,7 +6785,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
     if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
     setText(facilityReadout, "남아 있던 환승 정보를 정리하고 각 노선의 일반역으로 분리했습니다");
     showToast("손상된 환승 연결을 복구하고 일반역으로 분리했습니다.");
-    playFeedback("confirm");
+    playFeedback("demolish");
     return;
   }
 
@@ -6799,7 +6816,7 @@ function removeTransferGroup(transferGroupId: string, focusedStationId?: string)
   if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
   setText(facilityReadout, "환승 해제 완료 · 각 노선의 역을 개별 일반역으로 전환했습니다");
   showToast(`${memberNames.join(" · ") || "환승역"} 환승을 해제하고 각 노선의 일반역으로 분리했습니다.`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function removeStandaloneMultiRouteStation(station: Station) {
@@ -6816,7 +6833,7 @@ function removeStandaloneMultiRouteStation(station: Station) {
   if (diagramScreen && !diagramScreen.hidden) renderMetroDiagram();
   setText(facilityReadout, "잔존 환승역을 각 노선의 개별 일반역으로 분리했습니다");
   showToast(`${station.name}역의 남아 있던 환승 취급을 해제했습니다.`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function separateTransferStations(memberIds: Set<string>) {
@@ -8083,7 +8100,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
     requestUpdate("blueprint-preview");
     resumePlanningTool(continuingTool);
     showToast("계획에 저장했습니다. 같은 도구로 계속 작업할 수 있습니다.");
-    playFeedback("confirm");
+    playFeedback("plan");
   } catch (error) {
     stateRecoveryCoordinator.recover(before, {
       scope: "partial",
@@ -8113,6 +8130,7 @@ function resumePlanningTool(tool: ToolMode) {
 }
 
 function setWorkspaceMode(nextMode: WorkspaceMode) {
+  const changed = workspaceMode !== nextMode;
   if (constructionDraft) cancelConstructionDraft();
   if (demolitionReview) cancelDemolitionReview();
   workspaceMode = nextMode;
@@ -8153,6 +8171,7 @@ function setWorkspaceMode(nextMode: WorkspaceMode) {
   };
   setHint(hints[nextMode]);
   requestUpdate("route-style", selectedRouteId ?? undefined);
+  if (changed) playFeedback(`mode-${nextMode}`);
 }
 
 function togglePlanningMode() {
@@ -8173,6 +8192,7 @@ function createNewPlan() {
   requestStateSave();
   renderPlanningDialog();
   requestUpdate("blueprint-preview");
+  playFeedback("plan");
 }
 
 function duplicateActivePlan() {
@@ -8188,6 +8208,7 @@ function duplicateActivePlan() {
   requestStateSave();
   renderPlanningDialog();
   requestUpdate("blueprint-preview");
+  playFeedback("plan");
 }
 
 function deleteActivePlan() {
@@ -8205,6 +8226,7 @@ function deleteActivePlan() {
       requestStateSave();
       renderPlanningDialog();
       requestUpdate("blueprint-preview");
+      playFeedback("demolish");
     },
   );
 }
@@ -8225,6 +8247,7 @@ function saveActivePlanMetadata() {
   renderPlanningDialog();
   requestUpdate("blueprint-preview");
   showToast("계획 정보를 저장했습니다.");
+  playFeedback("plan");
 }
 
 function openPlanningDialog() {
@@ -8321,6 +8344,7 @@ function deletePlannedStation(planId: string, stationId: string) {
   renderPlanningDialog();
   requestUpdate("blueprint-preview");
   showToast("계획역을 삭제했습니다.");
+  playFeedback("demolish");
 }
 
 function handlePlanAssetAction(action: string, assetId: string) {
@@ -8363,6 +8387,7 @@ function handlePlanAssetAction(action: string, assetId: string) {
   requestStateSave();
   renderPlanningDialog();
   requestUpdate("blueprint-preview");
+  playFeedback(action.startsWith("delete-") ? "demolish" : "plan");
 }
 
 function renderPlanComparison() {
@@ -8450,6 +8475,7 @@ function createPlannedStationAt(point: L.Point) {
   if (settings.autoStationNaming) {
     void refineAutomaticStationName({ kind: "planned", id: station.id, planId: plan.id, initialName: station.name });
   }
+  playFeedback("plan");
 }
 
 function reconcileBlueprints() {
@@ -9097,7 +9123,7 @@ async function confirmPlanConversion() {
       : convertedPlan && isPlanFullyConverted(convertedPlan)
         ? "계획 전체를 착공했습니다. 공사가 모두 끝나면 기획 목록에서 정리됩니다."
         : "선택한 계획 항목을 실제 건설로 전환했습니다.");
-    playFeedback("confirm");
+    playFeedback("build");
   } catch (error) {
     stateRecoveryCoordinator.recover(before, {
       scope: "partial",
@@ -11711,7 +11737,7 @@ function demolishDepots(depotIdsToRemove: string[]) {
   requestStateSave("immediate");
   requestUpdate("blueprint-preview", selectedRouteId ?? undefined);
   showToast(`${removedIds.size}개 차량기지를 철거했습니다.`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function renderStatisticsScreen() {
@@ -13149,6 +13175,7 @@ async function expandDepot(id: string, expected?: { level: number; cost: number;
     undoStack = [...undoStack, before].slice(-maxHistory);
     redoStack = [];
     showToast("차량기지를 확장했습니다.");
+    playFeedback("build");
     return true;
   } catch (error) {
     if (!hasActiveGameSession || metaState.current.slotId !== slotId || metaState.current.cityId !== cityId) return false;
@@ -14272,7 +14299,7 @@ function demolishWholeLine(routeId: string) {
   closeLineManager();
   requestUpdate("network-structure");
   showToast(`${route.name} 노선과 전용 역 ${removableStationIds.size}개를 철거했습니다.`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function renderEditHandles() {
@@ -14522,7 +14549,7 @@ async function erasePlannedRouteRange(planId: string, routeId: string, startInde
     renderPlanningDialog();
     requestUpdate("blueprint-preview");
     showToast("선택한 계획 구간을 지웠습니다. 실행 취소로 복원할 수 있습니다.");
-    playFeedback("confirm");
+    playFeedback("demolish");
   } catch (error) {
     stateRecoveryCoordinator.recover(before, {
       scope: "partial",
@@ -14602,6 +14629,7 @@ function openDecisionDialog(message: string, warning: string, confirmLabel: stri
   pendingDecision = action;
   dialogManager.open("decision");
   bindDecisionDialogListeners();
+  playFeedback("select");
 }
 
 function closeDecisionDialog() {
@@ -14706,7 +14734,7 @@ function splitRouteAtRange(routeId: string, startIndex: number, endIndex: number
   selectRoute(routeId, false);
   requestUpdate("network-structure", routeId);
   showToast(`${route.name}을 두 노선으로 분리했습니다 · ${formatCost(refund)} 환급`);
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function eraseRouteEndRange(route: RouteLine, remainingCoordinates: Array<[number, number]>, removedLength: number) {
@@ -14746,7 +14774,7 @@ function eraseRouteEndRange(route: RouteLine, remainingCoordinates: Array<[numbe
   selectRoute(remaining?.id ?? null, false);
   requestUpdate("network-structure", remaining?.id);
   showToast(remaining ? route.name + "의 끝 구간을 철거했습니다 · " + formatCost(refund) + " 환급" : route.name + "을 철거했습니다 · " + formatCost(refund) + " 환급");
-  playFeedback("confirm");
+  playFeedback("demolish");
 }
 
 function splitFleetBetweenRoutes(firstId: string, secondId: string) {
@@ -15109,6 +15137,7 @@ function savePlannedConnection(merge: PendingMerge) {
   showToast(transfer
     ? `${first.name} ↔ ${second.name} 환승 연결 설계를 기획안에 넣었습니다.`
     : `${first.name} ↔ ${second.name} 노선 병합 설계를 기획안에 넣었습니다. 착공해 공사가 끝나면 하나의 노선이 됩니다.`);
+  playFeedback("plan");
 }
 
 function redesignConnection() {
@@ -16289,6 +16318,7 @@ function undo() {
   });
   undoStack = undoStack.slice(0, -1);
   requestStateSave();
+  playFeedback("cancel");
 }
 
 function redo() {
@@ -16301,6 +16331,7 @@ function redo() {
   });
   redoStack = redoStack.slice(0, -1);
   requestStateSave();
+  playFeedback("confirm");
 }
 
 function cloneState(): SaveState {
@@ -17014,6 +17045,7 @@ function loadSettings(): GameSettings {
 
 function updateSettings(patch: Partial<GameSettings>) {
   settings = { ...settings, ...patch };
+  if (!settings.soundEnabled) soundFeedback.stop();
   localStorage.setItem("draw-gyotong-settings", JSON.stringify(settings));
   applySettingsToUi();
   if ("autoSaveEnabled" in patch || "autoSaveIntervalSeconds" in patch) startAutoSave();
@@ -17259,27 +17291,9 @@ async function clearMapCache() {
   }
 }
 
-function playFeedback(kind: "select" | "build" | "confirm") {
-  if (settings.hapticsEnabled) navigator.vibrate?.(kind === "build" ? [12, 24, 18] : kind === "confirm" ? [18, 20, 28] : 10);
-  if (!settings.soundEnabled) return;
-  try {
-    audioContext ??= new AudioContext();
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    const now = audioContext.currentTime;
-    const frequency = kind === "build" ? 520 : kind === "confirm" ? 720 : 380;
-    oscillator.type = kind === "build" ? "triangle" : "sine";
-    oscillator.frequency.setValueAtTime(frequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(frequency * (kind === "confirm" ? 1.35 : 1.08), now + 0.08);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.045, now + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
-    oscillator.connect(gain).connect(audioContext.destination);
-    oscillator.start(now);
-    oscillator.stop(now + 0.13);
-  } catch {
-    // Audio is optional and can be blocked until the first user gesture.
-  }
+function playFeedback(kind: SoundKind) {
+  if (settings.hapticsEnabled) navigator.vibrate?.(kind === "build" || kind === "demolish" ? [12, 24, 18] : kind === "confirm" || kind === "plan" ? [18, 20, 28] : 10);
+  soundFeedback.play(kind);
 }
 
 function updateLoadingProgress(progress: number, status: string) {
@@ -17338,6 +17352,7 @@ function showToast(message: string) {
 }
 
 function showError(message: string, retry?: () => void) {
+  playFeedback("error");
   retryAction = retry ?? null;
   setText(errorMessage, message);
   if (errorRetryButton) errorRetryButton.hidden = !retry;
