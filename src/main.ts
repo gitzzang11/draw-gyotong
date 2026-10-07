@@ -1813,6 +1813,11 @@ stationInteractionPane.style.pointerEvents = "none";
 const routeSelectionPane = map.createPane("routeSelectionPane");
 routeSelectionPane.style.zIndex = "460";
 routeSelectionPane.style.pointerEvents = "none";
+// 지도 편집 안내(분기점·연장 끝점·호버 강조·철거 대상)는 노선 선 위, 역 기호 아래에 그린다.
+const mapGuidePane = map.createPane("mapGuidePane");
+mapGuidePane.style.zIndex = "620";
+mapGuidePane.style.pointerEvents = "none";
+
 const populationDensityPane = map.createPane("populationDensityPane");
 populationDensityPane.style.zIndex = "350";
 populationDensityPane.style.pointerEvents = "none";
@@ -3352,7 +3357,7 @@ function clearToolHover() {
 function drawRouteHover(paths: LatLng[][], color: string) {
   for (const path of paths) {
     if (path.length < 2) continue;
-    L.polyline(path, { color, weight: 18, opacity: 0.32, lineCap: "round", lineJoin: "round", interactive: false }).addTo(toolHoverLayer);
+    L.polyline(path, { color, weight: 18, opacity: 0.32, lineCap: "round", lineJoin: "round", interactive: false, pane: "mapGuidePane" }).addTo(toolHoverLayer);
   }
 }
 
@@ -3369,7 +3374,7 @@ function updateToolHover() {
       const ends = [target.coordinates[0], target.coordinates[target.coordinates.length - 1]].map(([lat, lng]) => L.latLng(lat, lng));
       const end = ends.find((latLng) => map.latLngToContainerPoint(latLng).distanceTo(point) <= threshold);
       if (end) {
-        L.circleMarker(end, { radius: 14, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false }).addTo(toolHoverLayer);
+        L.circleMarker(end, { radius: 14, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false, pane: "mapGuidePane" }).addTo(toolHoverLayer);
         hovered = true;
       }
     }
@@ -3387,7 +3392,7 @@ function updateToolHover() {
     // 분기점(점선 원)을 만든 뒤에는 그 분기점에서 드래그하므로 분기점만 강조한다.
     const junction = L.latLng(pendingBranchJunction.position.lat, pendingBranchJunction.position.lng);
     if (map.latLngToContainerPoint(junction).distanceTo(point) <= threshold + 4) {
-      L.circleMarker(junction, { radius: 16, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false }).addTo(toolHoverLayer);
+      L.circleMarker(junction, { radius: 16, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false, pane: "mapGuidePane" }).addTo(toolHoverLayer);
       hovered = true;
     }
   } else if (activeTool === "branch") {
@@ -3850,7 +3855,7 @@ function onPointerDown(event: PointerEvent) {
           mapLayers.clear("edit-guide");
           L.circleMarker(L.latLng(junction.position.lat, junction.position.lng), {
             radius: 12, color: "#ffffff", weight: 3, fillColor: snap.route.color,
-            fillOpacity: 0.75, dashArray: "4 3", interactive: false,
+            fillOpacity: 0.75, dashArray: "4 3", interactive: false, pane: "mapGuidePane",
           }).addTo(editGuideLayer);
           setText(facilityReadout, "생성할 분기점에서 지선 종점까지 드래그하세요");
         },
@@ -4128,11 +4133,11 @@ function showDemolitionTargets(targets: DemolitionTargets) {
   const danger = themeTokenColor("--signal-danger", "#C8242C");
   const ground = themeTokenColor("--surface-0", "#FFFFFF");
   for (const segment of targets.segments) {
-    L.polyline(segment, { color: ground, weight: style.cover, opacity: 0.72, lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
-    L.polyline(segment, { color: danger, weight: style.dash, opacity: 1, dashArray: style.dashArray, lineCap: "butt", lineJoin: "round", interactive: false }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: ground, weight: style.cover, opacity: 0.72, lineCap: "butt", lineJoin: "round", interactive: false, pane: "mapGuidePane" }).addTo(demolitionRangeLayer);
+    L.polyline(segment, { color: danger, weight: style.dash, opacity: 1, dashArray: style.dashArray, lineCap: "butt", lineJoin: "round", interactive: false, pane: "mapGuidePane" }).addTo(demolitionRangeLayer);
   }
   for (const polygon of targets.depots) {
-    L.polygon(polygon, { color: danger, weight: 2, dashArray: "6 4", fillColor: danger, fillOpacity: 0.08, interactive: false }).addTo(demolitionRangeLayer);
+    L.polygon(polygon, { color: danger, weight: 2, dashArray: "6 4", fillColor: danger, fillOpacity: 0.08, interactive: false, pane: "mapGuidePane" }).addTo(demolitionRangeLayer);
   }
   if (style.mark === 0) return;
   const half = style.mark / 2;
@@ -8439,8 +8444,8 @@ function reconcileBlueprints() {
 
 function renderExtensionEndpointHandle(point: LatLng, color: string) {
   const selectionLayer = mapLayers.get("selection");
-  L.circleMarker(point, { radius: 10, color: "#ffffff", weight: 3, fillColor: "#071116", fillOpacity: 0.95, interactive: false }).addTo(selectionLayer);
-  L.circleMarker(point, { radius: 5, color, weight: 2, fillColor: color, fillOpacity: 1, interactive: false }).addTo(selectionLayer);
+  L.circleMarker(point, { radius: 10, color: "#ffffff", weight: 3, fillColor: "#071116", fillOpacity: 0.95, interactive: false, pane: "mapGuidePane" }).addTo(selectionLayer);
+  L.circleMarker(point, { radius: 5, color, weight: 2, fillColor: color, fillOpacity: 1, interactive: false, pane: "mapGuidePane" }).addTo(selectionLayer);
 }
 
 function findNearestPlannedRoutePoint(point: L.Point, plan = getActivePlan(false)) {

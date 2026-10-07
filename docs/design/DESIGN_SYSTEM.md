@@ -271,6 +271,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - 구현: 타일 pane 하나에 CSS 필터를 건다(종이 `saturate(.45) sepia(.06) contrast(.88) brightness(1.03)`, 먹 `invert(1) hue-rotate(180deg) saturate(.4) contrast(.7) brightness(.72)`). 지형·철도 타일도 같은 pane이라 함께 처리된다(`src/design/hud.css` 지도 바탕).
 - 벡터 배경 레이어(행정 경계, 토지 이용)는 지도 층 토큰을 읽어 칠하고 테마를 바꾸면 `resetStyle()`로 다시 칠한다. 인구 밀도는 `--density-low` → `--density-mid` → `--density-high` 세 단계 색과 불투명도로 표현하고 범례도 같은 범위를 쓴다. 분석 레이어가 켜지면 지도 바탕(타일)을 한 단계 더 흐리게 한다.
 - 지도 위 편집 안내(편집 점, 삭제 기준점, 철거 범위, 끊긴 구간, 기지 연결, 산악 구간·교량·터널 표시)는 `themeTokenColor`로 신호 토큰을 읽어 칠한다: 위험·철거 `--signal-danger`, 공사·지형 비용 `--signal-caution`, 편집 점·터널·기획 `--signal-info`, 연결 가능 `--signal-ok`. 노선 색 외의 고정 색을 새로 쓰지 않는다.
+- 지도 편집 안내 중 노선 위에 놓이는 것(분기점, 연장 끝점 핸들, 호버 강조, 철거 대상)은 `mapGuidePane`(z 620: 노선 선 위, 역 기호 아래)에 그린다.
 - 노선은 굵은 실선 + 바탕색 casing으로 그린다. 선택되지 않은 노선끼리 발광하거나 그림자를 갖지 않는다.
 - 구현: `src/map/mapPalette.ts`의 `mapPalette()`가 테마 토큰(바탕·먹·신호색)을 `data-theme`별로 캐시해 렌더러(노선·역·기지·공사·기획)에 준다. 테마를 바꾸면 렌더러를 비우고 전체 갱신한다. 역명·운행계통 레이블과 역 누름 표시는 `src/design/hud.css` 지도 기호·레이블 구획에 있다.
 
