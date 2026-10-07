@@ -2699,6 +2699,20 @@ function setRailModesOpen(open: boolean) {
   });
 }
 railModeNowButton?.addEventListener("click", () => setRailModesOpen(railModeNowButton.getAttribute("aria-expanded") !== "true"));
+// 펼친 모드 목록은 바깥을 누르거나 Esc를 누르면 접는다(누른 곳의 동작은 그대로 진행).
+const railModesList = workspaceModeBar?.querySelector<HTMLElement>(".dg-rail__modes");
+document.addEventListener("pointerdown", (event) => {
+  if (railModeNowButton?.getAttribute("aria-expanded") !== "true") return;
+  const target = event.target;
+  if (!(target instanceof Node)) return;
+  if (railModesList?.contains(target) || railModeNowButton.contains(target)) return;
+  setRailModesOpen(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || railModeNowButton?.getAttribute("aria-expanded") !== "true") return;
+  setRailModesOpen(false);
+  railModeNowButton.focus();
+});
 compactRailQuery.addEventListener("change", () => syncRail());
 // 작도 시작(첫 터치)·끝을 레일 밀도에 바로 반영한다. 작도 처리기가 상태를 바꾼 뒤 확인한다.
 for (const type of ["pointerdown", "pointerup", "pointercancel"] as const) {
