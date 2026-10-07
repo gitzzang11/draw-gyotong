@@ -2715,8 +2715,8 @@ document.addEventListener("keydown", (event) => {
 });
 // 이름 칸에서 엔터를 누르면 옆의 저장 버튼을 누른 것과 같게 한다(바로 반영되는 칸은 입력만 마친다).
 // 한글 조합 중 엔터는 조합을 끝내는 키이므로, 조합이 끝난 뒤(compositionend) 저장한다.
-const enterSaveTargets: Record<string, string | null> = {
-  lineNameInput: "#saveLineManagerButton",
+const enterSaveTargets: Record<string, string | null | (() => void)> = {
+  lineNameInput: () => saveLineManager(true),
   stationManagerName: '[data-station-manager-action="save-name"]',
   planNameInput: "#savePlanButton",
   networkTitleInput: "#saveNetworkTitleButton",
@@ -2727,6 +2727,10 @@ function submitNameInput(input: HTMLInputElement) {
   if (selector === undefined || input.readOnly) return;
   if (selector === null) {
     input.blur();
+    return;
+  }
+  if (typeof selector === "function") {
+    selector();
     return;
   }
   const button = (input.closest(".dg-panel, .dg-dialog, section") ?? document).querySelector<HTMLButtonElement>(selector)
@@ -2944,7 +2948,7 @@ operatingServiceEditor?.querySelectorAll<HTMLButtonElement>("[data-service-prese
 deleteOperatingServiceButton?.addEventListener("click", deleteSelectedOperatingService);
 closeTrainManagerButton?.addEventListener("click", closeTrainManagerModal);
 if (trainManagerDialog) bindBackdropDismiss(trainManagerDialog, closeTrainManagerModal);
-saveLineManagerButton?.addEventListener("click", saveLineManager);
+saveLineManagerButton?.addEventListener("click", () => saveLineManager());
 deleteLineManagerButton?.addEventListener("click", requestWholeLineDemolition);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && operatingServiceMapEditActive) {
@@ -14187,7 +14191,8 @@ function handleTrainPanelClick(event: Event) {
   showToast(`${service.name}에 신규 ${cars}량 ${spec.label} 1편성을 배정했습니다.`);
 }
 
-function saveLineManager() {
+/** keepOpen: 이름 칸 엔터 저장처럼 창을 닫지 않고 저장만 한다. */
+function saveLineManager(keepOpen = false) {
   const route = networkState.routes.find((item) => item.id === selectedRouteId);
   if (!route) return;
   const nextName = lineNameInput?.value.trim() || route.name;
@@ -14218,7 +14223,7 @@ function saveLineManager() {
   );
   redoStack = [];
   requestStateSave("immediate");
-  closeLineManager();
+  if (!keepOpen) closeLineManager();
   requestUpdates([
     serviceChanged ? "network-structure" : styleChanged ? "route-style" : "fleet-service",
     ...(fareChanged && !serviceChanged ? ["fare" as const] : []),
