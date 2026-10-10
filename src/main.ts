@@ -11585,7 +11585,6 @@ function renderPlannedStationManager() {
     entityId: `planned-station:${plan.id}:${station.id}`,
     title: station.name,
     name: station.name,
-    editableName: false,
     status: "planned",
     statusLabel: "계획 중",
     metrics: [
@@ -11650,11 +11649,31 @@ function handleStationManagerClick(event: Event) {
   const action = target?.dataset.stationManagerAction;
   if (!action) return;
   if (selectedPlannedStationManager) {
-    if (action !== "delete-planned") return;
     const { planId, stationId } = selectedPlannedStationManager;
     const plan = constructionState.plans.find((item) => item.id === planId && item.cityId === metaState.current.cityId);
     const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
     if (!plan || !station) return;
+    if (action === "save-name") {
+      // 계획 역 이름: 기획안에만 바꾸고, 착공·완공 때 이 이름이 실제 역으로 이어진다.
+      const name = document.querySelector<HTMLInputElement>("#stationManagerName")?.value.trim();
+      if (!name) {
+        showToast("역 이름을 입력해 주세요.");
+        return;
+      }
+      if (name === station.name) return;
+      pushHistory();
+      updatePlan(plan.id, (item) => ({
+        ...item,
+        stations: item.stations.map((asset) => asset.id === station.id ? { ...asset, name } : asset),
+      }));
+      redoStack = [];
+      requestStateSave();
+      renderPlannedStationManager();
+      requestUpdate("blueprint-preview");
+      showToast("계획 역 이름을 저장했습니다.");
+      return;
+    }
+    if (action !== "delete-planned") return;
     openDecisionDialog(
       `“${station.name}” 계획역을 삭제할까요?`,
       "이 계획역만 삭제하며 연결된 계획 노선과 다른 시설은 유지합니다. 계획 환승 연결이 있으면 함께 정리됩니다.",
