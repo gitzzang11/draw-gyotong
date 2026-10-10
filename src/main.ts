@@ -11694,9 +11694,13 @@ function handleStationManagerClick(event: Event) {
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-station-manager-action]");
   let action = target?.dataset.stationManagerAction;
   if (!action) return;
-  // 이름 후보 접기: summary 기본 동작으로 열고 닫히며, 다시 그릴 때를 위해 상태만 기억한다(누르기 전 open이면 접힘).
+  // 이름 후보 접기·펼치기: 높이를 부드럽게 바꾸고, 다시 그릴 때를 위해 상태를 기억한다.
   if (action === "toggle-name-candidates") {
-    stationNameCandidatesCollapsed = Boolean(target?.closest("details")?.open);
+    event.preventDefault();
+    const details = target?.closest("details");
+    if (!details) return;
+    animateHeightChange(details, () => { details.open = !details.open; });
+    stationNameCandidatesCollapsed = !details.open;
     return;
   }
   // 이름 후보를 누르면 그 이름을 칸에 넣고 저장과 같게 처리한다.
