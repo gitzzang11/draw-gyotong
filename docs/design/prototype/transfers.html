@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>환승역 기호 시안</title>
+<!-- 떨어진 역을 묶은 환승역: 멀리서는 한 역, 아주 가까이에서만 각각의 역. 실제 서울 위도 축척으로 줌별 비교 -->
+<style>
+  body { margin: 0; padding: 20px; background: #2b2d30; color: #ddd; font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif; }
+  h1 { font-size: 16px; margin: 0 0 6px; }
+  h2 { font-size: 14px; margin: 22px 0 4px; color: #fff; }
+  p, li { font-size: 13px; color: #b8b8b8; line-height: 1.55; max-width: 1000px; }
+  p { margin: 0 0 10px; }
+  ul { margin: 4px 0 10px; padding-left: 18px; }
+  b { color: #eee; }
+  .row { display: grid; grid-template-columns: repeat(4, minmax(0, 300px)); gap: 12px; }
+  .cell h3 { font-size: 12px; margin: 0 0 5px; color: #ddd; font-weight: 700; }
+  .cell h3 small { color: #9a9a9a; font-weight: 400; }
+  svg.map { display: block; width: 100%; height: auto; aspect-ratio: 300 / 210; border-radius: 8px; }
+  .paper { --g:#ECE9E1; --w:#C6D3D9; --s:#FBFAF6; --k:#15171A; --k2:#6B7076; }
+  .ink { --g:#17191C; --w:#1F2B33; --s:#121416; --k:#ECEAE3; --k2:#8C8981; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border: 1px solid #777; color: #ccc; margin-left: 6px; }
+  .tag.rec { border-color: #e0e0e0; color: #fff; }
+</style>
+</head>
+<body>
+<h1>환승역 기호 시안 — 멀리서는 한 역, 아주 가까이에서만 각각의 역</h1>
+<p><b>결정(2026-10-10):</b> 막대·띠 단계 없이, 역들이 화면에서 따로 보이면 각자의 일반역 + 점선 환승 통로(B안의 줌 17 모습), 줌을 줄여 겹쳐 보일 만큼(14px 안) 붙으면 환승 원 하나로 합친다. 기준은 고정 줌이 아니라 화면 거리.</p>
+<p>예: <b>시청</b>(1호선 역과 2호선 역이 약 140m 떨어져 묶임), <b>종로3가</b>(1·3·5호선 역 셋이 약 120~180m 떨어져 묶임). 같은 자리에 여러 노선이 서는 역(한 역)은 지금처럼 늘 환승역 기호 하나입니다. 칸마다 실제 서울 위도의 줌 축척으로 그렸습니다(줌 13 ≈ 15m/px · 15 ≈ 3.8m/px · 16 ≈ 1.9m/px · 17 ≈ 0.95m/px). 역 기호는 지금처럼 줌 13부터, 역명은 줌 15부터 보입니다.</p>
+
+<h2>비교 · 지금 <span class="tag">현재</span></h2>
+<p>묶인 역마다 큰 환승 원이 따로 있고 점선으로 잇습니다. 멀리서는 원 두세 개가 겹쳐 뭉개지고, 중간 줌에서는 한 환승역이 역 여러 개처럼 보입니다.</p>
+<div class="row paper" data-variant="now"></div>
+
+<h2>A. 한 원으로 합치기 <span class="tag">비교안</span></h2>
+<p>줌 17 미만에서는 묶인 역들의 가운데에 환승 원 하나만 그립니다. 멀리서는 깔끔하지만, 줌 15~16에서는 역이 실제로는 100m 넘게 떨어져 있으면 <b>노선 선이 원에 닿지 않고 옆을 지나갑니다</b>.</p>
+<div class="row paper" data-variant="a"></div>
+
+<h2>B. 환승 원을 막대로 붙이기 <span class="tag rec">추천</span></h2>
+<p>실제 지하철 노선도의 환승 표기처럼, 줌 17 미만에서는 각 역 자리의 <b>환승 원(먹 테두리)을 짧은 흰 막대로 붙여 한 기호</b>로 그립니다. 역들이 화면에서 14px 안으로 붙어 있으면(멀리) 그냥 조금 큰 환승 원 하나입니다. 각 노선 선은 자기 역 원에 닿고, 역명은 하나만 씁니다. 줌 17 이상(완전 가까이)에서만 각자의 역(노선 색 테두리 일반역 기호 + 각자의 역명)으로 나뉘고, 사이는 먹 점선 환승 통로와 <b>환승 n분</b> 표시로 잇습니다.</p>
+<div class="row paper" data-variant="b"></div>
+<div class="row ink" data-variant="b" style="margin-top:12px"></div>
+
+<h2>C. 한 덩어리 띠로 감싸기 <span class="tag">비교안</span></h2>
+<p>줌 17 미만에서 역들을 잇는 굵은 둥근 띠(먹 테두리 + 바탕색) 하나로 감쌉니다. 한 덩어리로는 잘 읽히지만 중간 줌에서 띠가 크고 둔해 보입니다.</p>
+<div class="row paper" data-variant="c"></div>
+
+<h2>B안 규칙(구체화)</h2>
+<ul>
+  <li><b>대상</b>: 서로 다른 자리의 역을 묶은 환승 그룹(<code>networkState.transfers</code>, 실제로 환승이 성립하는 것). 같은 자리의 여러 노선 역은 바뀌지 않음.</li>
+  <li><b>줌 13~16(붙인 기호)</b>: 구성 역들의 화면 거리 중 가장 먼 값이 14px 이하이면 역들 가운데에 환승 원 하나(반지름 = max(8, 거리/2 + 4), 바탕색 + 먹 2.5px 테두리). 그보다 벌어지면 각 역 자리에 반지름 8 환승 원을 그리고, 역들을 가장 짧게 잇는 순서로 막대(먹 10px 아래 · 바탕색 5px 위)를 그려 원과 막대를 한 기호로 붙인다. 점선 통로·개별 역명은 그리지 않음.</li>
+  <li><b>역명</b>(줌 15부터): 합친 기호 위에 하나만. 구성 역 이름이 다르면 노선이 가장 많이 지나는 역의 이름(같으면 먼저 생긴 역).</li>
+  <li><b>줌 17 이상(나뉜 역)</b>: 각 역을 일반역 기호(바탕색 원 + 자기 노선 색 테두리, 반지름 6)와 각자의 역명으로. 역 사이는 먹 점선(3/6) 환승 통로, 통로 가운데 작은 <b>환승 n분</b> 레이블(환승 그룹의 환승 시간).</li>
+  <li><b>바뀌는 순간</b>: 줌 17을 넘나들 때 140ms 겹쳐 사라지기·나타나기(모션 토큰 <code>--dur-exit</code>). 줌 도중 깜빡임 없이 줌이 끝난 뒤 한 번.</li>
+  <li><b>누르기</b>: 합친 기호를 누르면 그 환승 그룹(대표 역의 역 정보, 환승 칸 펼침). 나뉜 상태에서는 지금처럼 역마다.</li>
+  <li><b>선택·공사 상태</b>: 선택은 합친 기호 바깥에 먹 고리(지금 선택 고리와 같은 2px), 구성 역 중 하나라도 공사 중이면 합친 기호 테두리 점선.</li>
+</ul>
+
+<script>
+// 장면: 미터 좌표(x 동쪽, y 북쪽). 실제 노선·역 위치 비례.
+const lines = [
+  { color: "#1D5FC2", pts: [[-3000, 0], [3200, 0]] },                       // 1호선
+  { color: "#1E8A47", pts: [[-600, 2200], [120, 120], [700, -1800]] },       // 2호선
+  { color: "#EF7C1C", pts: [[1330, -2400], [1330, 2400]] },                  // 3호선
+  { color: "#8B50A4", pts: [[-200, 1300], [1500, 140], [3200, -200]] },      // 5호선
+];
+const groups = [
+  { name: "시청", min: 3, members: [{ p: [0, 0], c: "#1D5FC2", routes: 1 }, { p: [120, 120], c: "#1E8A47", routes: 1 }] },
+  { name: "종로3가", min: 4, members: [{ p: [1420, 0], c: "#1D5FC2", routes: 1 }, { p: [1330, 110], c: "#EF7C1C", routes: 1 }, { p: [1500, 140], c: "#8B50A4", routes: 1 }] },
+];
+const plain = [[-1000, 0, "#1D5FC2"], [3000, 0, "#1D5FC2"], [600, -1000, "#1E8A47"], [1330, -1200, "#EF7C1C"], [1330, 1400, "#EF7C1C"], [2000, 40, "#8B50A4"], [500, 860, "#8B50A4"]];
+const views = [
+  { z: 13, label: "줌 13 · 멀리", center: [800, 80] },
+  { z: 15, label: "줌 15 · 중간", center: [1410, 80] },
+  { z: 16, label: "줌 16 · 가까이", center: [1415, 75] },
+  { z: 17, label: "줌 17 · 완전 가까이", center: [1415, 70] },
+];
+const mpp = (z) => 124190 / 2 ** z; // 서울(37.5°) 미터/픽셀
+const W = 300, H = 210;
+
+function project(view) {
+  const s = 1 / mpp(view.z);
+  return ([x, y]) => [W / 2 + (x - view.center[0]) * s, H / 2 - (y - view.center[1]) * s];
+}
+function chain(points) { // 가장 짧게 잇는 순서(가까운 이웃)
+  const rest = points.slice(1), out = [points[0]];
+  while (rest.length) {
+    const last = out[out.length - 1];
+    let bi = 0;
+    rest.forEach((p, i) => { if (Math.hypot(p[0] - last[0], p[1] - last[1]) < Math.hypot(rest[bi][0] - last[0], rest[bi][1] - last[1])) bi = i; });
+    out.push(rest.splice(bi, 1)[0]);
+  }
+  return out;
+}
+const d = (pts) => "M" + pts.map((p) => p.map((v) => v.toFixed(1)).join(" ")).join(" L");
+const label = (x, y, text, size = 11) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" style="font:800 ${size}px sans-serif;fill:var(--k);paint-order:stroke;stroke:var(--s);stroke-width:3">${text}</text>`;
+
+function render(variant, view) {
+  const P = project(view);
+  let svg = `<rect width="${W}" height="${H}" fill="var(--g)"/>`;
+  svg += `<path d="M-10 ${H - 30} C 90 ${H - 60} 200 ${H - 10} ${W + 10} ${H - 50}" fill="none" stroke="var(--w)" stroke-width="20"/>`;
+  const lw = view.z >= 15 ? 6 : 4;
+  for (const l of lines) {
+    const pts = l.pts.map(P);
+    svg += `<path d="${d(pts)}" fill="none" stroke="var(--s)" stroke-width="${lw + 4}" stroke-linejoin="round"/>`;
+    svg += `<path d="${d(pts)}" fill="none" stroke="${l.color}" stroke-width="${lw}" stroke-linejoin="round"/>`;
+  }
+  for (const [x, y, c] of plain) {
+    const [px, py] = P([x, y]);
+    svg += `<circle cx="${px}" cy="${py}" r="6" fill="var(--s)" stroke="${c}" stroke-width="2.5"/>`;
+  }
+  const showLabel = view.z >= 15;
+  for (const g of groups) {
+    const pts = g.members.map((m) => P(m.p));
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    const spread = Math.max(...pts.flatMap((a) => pts.map((b) => Math.hypot(a[0] - b[0], a[1] - b[1]))));
+    const split = variant === "now" || view.z >= 17;
+    if (split) {
+      const walk = chain(pts);
+      svg += `<path d="${d(walk)}" fill="none" stroke="var(--k)" stroke-width="2.5" stroke-dasharray="3 6" opacity=".85"/>`;
+      if (variant !== "now") {
+        const [a, b] = [walk[0], walk[1]];
+        svg += `<text x="${((a[0] + b[0]) / 2 + 4).toFixed(1)}" y="${((a[1] + b[1]) / 2 + 14).toFixed(1)}" style="font:700 9px sans-serif;fill:var(--k2);paint-order:stroke;stroke:var(--s);stroke-width:3">환승 ${g.min}분</text>`;
+      }
+      g.members.forEach((m, i) => {
+        const [x, y] = pts[i];
+        svg += variant === "now"
+          ? `<circle cx="${x}" cy="${y}" r="8" fill="var(--s)" stroke="var(--k)" stroke-width="2.5"/>`
+          : `<circle cx="${x}" cy="${y}" r="6" fill="var(--s)" stroke="${m.c}" stroke-width="2.5"/>`;
+        if (showLabel) svg += label(x, y - 12, g.name, 10);
+      });
+    } else if (variant === "a" || (variant === "b" && spread <= 14) || (variant === "c" && spread <= 6)) {
+      const r = variant === "b" ? Math.max(8, spread / 2 + 4) : 8;
+      svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--s)" stroke="var(--k)" stroke-width="2.5"/>`;
+      if (showLabel) svg += label(cx, cy - r - 5, g.name);
+    } else if (variant === "b") {
+      const bar = d(chain(pts));
+      svg += `<path d="${bar}" fill="none" stroke="var(--k)" stroke-width="10" stroke-linejoin="round"/>`;
+      for (const [x, y] of pts) svg += `<circle cx="${x}" cy="${y}" r="8" fill="var(--s)" stroke="var(--k)" stroke-width="2.5"/>`;
+      svg += `<path d="${bar}" fill="none" stroke="var(--s)" stroke-width="5" stroke-linejoin="round"/>`;
+      const top = Math.min(...pts.map((p) => p[1]));
+      if (showLabel) svg += label(cx, top - 13, g.name);
+    } else {
+      const band = d(chain(pts));
+      svg += `<path d="${band}" fill="none" stroke="var(--k)" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>`;
+      svg += `<path d="${band}" fill="none" stroke="var(--s)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const top = Math.min(...pts.map((p) => p[1]));
+      if (showLabel) svg += label(cx, top - 15, g.name);
+    }
+  }
+  return svg;
+}
+
+document.querySelectorAll(".row").forEach((row) => {
+  const variant = row.dataset.variant;
+  row.innerHTML = views.map((view) => `<div class="cell"><h3>${view.label} <small>${mpp(view.z).toFixed(view.z >= 16 ? 2 : 1)}m/px${row.classList.contains("ink") ? " · 먹" : ""}</small></h3><svg class="map" viewBox="0 0 ${W} ${H}">${render(variant, view)}</svg></div>`).join("");
+});
+</script>
+</body>
+</html>

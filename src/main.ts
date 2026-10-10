@@ -9837,24 +9837,58 @@ function reconcileConstructionProjects() {
   constructionRenderer.reconcileEntities(buildConstructionRenderEntities(constructionState.projects));
 }
 
+/** 떨어진 역을 묶은 환승역이 화면에서 이 거리(px) 안으로 붙으면 환승 원 하나로 그린다. */
+const mergedTransferSpreadPx = 14;
+
 function reconcileMapStations(selectedId?: string) {
   mapLayers.setVisible("stations", map.getZoom() >= 13);
-  const connectionEntities: TransferConnectionEntity[] = networkState.transfers.flatMap((transfer) => {
+  // 떨어진 역을 묶은 환승역: 화면에서 따로 보이면 각자의 일반역 기호 + 점선 환승 통로,
+  // 줌을 줄여 겹쳐 보일 만큼 붙으면 역들 가운데에 환승 원 하나(역명도 하나)로 그린다.
+  const connectionEntities: TransferConnectionEntity[] = [];
+  const mergedEntities: StationRenderEntity[] = [];
+  const mergedStationIds = new Set<string>();
+  const spreadStationIds = new Set<string>();
+  for (const transfer of networkState.transfers) {
     const transferStations = transfer.stationIds
       .map((id) => networkState.stations.find((station) => station.id === id))
       .filter(Boolean) as Station[];
     const transferInfo = transferStations[0] ? selectStationTransferInfo(transferStations[0].id) : null;
-    return transferStations.length < 2 || !transferInfo?.isTransfer
-      ? []
-      : [{ id: `transfer:${transfer.id}`, positions: transferStations.map((station) => station.position) }];
-  });
-  const stationEntities: StationRenderEntity[] = networkState.stations.map((station) => {
+    if (transferStations.length < 2 || !transferInfo?.isTransfer) continue;
+    const points = transferStations.map((station) => map.latLngToContainerPoint(station.position));
+    const spread = Math.max(...points.flatMap((a) => points.map((b) => a.distanceTo(b))));
+    if (spread > mergedTransferSpreadPx) {
+      connectionEntities.push({ id: `transfer:${transfer.id}`, positions: transferStations.map((station) => station.position) });
+      transferStations.forEach((station) => spreadStationIds.add(station.id));
+      continue;
+    }
+    transferStations.forEach((station) => mergedStationIds.add(station.id));
+    // 대표 역: 노선이 가장 많이 지나는 역(같으면 목록의 앞 역)
+    const representative = transferStations.reduce((best, station) => station.connectedRouteIds.length > best.connectedRouteIds.length ? station : best);
+    const selected = transferStations.some((station) => station.id === selectedId || selectedTransferStationIds.includes(station.id));
+    mergedEntities.push({
+      id: `transfer-merged:${transfer.id}`,
+      name: representative.name,
+      position: [
+        transferStations.reduce((sum, station) => sum + station.position[0], 0) / transferStations.length,
+        transferStations.reduce((sum, station) => sum + station.position[1], 0) / transferStations.length,
+      ],
+      color: transferInfo.connectedLines[0]?.color ?? "#ffffff",
+      selected,
+      express: false,
+      transfer: true,
+      operational: transferStations.every((station) => isStationOperational(station.id)),
+      showLabel: selected || map.getZoom() >= 15,
+      radius: Math.max(8, spread / 2 + 4),
+    });
+  }
+  const stationEntities: StationRenderEntity[] = networkState.stations.filter((station) => !mergedStationIds.has(station.id)).map((station) => {
     const isSelected = station.id === selectedId || selectedTransferStationIds.includes(station.id);
     const expressConfig = operationsState.expressConfigs.find((config) => config.routeId === selectedOperationRouteId);
     const isExpressStop = Boolean(expressConfig?.enabled && expressConfig.stopStationIds.includes(station.id));
     const transferInfo = selectStationTransferInfo(station.id);
-    const isTransferStation = Boolean(transferInfo?.isTransfer);
-    const routeColor = transferInfo?.connectedLines[0]?.color
+    // 따로 보이는 묶음 환승역의 각 역은 자기 노선의 일반역으로 그리고 환승은 점선 통로로 보인다.
+    const isTransferStation = spreadStationIds.has(station.id) ? station.connectedRouteIds.length > 1 : Boolean(transferInfo?.isTransfer);
+    const routeColor = (spreadStationIds.has(station.id) ? undefined : transferInfo?.connectedLines[0]?.color)
       ?? networkState.routes.find((route) => route.id === station.connectedRouteIds[0])?.color
       ?? "#ffffff";
     return {
@@ -9869,7 +9903,7 @@ function reconcileMapStations(selectedId?: string) {
       showLabel: isSelected || map.getZoom() >= 15,
     };
   });
-  stationRenderer.reconcileEntities(stationEntities, connectionEntities);
+  stationRenderer.reconcileEntities([...stationEntities, ...mergedEntities], connectionEntities);
 }
 
 function reconcileMapDepots(selectedId?: string) {

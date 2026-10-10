@@ -13,6 +13,8 @@ export interface StationRenderEntity {
   transfer: boolean;
   operational: boolean;
   showLabel: boolean;
+  /** 지정하면 기본 크기 대신 이 반지름(떨어진 환승역을 하나로 합친 기호) */
+  radius?: number;
 }
 
 export interface TransferConnectionEntity {
@@ -76,7 +78,7 @@ export class StationRenderer {
     // 급행 정차역은 노선 색 테두리 안에 먹 점, 공사 중은 점선 테두리.
     const palette = mapPalette();
     marker.setStyle({
-      radius: entity.transfer ? 8 : entity.express ? 7 : 6,
+      radius: entity.radius ?? (entity.transfer ? 8 : entity.express ? 7 : 6),
       color: entity.transfer ? palette.ink : entity.color,
       weight: entity.express && !entity.transfer ? 3 : 2.5,
       fillColor: entity.express && !entity.transfer ? palette.ink : palette.surface,
@@ -88,7 +90,7 @@ export class StationRenderer {
       marker.bindTooltip(escapeTooltipText(entity.name), {
         permanent: true,
         direction: "top",
-        offset: [0, -8],
+        offset: [0, -(entity.radius ?? 8)],
         className: "station-map-label",
         interactive: false,
       }).openTooltip();
@@ -98,7 +100,7 @@ export class StationRenderer {
   }
 
   private updateRing(marker: L.CircleMarker, entity: StationRenderEntity) {
-    const baseRadius = entity.express ? 8 : 6;
+    const baseRadius = entity.radius ?? (entity.express ? 8 : 6);
     const existing = this.rings.get(marker);
     if (!entity.selected) {
       if (existing) {
