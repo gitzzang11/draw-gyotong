@@ -17284,15 +17284,22 @@ function layoutRailTools() {
   if (modifyToolsButton.hidden && modifyToolsCard) modifyToolsCard.hidden = true;
 }
 
-/** 모드 배너는 두 정보판 사이에 들어가면 위쪽 가운데, 아니면 정보판 아래에 둔다. */
+/**
+ * 모드 배너는 화면 가운데에 두었을 때 양쪽 정보판과 12px 넘게 떨어지면 위쪽 가운데, 아니면 정보판 아래에 둔다.
+ * 왼쪽 정보판(자금·만족도)이 오른쪽보다 넓으므로 두 정보판 사이 틈이 아니라 가운데 자리로 판단한다.
+ */
 function placeModeBanner() {
   const financePlate = byId("financePlate");
   const timePlate = byId("timePlate");
   if (!modeBanner || !financePlate || !timePlate) return;
-  const gap = timePlate.getBoundingClientRect().left - financePlate.getBoundingClientRect().right;
-  modeBanner.dataset.placement = gap >= modeBanner.offsetWidth + 24 ? "top" : "low";
+  const center = window.innerWidth / 2;
+  const half = modeBanner.offsetWidth / 2;
+  const fits = center - half >= financePlate.getBoundingClientRect().right + 12
+    && center + half <= timePlate.getBoundingClientRect().left - 12;
+  modeBanner.dataset.placement = fits ? "top" : "low";
   document.body.dataset.modeBanner = modeBanner.dataset.placement;
 }
+window.addEventListener("resize", () => placeModeBanner());
 
 /** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */
 function syncSpeedControls() {
