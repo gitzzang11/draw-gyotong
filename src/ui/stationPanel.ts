@@ -18,11 +18,18 @@ export interface StationPanelTransfer {
   warning?: string;
 }
 
+/** 자동 이름 기준에 맞는 주변 이름 후보(누르면 그 이름으로 바꾼다) */
+export interface StationNameCandidatesView {
+  state: "idle" | "loading" | "error" | "ready";
+  items: Array<{ name: string; detail: string }>;
+}
+
 export interface StationPanelView {
   entityId: string;
   title: string;
   name: string;
   editableName?: boolean;
+  nameCandidates?: StationNameCandidatesView;
   status: InspectorStatus;
   statusLabel: string;
   metrics: InspectorMetric[];
@@ -74,6 +81,7 @@ export class StationPanel {
               ${editableName ? `<button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-station-manager-action="save-name">저장</button>` : ""}
             </span>
           </label>
+          ${editableName && view.nameCandidates ? nameCandidatesHtml(view.nameCandidates, view.name) : ""}
         </section>
         ${sectionHtml("승객", metricRowsHtml(view.metrics))}
         ${sectionHtml("수요 변화 원인", reasons || `<p class="game-inspector__note">${escapeHtml(view.reasonsNote ?? "")}</p>`)}
@@ -86,4 +94,19 @@ export class StationPanel {
   }
 
   close() { this.manager.close(this.kind); }
+}
+
+function nameCandidatesHtml(candidates: StationNameCandidatesView, currentName: string) {
+  if (candidates.state === "idle") {
+    return `<div class="game-inspector__name-candidates"><button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-station-manager-action="load-name-candidates">주변 이름 후보 보기</button></div>`;
+  }
+  if (candidates.state === "loading") return `<p class="game-inspector__note" role="status">주변 이름을 찾는 중…</p>`;
+  if (candidates.state === "error") {
+    return `<div class="game-inspector__name-candidates"><p class="game-inspector__note">주변 이름을 불러오지 못했습니다.</p><button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-station-manager-action="load-name-candidates">다시 시도</button></div>`;
+  }
+  if (candidates.items.length === 0) return `<p class="game-inspector__note">기준 반경 안에 쓸 수 있는 이름이 없습니다.</p>`;
+  return `<div class="game-inspector__name-candidates" role="group" aria-label="이름 후보">
+    <span class="dg-field__label">이름 후보 · 누르면 바로 바뀜</span>
+    ${candidates.items.map((item) => `<button class="game-route-item" type="button" data-station-manager-action="pick-name" data-name="${escapeHtml(item.name)}" aria-pressed="${item.name === currentName}"><span class="game-route-item__text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("")}
+  </div>`;
 }

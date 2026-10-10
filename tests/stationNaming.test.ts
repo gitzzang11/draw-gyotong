@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectAutomaticStationName, type StationNameFeature } from "../src/stationNaming";
+import { listAutomaticStationNames, selectAutomaticStationName, type StationNameFeature } from "../src/stationNaming";
 
 const origin: [number, number] = [0, 0];
 
@@ -185,5 +185,42 @@ describe("automatic station naming", () => {
   it("returns null when no valid candidate exists", () => {
     expect(selectAutomaticStationName(origin, [])).toBeNull();
     expect(selectAutomaticStationName(origin, [feature("밖의역", { railway: "station" }, 501)])).toBeNull();
+  });
+});
+
+describe("station name candidates", () => {
+  it("lists every name within its category radius by priority, then distance, without duplicates", () => {
+    const result = listAutomaticStationNames(origin, [
+      feature("공원", { leisure: "park" }, 100),
+      feature("동네", { place: "quarter" }, 300),
+      feature("가까운역", { railway: "station" }, 400),
+      feature("먼역", { railway: "station" }, 501),
+      feature("동네", { place: "quarter" }, 120),
+      feature("길", { highway: "residential" }, 50),
+    ]);
+    expect(result.map((item) => [item.name, item.source])).toEqual([
+      ["가까운", "railway"], ["동네", "area"], ["공원", "park"], ["길", "road"],
+    ]);
+    expect(result[1].distanceMeters).toBeCloseTo(120, 6);
+  });
+
+  it("keeps the higher-priority category when the same name appears in two categories and respects the limit", () => {
+    const result = listAutomaticStationNames(origin, [
+      feature("같은이름", { highway: "residential" }, 10),
+      feature("같은이름", { amenity: "school" }, 200),
+      ...Array.from({ length: 12 }, (_, index) => feature(`도로${index}`, { highway: "residential" }, 20 + index)),
+      ...Array.from({ length: 4 }, (_, index) => feature(`역${index}`, { railway: "station" }, 100 + index)),
+      feature("공원", { leisure: "park" }, 30),
+    ], 5);
+    expect(result[0]).toMatchObject({ name: "역0", source: "railway" });
+    expect(result.map((item) => item.source)).toEqual(["railway", "railway", "railway", "facility", "park"]);
+  });
+
+  it("caps each category so several kinds of names appear", () => {
+    const result = listAutomaticStationNames(origin, [
+      ...Array.from({ length: 5 }, (_, index) => feature(`동네${index}`, { place: "quarter" }, 10 + index)),
+      feature("학교", { amenity: "school" }, 300),
+    ]);
+    expect(result.map((item) => item.name)).toEqual(["동네0", "동네1", "학교"]);
   });
 });

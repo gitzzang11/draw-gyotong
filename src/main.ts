@@ -10,7 +10,7 @@ import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThe
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
-import { normalizeAutomaticStationName, selectAutomaticStationName, type StationNameMatch } from "./stationNaming.ts";
+import { listAutomaticStationNames, normalizeAutomaticStationName, selectAutomaticStationName, stationNameSourceLabels, type StationNameMatch } from "./stationNaming.ts";
 import {
   buildNetworkSignature,
   TransitRouter,
@@ -6555,6 +6555,47 @@ function makeUniqueStationName(baseName: string, position: LatLng, excludingId?:
   return `${normalized} ${suffix}`;
 }
 
+// 역 정보 창의 "주변 이름 후보": 자동 이름과 같은 기준(분류별 반경)의 후보를 모두 모은다. 창을 연 역 하나만 기억한다.
+let stationNameCandidates: { entityId: string; state: "idle" | "loading" | "error" | "ready"; items: Array<{ name: string; detail: string }> } | null = null;
+
+function stationNameCandidatesFor(entityId: string) {
+  if (stationNameCandidates?.entityId !== entityId) stationNameCandidates = { entityId, state: "idle", items: [] };
+  return { state: stationNameCandidates.state, items: stationNameCandidates.items };
+}
+
+async function loadStationNameCandidates(entityId: string, position: [number, number]) {
+  stationNameCandidates = { entityId, state: "loading", items: [] };
+  renderStationManagerIfOpen();
+  const [lat, lng] = position;
+  const filters = [
+    [500, '["railway"~"^(station|halt|tram_stop)$"]'],
+    [850, '["place"~"^(suburb|quarter|neighbourhood|village)$"]'],
+    [600, '["amenity"~"^(university|hospital|townhall|marketplace|library|school)$"]'],
+    [450, '["leisure"="park"]'],
+    [600, '["tourism"~"^(attraction|museum|gallery|viewpoint|zoo|theme_park)$"]'],
+    [600, '["historic"]'],
+    [300, '["highway"]'],
+  ] as const;
+  const query = `[out:json][timeout:10];(${filters.flatMap(([radius, filter]) =>
+    ["name", "name:ko"].map((nameTag) => `nwr(around:${radius},${lat},${lng})["${nameTag}"]${filter};`),
+  ).join("\n")});out center tags;`;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  try {
+    const data = await fetchOverpass(query, controller.signal, 12000);
+    const items = listAutomaticStationNames(position, data?.elements ?? []).map((match) => ({
+      name: match.name,
+      detail: `${stationNameSourceLabels[match.source]} · ${Math.round(match.distanceMeters)}m`,
+    }));
+    if (stationNameCandidates?.entityId === entityId) stationNameCandidates = { entityId, state: "ready", items };
+  } catch {
+    if (stationNameCandidates?.entityId === entityId) stationNameCandidates = { entityId, state: "error", items: [] };
+  } finally {
+    window.clearTimeout(timeout);
+  }
+  renderStationManagerIfOpen();
+}
+
 async function findNearbyOsmStationName(position: [number, number]) {
   const cacheKey = `${metaState.current.cityId}:${position[0]}:${position[1]}`;
   const cached = stationNameLookupCache.get(cacheKey);
@@ -11525,6 +11566,7 @@ function renderStationManager() {
   const growth = statistics.growth >= 0.03 ? `+${Math.round(statistics.growth * 100)}%` : `${Math.round(statistics.growth * 100)}%`;
   stationPanel.renderView({
     entityId: station.id,
+    nameCandidates: stationNameCandidatesFor(station.id),
     title: stationName,
     name: stationName,
     status: operational ? "operational" : "building",
@@ -11583,6 +11625,7 @@ function renderPlannedStationManager() {
   const transferCount = plan.transfers.filter((transfer) => !transfer.completed && transfer.stationIds.includes(station.id)).length;
   stationPanel.renderView({
     entityId: `planned-station:${plan.id}:${station.id}`,
+    nameCandidates: stationNameCandidatesFor(`planned-station:${plan.id}:${station.id}`),
     title: station.name,
     name: station.name,
     status: "planned",
@@ -11646,13 +11689,24 @@ function formatTransferOperationalStatus(status: "operational" | "partial" | "cl
 
 function handleStationManagerClick(event: Event) {
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-station-manager-action]");
-  const action = target?.dataset.stationManagerAction;
+  let action = target?.dataset.stationManagerAction;
   if (!action) return;
+  // 이름 후보를 누르면 그 이름을 칸에 넣고 저장과 같게 처리한다.
+  if (action === "pick-name") {
+    const input = document.querySelector<HTMLInputElement>("#stationManagerName");
+    if (!input || !target?.dataset.name) return;
+    input.value = target.dataset.name;
+    action = "save-name";
+  }
   if (selectedPlannedStationManager) {
     const { planId, stationId } = selectedPlannedStationManager;
     const plan = constructionState.plans.find((item) => item.id === planId && item.cityId === metaState.current.cityId);
     const station = plan?.stations.find((item) => item.id === stationId && !item.completed);
     if (!plan || !station) return;
+    if (action === "load-name-candidates") {
+      void loadStationNameCandidates(`planned-station:${plan.id}:${station.id}`, station.position);
+      return;
+    }
     if (action === "save-name") {
       // 계획 역 이름: 기획안에만 바꾸고, 착공·완공 때 이 이름이 실제 역으로 이어진다.
       const name = document.querySelector<HTMLInputElement>("#stationManagerName")?.value.trim();
@@ -11688,6 +11742,10 @@ function handleStationManagerClick(event: Event) {
   if (!selectedStationManagerId) return;
   const selectedStation = networkState.stations.find((station) => station.id === selectedStationManagerId);
   if (!selectedStation) return;
+  if (action === "load-name-candidates") {
+    void loadStationNameCandidates(selectedStation.id, selectedStation.position);
+    return;
+  }
   if (action === "delete") {
     const members = getStationManagerMembers(selectedStation);
     const routeNames = Array.from(new Set(members.flatMap((station) => station.connectedRouteIds)))

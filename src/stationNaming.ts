@@ -67,3 +67,55 @@ export function selectAutomaticStationName(
   }
   return best ? { name: best.name, source: best.source, distanceMeters: best.distanceMeters } : null;
 }
+
+export const stationNameSourceLabels: Record<StationNameSource, string> = {
+  railway: "철도역",
+  area: "동네",
+  facility: "시설",
+  park: "공원",
+  landmark: "명소",
+  road: "도로",
+};
+
+/**
+ * 자동 이름 기준(분류별 반경, 철도역 → 동네 → 시설 → 공원 → 명소 → 도로 순)에 맞는 이름 후보를 모두 고른다.
+ * 같은 이름은 우선순위가 높고 가까운 것 하나만 남기고, 우선순위 → 거리 → 이름 순으로 정렬한다.
+ * 한 분류가 목록을 다 차지하지 않도록 분류마다 개수를 제한한다(철도역 3개, 나머지 2개).
+ */
+export function listAutomaticStationNames(
+  position: GeoCoordinate,
+  elements: readonly StationNameFeature[],
+  limit = 8,
+): StationNameMatch[] {
+  if (!isValidCoordinate(position)) return [];
+  const byName = new Map<string, StationNameMatch & { priority: number }>();
+  for (const element of elements) {
+    const tags = element.tags ?? {};
+    const name = normalizeAutomaticStationName(tags["name:ko"]?.trim() || tags.name || "");
+    const priority = namingCategories.findIndex((category) => category.matches(tags));
+    if (!name || priority < 0) continue;
+    const point = element.center ??
+      (typeof element.lat === "number" && typeof element.lon === "number"
+        ? { lat: element.lat, lon: element.lon }
+        : element.geometry?.[0]);
+    if (!point || !isValidCoordinate([point.lat, point.lon])) continue;
+    const distance = distanceMeters(position, [point.lat, point.lon]);
+    const category = namingCategories[priority];
+    if (distance > category.radius + 1e-6) continue;
+    const current = byName.get(name);
+    if (!current || priority < current.priority || (priority === current.priority && distance < current.distanceMeters)) {
+      byName.set(name, { name, source: category.source, distanceMeters: distance, priority });
+    }
+  }
+  const perSource = new Map<StationNameSource, number>();
+  return [...byName.values()]
+    .sort((a, b) => a.priority - b.priority || a.distanceMeters - b.distanceMeters || a.name.localeCompare(b.name))
+    .filter((item) => {
+      const count = perSource.get(item.source) ?? 0;
+      if (count >= (item.source === "railway" ? 3 : 2)) return false;
+      perSource.set(item.source, count + 1);
+      return true;
+    })
+    .slice(0, limit)
+    .map(({ name, source, distanceMeters: distance }) => ({ name, source, distanceMeters: distance }));
+}
