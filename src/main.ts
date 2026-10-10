@@ -2723,7 +2723,7 @@ document.addEventListener("keydown", (event) => {
 // 한글 조합 중 엔터는 조합을 끝내는 키이므로, 조합이 끝난 뒤(compositionend) 저장한다.
 const enterSaveTargets: Record<string, string | null | (() => void)> = {
   lineNameInput: () => saveLineManager(true),
-  stationManagerName: '[data-station-manager-action="save-name"]',
+  stationManagerName: null,
   planNameInput: "#savePlanButton",
   networkTitleInput: "#saveNetworkTitleButton",
   draftRouteNameInput: null,
@@ -11690,9 +11690,14 @@ function formatTransferOperationalStatus(status: "operational" | "partial" | "cl
   }[status];
 }
 
-function handleStationManagerClick(event: Event) {
+// 역 이름은 저장 버튼 없이 바로 반영한다: 엔터(입력 마침)나 칸에서 벗어날 때(change) 저장.
+document.addEventListener("change", (event) => {
+  if ((event.target as HTMLElement | null)?.id === "stationManagerName") handleStationManagerClick(event, "save-name");
+});
+
+function handleStationManagerClick(event: Event, forcedAction?: string) {
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-station-manager-action]");
-  let action = target?.dataset.stationManagerAction;
+  let action = forcedAction ?? target?.dataset.stationManagerAction;
   if (!action) return;
   // 이름 후보 접기·펼치기: 높이를 부드럽게 바꾸고, 다시 그릴 때를 위해 상태를 기억한다.
   if (action === "toggle-name-candidates") {
@@ -11721,9 +11726,11 @@ function handleStationManagerClick(event: Event) {
     }
     if (action === "save-name") {
       // 계획 역 이름: 기획안에만 바꾸고, 착공·완공 때 이 이름이 실제 역으로 이어진다.
-      const name = document.querySelector<HTMLInputElement>("#stationManagerName")?.value.trim();
+      const nameInput = document.querySelector<HTMLInputElement>("#stationManagerName");
+      const name = nameInput?.value.trim();
       if (!name) {
         showToast("역 이름을 입력해 주세요.");
+        if (nameInput) nameInput.value = station.name;
         return;
       }
       if (name === station.name) return;
@@ -11779,8 +11786,10 @@ function handleStationManagerClick(event: Event) {
   const name = input?.value.trim();
   if (!name) {
     showToast("역 이름을 입력해 주세요.");
+    if (input) input.value = selectedStation.name;
     return;
   }
+  if (name === selectedStation.name) return;
   const memberIds = new Set(selectedStation ? getStationManagerMembers(selectedStation).map((station) => station.id) : []);
   networkState.stations = networkState.stations.map((station) => memberIds.has(station.id) ? { ...station, name } : station);
   requestStateSave();

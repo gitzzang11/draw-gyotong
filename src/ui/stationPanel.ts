@@ -78,10 +78,7 @@ export class StationPanel {
           <div class="game-inspector__tags">${statusTagHtml(view.status, view.statusLabel)}${view.routes.map((route) => lineMarkHtml(route)).join("")}</div>
           <label class="dg-field">
             <span class="dg-field__label">역 이름</span>
-            <span class="game-inspector__inline">
-              <input id="stationManagerName" class="dg-input" value="${escapeHtml(view.name)}" maxlength="32" ${editableName ? "" : "readonly aria-readonly=\"true\""} />
-              ${editableName ? `<button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-station-manager-action="save-name">저장</button>` : ""}
-            </span>
+            <input id="stationManagerName" class="dg-input" value="${escapeHtml(view.name)}" maxlength="32" enterkeyhint="done" ${editableName ? "" : "readonly aria-readonly=\"true\""} />
           </label>
           ${editableName && view.nameCandidates ? nameCandidatesHtml(view.nameCandidates, view.name) : ""}
         </section>
