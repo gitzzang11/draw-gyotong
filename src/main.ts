@@ -6558,9 +6558,12 @@ function makeUniqueStationName(baseName: string, position: LatLng, excludingId?:
 // 역 정보 창의 "주변 이름 후보": 자동 이름과 같은 기준(분류별 반경)의 후보를 모두 모은다. 창을 연 역 하나만 기억한다.
 let stationNameCandidates: { entityId: string; state: "idle" | "loading" | "error" | "ready"; items: Array<{ name: string; detail: string }> } | null = null;
 
+// 후보 목록 접기는 역을 바꿔도 유지한다(세션 동안).
+let stationNameCandidatesCollapsed = false;
+
 function stationNameCandidatesFor(entityId: string) {
   if (stationNameCandidates?.entityId !== entityId) stationNameCandidates = { entityId, state: "idle", items: [] };
-  return { state: stationNameCandidates.state, items: stationNameCandidates.items };
+  return { state: stationNameCandidates.state, items: stationNameCandidates.items, collapsed: stationNameCandidatesCollapsed };
 }
 
 async function loadStationNameCandidates(entityId: string, position: [number, number]) {
@@ -11691,6 +11694,11 @@ function handleStationManagerClick(event: Event) {
   const target = (event.target as HTMLElement).closest<HTMLElement>("[data-station-manager-action]");
   let action = target?.dataset.stationManagerAction;
   if (!action) return;
+  // 이름 후보 접기: summary 기본 동작으로 열고 닫히며, 다시 그릴 때를 위해 상태만 기억한다(누르기 전 open이면 접힘).
+  if (action === "toggle-name-candidates") {
+    stationNameCandidatesCollapsed = Boolean(target?.closest("details")?.open);
+    return;
+  }
   // 이름 후보를 누르면 그 이름을 칸에 넣고 저장과 같게 처리한다.
   if (action === "pick-name") {
     const input = document.querySelector<HTMLInputElement>("#stationManagerName");

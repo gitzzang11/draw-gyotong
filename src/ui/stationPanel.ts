@@ -22,6 +22,8 @@ export interface StationPanelTransfer {
 export interface StationNameCandidatesView {
   state: "idle" | "loading" | "error" | "ready";
   items: Array<{ name: string; detail: string }>;
+  /** 후보 목록을 접어 둔 상태(머리글만 보임) */
+  collapsed?: boolean;
 }
 
 export interface StationPanelView {
@@ -105,8 +107,8 @@ function nameCandidatesHtml(candidates: StationNameCandidatesView, currentName: 
     return `<div class="game-inspector__name-candidates"><p class="game-inspector__note">주변 이름을 불러오지 못했습니다.</p><button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-station-manager-action="load-name-candidates">다시 시도</button></div>`;
   }
   if (candidates.items.length === 0) return `<p class="game-inspector__note">기준 반경 안에 쓸 수 있는 이름이 없습니다.</p>`;
-  return `<div class="game-inspector__name-candidates" role="group" aria-label="이름 후보">
-    <span class="dg-field__label">이름 후보 · 누르면 바로 바뀜</span>
+  return `<details class="game-fold game-inspector__name-candidates" role="group" aria-label="이름 후보"${candidates.collapsed ? "" : " open"}>
+    <summary class="game-fold__summary" data-station-manager-action="toggle-name-candidates"><span class="dg-field__label">이름 후보 ${candidates.items.length}개 · 누르면 바로 바뀜</span></summary>
     ${candidates.items.map((item) => `<button class="game-route-item" type="button" data-station-manager-action="pick-name" data-name="${escapeHtml(item.name)}" aria-pressed="${item.name === currentName}"><span class="game-route-item__text"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.detail)}</small></span></button>`).join("")}
-  </div>`;
+  </details>`;
 }

@@ -456,7 +456,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 상태 태그 | `dg-tag` + `--ok` / `--build` / `--plan` / `--paused` / `--error` / `--express`, `dg-tag__icon` |
 | 공사 빗금 | `dg-hazard`, 토큰 `--hazard-pattern` |
 | Inspector 마크업 | `src/ui/inspectorMarkup.ts`: 이스케이프, 노선 기호(글자 대비 자동 선택), 상태 태그, 지표 행(톤마다 ▲▼✕△ 표식 병행), 노선 행, 구획. 패널 템플릿은 HTML 조각이 아니라 구조화된 데이터를 받는다 |
-| 역 이름 후보 | 역 정보 창(운영·계획 역)의 이름 칸 아래 `주변 이름 후보 보기`(누를 때만 지도 데이터 조회). 자동 이름과 같은 기준(철도역 500m · 동네 850m · 시설 600m · 공원 450m · 명소 600m · 도로 300m)의 후보를 우선순위 → 거리 순으로 최대 8개, 분류마다 철도역 3개·나머지 2개까지. 각 후보는 `game-route-item` 행(이름 + `분류 · 거리`), 지금 이름은 `aria-pressed`. 누르면 바로 그 이름으로 저장(이름 저장과 같음, 계획 역은 기획안에). 조회 중·실패(다시 시도)·후보 없음은 한 줄 안내. `src/stationNaming.ts` `listAutomaticStationNames` |
+| 역 이름 후보 | 역 정보 창(운영·계획 역)의 이름 칸 아래 `주변 이름 후보 보기`(누를 때만 지도 데이터 조회). 자동 이름과 같은 기준(철도역 500m · 동네 850m · 시설 600m · 공원 450m · 명소 600m · 도로 300m)의 후보를 우선순위 → 거리 순으로 최대 8개, 분류마다 철도역 3개·나머지 2개까지. 후보 목록은 `details.game-fold`(머리글 `이름 후보 n개 · 누르면 바로 바뀜`, ▾/▸)로 접고 펼 수 있고 접은 상태는 역을 바꿔도 세션 동안 유지. 각 후보는 `game-route-item` 행(이름 + `분류 · 거리`), 지금 이름은 `aria-pressed`. 누르면 바로 그 이름으로 저장(이름 저장과 같음, 계획 역은 기획안에). 조회 중·실패(다시 시도)·후보 없음은 한 줄 안내. `src/stationNaming.ts` `listAutomaticStationNames` |
 | 알림 묶음 | `game-notice-stack`(위쪽 가운데, 모드 배너 아래). 오류 배너 → 튜토리얼 → 토스트 순으로 겹치지 않게 쌓는다 |
 | 아래쪽 작업 막대 | `dg-plate game-bottom-bar`(실행 취소 묶음 오른쪽). 정차역 지도 편집의 정차·통과 수와 취소·적용, 철거 범위 조절 |
 | 기획 목록 | `dg-scrim game-planning` + `dg-panel dg-dialog dg-planning`(점선 구획). 넓은 가로 화면(760px 이상)은 편집·비교 2열, 좁으면 비교가 아래로. 포함 항목은 `game-plan-asset`(기획 노선 기호 `lineMarkHtml(..., "plan")`), 비교 카드는 `game-plan-compare[aria-pressed]` |
