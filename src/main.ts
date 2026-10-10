@@ -9857,7 +9857,12 @@ function reconcileMapStations(selectedId?: string) {
     const points = transferStations.map((station) => map.latLngToContainerPoint(station.position));
     const spread = Math.max(...points.flatMap((a) => points.map((b) => a.distanceTo(b))));
     if (spread > mergedTransferSpreadPx) {
-      connectionEntities.push({ id: `transfer:${transfer.id}`, positions: transferStations.map((station) => station.position) });
+      connectionEntities.push({
+        id: `transfer:${transfer.id}`,
+        positions: transferStations.map((station) => station.position),
+        // 통로가 레이블보다 충분히 길 때만(역명과 같은 줌 15부터) 환승 시간을 붙인다.
+        label: map.getZoom() >= 15 && spread >= 48 ? `환승 ${Math.max(1, Math.round(transfer.transferTimeMin))}분` : undefined,
+      });
       transferStations.forEach((station) => spreadStationIds.add(station.id));
       continue;
     }

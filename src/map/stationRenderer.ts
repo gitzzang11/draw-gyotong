@@ -20,6 +20,8 @@ export interface StationRenderEntity {
 export interface TransferConnectionEntity {
   id: string;
   positions: Array<[number, number]>;
+  /** 점선 통로 가운데에 붙는 "환승 n분" 레이블(없으면 숨김) */
+  label?: string;
 }
 
 export class StationRenderer {
@@ -49,9 +51,19 @@ export class StationRenderer {
       },
     });
     this.transfers = new EntityRenderer({
-      create: (entity) => L.polyline(entity.positions, this.transferStyle()).addTo(this.layer),
-      update: (line, entity) => line.setLatLngs(entity.positions).setStyle(this.transferStyle()),
-      remove: (line) => this.layer.removeLayer(line),
+      create: (entity) => {
+        const line = L.polyline(entity.positions, this.transferStyle()).addTo(this.layer);
+        this.updateTransferLabel(line, entity);
+        return line;
+      },
+      update: (line, entity) => {
+        line.setLatLngs(entity.positions).setStyle(this.transferStyle());
+        this.updateTransferLabel(line, entity);
+      },
+      remove: (line) => {
+        line.unbindTooltip();
+        this.layer.removeLayer(line);
+      },
     });
   }
 
@@ -127,6 +139,25 @@ export class StationRenderer {
       fillColor: "transparent",
       fillOpacity: 0,
     });
+  }
+
+  private updateTransferLabel(line: L.Polyline, entity: TransferConnectionEntity) {
+    if (!entity.label) {
+      line.unbindTooltip();
+      return;
+    }
+    const tooltip = line.getTooltip();
+    if (tooltip) {
+      tooltip.setContent(escapeTooltipText(entity.label));
+      tooltip.setLatLng(line.getCenter());
+      return;
+    }
+    line.bindTooltip(escapeTooltipText(entity.label), {
+      permanent: true,
+      direction: "center",
+      className: "transfer-time-label",
+      interactive: false,
+    }).openTooltip(line.getCenter());
   }
 
   private transferStyle(): L.PolylineOptions {
