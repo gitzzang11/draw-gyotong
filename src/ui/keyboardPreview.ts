@@ -76,8 +76,9 @@ export function installKeyboardPreview(root: HTMLElement = document.body) {
   document.addEventListener("focusin", render);
   // 다른 입력칸으로 옮겨 가는 경우를 기다린 뒤 다시 본다.
   document.addEventListener("focusout", () => window.setTimeout(render, 0));
-  // 한글 조합 중에도 글자가 바뀔 때마다 보인다.
-  for (const type of ["input", "compositionupdate", "compositionend", "keyup"] as const) {
+  // change 저장으로 입력칸이 교체되면 focusout이 document까지 오지 않을 수 있다.
+  // 저장 뒤에도 포커스를 다시 보고, 한글 조합 중에는 글자가 바뀔 때마다 보인다.
+  for (const type of ["input", "change", "compositionupdate", "compositionend", "keyup"] as const) {
     document.addEventListener(type, (event) => {
       if (isTextEntry(event.target as Element)) window.requestAnimationFrame(render);
     });

@@ -1002,7 +1002,7 @@ app.innerHTML = `
         </section>
         <section id="routeSettingsEditFields" class="dg-panel__section game-side-panel__fields">
           <label id="draftRouteTrainTypeField" class="dg-field"><span class="dg-field__label">차종 (건설 후 변경 불가)</span><select id="draftRouteTrainTypeSelect" class="dg-input">${TRAIN_TYPES.map((type) => `<option value="${type}"${type === DEFAULT_TRAIN_TYPE ? " selected" : ""}>${trainCatalog[type].label} · ${trainCatalog[type].minCars}~${trainCatalog[type].maxCars}량 · ${trainCatalog[type].speedKmh}km/h</option>`).join("")}</select></label>
-          <label class="dg-field"><span class="dg-field__label">이름</span><input id="draftRouteNameInput" class="dg-input" type="text" maxlength="32" placeholder="비우면 자동 이름" autocomplete="off" /></label>
+          <label class="dg-field"><span class="dg-field__label">이름</span><input id="draftRouteNameInput" class="dg-input" type="text" maxlength="32" placeholder="비우면 자동 이름" autocomplete="off" enterkeyhint="done" /></label>
           <div class="dg-field game-color-field" data-color-input="draftRouteColorInput">
             <span class="dg-field__label">노선 색</span>
             <input id="draftRouteColorInput" type="color" value="#3277ff" tabindex="-1" aria-hidden="true" hidden />
@@ -1382,7 +1382,7 @@ app.innerHTML = `
           <summary class="game-fold__summary"><span class="dg-panel__section-label">철도망 제목</span></summary>
           <p id="statisticsSaveMeta" class="game-inspector__note">샌드박스 · 보통 · 플레이 0분</p>
           <div class="game-stats__title-editor">
-            <label class="dg-field"><span class="dg-field__label">철도망 제목</span><input id="networkTitleInput" class="dg-input" maxlength="40" placeholder="비우면 도시 이름 사용" autocomplete="off" /></label>
+            <label class="dg-field"><span class="dg-field__label">철도망 제목</span><input id="networkTitleInput" class="dg-input" maxlength="40" placeholder="비우면 도시 이름 사용" autocomplete="off" enterkeyhint="done" /></label>
             <button id="saveNetworkTitleButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">제목 저장</button>
           </div>
         </details>
@@ -1439,7 +1439,7 @@ app.innerHTML = `
             <section class="dg-panel__section">
               <h3 class="dg-panel__section-label">기본 정보</h3>
               <div class="game-planning__fields">
-                <label class="dg-field"><span class="dg-field__label">기획안 이름</span><input id="planNameInput" class="dg-input" maxlength="32" autocomplete="off" /></label>
+                <label class="dg-field"><span class="dg-field__label">기획안 이름</span><input id="planNameInput" class="dg-input" maxlength="32" autocomplete="off" enterkeyhint="done" /></label>
                 <div class="game-save-editor__pair">
                   <label class="dg-field"><span class="dg-field__label">검토 상태</span><select id="planStatusSelect" class="dg-input">
                     <option value="draft">초안</option><option value="review">검토 중</option>
@@ -1543,7 +1543,7 @@ app.innerHTML = `
             <button id="addOperatingServiceButton" class="dg-btn dg-btn--secondary dg-btn--compact game-fold__action" type="button">＋ 운행 계통 추가</button>
             <form id="operatingServiceEditor" class="game-service-editor" hidden>
               <div class="game-service-editor__head"><strong id="operatingServiceEditorTitle">새 운행 계통</strong><button id="cancelOperatingServiceButton" class="dg-icon-btn" type="button" aria-label="계통 편집 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></div>
-              <label class="dg-field"><span class="dg-field__label">계통 이름</span><input id="operatingServiceNameInput" class="dg-input" maxlength="28" required /></label>
+              <label class="dg-field"><span class="dg-field__label">계통 이름</span><input id="operatingServiceNameInput" class="dg-input" maxlength="28" required enterkeyhint="done" /></label>
               <label class="dg-field"><span class="dg-field__label">운행 경로 · 분기 방향</span><select id="operatingServicePathSelect" class="dg-input"></select></label>
               <div class="dg-field"><span class="dg-field__label">정차 방식</span>
                 <div class="dg-seg game-service-presets" role="group" aria-label="정차 프리셋">
@@ -1564,7 +1564,7 @@ app.innerHTML = `
           <details class="dg-panel__section game-fold">
             <summary class="game-fold__summary"><span class="dg-panel__section-label">노선 설정</span></summary>
             <div class="game-fold__fields">
-              <label class="dg-field"><span class="dg-field__label">노선 이름</span><input id="lineNameInput" class="dg-input" maxlength="28" /></label>
+              <label class="dg-field"><span class="dg-field__label">노선 이름</span><input id="lineNameInput" class="dg-input" maxlength="28" enterkeyhint="done" /></label>
               <div class="dg-field game-color-field" data-color-input="lineColorInput">
                 <span class="dg-field__label">노선 색</span>
                 <input id="lineColorInput" type="color" tabindex="-1" aria-hidden="true" hidden />
@@ -2731,18 +2731,23 @@ const enterSaveTargets: Record<string, string | null | (() => void)> = {
 };
 function submitNameInput(input: HTMLInputElement) {
   const selector = enterSaveTargets[input.id];
-  if (selector === undefined || input.readOnly) return;
+  if (selector === undefined || input.readOnly || input.disabled) return;
   if (selector === null) {
     input.blur();
+    playFeedback("confirm");
     return;
   }
   if (typeof selector === "function") {
     selector();
+    input.blur();
     return;
   }
   const button = (input.closest(".dg-panel, .dg-dialog, section") ?? document).querySelector<HTMLButtonElement>(selector)
     ?? document.querySelector<HTMLButtonElement>(selector);
-  if (button && !button.disabled && !button.hidden) button.click();
+  if (button && !button.disabled && !button.hidden) {
+    button.click();
+    input.blur();
+  }
 }
 document.addEventListener("keydown", (event) => {
   const input = event.target;
@@ -11608,6 +11613,7 @@ function saveNetworkTitle() {
   renderStatisticsScreen();
   if (!diagramScreen?.hidden) renderMetroDiagram();
   showToast(value ? "철도망 제목을 저장했습니다." : `${cityConfigs[metaState.current.cityId].name} 철도망을 기본 제목으로 사용합니다.`);
+  playFeedback("confirm");
 }
 
 function calculateNetworkFinancials() {
@@ -14097,6 +14103,8 @@ function saveOperatingServiceEditor() {
   renderOperatingServiceMapOverlay(service);
   requestUpdate("fleet-service", route.id);
   showToast(`${service.name} 운행계통을 저장했습니다.`);
+  operatingServiceNameInput?.blur();
+  playFeedback("confirm");
 }
 
 function handleOperatingServiceListClick(event: Event) {

@@ -469,7 +469,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | 안내판 패널 | `dg-panel` (`--panel-band` 지정, 공사 검토는 `--hazard`), `__header` `__icon` `__title` `__header-end` `__body` `__section` `__section-label` `__actions` `__actions-push` |
 | 기획 재질 | 상위 요소에 `dg-planning`, 레일은 `dg-rail--planning` |
 | 데이터 행 | `dg-row` (`--meter`), `__label` `__value` (`--metric` `--ok` `--caution` `--danger`), `dg-meter` `dg-meter__fill--over` |
-| 입력 | `dg-field`, `dg-field__label`, `dg-input`, `dg-field__error`. 이름 칸(노선·기획안 이름, 철도망 제목)은 엔터가 옆 저장 버튼과 같고, 바로 반영되는 칸은 엔터로 입력만 마친다. 역 이름(운영·계획 역)은 저장 버튼 없이 바로 반영: 엔터 또는 칸에서 벗어날 때(change) 저장, 빈 이름은 안내 후 원래 이름으로 되돌림. 한글 조합 중 엔터는 조합이 끝난 뒤 저장한다(`main.ts` `enterSaveTargets`). 폼 안 칸(운행 계통, 세이브 편집)은 폼 제출 |
+| 입력 | `dg-field`, `dg-field__label`, `dg-input`, `dg-field__error`. 이름 칸(노선·기획안 이름, 철도망 제목)은 엔터가 옆 저장 버튼과 같고, 바로 반영되는 칸은 엔터로 입력만 마친다. 역 이름(운영·계획 역)은 저장 버튼 없이 바로 반영: 엔터 또는 칸에서 벗어날 때(change) 저장, 빈 이름은 안내 후 원래 이름으로 되돌림. 한글 조합 중 엔터는 조합이 끝난 뒤 저장한다(`main.ts` `enterSaveTargets`). 완료 키(`enterkeyhint="done"`)로 저장하면 포커스를 해제하여 키보드와 입력 미리보기를 닫고, 정보창은 유지한다. 완료 효과음은 소리 설정을 따르며 기획안은 기존 기획 저장음을 유지한다. 폼 안 칸(운행 계통, 세이브 편집)은 폼 제출 |
 | 정보판 | `dg-plate`, `__cell` (`--icon` `--stack` `--on`), `__key` `__metric` `__sub`, 배지 `dg-count-badge` |
 | Tool rail | `dg-rail` (`--compact` `--planning`), `__modes` `__mode` `__mode-now`, `dg-tool[aria-pressed]` (`--destructive`). 레일 도구는 `data-rail-tool`로 표시하고 모드별 목록은 `main.ts`의 `railToolIds`가 정한다 |
 | 모드 배너·안내 | `dg-mode-banner`, `dg-mode-mark--manage` / `--plan` / `--build`, `dg-hint` |
