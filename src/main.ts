@@ -10,6 +10,7 @@ import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThe
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
+import { constructionSubsidy, constructionSubsidyRates, payableConstructionCost } from "./domain/constructionSubsidy.ts";
 import { extensionRootId, freeExtensionEndpoints, labelExtensionPieces, normalizeExtensionChains, type ExtensionChainMember, type ExtensionPieceLabel } from "./domain/extensionChain.ts";
 import { listAutomaticStationNames, normalizeAutomaticStationName, selectAutomaticStationName, stationNameSourceLabels, type StationNameMatch } from "./stationNaming.ts";
 import {
@@ -861,9 +862,9 @@ app.innerHTML = `
             <span id="difficultyPickerLabel" class="dg-field__label">난이도</span>
             <select id="difficultySelect" class="dg-hook" aria-hidden="true" tabindex="-1" hidden><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
             <div class="dg-seg game-start__choice" role="radiogroup" aria-labelledby="difficultyPickerLabel">
-              <button class="dg-seg__item" type="button" data-choice-value="easy" role="radio"><strong>쉬움</strong><small>여유롭게 시작</small></button>
-              <button class="dg-seg__item" type="button" data-choice-value="normal" role="radio"><strong>보통</strong><small>표준 경영</small></button>
-              <button class="dg-seg__item" type="button" data-choice-value="hard" role="radio"><strong>어려움</strong><small>도전적인 운영</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="easy" role="radio"><strong>쉬움</strong><small>여유롭게 시작</small><small>국비 보조 50%</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="normal" role="radio"><strong>보통</strong><small>표준 경영</small><small>국비 보조 40%</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="hard" role="radio"><strong>어려움</strong><small>도전적인 운영</small><small>국비 보조 25%</small></button>
             </div>
           </div>
           <label class="dg-field"><span class="dg-field__label">세이브 이름</span><input id="slotNameInput" class="dg-input" value="서울 1호 계획" maxlength="20" placeholder="세이브 이름" autocomplete="off" /></label>
@@ -4858,7 +4859,7 @@ function stageDepotDraft(polygon: LatLng[], connectedRouteIds: string[], connect
   const totalCost = Math.round(areaHa * 680 * cityConfigs[metaState.current.cityId].constructionMultiplier * difficultyConfigs[metaState.current.difficulty].costMultiplier);
   const warnings: ConstructionWarning[] = [];
   if (metaState.current.mode === "career" && totalCost > financeState.economy.cash)
-    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(totalCost - financeState.economy.cash)} 부족합니다.` });
+    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(subsidizedCost(totalCost) - financeState.economy.cash)} 부족합니다.` });
   const analysis: ConstructionAnalysis = {
     segments: [],
     lengthKm: 0,
@@ -4870,7 +4871,7 @@ function stageDepotDraft(polygon: LatLng[], connectedRouteIds: string[], connect
     stationInstallCount: 0,
     depotConnected: connectedRouteIds.length > 0 || connectedPlannedRouteIds.length > 0,
     totalCost,
-    balanceAfter: planningMode ? financeState.economy.cash : financeState.economy.cash - totalCost,
+    balanceAfter: planningMode ? financeState.economy.cash : financeState.economy.cash - subsidizedCost(totalCost),
     durationDays: Math.max(45, Math.round(areaHa * 32)),
     warnings: planningMode
       ? warnings.filter((warning) => warning.code !== "insufficient-funds" && !(warning.code === "depot-unconnected" && connectedPlannedRouteIds.length > 0))
@@ -4924,10 +4925,10 @@ function stageLiveEditDraft(handle: RouteHandleMove, coordinates: Array<[number,
   const analysis = analyzeConstruction("edit", points, route.id, existingChoices);
   analysis.baseCost = deltaCost;
   analysis.totalCost = deltaCost + analysis.mountainCost + analysis.riverCost;
-  analysis.balanceAfter = financeState.economy.cash - analysis.totalCost;
+  analysis.balanceAfter = financeState.economy.cash - subsidizedCost(analysis.totalCost);
   analysis.durationDays = Math.max(7, Math.round(Math.abs(newLength - route.lengthKm) * baseConstructionDaysPerKm));
-  if (metaState.current.mode === "career" && deltaCost > financeState.economy.cash)
-    analysis.warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(deltaCost - financeState.economy.cash)} 부족합니다.` });
+  if (metaState.current.mode === "career" && subsidizedCost(deltaCost) > financeState.economy.cash)
+    analysis.warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(subsidizedCost(deltaCost) - financeState.economy.cash)} 부족합니다.` });
   constructionDraft = {
     id: constructionDraft?.kind === "edit" ? constructionDraft.id : createId("draft"),
     kind: "edit",
@@ -4975,8 +4976,10 @@ function renderConstructionPanel() {
   setText(previewStationCountLabel, "역 연결/설치");
   setText(previewDepotConnectionLabel, "차량기지 연결");
   const costStr = analysis.totalCost < 0 ? `${formatCost(Math.abs(analysis.totalCost))} 환급` : formatCost(analysis.totalCost);
-  setText(previewTotalCost, costStr);
-  setText(headerPreviewCost, costStr);
+  // 공사 모드: 확정 줄 비용은 국비 보조를 뺀 실부담, 사업비 줄에 보조율과 보조액을 적는다.
+  const subsidy = planningMode ? 0 : constructionSubsidy(analysis.totalCost, constructionSubsidyRate());
+  setText(previewTotalCost, subsidy > 0 ? `${costStr} · 국비 −${formatCost(subsidy)}` : costStr);
+  setText(headerPreviewCost, subsidy > 0 ? formatCost(subsidizedCost(analysis.totalCost)) : costStr);
   setText(previewBalance, planningMode ? "기획안 저장" : formatSignedCost(analysis.balanceAfter));
   setText(previewDuration, formatConstructionDuration(analysis.durationDays));
   setText(previewLength, analysis.lengthKm < 1 ? `${Math.round(analysis.lengthKm * 1000)}m` : `${analysis.lengthKm.toFixed(2)}km`);
@@ -4996,7 +4999,8 @@ function renderConstructionPanel() {
     const row = value?.closest<HTMLElement>(".dg-row");
     if (row) row.hidden = !visible;
   };
-  showRow(previewTotalCost, false);
+  showRow(previewTotalCost, subsidy > 0);
+  if (subsidy > 0) setText(previewTotalCostLabel, `사업비 (국비 ${Math.round(constructionSubsidyRate() * 100)}% 보조)`);
   // 길이와 공기는 한 줄로 합친다.
   setText(previewDurationLabel, "길이 · 공기");
   setText(previewDuration, `${previewLength?.textContent ?? ""} · ${formatConstructionDuration(analysis.durationDays)}`);
@@ -5195,8 +5199,9 @@ async function confirmConstructionDraft() {
     const selectedId = commitConstructionDraft(draft);
     financeState.economy = {
       ...financeState.economy,
-      cash: financeState.economy.cash - draft.analysis.totalCost,
-      constructionSpent: Math.max(0, financeState.economy.constructionSpent + draft.analysis.totalCost),
+      // 국비 보조를 뺀 실부담만 낸다(환급이면 그대로).
+      cash: financeState.economy.cash - subsidizedCost(draft.analysis.totalCost),
+      constructionSpent: Math.max(0, financeState.economy.constructionSpent + subsidizedCost(draft.analysis.totalCost)),
     };
     synchronizeGraphReferences();
     metaState.patch({ updatedAt: Date.now() });
@@ -5659,7 +5664,8 @@ function constructionProjectProgress(project: ConstructionProject) {
 }
 
 function constructionProjectRefund(project: ConstructionProject) {
-  return Math.round(Math.max(0, project.baseCost) * (1 - constructionProjectProgress(project)));
+  // 사업비 중 회사가 낸 몫(국비 보조 제외)의 남은 공정만큼 돌려받는다.
+  return Math.round(subsidizedCost(Math.max(0, project.baseCost) * (1 - constructionProjectProgress(project))));
 }
 
 function isConnectionConstructionProject(project: ConstructionProject) {
@@ -8081,7 +8087,7 @@ function recalculatePlan(plan: ConstructionPlan): ConstructionPlan {
   let status = plan.status;
   if (totalAssets > 0 && completedAssets === totalAssets) status = "completed";
   else if (completedAssets > 0) status = "partial";
-  else if (status !== "on-hold" && status !== "review") status = remainingCost > financeState.economy.cash && metaState.current.mode === "career" ? "insufficient" : totalAssets > 0 ? "ready" : "draft";
+  else if (status !== "on-hold" && status !== "review") status = subsidizedCost(remainingCost) > financeState.economy.cash && metaState.current.mode === "career" ? "insufficient" : totalAssets > 0 ? "ready" : "draft";
   return { ...plan, expectedTotalCost, remainingCost, expectedConstructionDays, expectedDemand, expectedRevenue, terrainDifficulty, transferEffect, status };
 }
 
@@ -9061,7 +9067,10 @@ function renderPlanConversionSummary() {
   // 연장 조각은 뿌리 노선과 한 노선으로 센다.
   const routeCount = new Set(selection.filter((item) => item.kind === "segment").map((item) => planLineKey(item.routeId, plan))).size;
   const cost = calculatePlanConversionCost(plan, selection);
-  const shortfall = Math.max(0, cost - financeState.economy.cash);
+  // 국비 보조를 뺀 실부담으로 자금 부족을 판단한다.
+  const payable = subsidizedCost(cost);
+  const subsidy = Math.max(0, cost - payable);
+  const shortfall = Math.max(0, payable - financeState.economy.cash);
   const invalidFacilities = selection.filter((entry) => {
     if (entry.kind === "station") {
       const station = plan.stations.find((item) => item.id === entry.assetId);
@@ -9088,7 +9097,7 @@ function renderPlanConversionSummary() {
     .sort((a, b) => a.constructionCost - b.constructionCost)
     .reduce(
       (state, segment) =>
-        state.cost + segment.constructionCost <= financeState.economy.cash ? { count: state.count + 1, cost: state.cost + segment.constructionCost } : state,
+        state.cost + subsidizedCost(segment.constructionCost) <= financeState.economy.cash ? { count: state.count + 1, cost: state.cost + subsidizedCost(segment.constructionCost) } : state,
       { count: 0, cost: 0 },
     );
   const state = selection.length === 0 ? "empty" : invalidFacilities > 0 ? "invalid" : metaState.current.mode === "career" && shortfall > 0 ? "shortfall" : "ready";
@@ -9106,7 +9115,8 @@ function renderPlanConversionSummary() {
     <div class="dg-notice ${notice.tone}"><span class="dg-notice__lead">${notice.lead}</span><span>${notice.message}</span></div>
     ${metricRowsHtml([
       { label: "선택 공사비", value: formatCost(cost) },
-      { label: "건설 후 자금", value: formatSignedCost(financeState.economy.cash - cost), tone: financeState.economy.cash - cost < 0 ? "danger" : undefined },
+      ...(subsidy > 0 ? [{ label: `국비 보조 (${Math.round(constructionSubsidyRate() * 100)}%)`, value: `−${formatCost(subsidy)}` }, { label: "실부담", value: formatCost(payable) }] : []),
+      { label: "건설 후 자금", value: formatSignedCost(financeState.economy.cash - payable), tone: financeState.economy.cash - payable < 0 ? "danger" : undefined },
       { label: "대상 노선", value: `${routeCount}개` },
       { label: "노선 구간", value: `${segmentCount}개` },
       { label: "역", value: `${stationCount}개` },
@@ -9114,7 +9124,7 @@ function renderPlanConversionSummary() {
       { label: "환승 연결", value: `${transferCount}개` },
       { label: "연결 공사", value: `${connectionCount}개` },
     ])}`;
-  setText(planConversionDialog?.querySelector<HTMLElement>("#planConversionCost") ?? null, formatCost(cost));
+  setText(planConversionDialog?.querySelector<HTMLElement>("#planConversionCost") ?? null, formatCost(payable));
   if (confirmPlanConversionButton)
     confirmPlanConversionButton.disabled = selection.length === 0 || invalidFacilities > 0 || (metaState.current.mode === "career" && shortfall > 0);
   const confirmLabel = confirmPlanConversionButton?.querySelector("span");
@@ -9166,7 +9176,7 @@ async function confirmPlanConversion() {
     return false;
   });
   const cost = calculatePlanConversionCost(plan, selection);
-  if (selection.length === 0 || (metaState.current.mode === "career" && cost > financeState.economy.cash)) return;
+  if (selection.length === 0 || (metaState.current.mode === "career" && subsidizedCost(cost) > financeState.economy.cash)) return;
   const before = cloneState();
   planConversionsInFlight.add(plan.id);
   const createdRouteIds: string[] = [];
@@ -9421,7 +9431,9 @@ async function confirmPlanConversion() {
         constructionState.replaceProjects(constructionState.projects.map((item) => item.id === projectId ? { ...item, status: "operating", openedAtDay: analysisStateOwner.current.dayIndex } : item));
       }
     }
-    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - cost, constructionSpent: financeState.economy.constructionSpent + cost };
+    // 국비 보조를 뺀 실부담만 낸다.
+    const payable = subsidizedCost(cost);
+    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - payable, constructionSpent: financeState.economy.constructionSpent + payable };
     if (usesConstructionTimeline()) {
       constructionState.replaceProjects([
         ...constructionState.projects,
@@ -13168,6 +13180,16 @@ function calculateDailyMaintenance(fleetSource = operationsState.fleets) {
   return breakdown.trains + breakdown.depots + breakdown.express;
 }
 
+/** 건설 국비 보조율: 커리어 모드에서 난이도별(쉬움 50% · 보통 40% · 어려움 25%), 샌드박스는 0 */
+function constructionSubsidyRate() {
+  return metaState.current.mode === "career" ? constructionSubsidyRates[metaState.current.difficulty] ?? 0 : 0;
+}
+
+/** 사업비 중 회사가 실제로 내는 금액(국비 보조를 뺀 값) */
+function subsidizedCost(cost: number) {
+  return payableConstructionCost(cost, constructionSubsidyRate());
+}
+
 /**
  * 운임 외 수입(역 상가 임대·광고 등). 운임 수입에 비례해 40%를 더한다(2026-10-11 조정).
  * 실제 도시철도 운영사도 운임 외 수입이 운임의 수십 % 수준이다. 이 값이 있어야 잘 짠 노선망이 확장 자금을 모은다.
@@ -13566,7 +13588,8 @@ function updateExpressButton() {
 function getCurrentDepotExpansionQuote(depot: Depot) {
   return getDepotExpansionQuote(depot, {
     mode: metaState.current.mode,
-    cash: financeState.economy.cash,
+    // 견적은 사업비와 자금을 비교하므로, 국비 보조를 뺀 실부담 기준으로 자금을 환산해 넘긴다.
+    cash: financeState.economy.cash / Math.max(0.01, 1 - constructionSubsidyRate()),
     costMultiplier: cityConfigs[metaState.current.cityId].constructionMultiplier * difficultyConfigs[metaState.current.difficulty].costMultiplier,
     operational: isDepotOperational(depot.id),
     busy: depotExpansionsInFlight.size > 0,
@@ -13582,7 +13605,7 @@ function requestDepotExpansion(id: string) {
   closeDepotManager();
   openDecisionDialog(
     `“${depot.name}” 차량기지를 레벨 ${depot.level} → ${quote.nextLevel}로 확장할까요?`,
-    `비용 ${formatCost(quote.cost)} · 확장 후 잔액 ${formatCost(financeState.economy.cash - quote.cost)}. ` +
+    `사업비 ${formatCost(quote.cost)}${constructionSubsidyRate() > 0 ? ` (국비 −${formatCost(constructionSubsidy(quote.cost, constructionSubsidyRate()))})` : ""} · 확장 후 잔액 ${formatCost(financeState.economy.cash - subsidizedCost(quote.cost))}. ` +
       `수용량 ${depot.capacity} → ${calculateDepotCapacity(depot.areaHa, quote.nextLevel)}편성 · 월 유지비 ${formatCost(depot.maintenanceCost)} → ${formatCost(calculateDepotMaintenance(depot.areaHa, quote.nextLevel))}. ` +
       "기존 부지의 설비 개량으로 즉시 반영하며 운행을 유지합니다. 저장 완료 후 실행 취소할 수 있습니다.",
     `${formatCost(quote.cost)} · 확장 확정`,
@@ -13612,7 +13635,7 @@ async function expandDepot(id: string, expected?: { level: number; cost: number;
       maintenanceCost: calculateDepotMaintenance(item.areaHa, quote.nextLevel),
       constructionCost: (item.constructionCost ?? 0) + quote.cost,
     });
-    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - quote.cost, constructionSpent: financeState.economy.constructionSpent + quote.cost };
+    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - subsidizedCost(quote.cost), constructionSpent: financeState.economy.constructionSpent + subsidizedCost(quote.cost) };
     requestUpdateDomains(["capacity", "finance", "hud-finance", "hud-status", "active-panel"]);
     await flushStateSave();
     if (!hasActiveGameSession || metaState.current.slotId !== slotId || metaState.current.cityId !== cityId) return false;
@@ -15688,7 +15711,7 @@ async function confirmRouteMerge() {
       connectedRouteIds: Array.from(new Set(depot.connectedRouteIds.map((id) => (id === second.id ? first.id : id)))),
     }));
     operationsState.expressConfigs = mergeExpressConfigs(first.id, second.id);
-    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - bridgeCost, constructionSpent: financeState.economy.constructionSpent + bridgeCost };
+    financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - subsidizedCost(bridgeCost), constructionSpent: financeState.economy.constructionSpent + subsidizedCost(bridgeCost) };
     cleanupTransferData();
     synchronizeGraphReferences();
     metaState.patch({ updatedAt: Date.now() });
@@ -16378,7 +16401,7 @@ function analyzeConstruction(
     stationInstallCount,
     depotConnected,
     totalCost,
-    balanceAfter: financeState.economy.cash - totalCost,
+    balanceAfter: financeState.economy.cash - subsidizedCost(totalCost),
     durationDays,
     warnings,
   };
@@ -16450,7 +16473,7 @@ function collectConstructionWarnings(input: {
   else if (input.kind !== "depot" && input.lengthKm * 1000 < 180)
     warnings.push({ code: "short-section", severity: "warning", message: "매우 짧은 구간입니다. 향후 선형 수정이 어려울 수 있습니다." });
   if (metaState.current.mode === "career" && input.totalCost > financeState.economy.cash)
-    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(input.totalCost - financeState.economy.cash)} 부족합니다.` });
+    warnings.push({ code: "insufficient-funds", severity: "error", message: `자금이 ${formatCost(subsidizedCost(input.totalCost) - financeState.economy.cash)} 부족합니다.` });
   if (input.crossings.some((crossing) => !crossing.mode))
     warnings.push({ code: "river-choice", severity: "error", message: "각 강 통과 지점의 교량 또는 지하 방식을 선택하세요." });
   if (!input.depotConnected && input.kind !== "repair" && input.kind !== "edit")

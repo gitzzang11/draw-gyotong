@@ -53,6 +53,8 @@ function application(plan = fixture(), timeline = false, flushStateSave = async 
   const financeState = { economy: { cash: 10_000, constructionSpent: 0 } };
   const latLng = (lat: number, lng: number) => ({ lat, lng });
   const context = createContext({
+    // 국비 보조 없음(보조금은 tests/constructionSubsidy.test.ts에서 따로 검사)
+    subsidizedCost: (cost: number) => cost, constructionSubsidyRate: () => 0, constructionSubsidy: () => 0,
     structuredClone, Date, Error, console: { error: (error: unknown) => errors.push(error) },
     constructionState, networkState, financeState, operationsState,
     metaState: { current: { mode: "sandbox", cityId: "seoul", difficulty: "normal" }, patch: noop },

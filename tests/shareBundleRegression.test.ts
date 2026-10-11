@@ -19,6 +19,8 @@ const noop = () => {};
 function applicationContext(names: string[], globals: Record<string, unknown> = {}) {
   let sequence = 0;
   const context = createContext({
+    // 국비 보조 없음(보조금은 tests/constructionSubsidy.test.ts에서 따로 검사)
+    subsidizedCost: (cost: number) => cost, constructionSubsidyRate: () => 0, constructionSubsidy: () => 0,
     structuredClone, console, Date, Error,
     gameVersion: "0.4.0", cityDataVersion: "korea-cities-1",
     metaState: { current: { cityId: "seoul", mode: "sandbox", slotId: "slot-a" } },
