@@ -16,6 +16,8 @@ export interface SettlementForecast {
 
 export interface SettlementPreparation {
   forecast: SettlementForecast;
+  /** 운임 외 수입(역 상가·광고 등) */
+  otherRevenue?: number;
   maintenance: { trains: number; depots: number; express: number };
   constructionCostDue: number;
   financesBefore: { transitShare: number; assets: number };
@@ -96,7 +98,7 @@ export class DailySettlementRuntime<TAnalysis, TMeta, TNews = unknown> {
         gameMode: context.getGameMode(),
         currentMoney: economy.cash,
         fareRevenue: prepared.forecast.revenue,
-        otherRevenue: 0,
+        otherRevenue: prepared.otherRevenue ?? 0,
         lineMaintenanceCost: 0,
         stationMaintenanceCost: 0,
         trainMaintenanceCost: prepared.maintenance.trains,

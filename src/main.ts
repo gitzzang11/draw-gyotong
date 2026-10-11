@@ -12204,6 +12204,7 @@ function renderOverviewStatistics() {
     ["총부채", formatCost(finances.liabilities), null],
     ["대출 상환액", `${formatCost(financeState.statistics.totalLoanRepaid)} 누적`, null],
     ["일간 수익", formatCost(finances.dailyRevenue), null],
+    ["그중 부대 수입(상가·광고)", formatCost((finances.dailyRevenue * ancillaryRevenueShare) / (1 + ancillaryRevenueShare)), null],
     ["일간 지출", formatCost(finances.dailyExpenses), null],
     ["월간 수익", formatCost(finances.monthlyRevenue), null],
     ["월간 지출", formatCost(finances.monthlyExpenses), null],
@@ -12935,7 +12936,7 @@ function calculateOperatingForecastForGroups(
     gameMode: metaState.current.mode,
     currentMoney: financeState.economy.cash,
     fareRevenue: forecast.revenue,
-    otherRevenue: 0,
+    otherRevenue: calculateAncillaryRevenue(forecast.revenue),
     lineMaintenanceCost: 0,
     stationMaintenanceCost: 0,
     trainMaintenanceCost: maintenance.trains,
@@ -13102,12 +13103,14 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     regeneratePassengerGroups();
     const forecast = calculateCurrentOperatingForecast(operationsState.fleets, financeState.economy.fare);
     const maintenance = calculateDailyMaintenanceBreakdown();
+    const otherRevenue = calculateAncillaryRevenue(forecast.revenue);
     const constructionCostDue = constructionState.projects.flatMap((project) => project.events)
       .filter((event) => !event.applied && event.kind === "extra-cost" && event.triggerDay <= gameDay)
       .reduce((sum, event) => sum + Math.max(0, event.extraCost ?? 0), 0);
     const financesBefore = calculateNetworkFinancials();
     return {
       forecast,
+      otherRevenue,
       maintenance,
       constructionCostDue,
       financesBefore,
@@ -13165,6 +13168,16 @@ function calculateDailyMaintenance(fleetSource = operationsState.fleets) {
   return breakdown.trains + breakdown.depots + breakdown.express;
 }
 
+/**
+ * 운임 외 수입(역 상가 임대·광고 등). 운임 수입에 비례해 40%를 더한다(2026-10-11 조정).
+ * 실제 도시철도 운영사도 운임 외 수입이 운임의 수십 % 수준이다. 이 값이 있어야 잘 짠 노선망이 확장 자금을 모은다.
+ */
+const ancillaryRevenueShare = 0.4;
+
+function calculateAncillaryRevenue(fareRevenue: number) {
+  return Math.round(Math.max(0, fareRevenue) * ancillaryRevenueShare * 100) / 100;
+}
+
 function calculateDailyMaintenanceBreakdown(fleetSource = operationsState.fleets) {
   const multiplier = getNewsOperatingCostMultiplier();
   return {
@@ -13185,9 +13198,17 @@ function calculateAutoFare() {
   return clampInteger(Math.round(target / 50) * 50, 1100, 2800);
 }
 
-/** 대출 한 건의 원금(억)과 월 상환액(억). 재정 화면의 확인 문구도 같은 값을 쓴다. */
+/**
+ * 대출 한 건의 원금(억)과 상환 기간. 월 상환액은 연이율로 20년 원리금 균등 상환(보통 난이도 월 약 206억).
+ * 예전에는 월 720억 고정이라 운영 흑자로는 갚을 수 없어 대출이 곧 파산으로 이어졌다(2026-10-11 조정).
+ */
 const loanPrincipal = 30000;
-const loanMonthlyPayment = 720;
+const loanTermMonths = 240;
+
+function currentLoanMonthlyPayment() {
+  const monthlyRate = currentLoanInterestRate() / 12;
+  return Math.round((loanPrincipal * monthlyRate) / (1 - (1 + monthlyRate) ** -loanTermMonths));
+}
 
 function currentLoanInterestRate() {
   return 0.055 * difficultyConfigs[metaState.current.difficulty].loanInterestMultiplier;
@@ -13212,7 +13233,7 @@ function takeLoan() {
     principal,
     balance: principal,
     interestRate: currentLoanInterestRate(),
-    monthlyPayment: loanMonthlyPayment,
+    monthlyPayment: currentLoanMonthlyPayment(),
   });
   financeState.economy = { ...financeState.economy, cash: financeState.economy.cash + principal, loanBalance: financeState.economy.loanBalance + principal };
   redoStack = [];
@@ -13290,7 +13311,7 @@ function openLoanDecision(afterLoan: () => void) {
   const { cash, loanBalance } = financeState.economy;
   openDecisionDialog(
     `${formatCost(loanPrincipal)}을 대출할까요?`,
-    `자금 ${formatSignedCost(cash)} → ${formatSignedCost(cash + loanPrincipal)} · 대출 잔액 ${formatCost(loanBalance)} → ${formatCost(loanBalance + loanPrincipal)} · 연 이자 ${(currentLoanInterestRate() * 100).toFixed(1)}% · 월 상환 ${formatCost(loanMonthlyPayment)}`,
+    `자금 ${formatSignedCost(cash)} → ${formatSignedCost(cash + loanPrincipal)} · 대출 잔액 ${formatCost(loanBalance)} → ${formatCost(loanBalance + loanPrincipal)} · 연 이자 ${(currentLoanInterestRate() * 100).toFixed(1)}% · 월 상환 ${formatCost(currentLoanMonthlyPayment())}(20년)`,
     `${formatCost(loanPrincipal)} 대출`,
     () => {
       takeLoan();

@@ -108,8 +108,9 @@ export function calculateOperatingForecast(input: OperatingForecastInput): Opera
   const satisfaction = demand > 0
     ? Math.round(weightedSatisfaction / demand)
     : Math.round(input.fallbackSatisfaction ?? 75);
-  const calculatedRevenue = Math.round((demand * input.fare) / 100000000);
-  const revenue = demand > 0 ? Math.max(1, calculatedRevenue) : 0;
+  // 운임 수입(억)은 0.01억(100만 원) 단위. 1억 단위로 반올림하면 작은 노선망의 수입이 0 또는 1억으로 뭉개진다.
+  const calculatedRevenue = Math.round((demand * input.fare) / 1000000) / 100;
+  const revenue = demand > 0 ? Math.max(0.01, calculatedRevenue) : 0;
   const expenses = Math.round(input.maintenance + input.loanInterest + input.loanPayment);
   return {
     crowding,

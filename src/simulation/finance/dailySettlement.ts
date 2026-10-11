@@ -39,14 +39,14 @@ export function calculateDailySettlement<L extends FinanceLoan>(
     other: otherExpense,
     total: 0,
   };
-  expenses.total = Object.entries(expenses)
+  expenses.total = roundMoney(Object.entries(expenses)
     .filter(([key]) => key !== "total")
-    .reduce((sum, [, value]) => sum + value, 0);
+    .reduce((sum, [, value]) => sum + value, 0));
   const grossOperatingProfit = revenue.total - (
     expenses.lines + expenses.stations + expenses.trains + expenses.depots + expenses.express
   );
   const netProfit = revenue.total - expenses.total;
-  const moneyAfter = sandbox ? 999_999_999 : Math.round(input.currentMoney + netProfit);
+  const moneyAfter = sandbox ? 999_999_999 : roundMoney(input.currentMoney + netProfit);
   const result: DailySettlementResult<L> = {
     gameDay: input.gameDay,
     revenue,
@@ -163,7 +163,8 @@ export function calculateAtomicDailySettlement<E extends SettlementEconomy, L ex
 }
 
 function sanitizeInput<L extends FinanceLoan>(input: DailySettlementInput<L>): DailySettlementInput<L> {
-  const cost = (value: number) => Math.max(0, Math.round(finite(value)));
+  // 금액은 0.01억(100만 원) 단위. 1억 단위로 반올림하면 작은 노선망의 운영비·운임 외 수입이 통째로 사라진다.
+  const cost = (value: number) => Math.max(0, roundMoney(finite(value)));
   return {
     ...input,
     gameDay: cost(input.gameDay),
@@ -182,6 +183,11 @@ function sanitizeInput<L extends FinanceLoan>(input: DailySettlementInput<L>): D
     eventEffects: input.eventEffects.map((effect) => ({ ...effect, amount: finite(effect.amount) })),
     bankruptcyRules: { limit: finite(input.bankruptcyRules.limit) },
   };
+}
+
+/** 0.01억 단위 반올림 */
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
 }
 
 function finite(value: number) {

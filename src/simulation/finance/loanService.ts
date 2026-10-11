@@ -18,7 +18,7 @@ export function settleDailyLoans<T extends FinanceLoan>(
     principalRepaid += principal;
     return {
       ...loan,
-      balance: Math.max(0, Math.round(loan.balance - principal)),
+      balance: Math.max(0, Math.round((loan.balance - principal) * 100) / 100),
       lastInterestAppliedDay: preview ? loan.lastInterestAppliedDay : gameDay,
     };
   }).filter((loan) => loan.balance > 0);
@@ -36,5 +36,5 @@ function finite(value: number) {
 }
 
 function round(value: number) {
-  return Math.max(0, Math.round(finite(value)));
+  return Math.max(0, Math.round(finite(value) * 100) / 100);
 }
