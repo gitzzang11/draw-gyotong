@@ -93,7 +93,8 @@ export function listAutomaticStationNames(
     const tags = element.tags ?? {};
     const name = normalizeAutomaticStationName(tags["name:ko"]?.trim() || tags.name || "");
     const priority = namingCategories.findIndex((category) => category.matches(tags));
-    if (!name || priority < 0) continue;
+    // 후보는 한글 이름만(name:ko가 없는 외국어 이름은 역 이름으로 어색하다).
+    if (!name || priority < 0 || !/[가-힣]/.test(name)) continue;
     const point = element.center ??
       (typeof element.lat === "number" && typeof element.lon === "number"
         ? { lat: element.lat, lon: element.lon }

@@ -224,3 +224,13 @@ describe("station name candidates", () => {
     expect(result.map((item) => item.name)).toEqual(["동네0", "동네1", "학교"]);
   });
 });
+
+describe("station name candidates language", () => {
+  it("skips names without Hangul", () => {
+    const result = listAutomaticStationNames(origin, [
+      feature("Maxim Mural", { tourism: "attraction" }, 10),
+      feature("성수동", { place: "quarter" }, 100),
+    ]);
+    expect(result.map((item) => item.name)).toEqual(["성수동"]);
+  });
+});
