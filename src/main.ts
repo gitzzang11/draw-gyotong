@@ -915,7 +915,7 @@ app.innerHTML = `
         <svg class="game-icon-pause" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="3.5" height="12"/><rect x="11.5" y="4" width="3.5" height="12"/></svg>
         <svg class="game-icon-play" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6 4 L16 10 L6 16 Z"/></svg>
       </button>
-      <button id="speedCycleButton" class="dg-plate__cell game-speed-cell" type="button">×2</button>
+      <button id="speedCycleButton" class="dg-plate__cell game-speed-cell" type="button">×1</button>
       <button id="newsButton" class="dg-plate__cell dg-plate__cell--icon" type="button" aria-label="도시 뉴스">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M4 15 H16 L14.5 12.5 V8.5 A4.5 4.5 0 0 0 5.5 8.5 V12.5 Z M8.5 17.5 H11.5"/></svg>
         <span id="newsBadge" class="dg-count-badge" hidden>0</span>
@@ -3271,7 +3271,15 @@ errorRetryButton?.addEventListener("click", () => {
   action?.();
 });
 /** 배속 순서. 배속 칸을 누를 때마다 다음 값으로 넘어간다(docs/design/DESIGN_SYSTEM.md §9). */
-const speedSteps = [2, 5, 10, 100] as const;
+/**
+ * 배속 = 실제 1초에 흐르는 게임 분. 게임 하루(1440분)가 실제 1분·20초·6초·2초(2026-10-11).
+ * 공사 기간(게임 130~400일)을 최고 배속에서 실제 4~13분에 기다릴 수 있게 했다. 화면에는 가장 느린 단계를 ×1로 표시한다.
+ */
+const speedSteps = [24, 72, 240, 720] as const;
+
+function speedLabel(speed: number) {
+  return `×${Math.round(speed / speedSteps[0])}`;
+}
 let lastRunningSpeed: number = speedSteps[0];
 
 function nextSpeedStep(speed: number) {
@@ -13592,7 +13600,7 @@ function updateGameClockHud() {
 function syncWorkspaceClocks() {
   const clocks = document.querySelectorAll<HTMLElement>(".dg-workspace:not([hidden]) [data-workspace-clock]");
   if (clocks.length === 0) return;
-  const text = `${gameDayReadout?.textContent ?? ""} ${gameClockReadout?.textContent ?? ""} · ${simSpeed === 0 ? "‖ 정지" : `▶ ×${simSpeed}`}`;
+  const text = `${gameDayReadout?.textContent ?? ""} ${gameClockReadout?.textContent ?? ""} · ${simSpeed === 0 ? "‖ 정지" : `▶ ${speedLabel(simSpeed)}`}`;
   clocks.forEach((clock) => {
     if (clock.textContent !== text) clock.textContent = text;
   });
@@ -17348,7 +17356,7 @@ const tutorialSteps = [
   { title: "노선 연결 여부를 확인하세요", text: "노선 가까이는 연결된 상태로, 떨어진 곳은 단독 건설로 표시됩니다. 두 경우 모두 건설할 수 있습니다.", target: "depot" },
   { title: "열차를 구매하고 배정하세요", text: "관리 모드의 노선 목록에서 첫 노선을 열고 열차 운행·편성 관리에서 편성을 구매하세요.", target: "train" },
   { title: "첫 노선을 개통하세요", text: "공사 목록에서 네 가지 개통 조건을 확인하고 노선 개통을 누르세요.", target: "opening" },
-  { title: "시간을 흐르게 하세요", text: "오른쪽 위 시간 정보판에서 재생을 누르거나 배속(×2·×5·×10·×100)을 눌러 운행을 시작하세요.", target: "speed" },
+  { title: "시간을 흐르게 하세요", text: "오른쪽 위 시간 정보판에서 재생을 누르거나 배속(×1·×3·×10·×30)을 눌러 운행을 시작하세요.", target: "speed" },
   { title: "첫 수익을 확인하세요", text: "하루 운행이 끝날 때까지 기다리세요. 첫 운임 수익이 기록되면 완료됩니다.", target: "revenue" },
 ] as const;
 
@@ -17706,11 +17714,11 @@ function syncSpeedControls() {
   if (pauseToggleButton) {
     pauseToggleButton.dataset.paused = String(paused);
     pauseToggleButton.classList.toggle("dg-plate__cell--on", paused);
-    pauseToggleButton.setAttribute("aria-label", paused ? `재생, ×${shownSpeed}로 재개` : "일시정지");
+    pauseToggleButton.setAttribute("aria-label", paused ? `재생, ${speedLabel(shownSpeed)}로 재개` : "일시정지");
   }
   if (speedCycleButton) {
-    speedCycleButton.textContent = `×${shownSpeed}`;
-    speedCycleButton.setAttribute("aria-label", `배속 ×${shownSpeed}${paused ? ", 정지 중" : ""}. 누르면 ×${nextSpeedStep(shownSpeed)}`);
+    speedCycleButton.textContent = speedLabel(shownSpeed);
+    speedCycleButton.setAttribute("aria-label", `배속 ${speedLabel(shownSpeed)}${paused ? ", 정지 중" : ""}. 누르면 ${speedLabel(nextSpeedStep(shownSpeed))}`);
   }
 }
 
