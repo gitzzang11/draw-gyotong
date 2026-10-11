@@ -476,6 +476,16 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-plan-asset__main { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 180px; min-width: 0; }
 .game-plan-asset__actions { display: flex; gap: var(--space-1); margin-left: auto; }
 .game-plan-asset__icon { width: 24px; flex: none; text-align: center; font-weight: 800; }
+/* 연장 구간 줄: 뿌리 노선 줄 아래 들여쓰고 구분선을 흐리게 */
+.game-plan-asset--piece { padding-left: var(--space-3); border-top-style: dashed; }
+.game-plan-asset--piece .game-plan-asset__icon { color: var(--text-2); font-weight: 400; }
+/* 지도: 계획 연장 구간 이음매 눈금(노선을 가로지르는 먹 막대, 바탕색 테두리) */
+.game-extension-joint { position: relative; pointer-events: none; }
+.game-extension-joint > span { position: absolute; inset: 0; display: block; }
+.game-extension-joint > span::before {
+  content: ""; position: absolute; left: 6px; top: 0; width: 2px; height: 14px;
+  background: var(--text-1); box-shadow: 0 0 0 1px var(--surface-0);
+}
 .game-plan-compare {
   display: grid;
   gap: 2px;

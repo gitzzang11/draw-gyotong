@@ -3390,6 +3390,30 @@ function planExtensionLabels(plan: ConstructionPlan) {
   return labels;
 }
 
+/** 계획 노선을 지울 때 함께 지울 노선: 그 노선 + 거기서 이어 연장한 바깥 조각들(계획 노선 뿌리면 그 노선의 연장 조각 전부) */
+function plannedRouteDeletionIds(plan: ConstructionPlan, routeId: string) {
+  const ids = new Set([routeId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const route of plan.routes) {
+      if (ids.has(route.id)) continue;
+      if ((route.parentBlueprintId && ids.has(route.parentBlueprintId)) || (route.operationKind === "extension" && route.rootLineId && ids.has(route.rootLineId))) {
+        ids.add(route.id);
+        changed = true;
+      }
+    }
+  }
+  return ids;
+}
+
+/** 기획안 요약의 노선 수: 연장 조각은 뿌리 노선과 한 노선으로 센다(예: "노선 2 · 연장 3구간") */
+function planRouteCountLabel(plan: ConstructionPlan) {
+  const labels = planExtensionLabels(plan);
+  const lines = new Set(plan.routes.map((route) => planLineKey(route.id, plan))).size;
+  return `노선 ${lines}${labels.size > 0 ? ` · 연장 ${labels.size}구간` : ""}`;
+}
+
 /** 공사 목록에 쓰는 이름: 기획안 연장 조각 공사는 방향·순서를 붙인다(예: "Manual Main 연장 (동쪽 2/3)") */
 function constructionProjectDisplayName(project: ConstructionProject) {
   if (project.kind !== "extension" || !project.sourcePlanId || !project.blueprintId) return project.name;
@@ -8433,7 +8457,43 @@ function renderPlanningDialog() {
 
 function renderPlanAssets(plan: ConstructionPlan) {
   if (!planAssetList) return;
-  const routeItems = plan.routes
+  // 연장 조각은 따로 노선 줄을 만들지 않고 뿌리 노선(운영 노선이면 머리 줄) 아래에 "동쪽 2/3" 줄로 묶는다.
+  const extensionLabels = planExtensionLabels(plan);
+  const piecesByLine = new Map<string, PlannedRoute[]>();
+  for (const route of plan.routes) {
+    if (!extensionLabels.has(route.id)) continue;
+    const key = planLineKey(route.id, plan);
+    piecesByLine.set(key, [...(piecesByLine.get(key) ?? []), route]);
+  }
+  const outwardCount = (pieceId: string) => plannedRouteDeletionIds(plan, pieceId).size - 1;
+  const pieceRows = (key: string) => (piecesByLine.get(key) ?? [])
+    .sort((a, b) => {
+      const la = extensionLabels.get(a.id)!;
+      const lb = extensionLabels.get(b.id)!;
+      return la.side.localeCompare(lb.side) || la.order - lb.order;
+    })
+    .map((piece) => {
+      const label = extensionLabels.get(piece.id)!;
+      const km = piece.segments.reduce((sum, segment) => sum + segment.lengthKm, 0);
+      const built = piece.segments.length > 0 && piece.segments.every((segment) => piece.completedSegmentIds.includes(segment.id));
+      const outward = outwardCount(piece.id);
+      return `<div class="game-plan-asset game-plan-asset--piece" data-asset-kind="route">
+        <div class="game-plan-asset__main"><span class="game-plan-asset__icon" aria-hidden="true">└</span><span class="game-route-item__text"><strong>${escapeHtml(label.label)}</strong><small>연장 ${km.toFixed(2)}km · ${built ? "착공함" : "미착공"} · ${formatCost(piece.expectedCost)}</small></span></div>
+        <div class="game-plan-asset__actions"><button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-plan-action="delete-route" data-asset-id="${piece.id}" aria-label="${escapeHtml(label.label)} 연장 삭제${outward > 0 ? `, 바깥 구간 ${outward}개도 함께` : ""}">삭제</button></div>
+      </div>`;
+    })
+    .join("");
+  const actualHeads = [...piecesByLine.keys()].filter((key) => key.startsWith("actual:")).map((key) => {
+    const actual = networkState.routes.find((route) => route.id === key.slice("actual:".length));
+    const pieces = piecesByLine.get(key) ?? [];
+    const cost = pieces.reduce((sum, piece) => sum + piece.expectedCost, 0);
+    const demand = pieces.reduce((sum, piece) => sum + piece.expectedDemand, 0);
+    return `<div class="game-plan-asset" data-asset-kind="route">
+        <div class="game-plan-asset__main">${lineMarkHtml({ name: actual?.name ?? pieces[0].name, color: actual?.color ?? pieces[0].color }, "sm", "plan")}<span class="game-route-item__text"><strong>${escapeHtml(actual?.name ?? pieces[0].name)}</strong><small>운영 노선 연장 ${pieces.length}구간 · ${formatCost(cost)} · 수요 ${demand.toLocaleString("ko-KR")}</small></span></div>
+      </div>${pieceRows(key)}`;
+  }).join("");
+  const routeItems = actualHeads + plan.routes
+    .filter((route) => !extensionLabels.has(route.id))
     .map((route) => {
       const completed = route.completedSegmentIds.length;
       return `<div class="game-plan-asset" data-asset-kind="route">
@@ -8443,7 +8503,7 @@ function renderPlanAssets(plan: ConstructionPlan) {
           <button class="dg-btn dg-btn--quiet dg-btn--compact" type="button" data-plan-action="duplicate-route" data-asset-id="${route.id}">복제</button>
           <button class="dg-btn dg-btn--danger-quiet dg-btn--compact" type="button" data-plan-action="delete-route" data-asset-id="${route.id}" aria-label="${escapeHtml(route.name)} 삭제">삭제</button>
         </div>
-      </div>`;
+      </div>${pieceRows(`planned:${route.id}`)}`;
     })
     .join("");
   const facilityRow = (kind: string, icon: string, label: string, name: string, meta: string, assetId: string) =>
@@ -8510,7 +8570,7 @@ function handlePlanAssetAction(action: string, assetId: string) {
   } else if (action.startsWith("delete-")) {
     updatePlan(plan.id, (item) => ({
       ...item,
-      routes: action === "delete-route" ? item.routes.filter((asset) => asset.id !== assetId) : item.routes,
+      routes: action === "delete-route" ? item.routes.filter((asset) => !plannedRouteDeletionIds(item, assetId).has(asset.id)) : item.routes,
       depots: action === "delete-depot" ? item.depots.filter((asset) => asset.id !== assetId) : item.depots,
       transfers: action === "delete-transfer" ? item.transfers.filter((asset) => asset.id !== assetId) : item.transfers,
     }));
@@ -8539,7 +8599,7 @@ function renderPlanComparison() {
     .map(
       (plan) => `<button type="button" class="game-plan-compare" aria-pressed="${plan.id === activePlanId}" data-plan-id="${plan.id}">
         <span class="game-plan-compare__head"><strong>${escapeHtml(plan.name)}</strong><span class="dg-tag ${planStatusTagClass(plan.status)}">${statusLabels[plan.status]}</span></span>
-        <small>우선순위 ${formatPriority(plan.priority)} · 노선 ${plan.routes.length} · 역 ${plan.stations.length} · 기지 ${plan.depots.length} · 환승 ${plan.transfers.length}</small>
+        <small>우선순위 ${formatPriority(plan.priority)} · ${planRouteCountLabel(plan)} · 역 ${plan.stations.length} · 기지 ${plan.depots.length} · 환승 ${plan.transfers.length}</small>
         <span class="game-plan-compare__metrics"><span>비용 <b>${formatCost(plan.expectedTotalCost)}</b></span><span>수요 <b>${plan.expectedDemand.toLocaleString("ko-KR")}</b></span><span>수익 <b>${formatCost(plan.expectedRevenue)}/년</b></span><span>공기 <b>${plan.expectedConstructionDays > 0 ? formatConstructionDuration(plan.expectedConstructionDays) : "미정"}</b></span></span>
       </button>`,
     )
@@ -8701,8 +8761,34 @@ function reconcileBlueprints() {
     }
   }
   blueprintRenderer.reconcileEntities(entities);
+  renderExtensionJoints();
   if (planningMode && activeTool === "extend") {
     for (const end of extendLineEndpoints()) renderExtensionEndpointHandle(end.latLng, end.color);
+  }
+}
+
+/**
+ * 계획 연장 구간의 이음매(조각이 안쪽 노선에 붙는 점)에 노선을 가로지르는 짧은 먹 눈금을 둔다.
+ * 한 노선으로 읽히면서도 착공 단위(구간)가 어디서 나뉘는지 보인다. 화면 크기 고정(14px).
+ */
+function renderExtensionJoints() {
+  const plan = getActivePlan(false);
+  if (!plan) return;
+  const labels = planExtensionLabels(plan);
+  const selectionLayer = mapLayers.get("selection");
+  for (const piece of plan.routes) {
+    if (!labels.has(piece.id) || piece.coordinates.length < 2) continue;
+    if (piece.segments.every((segment) => piece.completedSegmentIds.includes(segment.id))) continue;
+    const [from, next] = piece.coordinates;
+    const dx = (next[1] - from[1]) * Math.cos((from[0] * Math.PI) / 180);
+    const dy = next[0] - from[0];
+    const angle = (Math.atan2(-dy, dx) * 180) / Math.PI;
+    L.marker(from, {
+      interactive: false,
+      keyboard: false,
+      pane: "mapGuidePane",
+      icon: L.divIcon({ className: "game-extension-joint", iconSize: [14, 14], html: `<span style="transform: rotate(${angle.toFixed(1)}deg)"></span>` }),
+    }).addTo(selectionLayer);
   }
 }
 
