@@ -10,3 +10,6 @@ android/app/build/
 .idea/
 *.apk
 *.aab
+
+# 브라우저 실행 기록(개발 중 생김)
+debug.log

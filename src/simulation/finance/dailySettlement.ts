@@ -23,7 +23,7 @@ export function calculateDailySettlement<L extends FinanceLoan>(
   const revenue = {
     fare: input.fareRevenue,
     other: otherRevenue,
-    total: input.fareRevenue + otherRevenue,
+    total: roundMoney(input.fareRevenue + otherRevenue),
   };
   const expenses = {
     lines: input.lineMaintenanceCost,
@@ -45,7 +45,7 @@ export function calculateDailySettlement<L extends FinanceLoan>(
   const grossOperatingProfit = revenue.total - (
     expenses.lines + expenses.stations + expenses.trains + expenses.depots + expenses.express
   );
-  const netProfit = revenue.total - expenses.total;
+  const netProfit = roundMoney(revenue.total - expenses.total);
   const moneyAfter = sandbox ? 999_999_999 : roundMoney(input.currentMoney + netProfit);
   const result: DailySettlementResult<L> = {
     gameDay: input.gameDay,
@@ -78,7 +78,8 @@ export function validateDailySettlement(result: DailySettlementResult) {
   if (result.gameDay < 0 || result.expenses.total < 0 || result.revenue.total < 0 || result.loanBalanceAfter < 0) {
     throw new Error("Daily settlement contains a negative invariant");
   }
-  if (result.revenue.total !== result.revenue.fare + result.revenue.other) throw new Error("Revenue total mismatch");
+  // 합계는 0.01억 단위로 반올림하므로 그 안의 오차는 허용한다.
+  if (Math.abs(result.revenue.total - (result.revenue.fare + result.revenue.other)) > 0.005) throw new Error("Revenue total mismatch");
   return result;
 }
 

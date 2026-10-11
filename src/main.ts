@@ -862,9 +862,9 @@ app.innerHTML = `
             <span id="difficultyPickerLabel" class="dg-field__label">난이도</span>
             <select id="difficultySelect" class="dg-hook" aria-hidden="true" tabindex="-1" hidden><option value="easy">쉬움</option><option value="normal" selected>보통</option><option value="hard">어려움</option></select>
             <div class="dg-seg game-start__choice" role="radiogroup" aria-labelledby="difficultyPickerLabel">
-              <button class="dg-seg__item" type="button" data-choice-value="easy" role="radio"><strong>쉬움</strong><small>여유롭게 시작</small><small>국비 보조 50%</small></button>
-              <button class="dg-seg__item" type="button" data-choice-value="normal" role="radio"><strong>보통</strong><small>표준 경영</small><small>국비 보조 40%</small></button>
-              <button class="dg-seg__item" type="button" data-choice-value="hard" role="radio"><strong>어려움</strong><small>도전적인 운영</small><small>국비 보조 25%</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="easy" role="radio"><strong>쉬움</strong><small>여유롭게 시작</small><small class="game-start__subsidy">국비 보조 50%</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="normal" role="radio"><strong>보통</strong><small>표준 경영</small><small class="game-start__subsidy">국비 보조 40%</small></button>
+              <button class="dg-seg__item" type="button" data-choice-value="hard" role="radio"><strong>어려움</strong><small>도전적인 운영</small><small class="game-start__subsidy">국비 보조 25%</small></button>
             </div>
           </div>
           <label class="dg-field"><span class="dg-field__label">세이브 이름</span><input id="slotNameInput" class="dg-input" value="서울 1호 계획" maxlength="20" placeholder="세이브 이름" autocomplete="off" /></label>
@@ -3158,8 +3158,14 @@ document.querySelectorAll<HTMLElement>("[data-choice-input]").forEach((field) =>
   });
 });
 
+// 국비 보조는 커리어에만 있으므로 샌드박스를 고르면 난이도 버튼의 보조율 줄을 숨긴다.
+function syncSubsidyHints() {
+  const sandbox = (modeSelect?.value ?? "sandbox") === "sandbox";
+  document.querySelectorAll<HTMLElement>(".game-start__subsidy").forEach((item) => (item.hidden = sandbox));
+}
 modeSelect?.addEventListener("change", () => {
   syncSetupChoice(modeSelect);
+  syncSubsidyHints();
   renderCityOptions();
 });
 difficultySelect?.addEventListener("change", () => syncSetupChoice(difficultySelect));
@@ -3173,6 +3179,7 @@ cityPicker?.addEventListener("click", (event) => {
 });
 syncSetupChoice(modeSelect);
 syncSetupChoice(difficultySelect);
+syncSubsidyHints();
 saveButton?.addEventListener("click", () => saveCurrentSlot("수동 저장"));
 openDiagramButton?.addEventListener("click", openDiagramScreen);
 diagramToolButton?.addEventListener("click", openDiagramScreen);
@@ -5827,10 +5834,10 @@ function renderConstructionProjectCard(project: ConstructionProject) {
       ? `<ul class="game-inspector__list">${project.events.map((event) => `<li>${event.applied ? "✓ " : "△ "}${escapeHtml(event.message)}</li>`).join("")}</ul>`
       : "";
   const cancelPlan = planConstructionCancel(project);
-  // 이어 연장 공사는 안쪽 구간이 개통해야 개통할 수 있다(공사는 함께 진행).
+  // 이어 연장 공사는 안쪽 구간이 개통한 뒤에 공사를 시작한다.
   const parentProject = project.dependsOnProjectId ? constructionState.projects.find((item) => item.id === project.dependsOnProjectId) : undefined;
   const orderNote = parentProject && parentProject.status !== "operating" && project.status !== "operating"
-    ? `<p class="game-inspector__note">안쪽 구간 “${escapeHtml(constructionProjectDisplayName(parentProject))}” 개통 후 개통할 수 있습니다.</p>`
+    ? `<p class="game-inspector__note">안쪽 구간 “${escapeHtml(constructionProjectDisplayName(parentProject))}” 개통 후 공사를 시작합니다.</p>`
     : "";
   const statusTag = project.status === "operating" ? "dg-tag--ok" : project.status === "planned" ? "dg-tag--plan" : project.status === "opening-ready" ? "dg-tag--express" : "dg-tag--build";
   return `<section class="dg-panel__section game-project" data-project-id="${project.id}">
@@ -8783,7 +8790,8 @@ function renderExtensionJoints() {
   const labels = planExtensionLabels(plan);
   const selectionLayer = mapLayers.get("selection");
   for (const piece of plan.routes) {
-    if (!labels.has(piece.id) || piece.coordinates.length < 2) continue;
+    // 운영 노선과 계획 구간 사이는 실선·점선으로 이미 구분되고 끝 역 기호에 가리므로, 계획 구간끼리 이어지는 곳만.
+    if (!labels.has(piece.id) || !piece.parentBlueprintId || piece.coordinates.length < 2) continue;
     if (piece.segments.every((segment) => piece.completedSegmentIds.includes(segment.id))) continue;
     const [from, next] = piece.coordinates;
     const dx = (next[1] - from[1]) * Math.cos((from[0] * Math.PI) / 180);
@@ -12949,8 +12957,8 @@ function calculateOperatingForecastForGroups(
     currentMoney: financeState.economy.cash,
     fareRevenue: forecast.revenue,
     otherRevenue: calculateAncillaryRevenue(forecast.revenue),
-    lineMaintenanceCost: 0,
-    stationMaintenanceCost: 0,
+    lineMaintenanceCost: maintenance.lines,
+    stationMaintenanceCost: maintenance.stations,
     trainMaintenanceCost: maintenance.trains,
     depotMaintenanceCost: maintenance.depots,
     expressOperatingCost: maintenance.express,
@@ -13177,8 +13185,15 @@ function updateCareerProgress(bankrupt: boolean) {
 
 function calculateDailyMaintenance(fleetSource = operationsState.fleets) {
   const breakdown = calculateDailyMaintenanceBreakdown(fleetSource);
-  return breakdown.trains + breakdown.depots + breakdown.express;
+  return breakdown.trains + breakdown.depots + breakdown.express + breakdown.lines + breakdown.stations;
 }
+
+/**
+ * 노선·역 하루 유지비(억). 운영 중인 노선 1km당 0.012억(연 약 4.4억), 운영 중인 역 1곳당 0.01억(연 약 3.7억).
+ * 예전에는 0이라 노선을 길게 깔수록 손해가 없었다(2026-10-11).
+ */
+const lineMaintenancePerKmDay = 0.012;
+const stationMaintenancePerDay = 0.01;
 
 /** 건설 국비 보조율: 커리어 모드에서 난이도별(쉬움 50% · 보통 40% · 어려움 25%), 샌드박스는 0 */
 function constructionSubsidyRate() {
@@ -13206,6 +13221,8 @@ function calculateDailyMaintenanceBreakdown(fleetSource = operationsState.fleets
     trains: roundCost(fleetSource.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0) * multiplier),
     // 기지 유지비는 월 단위로 정해 두고 하루에 1/30씩 뺀다.
     depots: roundCost((networkState.depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0) / 30) * multiplier),
+    lines: roundCost(networkState.routes.filter((route) => isRouteOperational(route.id)).reduce((sum, route) => sum + route.lengthKm, 0) * lineMaintenancePerKmDay * multiplier),
+    stations: roundCost(networkState.stations.filter((station) => isStationOperational(station.id)).length * stationMaintenancePerDay * multiplier),
     express: Math.round(operationsState.expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0) * multiplier),
   };
 }
@@ -16893,7 +16910,13 @@ function applyState(state: SaveState) {
   migrateLegacyFleetsToOperatingServices();
   operationsState.expressConfigs = state.expressConfigs ?? [];
   demandState.passengerGroups = state.passengerGroups ?? [];
-  loanState.replace(state.loans ?? []);
+  // 예전 조건(월 720억 고정) 대출은 남은 잔액을 20년 원리금 균등으로 다시 나눈다(월 상환이 줄어드는 경우만).
+  loanState.replace((state.loans ?? []).map((loan) => {
+    const monthlyRate = loan.interestRate / 12;
+    const months = Math.max(1, loanTermMonths);
+    const annuity = monthlyRate > 0 ? Math.round((loan.balance * monthlyRate) / (1 - (1 + monthlyRate) ** -months)) : Math.ceil(loan.balance / months);
+    return annuity > 0 && loan.monthlyPayment > annuity ? { ...loan, monthlyPayment: annuity } : loan;
+  }));
   financeState.economy = { ...defaultEconomy, ...(state.economy ?? {}) };
   transitRouterCache.invalidate();
   congestionRuntimeState.reset();
@@ -16942,6 +16965,18 @@ if (import.meta.env.DEV) {
       requestUpdates(["network-structure", "blueprint-preview"]);
     },
     inspect: () => ({ state: cloneState(), updateTrace: updateScheduler.snapshot() }),
+    // 하루씩 시계를 넘기고 실제 게임 루프와 같은 경로(하루 바뀜 → 정산 → 공사 진행)로 처리한다.
+    skipDays: async (days: number) => {
+      const fromDay = analysisStateOwner.current.dayIndex;
+      for (let index = 0; index < Math.max(0, Math.floor(days)); index += 1) {
+        const result = simulationCoordinator.advance(1440);
+        if (result.gameDayChanged) simulationApplication.handleGameDayChanged(result);
+        if (metaState.current.bankrupt) break;
+      }
+      await flushStateSave();
+      requestUpdates(["network-structure", "blueprint-preview"]);
+      return { fromDay, toDay: analysisStateOwner.current.dayIndex, cash: financeState.economy.cash };
+    },
   });
 }
 
@@ -17282,14 +17317,14 @@ function setTileOpacity(layer: TileLayer, opacity: number) {
 
 const tutorialSteps = [
   { title: "지도를 움직이고 확대하세요", text: "한 손가락으로 지도를 이동한 뒤 두 손가락으로 확대하세요.", target: "map" },
-  { title: "노선 색상을 고르세요", text: "상단 색상표에서 첫 노선에 사용할 색을 하나 선택하세요.", target: "color" },
-  { title: "짧은 노선을 그리세요", text: "노선 버튼을 누르고 지도 위를 50m 이상 드래그한 뒤 건설을 확정하세요.", target: "route" },
-  { title: "역을 두 개 배치하세요", text: "역 버튼을 누르고 방금 만든 노선 위의 서로 다른 지점을 두 번 누르세요.", target: "station" },
-  { title: "차량기지 범위를 지정하세요", text: "기지 버튼을 누르고 차량기지 경계를 그리세요. 노선 옆에 두면 연결되고, 떨어진 곳에도 단독 건설할 수 있습니다.", target: "depot" },
+  { title: "노선 색상을 고르세요", text: "기획 모드의 노선 건설 도구를 누르면 왼쪽 노선 설정 상자에서 첫 노선 색을 고를 수 있습니다.", target: "color" },
+  { title: "짧은 노선을 그리세요", text: "노선 건설 도구로 지도 위를 50m 이상 드래그해 기획안에 넣고, 계획 목록의 건설 검토에서 착공하세요.", target: "route" },
+  { title: "역을 두 개 배치하세요", text: "역 도구로 방금 만든 노선 위 서로 다른 두 곳을 누른 뒤, 건설 검토에서 역을 착공하세요.", target: "station" },
+  { title: "차량기지 범위를 지정하세요", text: "기지 도구로 차량기지 경계를 그리고 건설 검토에서 착공하세요. 노선 옆에 두면 연결되고, 떨어진 곳에도 단독 건설할 수 있습니다.", target: "depot" },
   { title: "노선 연결 여부를 확인하세요", text: "노선 가까이는 연결된 상태로, 떨어진 곳은 단독 건설로 표시됩니다. 두 경우 모두 건설할 수 있습니다.", target: "depot" },
-  { title: "열차를 구매하고 배정하세요", text: "첫 노선을 선택한 상태에서 편성 수와 차량 수를 확인하고 구매하세요.", target: "train" },
+  { title: "열차를 구매하고 배정하세요", text: "관리 모드의 노선 목록에서 첫 노선을 열고 열차 운행·편성 관리에서 편성을 구매하세요.", target: "train" },
   { title: "첫 노선을 개통하세요", text: "공사 목록에서 네 가지 개통 조건을 확인하고 노선 개통을 누르세요.", target: "opening" },
-  { title: "시간을 흐르게 하세요", text: "하단의 x2, x5, x10 또는 x100을 눌러 운행을 시작하세요.", target: "speed" },
+  { title: "시간을 흐르게 하세요", text: "오른쪽 위 시간 정보판에서 재생을 누르거나 배속(×2·×5·×10·×100)을 눌러 운행을 시작하세요.", target: "speed" },
   { title: "첫 수익을 확인하세요", text: "하루 운행이 끝날 때까지 기다리세요. 첫 운임 수익이 기록되면 완료됩니다.", target: "revenue" },
 ] as const;
 
@@ -17444,13 +17479,13 @@ function getTutorialFeedback(step: number) {
     return progress.mapMoved ? "이동했습니다. 이제 지도를 확대해 보세요." : "확대했습니다. 이제 지도를 옆으로 움직여 보세요.";
   }
   if (step === 1) return "색상 원을 직접 누르면 선택됩니다.";
-  if (step === 2) return "50m 미만 구간은 건설할 수 없습니다. 더 길게 드래그하세요.";
+  if (step === 2) return "50m 이상 드래그해 기획안에 넣은 뒤, 계획 목록 → 건설 검토에서 착공하세요.";
   if (step === 3) return `첫 노선 위에 역이 2개 필요합니다. 현재 ${routeStationCount}개가 연결되어 있습니다.`;
   if (step === 4) return "기지 경계는 노선 가까이에 충분한 면적으로 그려 주세요.";
   if (step === 5) return depot ? "차량기지가 첫 노선과 연결되지 않았습니다. 경계를 노선 가까이에 다시 지정해 주세요." : "먼저 차량기지 범위를 지정하세요.";
-  if (step === 6) return "연결된 차량기지가 준비되었습니다. 하단 구매 버튼으로 열차를 배정하세요.";
+  if (step === 6) return "연결된 차량기지가 준비되었습니다. 노선 목록에서 첫 노선을 열고 열차 운행·편성 관리에서 열차를 배정하세요.";
   if (step === 7) return "공사 목록을 열고 차량기지·열차·역·운행 경로가 모두 충족됐는지 확인하세요.";
-  if (step === 8) return "하단 시간 배속에서 x1 이상을 선택하세요.";
+  if (step === 8) return "오른쪽 위 시간 정보판에서 재생 또는 배속을 누르세요.";
   return financeState.economy.demand <= 0
     ? "승객 수요가 없습니다. 노선 개통과 역 연결 상태를 확인하세요."
     : "열차가 운행 중입니다. 게임 하루가 끝나면 운임 수익이 기록됩니다.";

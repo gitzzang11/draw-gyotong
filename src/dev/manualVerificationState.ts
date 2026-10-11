@@ -109,6 +109,8 @@ export type ManualVerificationHook = {
   create: () => ManualVerificationState;
   seed: () => Promise<ManualVerificationState>;
   inspect: () => { state: unknown; updateTrace: unknown };
+  /** 개발용: 게임 시간을 n일 건너뛴다(하루마다 실제 게임과 같은 정산·공사 진행). 완공·개통·대출·밸런스 검증용 */
+  skipDays: (days: number) => Promise<{ fromDay: number; toDay: number; cash: number }>;
 };
 
 declare global {
@@ -229,6 +231,7 @@ export function installManualVerificationStateHook(actions: {
   apply: (state: ManualVerificationState) => void;
   save: () => Promise<void>;
   inspect: () => { state: unknown; updateTrace: unknown };
+  skipDays: (days: number) => Promise<{ fromDay: number; toDay: number; cash: number }>;
 }) {
   if (typeof window === "undefined") return;
   window.__drawGyotongManualVerification = {
@@ -240,6 +243,7 @@ export function installManualVerificationStateHook(actions: {
       return state;
     },
     inspect: actions.inspect,
+    skipDays: actions.skipDays,
   };
 }
 
