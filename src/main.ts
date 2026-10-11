@@ -13169,7 +13169,8 @@ function calculateDailyMaintenanceBreakdown(fleetSource = operationsState.fleets
   const multiplier = getNewsOperatingCostMultiplier();
   return {
     trains: roundCost(fleetSource.reduce((sum, fleet) => sum + getFleetMaintenanceCost(fleet), 0) * multiplier),
-    depots: Math.round(networkState.depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0) * multiplier),
+    // 기지 유지비는 월 단위로 정해 두고 하루에 1/30씩 뺀다.
+    depots: roundCost((networkState.depots.reduce((sum, depot) => sum + depot.maintenanceCost, 0) / 30) * multiplier),
     express: Math.round(operationsState.expressConfigs.filter((config) => config.enabled).reduce((sum, config) => sum + config.extraOperatingCost, 0) * multiplier),
   };
 }
@@ -16701,8 +16702,13 @@ function calculateDepotCapacity(areaHa: number, level: number) {
   return Math.max(4, Math.floor(areaHa * 3.2) + level * 4);
 }
 
+/**
+ * 차량기지 월 유지비(억). 정산은 하루에 1/30씩 뺀다.
+ * 예전 식(면적 × 95 + 레벨 × 420)을 매일 빼서 18ha 기지 하나가 하루 운임 수입의 수백 배였다(2026-10-11 조정).
+ * 지금은 18ha·레벨 1 기지가 월 약 7.8억(하루 약 0.26억) — 열차 1량 하루 운영비(중전철 0.008억)와 같은 크기.
+ */
 function calculateDepotMaintenance(areaHa: number, level: number) {
-  return Math.round(areaHa * 95 + level * 420);
+  return Math.round((areaHa * 0.36 + level * 1.2) * 100) / 100;
 }
 
 function polylinePixelLength(points: L.Point[]) {
@@ -16820,7 +16826,8 @@ function applyState(state: SaveState) {
     routes: (state.routes ?? []).map((route) => rebuildRouteGraph(route)),
     stations: state.stations,
     transfers: state.transfers,
-    depots: state.depots,
+    // 기지 유지비는 저장값 대신 지금 식으로 다시 계산한다(예전 세이브의 과도한 값 정리).
+    depots: (state.depots ?? []).map((depot) => ({ ...depot, maintenanceCost: calculateDepotMaintenance(depot.areaHa, depot.level ?? 1) })),
   });
   demandState.demandZones = state.demandZones ?? [];
   demandState.stationDemandStates = state.stationDemandStates ?? [];

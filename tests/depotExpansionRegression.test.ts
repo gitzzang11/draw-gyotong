@@ -83,7 +83,7 @@ describe("depot expansion rules", () => {
 
     await context.expandDepot("depot");
 
-    expect(networkState.depots[0]).toMatchObject({ level: 2, capacity: 14, maintenanceCost: 1030 });
+    expect(networkState.depots[0]).toMatchObject({ level: 2, capacity: 14, maintenanceCost: 3.12 });
   });
 
   it("rejects insufficient career cash without changing the depot, finances or history", async () => {
