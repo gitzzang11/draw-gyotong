@@ -3682,7 +3682,7 @@ function collectMapHitCandidates(point: L.Point, pointerType: string): MapHitCan
       });
     }
   }
-  if (map.getZoom() >= 13) {
+  if (map.getZoom() >= stationMinZoom) {
     const stationRadius = getTargetHitRadius("station", pointerType);
     for (const station of networkState.stations) {
       const distancePx = point.distanceTo(map.latLngToContainerPoint(L.latLng(...station.position)));
@@ -10198,8 +10198,13 @@ function reconcileConstructionProjects() {
 /** 떨어진 역을 묶은 환승역이 화면에서 이 거리(px) 안으로 붙으면 환승 원 하나로 그린다. */
 const mergedTransferSpreadPx = 14;
 
+/** 역 기호는 줌 11부터 보이고, 13 미만에서는 작은 기호로 그린다(역명은 15부터). */
+const stationMinZoom = 11;
+const stationCompactBelowZoom = 13;
+
 function reconcileMapStations(selectedId?: string) {
-  mapLayers.setVisible("stations", map.getZoom() >= 13);
+  mapLayers.setVisible("stations", map.getZoom() >= stationMinZoom);
+  const compact = map.getZoom() < stationCompactBelowZoom;
   // 떨어진 역을 묶은 환승역: 화면에서 따로 보이면 각자의 일반역 기호 + 점선 환승 통로,
   // 줌을 줄여 겹쳐 보일 만큼 붙으면 역들 가운데에 환승 원 하나(역명도 하나)로 그린다.
   const connectionEntities: TransferConnectionEntity[] = [];
@@ -10242,6 +10247,7 @@ function reconcileMapStations(selectedId?: string) {
       operational: transferStations.every((station) => isStationOperational(station.id)),
       showLabel: selected || map.getZoom() >= 15,
       radius: Math.max(8, spread / 2 + 4),
+      compact,
     });
   }
   const stationEntities: StationRenderEntity[] = networkState.stations.filter((station) => !mergedStationIds.has(station.id)).map((station) => {
@@ -10264,6 +10270,7 @@ function reconcileMapStations(selectedId?: string) {
       transfer: isTransferStation,
       operational: isStationOperational(station.id),
       showLabel: isSelected || map.getZoom() >= 15,
+      compact,
     };
   });
   stationRenderer.reconcileEntities([...stationEntities, ...mergedEntities], connectionEntities);

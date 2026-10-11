@@ -15,6 +15,8 @@ export interface StationRenderEntity {
   showLabel: boolean;
   /** 지정하면 기본 크기 대신 이 반지름(떨어진 환승역을 하나로 합친 기호) */
   radius?: number;
+  /** 멀리서 볼 때(줌 11~12) 작은 기호: 크기 60%, 테두리 1.5px */
+  compact?: boolean;
 }
 
 export interface TransferConnectionEntity {
@@ -89,10 +91,11 @@ export class StationRenderer {
     // 역 기호 (DESIGN_SYSTEM §11): 일반역은 바탕색 원 + 노선 색 테두리, 환승역은 더 큰 원 + 먹 테두리,
     // 급행 정차역은 노선 색 테두리 안에 먹 점, 공사 중은 점선 테두리.
     const palette = mapPalette();
+    const radius = entity.radius ?? (entity.transfer ? 8 : entity.express ? 7 : 6);
     marker.setStyle({
-      radius: entity.radius ?? (entity.transfer ? 8 : entity.express ? 7 : 6),
+      radius: entity.compact ? Math.max(3, radius * 0.6) : radius,
       color: entity.transfer ? palette.ink : entity.color,
-      weight: entity.express && !entity.transfer ? 3 : 2.5,
+      weight: entity.compact ? 1.5 : entity.express && !entity.transfer ? 3 : 2.5,
       fillColor: entity.express && !entity.transfer ? palette.ink : palette.surface,
       fillOpacity: 1,
       dashArray: entity.operational ? undefined : "3 4",
@@ -112,7 +115,7 @@ export class StationRenderer {
   }
 
   private updateRing(marker: L.CircleMarker, entity: StationRenderEntity) {
-    const baseRadius = entity.radius ?? (entity.express ? 8 : 6);
+    const baseRadius = (entity.radius ?? (entity.express ? 8 : 6)) * (entity.compact ? 0.6 : 1);
     const existing = this.rings.get(marker);
     if (!entity.selected) {
       if (existing) {
