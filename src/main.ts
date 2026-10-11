@@ -790,10 +790,20 @@ const stationNamePlaces: Record<CityId, StationNamePlace[]> = {
   ],
 };
 
+/**
+ * 게임 진행 속도 배율(2026-10-11). 실제 금액 그대로면 잘 짠 노선망도 새 노선 하나에 게임 시간 2년이 걸려,
+ * 건설비는 절반, 승객 1명당 수입은 4.5배로 맞췄다. 목표: 보통 난이도의 성숙한 노선망이 게임 시간 60~90일에 10km 노선 하나.
+ * 시작 자금·파산 한도·대출 원금·도시 해금 기준은 같은 흐름에 맞춰 예전의 0.3배.
+ */
+const gameConstructionCostScale = 0.5;
+const gameRevenueScale = 4.5;
+/** 커리어에서 자금이 이 값에 이르면 해금되는 도시 */
+const cityUnlockCash = { daejeon: 25500, gwangju: 39000, busan: 54000 } as const;
+
 const difficultyConfigs: Record<Difficulty, { label: string; startCash: number; costMultiplier: number; demandMultiplier: number; bankruptcyLimit: number; loanInterestMultiplier: number }> = {
-  easy: { label: "쉬움", startCash: 90000, costMultiplier: 0.85, demandMultiplier: 1.12, bankruptcyLimit: -35000, loanInterestMultiplier: 0.8 },
-  normal: { label: "보통", startCash: 60000, costMultiplier: 1, demandMultiplier: 1, bankruptcyLimit: -18000, loanInterestMultiplier: 1 },
-  hard: { label: "어려움", startCash: 42000, costMultiplier: 1.22, demandMultiplier: 0.9, bankruptcyLimit: -8000, loanInterestMultiplier: 1.35 },
+  easy: { label: "쉬움", startCash: 27000, costMultiplier: 0.85 * gameConstructionCostScale, demandMultiplier: 1.12, bankruptcyLimit: -10500, loanInterestMultiplier: 0.8 },
+  normal: { label: "보통", startCash: 18000, costMultiplier: 1 * gameConstructionCostScale, demandMultiplier: 1, bankruptcyLimit: -5400, loanInterestMultiplier: 1 },
+  hard: { label: "어려움", startCash: 12600, costMultiplier: 1.22 * gameConstructionCostScale, demandMultiplier: 0.9, bankruptcyLimit: -2400, loanInterestMultiplier: 1.35 },
 };
 
 const overlayState: Record<OverlayKey, boolean> = {
@@ -8156,7 +8166,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
         expectedCost: draft.analysis.totalCost,
         constructionDays: draft.analysis.durationDays,
         expectedDemand,
-        expectedRevenue: Math.round((expectedDemand * financeState.economy.fare * 365) / 100000000),
+        expectedRevenue: estimateAnnualRevenue(expectedDemand),
         transferEffect: estimatePlannedTransferEffect(draft.points),
         operationKind: "branch",
         rootLineId: targetRoute.id,
@@ -8192,7 +8202,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
                 expectedCost: route.expectedCost + draft.analysis.totalCost,
                 constructionDays: Math.max(route.constructionDays, draft.analysis.durationDays),
                 expectedDemand: route.expectedDemand + Math.round(branchDemand * 0.65),
-                expectedRevenue: route.expectedRevenue + Math.round((branchDemand * financeState.economy.fare * 365 * 0.65) / 100000000),
+                expectedRevenue: route.expectedRevenue + estimateAnnualRevenue(branchDemand * 0.65),
                 transferEffect: route.transferEffect + estimatePlannedTransferEffect(draft.points),
                 branches: [
                   ...(route.branches ?? []),
@@ -8206,7 +8216,7 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
       const firstNodeId = createId("node");
       const graph = createGraphForDraftPath(draft, firstNodeId);
       const expectedDemand = estimatePlannedRouteDemand(draft.points);
-      const expectedRevenue = Math.round((expectedDemand * financeState.economy.fare * 365) / 100000000);
+      const expectedRevenue = estimateAnnualRevenue(expectedDemand);
       const extensionTarget = draft.plannedExtension ? networkState.routes.find((item) => item.id === draft.plannedExtension?.routeId) : undefined;
       const plannedReplacementId = draft.kind === "extension"
         ? null
@@ -9877,9 +9887,9 @@ function updateCityNote() {
 function getUnlockedCityIds() {
   const unlocked = new Set<CityId>(["seoul"]);
   for (const slot of slotSummaries) slot.unlockedCityIds.forEach((cityId) => unlocked.add(cityId));
-  if (financeState.economy.cash >= 85000) unlocked.add("daejeon");
-  if (financeState.economy.cash >= 130000) unlocked.add("gwangju");
-  if (financeState.economy.cash >= 180000) unlocked.add("busan");
+  if (financeState.economy.cash >= cityUnlockCash.daejeon) unlocked.add("daejeon");
+  if (financeState.economy.cash >= cityUnlockCash.gwangju) unlocked.add("gwangju");
+  if (financeState.economy.cash >= cityUnlockCash.busan) unlocked.add("busan");
   return Array.from(unlocked);
 }
 
@@ -10999,7 +11009,7 @@ function refreshOperationSuggestions(force = false) {
       );
     }
 
-    const estimatedRevenue = Math.round((operation.dailyDemand * financeState.economy.fare) / 100000000);
+    const estimatedRevenue = Math.round(estimateAnnualRevenue(operation.dailyDemand) / 365);
     if (sets > 0 && operation.operatingCost > estimatedRevenue * 1.12) {
       add(
         "route-deficit",
@@ -12949,6 +12959,7 @@ function calculateOperatingForecastForGroups(
     timeBand: `${String(hour).padStart(2, "0")}:00`,
     hourlyDemandShare,
     fallbackSatisfaction: financeState.economy.satisfaction,
+    revenueScale: gameRevenueScale,
   });
   const maintenance = calculateDailyMaintenanceBreakdown(fleetSource);
   const preview = calculateDailySettlement({
@@ -13170,9 +13181,9 @@ function updateCareerProgress(bankrupt: boolean) {
     return;
   }
   const unlocked = new Set(metaState.current.unlockedCityIds);
-  if (financeState.economy.cash >= 85000) unlocked.add("daejeon");
-  if (financeState.economy.cash >= 130000) unlocked.add("gwangju");
-  if (financeState.economy.cash >= 180000) unlocked.add("busan");
+  if (financeState.economy.cash >= cityUnlockCash.daejeon) unlocked.add("daejeon");
+  if (financeState.economy.cash >= cityUnlockCash.gwangju) unlocked.add("gwangju");
+  if (financeState.economy.cash >= cityUnlockCash.busan) unlocked.add("busan");
   if (bankrupt) {
     simSpeed = 0;
     gameLoopController.setSpeed(0);
@@ -13211,6 +13222,12 @@ function subsidizedCost(cost: number) {
  */
 const ancillaryRevenueShare = 0.4;
 
+/** 하루 승객 수로 어림한 연 수입(억): 운임(게임 배율 포함) + 운임 외 수입. 기획안 예상 수익 등에 쓴다. */
+function estimateAnnualRevenue(dailyDemand: number) {
+  const dailyFare = (dailyDemand * financeState.economy.fare * gameRevenueScale) / 100000000;
+  return Math.round(dailyFare * (1 + ancillaryRevenueShare) * 365);
+}
+
 function calculateAncillaryRevenue(fareRevenue: number) {
   return Math.round(Math.max(0, fareRevenue) * ancillaryRevenueShare * 100) / 100;
 }
@@ -13241,7 +13258,7 @@ function calculateAutoFare() {
  * 대출 한 건의 원금(억)과 상환 기간. 월 상환액은 연이율로 20년 원리금 균등 상환(보통 난이도 월 약 206억).
  * 예전에는 월 720억 고정이라 운영 흑자로는 갚을 수 없어 대출이 곧 파산으로 이어졌다(2026-10-11 조정).
  */
-const loanPrincipal = 30000;
+const loanPrincipal = 9000;
 const loanTermMonths = 240;
 
 function currentLoanMonthlyPayment() {
@@ -15067,7 +15084,7 @@ function createPlannedRouteSection(
     expectedCost: segments.reduce((sum, segment) => sum + segment.constructionCost, 0),
     constructionDays: Math.max(0, ...segments.map((segment) => segment.constructionDays ?? Math.round(segment.lengthKm * baseConstructionDaysPerKm))),
     expectedDemand,
-    expectedRevenue: Math.round((expectedDemand * financeState.economy.fare * 365) / 100000000),
+    expectedRevenue: estimateAnnualRevenue(expectedDemand),
     transferEffect: estimatePlannedTransferEffect(points),
   };
 }
