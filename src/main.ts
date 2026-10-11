@@ -10,7 +10,7 @@ import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThe
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
-import { extensionRootId, freeExtensionEndpoints, normalizeExtensionChains, type ExtensionChainMember } from "./domain/extensionChain.ts";
+import { extensionRootId, freeExtensionEndpoints, labelExtensionPieces, normalizeExtensionChains, type ExtensionChainMember, type ExtensionPieceLabel } from "./domain/extensionChain.ts";
 import { listAutomaticStationNames, normalizeAutomaticStationName, selectAutomaticStationName, stationNameSourceLabels, type StationNameMatch } from "./stationNaming.ts";
 import {
   buildNetworkSignature,
@@ -3352,9 +3352,8 @@ let extendTarget: { kind: "actual" | "planned"; id: string } | null = null;
  * 연장 도구에서 노선 하나 = 운영 노선(또는 처음 계획 노선) + 그 노선의 연장 조각들.
  * 조각을 고르면 뿌리 노선을 고른 것으로 보고, 연장은 묶인 전체의 바깥 끝에서만 시작한다.
  */
-function normalizeExtendTarget(target: { kind: "actual" | "planned"; id: string }): { kind: "actual" | "planned"; id: string } {
+function normalizeExtendTarget(target: { kind: "actual" | "planned"; id: string }, plan = getActivePlan(false)): { kind: "actual" | "planned"; id: string } {
   if (target.kind !== "planned") return target;
-  const plan = getActivePlan(false);
   let route = plan?.routes.find((item) => item.id === target.id);
   const visited = new Set<string>();
   while (route && !visited.has(route.id)) {
@@ -3365,6 +3364,33 @@ function normalizeExtendTarget(target: { kind: "actual" | "planned"; id: string 
     route = plan?.routes.find((item) => item.id === rootId);
   }
   return target;
+}
+
+/** 기획안 노선이 속한 노선 묶음의 열쇠(연장 조각은 뿌리 노선의 열쇠) */
+function planLineKey(routeId: string, plan: ConstructionPlan) {
+  const root = normalizeExtendTarget({ kind: "planned", id: routeId }, plan);
+  return `${root.kind}:${root.id}`;
+}
+
+/** 기획안의 연장 조각마다 "동쪽 2/3" 같은 방향·순서 이름(같은 노선 묶음끼리 센다) */
+function planExtensionLabels(plan: ConstructionPlan) {
+  const groups = new Map<string, PlannedRoute[]>();
+  for (const route of plan.routes) {
+    const key = planLineKey(route.id, plan);
+    if (key === `planned:${route.id}`) continue;
+    groups.set(key, [...(groups.get(key) ?? []), route]);
+  }
+  const labels = new Map<string, ExtensionPieceLabel>();
+  for (const pieces of groups.values()) labelExtensionPieces(pieces).forEach((label, id) => labels.set(id, label));
+  return labels;
+}
+
+/** 공사 목록에 쓰는 이름: 기획안 연장 조각 공사는 방향·순서를 붙인다(예: "Manual Main 연장 (동쪽 2/3)") */
+function constructionProjectDisplayName(project: ConstructionProject) {
+  if (project.kind !== "extension" || !project.sourcePlanId || !project.blueprintId) return project.name;
+  const plan = constructionState.plans.find((item) => item.id === project.sourcePlanId);
+  const label = plan ? planExtensionLabels(plan).get(project.blueprintId)?.label : undefined;
+  return label ? `${project.name} (${label})` : project.name;
 }
 
 /** 아직 짓지 않았거나 공사 중인 연장 조각(완공되면 운영 노선에 합쳐져 빠진다) */
@@ -5614,7 +5640,7 @@ function isConnectionConstructionProject(project: ConstructionProject) {
 function planConstructionCancel(project: ConstructionProject): ConstructionCancelPlan | { reason: string } {
   if (!cancellableProjectStatuses.has(project.status)) return { reason: "이미 완공된 공사입니다. 철거 도구를 쓰세요." };
   const dependent = constructionState.projects.find((item) => item.dependsOnProjectId === project.id && cancellableProjectStatuses.has(item.status));
-  if (dependent) return { reason: `이어지는 공사 “${dependent.name}”을 먼저 취소하세요.` };
+  if (dependent) return { reason: `이어지는 공사 “${constructionProjectDisplayName(dependent)}”을 먼저 취소하세요.` };
   // 완공 때 망에 반영되는 공사: 공사만 없애면 된다.
   if (project.pendingExtension || project.junctionBlueprint || project.pendingPlanAddition || (project.kind === "plan" && isConnectionConstructionProject(project))) {
     return { projects: [project], removeRouteIds: [], removeStationIds: [], removeDepotIds: [] };
@@ -5661,7 +5687,7 @@ function requestConstructionCancel(project: ConstructionProject) {
   ].filter(Boolean);
   const progress = Math.round(constructionProjectProgress(project) * 100);
   openDecisionDialog(
-    `“${project.name}” 공사를 취소할까요?`,
+    `“${constructionProjectDisplayName(project)}” 공사를 취소할까요?`,
     `진행률 ${progress}% · 환급 ${formatCost(refund)}(남은 공정만큼)${effects.length > 0 ? ` · ${effects.join(" · ")}` : ""}. 이미 진행한 공정의 비용은 돌려받지 못합니다.`,
     "공사 취소",
     () => cancelConstructionProjects(plan, refund),
@@ -5766,14 +5792,20 @@ function renderConstructionProjectCard(project: ConstructionProject) {
       ? `<ul class="game-inspector__list">${project.events.map((event) => `<li>${event.applied ? "✓ " : "△ "}${escapeHtml(event.message)}</li>`).join("")}</ul>`
       : "";
   const cancelPlan = planConstructionCancel(project);
+  // 이어 연장 공사는 안쪽 구간이 개통해야 개통할 수 있다(공사는 함께 진행).
+  const parentProject = project.dependsOnProjectId ? constructionState.projects.find((item) => item.id === project.dependsOnProjectId) : undefined;
+  const orderNote = parentProject && parentProject.status !== "operating" && project.status !== "operating"
+    ? `<p class="game-inspector__note">안쪽 구간 “${escapeHtml(constructionProjectDisplayName(parentProject))}” 개통 후 개통할 수 있습니다.</p>`
+    : "";
   const statusTag = project.status === "operating" ? "dg-tag--ok" : project.status === "planned" ? "dg-tag--plan" : project.status === "opening-ready" ? "dg-tag--express" : "dg-tag--build";
   return `<section class="dg-panel__section game-project" data-project-id="${project.id}">
-    <div class="game-project__head"><span class="dg-tag ${statusTag}"><i class="dg-tag__icon" aria-hidden="true"></i>${labels[project.status]}</span><strong>${escapeHtml(project.name)}</strong><span class="dg-row__value">${Math.round(progress * 100)}%</span></div>
+    <div class="game-project__head"><span class="dg-tag ${statusTag}"><i class="dg-tag__icon" aria-hidden="true"></i>${labels[project.status]}</span><strong>${escapeHtml(constructionProjectDisplayName(project))}</strong><span class="dg-row__value">${Math.round(progress * 100)}%</span></div>
     <div class="dg-meter game-project__progress" role="progressbar" aria-label="공사 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progress * 100)}"><span class="dg-meter__fill" style="width:${Math.round(progress * 100)}%"></span></div>
     <div class="dg-row"><span class="dg-row__label">공사 기간</span><span class="dg-row__value">${formatConstructionDuration(project.durationDays + project.delayDays)}</span></div>
     <div class="dg-row"><span class="dg-row__label">완공 예정</span><span class="dg-row__value">게임 ${project.expectedCompletionDay + 1}일차</span></div>
     <div class="dg-row"><span class="dg-row__label">사업비</span><span class="dg-row__value">${formatCost(project.baseCost + project.additionalCost)}</span></div>
     ${requirements.length > 0 ? `<h4 class="dg-panel__section-label">개통 조건</h4><div class="game-project__requirements">${requirements.map((item) => `<button class="game-route-item" type="button" data-project-action="${item.action}"><span class="${item.met ? "game-inspector__plus" : "game-inspector__minus"}" aria-hidden="true">${item.met ? "✓" : "!"}</span><span class="game-route-item__text"><strong>${item.label}</strong><small>${item.met ? "충족" : "미충족 · 눌러서 해결"}</small></span></button>`).join("")}</div>` : ""}
+    ${orderNote}
     ${eventMarkup}
     <div class="game-project__actions">
       <button class="dg-btn dg-btn--secondary dg-btn--compact" type="button" data-focus-project>지도에서 보기</button>
@@ -8715,7 +8747,63 @@ function openPlanConversionDialog() {
   if (!plan || !planConversionDialog || !planConversionItems) return;
   const routeItems: string[] = [];
   const facilityItems: string[] = [];
+  const remainingOf = (route: PlannedRoute) => route.segments.filter((segment) => !route.completedSegmentIds.includes(segment.id));
+  // 연장 조각은 뿌리 노선(운영 노선 또는 처음 계획 노선) 한 줄로 묶고, 펼치면 "동쪽 2/3"처럼 방향·순서로 고른다.
+  const extensionLabels = planExtensionLabels(plan);
+  const lineGroups = new Map<string, PlannedRoute[]>();
   for (const route of plan.routes) {
+    const key = planLineKey(route.id, plan);
+    lineGroups.set(key, [...(lineGroups.get(key) ?? []), route]);
+  }
+  const groupedRouteIds = new Set<string>();
+  for (const [key, routes] of lineGroups) {
+    const pieces = routes.filter((route) => extensionLabels.has(route.id));
+    if (pieces.length === 0) continue;
+    routes.forEach((route) => groupedRouteIds.add(route.id));
+    const rootPlanned = routes.find((route) => !extensionLabels.has(route.id));
+    const rootRemaining = rootPlanned ? remainingOf(rootPlanned) : [];
+    const livePieces = pieces
+      .filter((piece) => remainingOf(piece).length > 0)
+      .sort((a, b) => {
+        const la = extensionLabels.get(a.id)!;
+        const lb = extensionLabels.get(b.id)!;
+        return la.side.localeCompare(lb.side) || la.order - lb.order;
+      });
+    if (rootRemaining.length === 0 && livePieces.length === 0) continue;
+    const lineRoot = key.startsWith("actual:")
+      ? networkState.routes.find((route) => route.id === key.slice("actual:".length))
+      : rootPlanned;
+    const lineName = lineRoot?.name ?? pieces[0].name;
+    const lineMark = lineMarkHtml({ name: lineName, color: lineRoot?.color ?? pieces[0].color }, "sm", "plan");
+    const allSegments = [...rootRemaining, ...livePieces.flatMap(remainingOf)];
+    const lineLength = allSegments.reduce((sum, segment) => sum + segment.lengthKm, 0);
+    const lineCost = allSegments.reduce((sum, segment) => sum + segment.constructionCost, 0);
+    const meta = `${rootRemaining.length > 0 ? `본선 ${rootRemaining.length}구간 · ` : ""}연장 ${livePieces.length}구간 · ${lineLength.toFixed(2)}km`;
+    routeItems.push(`
+      <div class="game-conversion__route" data-conversion-line="${escapeHtml(key)}">
+        <label class="game-conversion__item">
+          <input type="checkbox" checked data-line-toggle />
+          ${lineMark}
+          <span class="game-route-item__text"><strong>${escapeHtml(lineName)}</strong><small>${meta}</small></span>
+          <span class="game-conversion__cost">${formatCost(lineCost)}</span>
+        </label>
+        <details class="game-fold game-conversion__segments">
+          <summary class="game-fold__summary"><span class="game-inspector__muted">구간별 선택 · 바깥 구간은 안쪽 구간과 함께</span></summary>
+          <div>`);
+    rootPlanned?.segments.forEach((segment, index) => {
+      if (rootPlanned.completedSegmentIds.includes(segment.id)) return;
+      routeItems.push(`<label class="game-conversion__item"><input type="checkbox" checked data-convert-kind="segment" data-line-root data-route-id="${rootPlanned.id}" data-asset-id="${segment.id}" /><span class="game-route-item__text"><strong>본선 ${index + 1}구간</strong><small>${segment.lengthKm.toFixed(2)}km</small></span><span class="game-conversion__cost">${formatCost(segment.constructionCost)}</span></label>`);
+    });
+    for (const piece of livePieces) {
+      const segments = remainingOf(piece);
+      const label = extensionLabels.get(piece.id)!;
+      routeItems.push(`<label class="game-conversion__item"><input type="checkbox" checked data-piece-toggle="${piece.id}" data-piece-parent="${piece.parentBlueprintId ?? ""}" /><span class="game-route-item__text"><strong>${escapeHtml(label.label)}</strong><small>연장 · ${segments.reduce((sum, segment) => sum + segment.lengthKm, 0).toFixed(2)}km</small></span><span class="game-conversion__cost">${formatCost(segments.reduce((sum, segment) => sum + segment.constructionCost, 0))}</span></label>`);
+      routeItems.push(segments.map((segment) => `<input type="checkbox" checked hidden data-convert-kind="segment" data-piece-segment="${piece.id}" data-route-id="${piece.id}" data-asset-id="${segment.id}" />`).join(""));
+    }
+    routeItems.push(`</div></details></div>`);
+  }
+  for (const route of plan.routes) {
+    if (groupedRouteIds.has(route.id)) continue;
     const remainingSegments = route.segments.filter((segment) => !route.completedSegmentIds.includes(segment.id));
     if (remainingSegments.length === 0) continue;
     const routeLength = remainingSegments.reduce((sum, segment) => sum + segment.lengthKm, 0);
@@ -8760,8 +8848,64 @@ function openPlanConversionDialog() {
   renderPlanConversionSummary();
 }
 
+/**
+ * 연장 묶음 선택 규칙: 바깥 구간을 고르면 안쪽 구간(본선 포함)도 고르고, 안쪽 구간을 빼면 그 바깥 구간도 뺀다.
+ * 연장 조각은 통째로만 지을 수 있으므로 조각의 구간 입력(숨김)은 조각 선택을 따른다.
+ */
+function syncConversionLine(container: HTMLElement, input: HTMLInputElement) {
+  const pieceToggles = Array.from(container.querySelectorAll<HTMLInputElement>("input[data-piece-toggle]"));
+  const rootSegments = Array.from(container.querySelectorAll<HTMLInputElement>("input[data-line-root]"));
+  const byPiece = new Map(pieceToggles.map((toggle) => [toggle.dataset.pieceToggle ?? "", toggle]));
+  const uncheckOutward = (removed: Set<string>) => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const toggle of pieceToggles) {
+        if (toggle.checked && removed.has(toggle.dataset.pieceParent ?? "")) {
+          toggle.checked = false;
+          removed.add(toggle.dataset.pieceToggle ?? "");
+          changed = true;
+        }
+      }
+    }
+  };
+  if (input.hasAttribute("data-line-toggle")) {
+    [...pieceToggles, ...rootSegments].forEach((item) => (item.checked = input.checked));
+  } else if (input.dataset.pieceToggle) {
+    if (input.checked) {
+      let parentId = input.dataset.pieceParent;
+      while (parentId && byPiece.has(parentId)) {
+        const parent = byPiece.get(parentId)!;
+        parent.checked = true;
+        parentId = parent.dataset.pieceParent;
+      }
+      if (parentId && rootSegments.some((segment) => segment.dataset.routeId === parentId)) rootSegments.forEach((segment) => (segment.checked = true));
+    } else {
+      uncheckOutward(new Set([input.dataset.pieceToggle]));
+    }
+  } else if (input.hasAttribute("data-line-root") && !input.checked) {
+    uncheckOutward(new Set([input.dataset.routeId ?? ""]));
+  }
+  for (const toggle of pieceToggles) {
+    container.querySelectorAll<HTMLInputElement>(`input[data-piece-segment="${CSS.escape(toggle.dataset.pieceToggle ?? "")}"]`).forEach((segment) => (segment.checked = toggle.checked));
+  }
+  const lineToggle = container.querySelector<HTMLInputElement>("input[data-line-toggle]");
+  const segments = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-convert-kind="segment"]'));
+  const selectedCount = segments.filter((segment) => segment.checked).length;
+  if (lineToggle) {
+    lineToggle.checked = selectedCount === segments.length;
+    lineToggle.indeterminate = selectedCount > 0 && selectedCount < segments.length;
+  }
+}
+
 function handlePlanConversionSelectionChange(event: Event) {
   const input = event.target as HTMLInputElement;
+  const lineContainer = input.closest<HTMLElement>("[data-conversion-line]");
+  if (lineContainer) {
+    syncConversionLine(lineContainer, input);
+    renderPlanConversionSummary();
+    return;
+  }
   const routeContainer = input.closest<HTMLElement>("[data-conversion-route]");
   if (routeContainer) {
     const routeToggle = routeContainer.querySelector<HTMLInputElement>("input[data-route-toggle]");
@@ -8823,7 +8967,8 @@ function renderPlanConversionSummary() {
   const depotCount = selection.filter((item) => item.kind === "depot").length;
   const transferCount = selection.filter((item) => item.kind === "transfer").length;
   const connectionCount = selection.filter((item) => item.kind === "connection").length;
-  const routeCount = new Set(selection.filter((item) => item.kind === "segment").map((item) => item.routeId)).size;
+  // 연장 조각은 뿌리 노선과 한 노선으로 센다.
+  const routeCount = new Set(selection.filter((item) => item.kind === "segment").map((item) => planLineKey(item.routeId, plan))).size;
   const cost = calculatePlanConversionCost(plan, selection);
   const shortfall = Math.max(0, cost - financeState.economy.cash);
   const invalidFacilities = selection.filter((entry) => {

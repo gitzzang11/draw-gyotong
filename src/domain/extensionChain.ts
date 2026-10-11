@@ -74,3 +74,64 @@ export function freeExtensionEndpoints(members: readonly ExtensionChainMember[],
 export function extensionRootId(route: PlannedRoute): string | null {
   return route.operationKind === "extension" && route.rootLineId && route.rootLineId !== route.id ? route.rootLineId : null;
 }
+
+const compassNames = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"] as const;
+
+/** from → to 방향의 8방위 이름(북·북동·동…) */
+export function compassDirection(from: GeoCoordinate, to: GeoCoordinate): string {
+  const dy = to[0] - from[0];
+  const dx = (to[1] - from[1]) * Math.cos(((from[0] + to[0]) / 2) * (Math.PI / 180));
+  const degrees = (Math.atan2(dx, dy) * 180) / Math.PI;
+  return compassNames[((Math.round(degrees / 45) % 8) + 8) % 8];
+}
+
+export interface ExtensionPieceLabel {
+  side: "start" | "end";
+  /** 뿌리 노선에서 바깥으로 몇 번째 구간인지(1부터) */
+  order: number;
+  /** 같은 쪽 구간 수 */
+  total: number;
+  /** "동쪽 2/3"처럼 화면에 쓰는 이름. 양쪽 방향이 같은 8방위면 "시작 쪽"·"끝 쪽" */
+  label: string;
+}
+
+/**
+ * 한 노선의 연장 조각들(새 구간만 담은 형태)에 방향과 순서를 붙인다.
+ * 순서는 뿌리 노선에 붙은 조각이 1, 그 바깥 끝에서 이어 연장한 조각이 2…
+ * 방향은 그쪽 첫 조각의 붙는 점에서 가장 바깥 조각 끝까지의 8방위.
+ */
+export function labelExtensionPieces(pieces: readonly PlannedRoute[]): Map<string, ExtensionPieceLabel> {
+  const byId = new Map(pieces.map((piece) => [piece.id, piece]));
+  const depth = new Map<string, number>();
+  const depthOf = (piece: PlannedRoute, seen = new Set<string>()): number => {
+    const known = depth.get(piece.id);
+    if (known) return known;
+    const parent = piece.parentBlueprintId ? byId.get(piece.parentBlueprintId) : undefined;
+    const value = parent && !seen.has(parent.id) ? depthOf(parent, new Set([...seen, piece.id])) + 1 : 1;
+    depth.set(piece.id, value);
+    return value;
+  };
+  const sideOf = (piece: PlannedRoute): "start" | "end" => (piece.extensionAtStart ?? piece.actualExtension?.atStart) ? "start" : "end";
+  const sides = new Map<"start" | "end", { total: number; direction: string }>();
+  for (const side of ["start", "end"] as const) {
+    const sidePieces = pieces.filter((piece) => sideOf(piece) === side && piece.coordinates.length >= 2);
+    if (sidePieces.length === 0) continue;
+    const first = sidePieces.reduce((best, piece) => (depthOf(piece) < depthOf(best) ? piece : best));
+    const last = sidePieces.reduce((best, piece) => (depthOf(piece) > depthOf(best) ? piece : best));
+    sides.set(side, {
+      total: Math.max(...sidePieces.map((piece) => depthOf(piece))),
+      direction: compassDirection(first.coordinates[0], last.coordinates[last.coordinates.length - 1]),
+    });
+  }
+  const sameDirection = sides.get("start")?.direction !== undefined && sides.get("start")?.direction === sides.get("end")?.direction;
+  const labels = new Map<string, ExtensionPieceLabel>();
+  for (const piece of pieces) {
+    const side = sideOf(piece);
+    const info = sides.get(side);
+    if (!info) continue;
+    const order = depthOf(piece);
+    const name = sameDirection ? (side === "start" ? "시작 쪽" : "끝 쪽") : `${info.direction}쪽`;
+    labels.set(piece.id, { side, order, total: info.total, label: `${name} ${order}/${info.total}` });
+  }
+  return labels;
+}

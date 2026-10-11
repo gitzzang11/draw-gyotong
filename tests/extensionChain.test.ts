@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PlannedRoute } from "../src/domain/constructionTypes";
 import type { RouteSegment } from "../src/domain/networkTypes";
-import { extensionRootId, freeExtensionEndpoints, normalizeExtensionChains, toAdditionOnlyExtension } from "../src/domain/extensionChain";
+import { compassDirection, extensionRootId, freeExtensionEndpoints, labelExtensionPieces, normalizeExtensionChains, toAdditionOnlyExtension } from "../src/domain/extensionChain";
 
 function segment(id: string, coordinates: Array<[number, number]>, lengthKm: number, constructionCost: number, constructionDays?: number): RouteSegment {
   return {
@@ -95,5 +95,31 @@ describe("one line made of extension pieces", () => {
   it("finds the root of an extension piece", () => {
     expect(extensionRootId(parent)).toBe("actual");
     expect(extensionRootId(route({ id: "n", operationKind: "new-line", rootLineId: "n", coordinates: [], segments: [] }))).toBeNull();
+  });
+});
+
+describe("extension piece labels", () => {
+  it("names pieces by compass direction and order from the root line", () => {
+    const east1 = route({ id: "e1", operationKind: "extension", rootLineId: "a", actualExtension: { routeId: "a", atStart: false }, extensionAtStart: false, coordinates: [[37.5, 127], [37.5, 127.01]], segments: [] });
+    const east2 = route({ id: "e2", operationKind: "extension", rootLineId: "a", parentBlueprintId: "e1", extensionAtStart: false, coordinates: [[37.5, 127.01], [37.501, 127.02]], segments: [] });
+    const west1 = route({ id: "w1", operationKind: "extension", rootLineId: "a", actualExtension: { routeId: "a", atStart: true }, extensionAtStart: true, coordinates: [[37.5, 126.99], [37.5, 126.98]], segments: [] });
+    const labels = labelExtensionPieces([east2, west1, east1]);
+    expect(labels.get("e1")?.label).toBe("동쪽 1/2");
+    expect(labels.get("e2")?.label).toBe("동쪽 2/2");
+    expect(labels.get("w1")?.label).toBe("서쪽 1/1");
+  });
+
+  it("falls back to start/end when both sides point the same way", () => {
+    const a = route({ id: "a1", extensionAtStart: true, coordinates: [[0, 0], [1, 0]], segments: [] });
+    const b = route({ id: "b1", extensionAtStart: false, coordinates: [[2, 0], [3, 0]], segments: [] });
+    const labels = labelExtensionPieces([a, b]);
+    expect(labels.get("a1")?.label).toBe("시작 쪽 1/1");
+    expect(labels.get("b1")?.label).toBe("끝 쪽 1/1");
+  });
+
+  it("gives eight compass directions", () => {
+    expect(compassDirection([0, 0], [1, 0])).toBe("북");
+    expect(compassDirection([0, 0], [0, 1])).toBe("동");
+    expect(compassDirection([0, 0], [-1, -1])).toBe("남서");
   });
 });
