@@ -2570,13 +2570,37 @@ const simulationCoordinator = new SimulationCoordinator({
   getDay: (value) => Math.floor(value / 1440),
 });
 
+/**
+ * 하루 정산마다 세이브 전체를 즉시 저장하면(복제·직렬화·저장소 쓰기) 하루가 넘어갈 때 화면이 잠깐 멈춘다.
+ * 빠른 배속에서는 하루가 2초라 자주 보이므로, 정산 저장은 실제 시간 20초에 한 번만 즉시 저장하고
+ * 그 사이 날들은 다음 저장(자동 저장·일시정지·앱 전환 때 포함)에 함께 담긴다.
+ */
+const settlementSaveIntervalMs = 20_000;
+
+/** 브라우저가 한가할 때 실행(없으면 다음 작업으로) */
+function scheduleIdle(task: () => void) {
+  const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
+  if (idle) idle(task, { timeout: 1000 });
+  else window.setTimeout(task, 0);
+}
+let lastSettlementSaveAt = 0;
+function throttleSettlementSave<T extends object>(result: T): T {
+  if (!(result as { requiresImmediateSave?: boolean }).requiresImmediateSave) return result;
+  const now = performance.now();
+  if (now - lastSettlementSaveAt >= settlementSaveIntervalMs) {
+    lastSettlementSaveAt = now;
+    return result;
+  }
+  return { ...result, requiresImmediateSave: false };
+}
+
 const simulationApplication = new SimulationApplicationOrchestrator({
   settleDay: () => settleSimulationDay(),
   requestRenderDomains: (domains) => requestUpdateDomains(domains),
   pauseSimulation: () => gameLoopController.pause(),
   reportRuntimeError: (error) => console.error("Game loop failed", error),
   showRuntimeError: () => showError("게임 시간 진행 중 오류가 발생해 시뮬레이션을 일시정지했습니다."),
-  dispatchSettlement: (result) => void runtimeResultDispatcher.dispatch([result]),
+  dispatchSettlement: (result) => void runtimeResultDispatcher.dispatch([throttleSettlementSave(result)]),
   reportSettlementFailure: (error) => {
     console.error("Daily settlement failed", error);
     showError("일일 결산을 적용하지 못해 이전 경제 상태로 복구했습니다.");
@@ -3295,7 +3319,9 @@ function setSimulationSpeed(nextSpeed: number) {
   else gameLoopController.resume();
   if (simSpeed > 0) recordTutorialSignal("timeStarted", false);
   syncSpeedControls();
-  setText(modeLabel, simSpeed === 0 ? "일시정지" : `운영 x${simSpeed}`);
+  setText(modeLabel, simSpeed === 0 ? "일시정지" : `운영 ${speedLabel(simSpeed)}`);
+  // 정산 저장은 20초에 한 번이므로, 멈출 때 지금까지의 날들을 저장해 둔다.
+  if (simSpeed === 0) requestStateSave();
   updateTutorialProgress();
   playFeedback("select");
 }
@@ -13176,12 +13202,15 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     const eventResult = updateNewsEventsForDay(false);
     updateConstructionProjectsForDay();
     recordDemandSnapshot();
-    refreshOperationSuggestions(true);
-    const criticalCount = analysisStateOwner.current.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
-    if (criticalCount > 0 && analysisStateOwner.current.lastNotifiedDay !== gameDay) {
-      analysisStateOwner.current = { ...analysisStateOwner.current, lastNotifiedDay: gameDay };
-      showToast(`운영 분석에 우선 확인 제안 ${criticalCount}건이 있습니다.`);
-    }
+    // 운영 분석 제안은 조언이라 바로 필요하지 않다. 하루가 넘어가는 프레임을 가볍게 하려고 한가할 때 갱신한다.
+    scheduleIdle(() => {
+      refreshOperationSuggestions(true);
+      const criticalCount = analysisStateOwner.current.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
+      if (criticalCount > 0 && analysisStateOwner.current.lastNotifiedDay !== gameDay) {
+        analysisStateOwner.current = { ...analysisStateOwner.current, lastNotifiedDay: gameDay };
+        showToast(`운영 분석에 우선 확인 제안 ${criticalCount}건이 있습니다.`);
+      }
+    });
     return { newsEvents: eventResult.newsEvents, updateDomains: eventResult.updateDomains };
   },
 };
