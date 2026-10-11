@@ -29,6 +29,8 @@ export interface PlannedRoute {
   targetLineId?: string;
   parentBlueprintId?: string;
   extensionAtStart?: boolean;
+  /** "addition": 연장 조각이 새 구간만 담음(붙는 점 → 바깥 끝). 없으면 예전 형태(부모 경로 포함)로 보고 불러올 때 바꾼다. */
+  extensionGeometry?: "addition";
   branches?: Array<{ branchId: string; junctionNodeId: string; segmentIds: string[] }>;
 }
 

@@ -10,6 +10,7 @@ import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThe
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
+import { extensionRootId, freeExtensionEndpoints, normalizeExtensionChains, type ExtensionChainMember } from "./domain/extensionChain.ts";
 import { listAutomaticStationNames, normalizeAutomaticStationName, selectAutomaticStationName, stationNameSourceLabels, type StationNameMatch } from "./stationNaming.ts";
 import {
   buildNetworkSignature,
@@ -3347,6 +3348,58 @@ document.addEventListener("visibilitychange", () => {
 // 연장은 대상 노선의 이름·색을 그대로 따르므로 이름·색 입력은 보이지 않는다.
 let extendTarget: { kind: "actual" | "planned"; id: string } | null = null;
 
+/**
+ * 연장 도구에서 노선 하나 = 운영 노선(또는 처음 계획 노선) + 그 노선의 연장 조각들.
+ * 조각을 고르면 뿌리 노선을 고른 것으로 보고, 연장은 묶인 전체의 바깥 끝에서만 시작한다.
+ */
+function normalizeExtendTarget(target: { kind: "actual" | "planned"; id: string }): { kind: "actual" | "planned"; id: string } {
+  if (target.kind !== "planned") return target;
+  const plan = getActivePlan(false);
+  let route = plan?.routes.find((item) => item.id === target.id);
+  const visited = new Set<string>();
+  while (route && !visited.has(route.id)) {
+    visited.add(route.id);
+    const rootId = extensionRootId(route);
+    if (!rootId) return { kind: "planned", id: route.id };
+    if (networkState.routes.some((item) => item.id === rootId)) return { kind: "actual", id: rootId };
+    route = plan?.routes.find((item) => item.id === rootId);
+  }
+  return target;
+}
+
+/** 아직 짓지 않았거나 공사 중인 연장 조각(완공되면 운영 노선에 합쳐져 빠진다) */
+function isLiveExtensionPiece(route: PlannedRoute) {
+  return route.segments.some((segment) => !route.completedSegmentIds.includes(segment.id))
+    || constructionState.projects.some((project) => project.blueprintId === route.id && project.status !== "operating");
+}
+
+function extendLineMembers(target: { kind: "actual" | "planned"; id: string } | null) {
+  if (!target) return [];
+  const plan = getActivePlan(false);
+  const root = normalizeExtendTarget(target);
+  const members: Array<ExtensionChainMember & { color: string; paths: LatLng[][] }> = [];
+  if (root.kind === "actual") {
+    const actual = networkState.routes.find((item) => item.id === root.id);
+    if (actual) members.push({ owner: root, coordinates: actual.coordinates, color: actual.color, paths: getRoutePaths(actual) });
+  } else {
+    const planned = plan?.routes.find((item) => item.id === root.id);
+    if (planned) members.push({ owner: root, coordinates: planned.coordinates, color: planned.color, paths: [planned.coordinates.map(([lat, lng]) => L.latLng(lat, lng))] });
+  }
+  for (const piece of plan?.routes ?? []) {
+    if (piece.id === root.id || piece.coordinates.length < 2 || !isLiveExtensionPiece(piece)) continue;
+    const pieceRoot = normalizeExtendTarget({ kind: "planned", id: piece.id });
+    if (pieceRoot.kind !== root.kind || pieceRoot.id !== root.id) continue;
+    members.push({ owner: { kind: "planned", id: piece.id }, coordinates: piece.coordinates, color: piece.color, paths: [piece.coordinates.map(([lat, lng]) => L.latLng(lat, lng))] });
+  }
+  return members;
+}
+
+function extendLineEndpoints(target = extendTarget) {
+  const members = extendLineMembers(target);
+  const color = members[0]?.color ?? "#ffffff";
+  return freeExtensionEndpoints(members).map((end) => ({ ...end, latLng: L.latLng(end.position[0], end.position[1]), color }));
+}
+
 function extendTargetRoute(): (RouteLine | PlannedRoute) | null {
   if (!extendTarget) return null;
   const route = extendTarget.kind === "actual"
@@ -3356,7 +3409,7 @@ function extendTargetRoute(): (RouteLine | PlannedRoute) | null {
 }
 
 function setExtendTarget(target: { kind: "actual" | "planned"; id: string }) {
-  extendTarget = target;
+  extendTarget = normalizeExtendTarget(target);
   const route = extendTargetRoute();
   if (!route) {
     extendTarget = null;
@@ -3376,11 +3429,18 @@ function renderExtendTargetList() {
   if (!list) return;
   list.hidden = activeTool !== "extend";
   if (list.hidden) return;
-  const planned = (getActivePlan(false)?.routes ?? []).filter((route) => route.coordinates.length >= 2);
+  // 연장 조각은 따로 줄을 만들지 않고 뿌리 노선 줄에 "계획 연장 n구간"으로 묶는다.
+  const planned = (getActivePlan(false)?.routes ?? []).filter((route) => {
+    if (route.coordinates.length < 2) return false;
+    const root = normalizeExtendTarget({ kind: "planned", id: route.id });
+    return root.kind === "planned" && root.id === route.id;
+  });
   const actual = networkState.routes.filter((route) => route.coordinates.length >= 2);
   const item = (route: Pick<RouteLine, "id" | "name" | "color">, kind: "actual" | "planned") => {
     const selected = extendTarget?.kind === kind && extendTarget.id === route.id;
-    return `<button class="game-route-item" type="button" data-extend-target-kind="${kind}" data-extend-target-id="${escapeHtml(route.id)}" aria-pressed="${selected}">${lineMarkHtml(route)}<span class="game-route-item__text"><strong>${escapeHtml(route.name)}</strong><small>${kind === "actual" ? "운영 노선" : "계획 노선"}</small></span></button>`;
+    const pieces = extendLineMembers({ kind, id: route.id }).length - 1;
+    const meta = `${kind === "actual" ? "운영 노선" : "계획 노선"}${pieces > 0 ? ` · 계획 연장 ${pieces}구간` : ""}`;
+    return `<button class="game-route-item" type="button" data-extend-target-kind="${kind}" data-extend-target-id="${escapeHtml(route.id)}" aria-pressed="${selected}">${lineMarkHtml(route)}<span class="game-route-item__text"><strong>${escapeHtml(route.name)}</strong><small>${meta}</small></span></button>`;
   };
   const html = [...actual.map((route) => item(route, "actual")), ...planned.map((route) => item(route, "planned"))].join("")
     || `<p class="game-inspector__note">연장할 노선이 없습니다.</p>`;
@@ -3431,24 +3491,17 @@ function updateToolHover() {
   const threshold = 16;
   let hovered = false;
   if (activeTool === "extend" && planningMode) {
-    const target = extendTargetRoute();
-    if (target && target.coordinates.length >= 2) {
-      const ends = [target.coordinates[0], target.coordinates[target.coordinates.length - 1]].map(([lat, lng]) => L.latLng(lat, lng));
-      const end = ends.find((latLng) => map.latLngToContainerPoint(latLng).distanceTo(point) <= threshold);
-      if (end) {
-        L.circleMarker(end, { radius: 14, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false, pane: "mapGuidePane" }).addTo(toolHoverLayer);
-        hovered = true;
-      }
+    // 고른 노선(조각까지 묶은 전체)의 바깥 끝점 위면 고리, 아니면 누르면 고를 노선 전체(조각 포함)를 띠로.
+    const end = extendTarget ? extendLineEndpoints().find((item) => map.latLngToContainerPoint(item.latLng).distanceTo(point) <= threshold) : undefined;
+    if (end) {
+      L.circleMarker(end.latLng, { radius: 14, color: themeTokenColor("--text-1", "#15171A"), weight: 3, fill: false, interactive: false, pane: "mapGuidePane" }).addTo(toolHoverLayer);
+      hovered = true;
     }
     if (!hovered) {
       const picked = findExtendTargetAtPoint(point, "mouse");
-      const route = picked?.kind === "actual"
-        ? networkState.routes.find((item) => item.id === picked.id)
-        : picked ? getActivePlan(false)?.routes.find((item) => item.id === picked.id) : undefined;
-      if (route) {
-        drawRouteHover([route.coordinates.map(([lat, lng]) => L.latLng(lat, lng))], route.color);
-        hovered = true;
-      }
+      const members = extendLineMembers(picked);
+      for (const member of members) drawRouteHover(member.paths, member.color);
+      hovered = members.length > 0;
     }
   } else if (activeTool === "branch" && pendingBranchJunction) {
     // 분기점(점선 원)을 만든 뒤에는 그 분기점에서 드래그하므로 분기점만 강조한다.
@@ -3504,26 +3557,15 @@ function findPlanningRouteContinuation(point: L.Point, thresholdPx = 56): Planni
   if (!planningMode || activeTool !== "extend") return null;
   // 연장은 고른 노선의 끝점에서만 시작한다.
   if (!extendTarget) return null;
-  const candidates: PlanningRouteContinuation[] = [];
-  const plan = getActivePlan(false);
-  for (const route of plan?.routes ?? []) {
-    if (route.coordinates.length < 2) continue;
-    if (extendTarget.kind !== "planned" || extendTarget.id !== route.id) continue;
-    const basePoints = route.coordinates.map(([lat, lng]) => L.latLng(lat, lng));
-    candidates.push({ atStart: true, anchor: map.latLngToContainerPoint(basePoints[0]), basePoints, plannedRouteId: route.id, color: route.color });
-    candidates.push({ atStart: false, anchor: map.latLngToContainerPoint(basePoints[basePoints.length - 1]), basePoints, plannedRouteId: route.id, color: route.color });
-  }
-  if (activeTool === "extend") {
-    for (const route of networkState.routes) {
-      if (route.coordinates.length < 2) continue;
-      if (extendTarget.kind !== "actual" || extendTarget.id !== route.id) continue;
-      const start = L.latLng(route.coordinates[0][0], route.coordinates[0][1]);
-      const endCoordinate = route.coordinates[route.coordinates.length - 1];
-      const end = L.latLng(endCoordinate[0], endCoordinate[1]);
-      candidates.push({ atStart: true, anchor: map.latLngToContainerPoint(start), basePoints: [start], actualRouteId: route.id, color: route.color });
-      candidates.push({ atStart: false, anchor: map.latLngToContainerPoint(end), basePoints: [end], actualRouteId: route.id, color: route.color });
-    }
-  }
+  // 고른 노선과 그 연장 조각들을 한 노선으로 보고, 묶인 전체의 바깥 끝점에서만 연장한다.
+  // 새 조각은 그 끝점부터 새 구간만 담는다(끝점이 운영 노선이면 운영 노선 연장, 계획 조각이면 그 조각의 이어 연장).
+  const candidates: PlanningRouteContinuation[] = extendLineEndpoints().map((end) => ({
+    atStart: end.atStart,
+    anchor: map.latLngToContainerPoint(end.latLng),
+    basePoints: [end.latLng],
+    ...(end.owner.kind === "actual" ? { actualRouteId: end.owner.id } : { plannedRouteId: end.owner.id }),
+    color: end.color,
+  }));
   return candidates
     .map((candidate) => ({ candidate, distance: point.distanceTo(candidate.anchor) }))
     .filter((item) => item.distance <= thresholdPx)
@@ -3533,9 +3575,8 @@ function findPlanningRouteContinuation(point: L.Point, thresholdPx = 56): Planni
 function combinePlanningContinuation(points: LatLng[]) {
   const continuation = activePlanningContinuation;
   if (!continuation) return points;
-  const addition = points.slice(1);
-  if (continuation.actualRouteId) return [...continuation.basePoints, ...addition];
-  return continuation.atStart ? [...addition.reverse(), ...continuation.basePoints] : [...continuation.basePoints, ...addition];
+  // 연장 조각은 [붙는 끝점, …새 구간] 순서로 새 구간만 담는다.
+  return [...continuation.basePoints, ...points.slice(1)];
 }
 
 function nearestScreenPathDistance(point: L.Point, coordinates: Array<[number, number]>) {
@@ -3778,7 +3819,8 @@ function onPointerDown(event: PointerEvent) {
   // 연장: 고른 노선 끝점 근처라도 다른 노선의 선 위를 누르면(끝점에서 20px 넘게 떨어짐) 그 노선을 고르는 것으로 본다.
   if (planningMode && activeTool === "extend" && planningContinuation && point.distanceTo(planningContinuation.anchor) > 20) {
     const picked = findExtendTargetAtPoint(point, event.pointerType);
-    if (picked && (picked.kind !== extendTarget?.kind || picked.id !== extendTarget?.id)) planningContinuation = null;
+    const pickedRoot = picked ? normalizeExtendTarget(picked) : null;
+    if (pickedRoot && (pickedRoot.kind !== extendTarget?.kind || pickedRoot.id !== extendTarget?.id)) planningContinuation = null;
   }
   if (constructionDraft && activePointerId === null && !planningContinuation) {
     map.dragging.enable();
@@ -6222,6 +6264,8 @@ function createLineExtensionPayload(
 }
 
 function getPlannedExtensionSegments(route: PlannedRoute, parent: PlannedRoute) {
+  // 새 형태 조각은 새 구간만 담고 있다(src/domain/extensionChain.ts).
+  if (route.extensionGeometry === "addition") return route.segments;
   const parentSegmentCount = parent.segments.length;
   return route.extensionAtStart
     ? route.segments.slice(0, Math.max(0, route.segments.length - parentSegmentCount))
@@ -6229,6 +6273,7 @@ function getPlannedExtensionSegments(route: PlannedRoute, parent: PlannedRoute) 
 }
 
 function getPlannedExtensionCoordinates(route: PlannedRoute, parent: PlannedRoute): Array<[number, number]> {
+  if (route.extensionGeometry === "addition") return route.coordinates;
   const parentCoordinateCount = parent.coordinates.length;
   if (route.extensionAtStart) {
     const addedCoordinateCount = Math.max(0, route.coordinates.length - parentCoordinateCount);
@@ -7844,11 +7889,12 @@ function normalizePlans(source: ConstructionPlan[]) {
       recalculatePlan({
         ...createPlanRecord(plan.name || "계획"),
         ...plan,
-        routes: (plan.routes ?? []).map((route) => ({
+        // 예전 세이브의 이어 연장 조각(부모 경로 포함)은 새 구간만 담는 형태로 바꾼다.
+        routes: normalizeExtensionChains((plan.routes ?? []).map((route) => ({
           ...route,
           segments: route.segments ?? [],
           completedSegmentIds: route.completedSegmentIds ?? [],
-        })),
+        }))),
         stations: plan.stations ?? [],
         depots: plan.depots ?? [],
         transfers: plan.transfers ?? [],
@@ -8121,7 +8167,12 @@ async function confirmPlanningDraft(draft: ConstructionDraft) {
         rootLineId,
         targetLineId: rootLineId,
         parentBlueprintId,
-        extensionAtStart: draft.plannedExtension?.atStart ?? draft.plannedRouteExtension?.atStart,
+        // 운영 노선 기준으로 어느 쪽 연장인지: 연장 조각의 바깥 끝에서 이어 연장하면 그 조각과 같은 쪽.
+        extensionAtStart: draft.plannedExtension?.atStart
+          ?? (existingPlannedRoute && parentBlueprintId && existingPlannedRoute.operationKind === "extension"
+            ? existingPlannedRoute.extensionAtStart
+            : draft.plannedRouteExtension?.atStart),
+        extensionGeometry: parentBlueprintId ? "addition" : undefined,
         branches: existingPlannedRoute?.branches ?? [],
       };
       updatePlan(plan.id, (item) => ({
@@ -8543,7 +8594,7 @@ function reconcileBlueprints() {
           name: route.name,
         });
       }
-      const showPlannedHandles = activeTool === "merge" || (activeTool === "extend" && extendTarget?.kind === "planned" && extendTarget.id === route.id);
+      const showPlannedHandles = activeTool === "merge";
       if (planningMode && showPlannedHandles && isActive && remainingSegments.length > 0) {
         renderExtensionEndpointHandle(L.latLng(...route.coordinates[0]), route.color);
         renderExtensionEndpointHandle(L.latLng(...route.coordinates[route.coordinates.length - 1]), route.color);
@@ -8614,10 +8665,7 @@ function reconcileBlueprints() {
   }
   blueprintRenderer.reconcileEntities(entities);
   if (planningMode && activeTool === "extend") {
-    for (const route of networkState.routes.filter((route) => route.coordinates.length >= 2 && extendTarget?.kind === "actual" && extendTarget.id === route.id)) {
-      renderExtensionEndpointHandle(L.latLng(...route.coordinates[0]), route.color);
-      renderExtensionEndpointHandle(L.latLng(...route.coordinates[route.coordinates.length - 1]), route.color);
-    }
+    for (const end of extendLineEndpoints()) renderExtensionEndpointHandle(end.latLng, end.color);
   }
 }
 
