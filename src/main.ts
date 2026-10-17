@@ -340,7 +340,13 @@ type GameSettings = {
   mapTheme: MapTheme;
   /** 지도 위 열차 모양 */
   trainStyle: TrainSymbolStyle;
+  /** 화면 방향: 자동(기기의 자동 회전 설정을 따름) · 가로 고정 · 세로 고정 */
+  screenOrientation: ScreenOrientationSetting;
 };
+
+type ScreenOrientationSetting = "auto" | "landscape" | "portrait";
+const SCREEN_ORIENTATION_SETTINGS: ScreenOrientationSetting[] = ["auto", "landscape", "portrait"];
+const SCREEN_ORIENTATION_LABELS: Record<ScreenOrientationSetting, string> = { auto: "자동", landscape: "가로 고정", portrait: "세로 고정" };
 
 type SaveState = {
   schemaVersion?: number;
@@ -618,6 +624,7 @@ const defaultSettings: GameSettings = {
   autoSaveIntervalSeconds: 30,
   mapTheme: "paper",
   trainStyle: "capsule",
+  screenOrientation: "auto",
 };
 const fallbackSaveKey = "draw-gyotong-save-slots-v1";
 const localRecoveryStateKey = "draw-gyotong-state";
@@ -1128,6 +1135,10 @@ app.innerHTML = `
             <div class="game-setting-row">
               <label class="game-setting-row__text" for="mapThemeSelect"><strong>지도 테마</strong><small>종이: 밝은 지도(기본) · 먹: 어두운 지도</small></label>
               <select class="dg-input game-setting-row__select" id="mapThemeSelect">${MAP_THEMES.map((theme) => `<option value="${theme}">${MAP_THEME_LABELS[theme]}</option>`).join("")}</select>
+            </div>
+            <div class="game-setting-row">
+              <label class="game-setting-row__text" for="screenOrientationSelect"><strong>화면 방향</strong><small>자동: 폰의 자동 회전 설정을 따름 · 가로·세로: 그 방향으로 고정</small></label>
+              <select class="dg-input game-setting-row__select" id="screenOrientationSelect">${SCREEN_ORIENTATION_SETTINGS.map((mode) => `<option value="${mode}">${SCREEN_ORIENTATION_LABELS[mode]}</option>`).join("")}</select>
             </div>
             <div class="game-setting-row">
               <label class="game-setting-row__text" for="trainStyleSelect"><strong>열차 모양</strong><small>캡슐: 진행 방향으로 눕힘 · 편성: 칸 수 표시 · 노선 배지: 노선 번호 · 집: 뾰족한 머리가 진행 방향</small></label>
@@ -1765,10 +1776,22 @@ const map = L.map("map", {
   touchZoom: "center",
 });
 
+/**
+ * 지도 이동 범위. 세로 화면에서는 아래쪽 정보창·검토가 화면 아래를 덮으므로, 도시 남쪽 끝도 정보창 위로
+ * 올려 볼 수 있게 남쪽으로 도시 높이의 25%만큼 더 허용한다.
+ */
+function cityMapBounds(cityId: CityId) {
+  const configured = cityConfigs[cityId].mapBounds;
+  const bounds = configured instanceof L.LatLngBounds ? configured : L.latLngBounds(configured as L.LatLngExpression[]);
+  if (!isPortraitLayout()) return bounds;
+  const extra = (bounds.getNorth() - bounds.getSouth()) * 0.25;
+  return L.latLngBounds([bounds.getSouth() - extra, bounds.getWest()], bounds.getNorthEast());
+}
+
 function applyCityMapConstraints(cityId: CityId) {
   const city = cityConfigs[cityId];
   map.setMinZoom(city.minZoom);
-  map.setMaxBounds(city.mapBounds);
+  map.setMaxBounds(cityMapBounds(cityId));
   map.setView(city.center, Math.max(12, city.minZoom));
   updateDynamicLayers();
 }
@@ -2000,6 +2023,7 @@ const hapticsToggle = document.querySelector<HTMLInputElement>("#hapticsToggle")
 const performanceSelect = document.querySelector<HTMLSelectElement>("#performanceSelect");
 const mapThemeSelect = document.querySelector<HTMLSelectElement>("#mapThemeSelect");
 const trainStyleSelect = document.querySelector<HTMLSelectElement>("#trainStyleSelect");
+const screenOrientationSelect = document.querySelector<HTMLSelectElement>("#screenOrientationSelect");
 const reducedMotionToggle = document.querySelector<HTMLInputElement>("#reducedMotionToggle");
 const sandboxConstructionTimeToggle = document.querySelector<HTMLInputElement>("#sandboxConstructionTimeToggle");
 const autoStationNamingToggle = document.querySelector<HTMLInputElement>("#autoStationNamingToggle");
@@ -3286,6 +3310,11 @@ trainStyleSelect?.addEventListener("change", () => {
   trainRenderer.clear();
   requestUpdate("full");
 });
+screenOrientationSelect?.addEventListener("change", () => {
+  const mode = SCREEN_ORIENTATION_SETTINGS.find((item) => item === screenOrientationSelect.value) ?? "auto";
+  updateSettings({ screenOrientation: mode });
+  applyScreenOrientation();
+});
 mapThemeSelect?.addEventListener("change", () => {
   updateSettings({ mapTheme: normalizeMapTheme(mapThemeSelect.value) });
   // 테마 토큰으로 칠하는 지도 기호를 새 테마 색으로 다시 그린다. 렌더러는 바뀐 객체만 다시 칠하므로 비우고 전체 갱신한다.
@@ -3355,12 +3384,7 @@ syncSpeedControls();
 // 정보판이 큰 글자로 줄바꿈되어도 레일·지도 컨트롤이 그 아래에 오도록 실제 아래쪽 위치를 반영한다.
 const topPlates = [byId("financePlate"), byId("timePlate")].filter((plate): plate is HTMLElement => Boolean(plate));
 if (topPlates.length && "ResizeObserver" in window) {
-  const observer = new ResizeObserver(() => {
-    const bottom = Math.max(...topPlates.map((plate) => plate.getBoundingClientRect().bottom));
-    document.documentElement.style.setProperty("--hud-top", `${Math.ceil(bottom)}px`);
-    placeModeBanner();
-    layoutRailTools();
-  });
+  const observer = new ResizeObserver(() => syncTopHud());
   topPlates.forEach((plate) => observer.observe(plate));
 }
 document.addEventListener("pointerdown", (event) => {
@@ -3392,18 +3416,28 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => undefined));
 }
 
-async function requestLandscapeOrientation() {
-  // Android's native activity is locked in the manifest. This only supplements
-  // installed PWAs and browsers that expose the Screen Orientation API.
+/**
+ * 설정의 화면 방향을 적용한다. 안드로이드 앱은 MainActivity의 DrawGyotongNative.setOrientation으로
+ * (자동 = 기기의 자동 회전 설정을 따름, 꺼져 있으면 지금 방향 유지), 설치한 웹 앱·브라우저는 Screen Orientation API로 잠근다.
+ * 화면 배치는 방향이 아니라 화면 비율로 정하므로(hud.css 세로 화면 구획) 잠그지 못해도 게임은 그대로 된다.
+ */
+async function applyScreenOrientation() {
+  const mode = settings.screenOrientation;
+  const native = (window as Window & { DrawGyotongNative?: { setOrientation?: (mode: string) => void } }).DrawGyotongNative;
+  if (native?.setOrientation) {
+    native.setOrientation(mode);
+    return;
+  }
   try {
-    const orientation = screen.orientation as ScreenOrientation & { lock?: (mode: "landscape") => Promise<void> };
-    if (orientation.lock) await orientation.lock("landscape");
+    const orientation = screen.orientation as ScreenOrientation & { lock?: (mode: "landscape" | "portrait") => Promise<void>; unlock?: () => void };
+    if (mode === "auto") orientation.unlock?.();
+    else if (orientation.lock) await orientation.lock(mode);
   } catch {
-    // Browsers such as iOS Safari require a user gesture or do not permit locks.
+    // iOS Safari처럼 잠금을 허용하지 않거나 전체 화면에서만 허용하는 브라우저
   }
 }
 
-void requestLandscapeOrientation();
+void applyScreenOrientation();
 
 window.addEventListener("error", (event) => {
   console.error(event.error ?? event.message);
@@ -3415,7 +3449,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
-    void requestLandscapeOrientation();
+    void applyScreenOrientation();
     if (simSpeed > 0) gameLoopController.resume();
   }
   if (document.visibilityState === "hidden" && hasActiveGameSession) void saveCurrentSlot("백그라운드 저장");
@@ -17926,7 +17960,12 @@ function loadSettings(): GameSettings {
   try {
     const saved = localStorage.getItem("draw-gyotong-settings");
     const loaded: GameSettings = { ...defaultSettings, ...(saved ? (JSON.parse(saved) as Partial<GameSettings>) : {}) };
-    return { ...loaded, mapTheme: normalizeMapTheme(loaded.mapTheme), trainStyle: TRAIN_SYMBOL_STYLES.includes(loaded.trainStyle) ? loaded.trainStyle : "capsule" };
+    return {
+      ...loaded,
+      mapTheme: normalizeMapTheme(loaded.mapTheme),
+      trainStyle: TRAIN_SYMBOL_STYLES.includes(loaded.trainStyle) ? loaded.trainStyle : "capsule",
+      screenOrientation: SCREEN_ORIENTATION_SETTINGS.includes(loaded.screenOrientation) ? loaded.screenOrientation : "auto",
+    };
   } catch {
     return { ...defaultSettings };
   }
@@ -17959,6 +17998,7 @@ function applySettingsToUi() {
   if (performanceSelect) performanceSelect.value = settings.performanceMode;
   if (mapThemeSelect) mapThemeSelect.value = settings.mapTheme;
   if (trainStyleSelect) trainStyleSelect.value = settings.trainStyle;
+  if (screenOrientationSelect) screenOrientationSelect.value = settings.screenOrientation;
   if (reducedMotionToggle) reducedMotionToggle.checked = settings.reducedMotion;
   if (sandboxConstructionTimeToggle) sandboxConstructionTimeToggle.checked = settings.sandboxConstructionTime;
   if (autoStationNamingToggle) autoStationNamingToggle.checked = settings.autoStationNaming;
@@ -18019,7 +18059,11 @@ function layoutRailTools() {
   // 더보기도 도구 상자 안 맨 아래에 둔다(모드 상자와 도구 상자를 나눠 그린다).
   railTools.append(modifyToolsButton);
   modifyToolsButton.hidden = true;
-  const overflows = () => workspaceModeBar.scrollHeight > workspaceModeBar.clientHeight + 1;
+  // 가로 화면은 왼쪽 세로 레일의 높이, 세로 화면은 아래 가로 레일의 폭에 들어가는 만큼만 둔다.
+  const portrait = isPortraitLayout();
+  const overflows = () => (portrait
+    ? railTools.scrollWidth > railTools.clientWidth + 1
+    : workspaceModeBar.scrollHeight > workspaceModeBar.clientHeight + 1);
   if (overflows()) {
     modifyToolsButton.hidden = false;
     for (let index = modeButtons.length - 1; index > 0 && overflows(); index -= 1) railOverflowTools.prepend(modeButtons[index]);
@@ -18051,7 +18095,134 @@ function placeModeBanner() {
   modeBanner.dataset.placement = fits ? "top" : "low";
   document.body.dataset.modeBanner = modeBanner.dataset.placement;
 }
-window.addEventListener("resize", () => placeModeBanner());
+window.addEventListener("resize", () => syncTopHud());
+
+/** 세로 화면 배치인지(hud.css의 세로 화면 구획과 같은 기준: 화면 비율) */
+function isPortraitLayout() {
+  return window.matchMedia("(orientation: portrait)").matches;
+}
+
+/**
+ * 위쪽 정보판 배치를 맞추고, 그 실제 아래쪽(--hud-top)에 맞춰 모드 배너와 레일을 다시 놓는다.
+ * 세로 화면에서 두 정보판이 한 줄에 들어가지 않으면 시간 정보판을 둘째 줄 오른쪽으로 내린다(data-plates="stacked").
+ */
+function syncTopHud() {
+  const portrait = isPortraitLayout();
+  if (document.body.dataset.layout !== (portrait ? "portrait" : "landscape")) {
+    document.body.dataset.layout = portrait ? "portrait" : "landscape";
+    map.setMaxBounds(cityMapBounds(metaState.current.cityId));
+  }
+  const financePlate = byId("financePlate");
+  const timePlate = byId("timePlate");
+  if (financePlate && timePlate) {
+    const left = financePlate.getBoundingClientRect().left;
+    const right = window.innerWidth - timePlate.getBoundingClientRect().right;
+    const stacked = isPortraitLayout() && financePlate.offsetWidth + timePlate.offsetWidth + 6 > window.innerWidth - left - right;
+    document.body.dataset.plates = stacked ? "stacked" : "row";
+    const bottom = Math.max(financePlate.getBoundingClientRect().bottom, timePlate.getBoundingClientRect().bottom);
+    document.documentElement.style.setProperty("--hud-top", `${Math.ceil(bottom)}px`);
+  }
+  placeModeBanner();
+  layoutRailTools();
+}
+
+// ===== 세로 화면 정보창 =====
+// 손잡이: 누르거나 위로 밀면 정보판 아래까지 펼치고, 다시 누르거나 아래로 밀면 접는다(hud.css .is-sheet-expanded).
+// 열 때마다 접힌 상태에서 시작한다. 가로 화면에서는 손잡이를 숨긴다.
+// 방금 지도에서 누르거나 끈 세로 범위(누른 대상, 그린 초안). 정보창·검토가 이것을 가리면 지도를 옮긴다.
+// 누르고 있는 동안(그리는 중)에는 지도를 옮기지 않고, 손을 뗄 때 열려 있는 정보창·검토를 기준으로 한 번 맞춘다.
+let lastMapPointer: { top: number; bottom: number; at: number; startX: number; startY: number; moved: boolean } | null = null;
+let mapPointerPressed = false;
+mapContainer?.addEventListener("pointerdown", (event) => {
+  lastMapPointer = { top: event.clientY, bottom: event.clientY, at: performance.now(), startX: event.clientX, startY: event.clientY, moved: false };
+  mapPointerPressed = true;
+}, { passive: true });
+window.addEventListener("pointermove", (event) => {
+  if (!mapPointerPressed || !lastMapPointer) return;
+  lastMapPointer.top = Math.min(lastMapPointer.top, event.clientY);
+  lastMapPointer.bottom = Math.max(lastMapPointer.bottom, event.clientY);
+  lastMapPointer.at = performance.now();
+  if (Math.hypot(event.clientX - lastMapPointer.startX, event.clientY - lastMapPointer.startY) > 8) lastMapPointer.moved = true;
+}, { passive: true });
+for (const type of ["pointerup", "pointercancel"] as const) {
+  window.addEventListener(type, () => {
+    if (!mapPointerPressed) return;
+    mapPointerPressed = false;
+    // 탐색 도구로 지도를 끌어 옮긴 것이면 플레이어가 고른 시야를 그대로 둔다.
+    if (lastMapPointer?.moved && activeTool === "pan") lastMapPointer = null;
+    if (lastMapPointer) lastMapPointer.at = performance.now();
+    const open = [...document.querySelectorAll<HTMLElement>(".game-inspector")].find((panel) => !panel.hidden);
+    if (open) keepTappedObjectVisible(open);
+  }, { capture: true, passive: true });
+}
+
+/** 세로 화면에서 방금 누른 지도 대상·그린 초안이 열린 정보창에 가려지면, 정보창 위에 남은 지도 가운데로 옮긴다. */
+function keepTappedObjectVisible(panel: HTMLElement) {
+  const pointer = lastMapPointer;
+  if (!isPortraitLayout() || !pointer || mapPointerPressed || performance.now() - pointer.at > 1500) return;
+  // 내용이 채워져 높이가 정해진 뒤에 잰다(검토 창은 연 다음 내용을 채운다).
+  window.setTimeout(() => {
+    // 들어오는 모션(translate)과 상관없는 최종 위치: 화면 아래에서 bottom·높이만큼 올라온 곳
+    const panelTop = window.innerHeight - parseFloat(getComputedStyle(panel).bottom) - panel.offsetHeight;
+    if (pointer.bottom < panelTop - 48) return;
+    const hudTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hud-top")) || 64;
+    // 범위가 남은 지도보다 길면 위쪽 끝을 맞추고, 아니면 가운데를 맞춘다.
+    const visibleCenter = hudTop + (panelTop - hudTop) / 2;
+    const span = pointer.bottom - pointer.top;
+    const shift = span > panelTop - hudTop - 96 ? pointer.top - (hudTop + 48) : (pointer.top + pointer.bottom) / 2 - visibleCenter;
+    if (lastMapPointer !== pointer) return;
+    map.panBy([0, shift], { animate: !settings.reducedMotion });
+    lastMapPointer = null;
+  }, 120);
+}
+
+function installSheetGrips() {
+  document.querySelectorAll<HTMLElement>(".game-inspector").forEach((panel) => {
+    const isReview = panel.classList.contains("game-review");
+    new MutationObserver(() => {
+      if (panel.hidden) return;
+      keepTappedObjectVisible(panel);
+      panel.classList.remove("is-sheet-expanded");
+      panel.querySelector(".game-sheet-grip")?.setAttribute("aria-expanded", "false");
+    }).observe(panel, { attributes: true, attributeFilter: ["hidden"] });
+    // 검토 창은 머리글의 접기 버튼이 같은 일을 하므로 손잡이를 두지 않는다.
+    if (isReview) return;
+    const grip = document.createElement("button");
+    grip.type = "button";
+    grip.className = "game-sheet-grip";
+    grip.setAttribute("aria-expanded", "false");
+    grip.setAttribute("aria-label", "정보창 펼치기");
+    panel.prepend(grip);
+    const setExpanded = (expanded: boolean) => {
+      panel.classList.toggle("is-sheet-expanded", expanded);
+      grip.setAttribute("aria-expanded", String(expanded));
+      grip.setAttribute("aria-label", expanded ? "정보창 접기" : "정보창 펼치기");
+    };
+    let startY: number | null = null;
+    let swiped = false;
+    grip.addEventListener("pointerdown", (event) => {
+      startY = event.clientY;
+      swiped = false;
+      grip.setPointerCapture(event.pointerId);
+    });
+    grip.addEventListener("pointermove", (event) => {
+      if (startY === null || swiped || Math.abs(event.clientY - startY) < 24) return;
+      swiped = true;
+      setExpanded(event.clientY < startY);
+    });
+    grip.addEventListener("pointerup", () => { startY = null; });
+    grip.addEventListener("pointercancel", () => { startY = null; });
+    grip.addEventListener("click", () => {
+      if (swiped) {
+        swiped = false;
+        return;
+      }
+      setExpanded(!panel.classList.contains("is-sheet-expanded"));
+      playFeedback("select");
+    });
+  });
+}
+installSheetGrips();
 
 /** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */
 function syncSpeedControls() {

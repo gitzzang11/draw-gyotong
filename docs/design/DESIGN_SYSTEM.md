@@ -218,6 +218,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 - **Map controls(오른쪽, 시간 정보판 아래)**: 레이어, 범례를 `48` 사각 버튼 묶음으로 둔다. 펼침 패널은 바깥 탭과 Escape로 닫힌다. 테마 전환은 설정에만 둔다.
 - 글자 확대로 정보판이 넘치면 잘리지 않고 줄바꿈한다. 아래 HUD는 정보판의 실제 아래쪽(`--hud-top`)을 기준으로 배치한다.
 
+세로 화면(화면 비율 세로)에서는 같은 표면을 아래쪽 엄지 영역으로 옮긴다: 도구 레일은 화면 아래 가로(높이 `60`, 도구 칸 최소 `56`), 실행 취소는 그 위 왼쪽, inspector·검토는 레일 위 전체 폭(접힘 46% · 손잡이로 펼침). 자세한 배치는 `MOBILE_UX.md` §16.
+
 상시 HUD끼리 지도를 둘러싸는 두꺼운 프레임을 만들지 않는다. 지도 시야를 최대화하고, 상세 정보는 필요할 때 가장자리에서 들어오는 inspector 또는 sheet로 확장한다.
 
 ### 정보 계층
@@ -426,6 +428,7 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 ## 17. 참조 시안
 
 - `docs/design/prototype/index.html`: 토큰, 기본 자산, 844×390 핵심 화면 시안 (종이·먹 전환 포함)
+- `docs/design/prototype/portrait.html`: 세로 화면 390×844 배치 시안(기본·모드 목록·역 선택·정보창 펼침·건설 검토·전체 화면·화면 방향 설정)
 
 ## 18. 구현 매핑
 
@@ -478,6 +481,8 @@ font-family: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, sans-
 | tooltip | `dg-tooltip` |
 | 알림 | `dg-toast`, `dg-banner` (`--caution` / `--danger`), 패널 내 `dg-notice` (`--danger`) |
 | 다이얼로그 | `dg-scrim` + `dg-dialog dg-panel`. 층 순서는 HUD 1000 · 알림 1050 · 시작 화면 1500 · 대화상자 2000 · 색 선택 2100 · 확인 2200 (`src/design/hud.css`) |
+| 세로 화면 배치 | `src/design/hud.css` 세로 화면 구획(`@media (orientation: portrait)`). 정보판이 한 줄에 못 들어가면 `body[data-plates="stacked"]`(시간 정보판 둘째 줄), 현재 배치는 `body[data-layout]`. 레일 넘침은 세로 화면에서 폭으로 판단(`layoutRailTools`). 정보창 손잡이 `game-sheet-grip`(검토 창 제외, 가로 화면에서 숨김) → `.is-sheet-expanded`. 가려진 대상 시야 맞추기 `keepTappedObjectVisible`, 지도 이동 범위 `cityMapBounds` (`main.ts`) |
+| 화면 방향 설정 | 설정 `screenOrientation`(`auto`·`landscape`·`portrait`), `applyScreenOrientation`. 안드로이드 `MainActivity` `DrawGyotongNative.setOrientation`(매니페스트 기본 `fullUser`), 웹 매니페스트 `orientation: any` |
 | 전체 화면 | `dg-workspace game-workspace`(z 1040: HUD 위, 알림·대화상자 아래), `__bar` `__title` `__body`. 제목 띠 오른쪽에 `[data-workspace-clock]`(게임 날짜·시각·재생 상태, `syncWorkspaceClocks`)과 닫기 |
 | 운영 현황·통계 | `game-stats`: 제목 띠 아래 `game-workspace__tabs`(`dg-seg`). 지표는 `dg-row` 2열(`game-stats__rows`), 증감은 ▲▼와 수치, 노선·역은 왼쪽 목록(`game-route-item[aria-pressed]`) + 오른쪽 상세, 지역 비교는 `dg-table`. 카드 격자 금지 |
 | 시작 화면 | `dg-workspace game-start`(z 1500, 세이브 관리 workspace). 왼쪽 열: 이어하기 주 버튼 + 세이브 목록(`game-slot`, 수정·삭제 아이콘), 오른쪽 열: 새 게임(도시 `game-city[role=radio]` 반전 코드 표지판, 모드·난이도 `dg-seg` 라디오, 이름, 오른쪽 아래 시작 버튼). 도시에는 노선 색 외 채도를 쓰지 않는다 |

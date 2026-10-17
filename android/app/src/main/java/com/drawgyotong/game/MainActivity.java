@@ -1,8 +1,11 @@
 package com.drawgyotong.game;
 
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import androidx.activity.OnBackPressedCallback;
 import androidx.core.graphics.Insets;
@@ -16,9 +19,43 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // 지난번 고른 화면 방향을 웹 화면이 뜨기 전에 먼저 적용해, 시작할 때 한 번 돌았다가 돌아오는 일이 없게 한다.
+        applyOrientation(getSharedPreferences(PREFS, MODE_PRIVATE).getString(ORIENTATION_KEY, "auto"));
+        bridgeOrientation();
         applyImmersiveStatusBar();
         bridgeKeyboardInsets();
         bridgeBackButton();
+    }
+
+    private static final String PREFS = "draw-gyotong";
+    private static final String ORIENTATION_KEY = "screen-orientation";
+
+    /**
+     * 게임 설정의 화면 방향을 웹에서 바꿀 수 있게 한다(window.DrawGyotongNative.setOrientation).
+     * auto: 기기의 자동 회전 설정을 따른다(fullUser — 자동 회전이 꺼져 있으면 지금 방향 유지).
+     * landscape·portrait: 기기 설정과 상관없이 그 방향(뒤집힌 방향은 센서로 허용).
+     */
+    private void bridgeOrientation() {
+        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        if (webView == null) return;
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void setOrientation(String mode) {
+                runOnUiThread(() -> {
+                    applyOrientation(mode);
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(ORIENTATION_KEY, mode).apply();
+                });
+            }
+        }, "DrawGyotongNative");
+    }
+
+    private void applyOrientation(String mode) {
+        int requested = "landscape".equals(mode)
+            ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            : "portrait".equals(mode)
+                ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                : ActivityInfo.SCREEN_ORIENTATION_FULL_USER;
+        if (getRequestedOrientation() != requested) setRequestedOrientation(requested);
     }
 
     /**

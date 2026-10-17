@@ -927,3 +927,174 @@ body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden;
 /* 철거 검토 중 철거 대상 역 표식 (DESIGN_SYSTEM 건설·철거 검토) */
 .game-demolish-mark { display: grid; place-items: center; box-sizing: border-box; border: 2px solid var(--signal-danger); border-radius: var(--radius); background: var(--surface-0); color: var(--signal-danger); font: 800 11px/1 var(--font-ui); }
 .game-demolish-mark--14 { font-size: 9px; }
+
+/* ===== 세로 화면 (MOBILE_UX §16, 시안 docs/design/prototype/portrait.html) =====
+   화면이 세로로 길면 한 손 엄지가 닿는 아래쪽으로 누르는 것을 모은다.
+   위: 정보판(읽기 위주) · 가운데: 지도 · 아래: 도구 레일(가로), 그 위 실행 취소와 정보창·검토(전체 폭).
+   가로 화면 규칙은 그대로 두고 위치·방향만 바꾼다. 기준은 기기 방향이 아니라 화면 비율(orientation 미디어). */
+.game-sheet-grip { display: none; }
+@media (orientation: portrait) {
+  :root {
+    --edge-inset-left: max(8px, env(safe-area-inset-left));
+    --edge-inset-right: max(8px, env(safe-area-inset-right));
+    --portrait-rail-height: 60px;
+    /* 아래 도구 레일 위로 올라오는 표면의 bottom 값 */
+    --portrait-rail-clear: calc(var(--edge-inset-bottom) + var(--portrait-rail-height) + var(--hud-gap));
+    --hud-left-clear: var(--edge-inset-left);
+    --hud-bottom-clear: calc(var(--portrait-rail-clear) + var(--plate-height) + 2px + var(--hud-gap));
+  }
+  body.game-rail-compact { --hud-left-clear: var(--edge-inset-left); }
+
+  /* 정보판: 한 줄에 둘. 자금 아래에 순익, 만족도는 표식 아래 점수로 쌓아 폭을 줄인다.
+     그래도 한 줄에 못 들어가면 main.ts가 data-plates="stacked"로 시간 정보판을 둘째 줄 오른쪽으로 내린다. */
+  .game-plate { flex-wrap: nowrap; }
+  .game-plate--finance, .game-plate--time { max-width: none; }
+  .game-plate .dg-plate__cell { padding: 0 6px; }
+  .game-plate .dg-plate__cell--icon { width: 44px; padding: 0; }
+  .game-plate .dg-plate__metric { font-size: 16px; }
+  .game-speed-cell { min-width: 44px; padding: 0 6px; }
+  #financeStatusButton,
+  #satisfactionPill { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+  #satisfactionPill { align-items: center; }
+  #financeStatusButton .game-status-net { font-size: 12px; line-height: 14px; }
+  body[data-plates="stacked"] .game-plate--time { top: calc(var(--hud-inset-top) + var(--plate-height) + 2px + 6px); }
+
+  /* 도구 레일: 화면 아래 가로. 왼쪽 반전 칸이 현재 모드, 오른쪽 상자가 도구(들어가는 만큼, 나머지는 더보기). */
+  .game-mode-rail,
+  .game-mode-rail.dg-rail--compact {
+    top: auto;
+    left: var(--edge-inset-left);
+    right: var(--edge-inset-right);
+    bottom: var(--edge-inset-bottom);
+    width: auto;
+    height: var(--portrait-rail-height);
+    max-height: none;
+    flex-direction: row;
+    overflow: visible;
+  }
+  .game-mode-rail .dg-rail__mode-now { flex-direction: column; flex: none; width: var(--rail-width-compact); height: 100%; gap: 4px; }
+  .game-rail-tools { flex-direction: row; flex: 1; min-width: 0; overflow: hidden; }
+  .game-mode-rail.dg-rail--compact .game-rail-tools .dg-tool {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 56px;
+    height: 100%;
+    padding: 0 2px;
+    border-bottom: 0;
+    border-left: var(--line-hair) solid var(--rule);
+    white-space: normal;
+    word-break: keep-all;
+    line-height: 13px;
+  }
+  .game-mode-rail.dg-rail--compact .game-rail-tools .dg-tool:first-child { border-left: 0; }
+  .game-mode-rail.dg-rail--planning .game-rail-tools .dg-tool { border-left-style: dashed; }
+  .game-mode-rail .game-rail-more { border-bottom: 0; }
+  /* 모드 목록은 현재 모드 칸 위로 펼친다(엄지에서 가까운 쪽). */
+  .game-mode-rail.dg-rail--compact.game-mode-rail--modes-open .dg-rail__modes {
+    top: auto;
+    bottom: calc(100% + 6px);
+    right: auto;
+    width: 160px;
+    animation: game-rail-modes-open-up var(--dur-panel) var(--ease-out);
+  }
+  .game-mode-rail--modes-open { z-index: 1001; }
+  .game-mode-rail.dg-rail--compact .dg-rail__mode { justify-content: flex-start; padding: 0 var(--space-3); text-align: left; }
+  /* 더보기: 레일 위 오른쪽(더보기 버튼 바로 위) */
+  .game-rail-overflow {
+    left: auto;
+    right: var(--edge-inset-right);
+    bottom: var(--portrait-rail-clear);
+    max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--portrait-rail-clear));
+  }
+
+  /* 실행 취소: 레일 위 왼쪽. 아래쪽 작업 막대는 그 오른쪽. */
+  .game-history-controls { left: var(--edge-inset-left); bottom: var(--portrait-rail-clear); }
+  .game-bottom-bar {
+    left: calc(var(--edge-inset-left) + var(--plate-height) * 2 + 2px + var(--hud-gap));
+    right: var(--edge-inset-right);
+    bottom: var(--portrait-rail-clear);
+    max-width: none;
+  }
+
+  /* 정보창·검토: 레일 위 전체 폭. 처음엔 화면 높이의 46%까지, 손잡이로 정보판 아래까지 펼친다.
+     건설·철거 검토 중에는 실행 취소 줄 위에 둬서 한 단계 되돌리기를 가리지 않는다. */
+  .game-inspector,
+  .game-inspector--tall {
+    left: var(--edge-inset-left);
+    right: var(--edge-inset-right);
+    bottom: var(--portrait-rail-clear);
+    width: auto;
+    max-height: min(46dvh, calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--portrait-rail-clear)));
+  }
+  .game-inspector { transition: max-height var(--dur-panel) var(--ease-out); }
+  .game-inspector.is-sheet-expanded { max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--portrait-rail-clear)); }
+  body.construction-reviewing .game-review {
+    bottom: var(--hud-bottom-clear);
+    max-height: min(46dvh, calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--hud-bottom-clear)));
+  }
+  .game-sheet-grip {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 100%;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .game-sheet-grip::before { content: ""; width: 40px; height: 4px; background: var(--rule); }
+  .game-sheet-grip:active::before { background: var(--text-2); }
+  .game-inspector:has(> .game-sheet-grip) > .dg-panel__header { padding-top: 0; }
+
+  /* 노선 설정 상자: 모드 배너·레이어 버튼 아래 전체 폭(레이어 버튼 자리는 비운다) */
+  .game-side-panel,
+  body[data-mode-banner="low"] .game-side-panel {
+    left: var(--edge-inset-left);
+    right: calc(var(--edge-inset-right) + var(--plate-height) + var(--hud-gap));
+    width: auto;
+    top: calc(var(--hud-top) + var(--hud-gap) * 2 + 32px);
+    max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) * 3 - 32px - var(--hud-bottom-clear));
+  }
+
+  /* 세로 화면에서는 지도 위쪽을 덜 가리게 머리글만 두고, 펼치기 버튼으로 연다. 안내는 그 아래. */
+  .game-side-panel:not(.is-expanded) .dg-panel__body { display: none; }
+  .game-side-panel .game-side-panel__expand { display: inline-grid; }
+  .game-side-panel.is-expanded .game-side-panel__expand svg { transform: rotate(180deg); }
+
+  .game-notice-stack { width: calc(100vw - var(--edge-inset-left) - var(--edge-inset-right)); }
+  body:has(.game-side-panel:not([hidden])) .game-notice-stack { top: calc(var(--hud-top) + var(--hud-gap) * 3 + 32px + 52px); }
+
+  /* 붙은 가장자리에서 들어오고 나간다: 정보창·검토·더보기는 아래에서, 노선 설정 상자는 위에서. */
+  .game-inspector:not([hidden]),
+  .game-rail-overflow:not([hidden]) { animation: dg-in-up var(--dur-panel) var(--ease-out); }
+  .game-side-panel:not([hidden]) { animation: dg-in-down var(--dur-panel) var(--ease-out); }
+  .game-inspector.is-leaving,
+  .game-rail-overflow.is-leaving { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
+  .game-side-panel.is-leaving { animation: dg-out-up var(--dur-exit) var(--ease-out) forwards; }
+
+  /* 노선 드래그 중 아래 HUD 후퇴는 레일에도 적용한다. */
+  body.route-drawing-hud-proximity .game-mode-rail {
+    opacity: var(--route-drawing-bottom-opacity, 1);
+    transform: translateY(var(--route-drawing-bottom-shift, 0px));
+  }
+
+  /* 전체 화면: 두 열을 한 열로 쌓는다. */
+  .game-stats__split { grid-template-columns: 1fr; }
+  .game-stats__list { position: static; max-height: none; padding-right: 0; border-right: 0; border-bottom: var(--line-strong) solid var(--text-1); }
+  .game-diagram__body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .game-diagram__side { max-height: 42dvh; border-left: 0; border-top: var(--line-strong) solid var(--text-1); }
+  .game-suggestion__facts { grid-template-columns: 64px minmax(0, 1fr); }
+
+  /* 메인 화면: 메뉴 열은 아래 전체 폭, 새 게임·불러오기 안내판은 화면 전체 */
+  /* 메뉴 열은 아래쪽(엄지)에, 위로는 노선이 그려지는 지도가 보이게 */
+  .game-title__panel { inset: auto 0 0 0; width: 100%; max-height: 80dvh; padding: var(--space-3) var(--edge-inset-right) max(var(--space-2), env(safe-area-inset-bottom)) var(--edge-inset-left); border-right: 0; border-top: var(--line-strong) solid var(--text-1); }
+  .game-title__bg { height: 56%; }
+  .game-title__sheet { width: 100%; border-left: 0; }
+  .game-title__sheet:not([hidden]) { animation: dg-in-up var(--dur-panel) var(--ease-out); }
+  .game-title__sheet.is-leaving { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
+}
+@keyframes game-rail-modes-open-up { from { clip-path: inset(100% 0 0 0); } to { clip-path: inset(0 0 0 0); } }

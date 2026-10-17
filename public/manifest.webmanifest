@@ -4,7 +4,7 @@
   "description": "대한민국 실제 도시 지도 기반 모바일 철도 경영 샌드박스",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#081117",
   "theme_color": "#081117",
   "icons": [
