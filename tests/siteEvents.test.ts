@@ -17,6 +17,15 @@ describe("site features from OpenStreetMap", () => {
     expect(classifySiteFeature({ amenity: "marketplace" })).toBe("market");
     expect(classifySiteFeature({ tourism: "gallery" })).toBeNull();
     expect(classifySiteFeature({ historic: "monument" })).toBeNull();
+    expect(classifySiteFeature({ amenity: "exhibition_centre", name: "김대중컨벤션센터" })).toBe("exhibition");
+    expect(classifySiteFeature({ amenity: "exhibition_centre", name: "박승희기억공간" })).toBeNull();
+    expect(classifySiteFeature({ aeroway: "aerodrome", name: "광주공항" })).toBe("airport");
+    expect(classifySiteFeature({ aeroway: "aerodrome", name: "비행장" })).toBeNull();
+    expect(classifySiteFeature({ railway: "station", train: "yes", name: "광주송정역" })).toBe("railHub");
+    expect(classifySiteFeature({ railway: "station", station: "subway", name: "상무역" })).toBeNull();
+    expect(classifySiteFeature({ amenity: "bus_station", name: "광주종합버스터미널" })).toBe("busTerminal");
+    expect(classifySiteFeature({ landuse: "industrial", name: "하남산업단지" })).toBe("industrial");
+    expect(classifySiteFeature({ landuse: "industrial", name: "어느 공장" })).toBeNull();
   });
 
   it("keeps only named Korean places once each", () => {
@@ -57,8 +66,33 @@ describe("site event candidates", () => {
       { id: "r2", name: "2호선", coordinates: [[37.6, 127], [37.62, 127.01], [37.64, 127.02]], riverCrossingPositions: [], mountainSegments: 2 },
       { id: "r3", name: "3호선", coordinates: [[37.7, 127], [37.71, 127.01]], riverCrossingPositions: [], mountainSegments: 0 },
     ]);
-    expect(candidates.map((item) => [item.kind, item.routeIds[0]])).toEqual([["heavy-rain", "r1"], ["heavy-snow", "r2"]]);
-    expect(candidates[0].position).toEqual([37.51, 127.005]);
-    expect(candidates[1].title).toBe("대설 — 2호선 산악 구간 점검");
+    const weather = candidates.filter((item) => item.kind !== "signal-failure");
+    expect(weather.map((item) => [item.kind, item.routeIds[0]])).toEqual([["typhoon", "r1"], ["heavy-rain", "r1"], ["heavy-snow", "r2"]]);
+    expect(weather[1].position).toEqual([37.51, 127.005]);
+    expect(weather[2].title).toBe("대설 — 2호선 산악 구간 점검");
+    // 신호 장애는 모든 노선에 생길 수 있다.
+    expect(candidates.filter((item) => item.kind === "signal-failure").map((item) => item.title)).toEqual(["1호선 신호 설비 장애", "2호선 신호 설비 장애", "3호선 신호 설비 장애"]);
+  });
+
+  it("turns transport hubs, exhibition halls and industrial parks into events", () => {
+    const near: [number, number] = [37.5448, 127.0560];
+    const candidates = buildSiteEventCandidates(
+      [
+        { kind: "exhibition", name: "성수전시장", position: near },
+        { kind: "railHub", name: "성수기차", position: near },
+        { kind: "busTerminal", name: "성수터미널", position: near },
+        { kind: "industrial", name: "성수산업단지", position: near },
+        { kind: "airport", name: "성수공항", position: near },
+      ],
+      [station],
+      [],
+    );
+    expect(candidates.map((item) => [item.kind, item.title])).toEqual([
+      ["exhibition", "성수전시장 박람회 개최"],
+      ["homecoming", "성수기차역 명절 귀성객"],
+      ["homecoming", "성수터미널 명절 귀성객"],
+      ["industrial", "성수산업단지 교대 근무 확대"],
+      ["airport", "성수공항 여행객 증가"],
+    ]);
   });
 });

@@ -5,7 +5,8 @@ import { distanceMeters, type GeoCoordinate } from "../geometry/constructionGeom
  * OpenStreetMap에서 받은 장소(경기장·공연장·대학·관광지·공원·쇼핑·도로·동네)와 노선의 실제 지형(강 횡단·산악 구간)으로
  * 이벤트 후보를 만든다. 어떤 후보를 고를지는 부르는 쪽이 정한다(난수 시드).
  */
-export type SiteKind = "sports" | "concert" | "university" | "tourism" | "park" | "shopping" | "market" | "road" | "place";
+export type SiteKind = "sports" | "concert" | "university" | "tourism" | "park" | "shopping" | "market" | "road" | "place"
+  | "exhibition" | "airport" | "railHub" | "busTerminal" | "industrial";
 
 export interface SiteFeature {
   kind: SiteKind;
@@ -23,6 +24,14 @@ export interface SiteFeatureSource {
 
 /** OSM 태그 → 장소 종류. 이름이 없거나 해당 없음이면 null */
 export function classifySiteFeature(tags: Record<string, string>): SiteKind | null {
+  const name = tags["name:ko"] ?? tags.name ?? "";
+  // 박람회를 여는 큰 전시장만(기념관·소규모 공간 제외)
+  if (/^(conference_centre|exhibition_centre)$/.test(tags.amenity ?? "") && /컨벤션|전시|엑스포|박람/.test(name)) return "exhibition";
+  if (tags.aeroway === "aerodrome" && /공항/.test(name)) return "airport";
+  // 지하철역이 아닌 철도역(KTX·일반 열차): 명절 귀성객이 몰리는 곳
+  if (tags.railway === "station" && tags.station !== "subway" && (tags.train === "yes" || tags.station === "train")) return "railHub";
+  if (tags.amenity === "bus_station" && /터미널/.test(name)) return "busTerminal";
+  if (tags.landuse === "industrial" && /산업단지|산단|공단/.test(name)) return "industrial";
   if (tags.leisure === "stadium" || (tags.leisure === "sports_centre" && tags.building)) return "sports";
   // 작은 화랑·미술관(arts_centre)과 events_venue(단체 사무실 등이 섞임)는 공연장으로 보지 않는다.
   if (/^(theatre|concert_hall)$/.test(tags.amenity ?? "")) return "concert";
@@ -79,7 +88,8 @@ export interface SiteEventRoute {
 }
 
 /** 이벤트 종류(게임의 NewsEventKind와 같은 이름) */
-export type SiteEventKind = "sports" | "concert" | "university" | "tourism" | "festival" | "roadworks" | "heavy-rain" | "heavy-snow";
+export type SiteEventKind = "sports" | "concert" | "university" | "tourism" | "festival" | "roadworks" | "heavy-rain" | "heavy-snow"
+  | "exhibition" | "airport" | "homecoming" | "industrial" | "typhoon" | "signal-failure";
 
 export interface SiteEventCandidate {
   kind: SiteEventKind;
@@ -93,6 +103,7 @@ export interface SiteEventCandidate {
 
 const siteRadiusM: Record<Exclude<SiteKind, "place">, number> = {
   sports: 900, concert: 700, university: 900, tourism: 800, park: 600, shopping: 600, market: 600, road: 250,
+  exhibition: 800, airport: 1500, railHub: 600, busTerminal: 600, industrial: 1500,
 };
 
 /**
@@ -133,11 +144,40 @@ export function buildSiteEventCandidates(
     else if (feature.kind === "park") candidates.push({ ...base, kind: "festival", title: `${feature.name} 축제`, summary: `축제를 찾는 시민이 저녁 시간 ${stationLabel}으로 모입니다.` });
     else if (feature.kind === "shopping") candidates.push({ ...base, kind: "festival", title: `${feature.name} 대규모 할인 행사`, summary: `행사 기간 ${stationLabel} 주변 쇼핑객이 늘어납니다.` });
     else if (feature.kind === "market") candidates.push({ ...base, kind: "festival", title: `${feature.name} 장날 행사`, summary: `장을 보러 오는 손님으로 ${stationLabel} 낮 시간 이용객이 늘어납니다.` });
+    else if (feature.kind === "exhibition") candidates.push({ ...base, kind: "exhibition", title: `${feature.name} 박람회 개최`, summary: `박람회 기간 낮 시간 ${stationLabel} 방문객이 늘어납니다.` });
+    else if (feature.kind === "airport") candidates.push({ ...base, kind: "airport", title: `${feature.name} 여행객 증가`, summary: `휴가철 여행객이 ${stationLabel}을 거쳐 공항을 오갑니다.` });
+    else if (feature.kind === "railHub" || feature.kind === "busTerminal") {
+      // OSM의 철도역 이름은 "광주송정"처럼 "역"이 빠진 경우가 많다.
+      const hubName = feature.kind === "railHub" && !feature.name.endsWith("역") ? `${feature.name}역` : feature.name;
+      candidates.push({ ...base, kind: "homecoming", title: `${hubName} 명절 귀성객`, summary: `명절을 맞아 ${hubName}을 오가는 귀성객이 ${stationLabel}으로 몰립니다.` });
+    }
+    else if (feature.kind === "industrial") candidates.push({ ...base, kind: "industrial", title: `${feature.name} 교대 근무 확대`, summary: `공장 가동이 늘어 출퇴근 시간 ${stationLabel} 이용객이 늘어납니다.` });
     else if (feature.kind === "road") candidates.push({ ...base, kind: "roadworks", title: `${feature.name} 도로 공사`, summary: `차로가 줄어 버스·승용차 이용자 일부가 ${stationLabel} 철도로 옮겨옵니다.` });
   }
   for (const route of routes) {
     const crossing = route.riverCrossingPositions[0];
+    if (route.coordinates.length > 0) {
+      const middle = route.coordinates[Math.floor(route.coordinates.length / 2)];
+      candidates.push({
+        kind: "signal-failure",
+        title: `${route.name} 신호 설비 장애`,
+        summary: `복구 작업 동안 ${route.name} 열차가 느려져 이용객이 줄고 운영비가 늘어납니다.`,
+        regionName: regionOf(middle, route.name),
+        position: middle,
+        stationIds: [],
+        routeIds: [route.id],
+      });
+    }
     if (crossing) {
+      candidates.push({
+        kind: "typhoon",
+        title: `태풍 — ${route.name} 강 횡단 구간 운행 조정`,
+        summary: `강풍으로 강을 건너는 구간의 운행을 조정해 운영비가 크게 늘고 이용객은 줄어듭니다.`,
+        regionName: regionOf(crossing, route.name),
+        position: crossing,
+        stationIds: [],
+        routeIds: [route.id],
+      });
       candidates.push({
         kind: "heavy-rain",
         title: `집중호우 — ${route.name} 강 횡단 구간 서행`,

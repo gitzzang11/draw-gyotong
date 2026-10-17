@@ -674,6 +674,20 @@ const newsEventCatalog: Record<
   "operating-cost": { tone: "change", title: "운영 물가 상승", summary: "에너지와 정비 비용이 한시적으로 상승합니다.", demandMultiplier: 1, operatingCostMultiplier: 1.12, duration: [5, 8], action: "review-fare", actionLabel: "수지 검토" },
   "construction-delay": { tone: "change", title: "공사 일정 조정 필요", summary: "진행 중인 공사에 안전 점검 기간이 추가됩니다.", demandMultiplier: 1, operatingCostMultiplier: 1, duration: [3, 5], action: "review-construction", actionLabel: "공사 일정 확인" },
   recession: { tone: "change", title: "지역 경기 둔화", summary: "통행 수요가 줄지만 합리적인 운임으로 이용을 유도할 수 있습니다.", demandMultiplier: 0.92, operatingCostMultiplier: 1.04, duration: [7, 12], action: "review-fare", actionLabel: "운임 전략 검토" },
+  // 2026-10-17 추가: 실제 장소(박람회·공항·귀성·산업단지)와 노선(신호 장애·태풍), 도시 전체(날씨·연휴·파업·유가·캠페인)
+  exhibition: { tone: "opportunity", title: "박람회 개최", summary: "박람회 기간 전시장 주변 낮 시간 방문객이 늘어납니다.", demandMultiplier: 1.18, operatingCostMultiplier: 1, duration: [3, 5], action: "add-service", actionLabel: "임시 증편 준비" },
+  airport: { tone: "opportunity", title: "공항 여행객 증가", summary: "휴가철 공항을 오가는 여행객이 늘어납니다.", demandMultiplier: 1.15, operatingCostMultiplier: 1, duration: [4, 7], action: "review-area", actionLabel: "수요 지역 검토" },
+  homecoming: { tone: "opportunity", title: "명절 귀성객 이동", summary: "명절을 맞아 기차역·터미널 주변 이동이 크게 늘어납니다.", demandMultiplier: 1.25, operatingCostMultiplier: 1.02, duration: [2, 4], action: "add-service", actionLabel: "임시 증편 준비" },
+  industrial: { tone: "opportunity", title: "산업단지 교대 근무 확대", summary: "공장 가동이 늘어 출퇴근 시간 이용객이 늘어납니다.", demandMultiplier: 1.14, operatingCostMultiplier: 1, duration: [6, 10], action: "add-service", actionLabel: "출퇴근 증편 검토" },
+  "bus-strike": { tone: "change", title: "시내버스 파업", summary: "버스 이용객이 철도로 몰려 출퇴근 혼잡이 커집니다.", demandMultiplier: 1.2, operatingCostMultiplier: 1.04, duration: [2, 4], action: "add-service", actionLabel: "운영 여력 확인" },
+  heatwave: { tone: "change", title: "폭염 특보", summary: "냉방 부담으로 운영비가 늘고, 걷기 대신 철도를 타는 시민이 조금 늘어납니다.", demandMultiplier: 1.04, operatingCostMultiplier: 1.1, duration: [4, 7], action: "add-service", actionLabel: "운영 여력 확인" },
+  "cold-wave": { tone: "change", title: "한파 특보", summary: "난방과 설비 동파 점검으로 운영비가 늘어납니다.", demandMultiplier: 1.05, operatingCostMultiplier: 1.09, duration: [3, 6], action: "add-service", actionLabel: "운영 여력 확인" },
+  "fine-dust": { tone: "change", title: "고농도 미세먼지", summary: "야외 활동을 줄이고 대중교통을 타는 시민이 늘어납니다.", demandMultiplier: 1.06, operatingCostMultiplier: 1, duration: [2, 4], action: "add-service", actionLabel: "운영 여력 확인" },
+  holiday: { tone: "change", title: "징검다리 연휴", summary: "출퇴근 이동이 줄어 전체 이용객이 일시적으로 감소합니다.", demandMultiplier: 0.9, operatingCostMultiplier: 1, duration: [3, 5], action: "review-fare", actionLabel: "운임·배차 검토" },
+  "fuel-price": { tone: "opportunity", title: "기름값 급등", summary: "승용차 대신 철도를 타는 시민이 늘어납니다.", demandMultiplier: 1.08, operatingCostMultiplier: 1.03, duration: [10, 15], action: "review-fare", actionLabel: "운임 전략 검토" },
+  "transit-campaign": { tone: "opportunity", title: "대중교통 이용 캠페인", summary: "시가 대중교통 이용을 장려해 이용객이 늘어납니다.", demandMultiplier: 1.1, operatingCostMultiplier: 1, duration: [7, 12], action: "add-service", actionLabel: "배차 여력 확인" },
+  typhoon: { tone: "change", title: "태풍 북상", summary: "강풍으로 운행을 조정해 운영비가 크게 늘고 이용객은 줄어듭니다.", demandMultiplier: 0.9, operatingCostMultiplier: 1.16, duration: [2, 3], action: "add-service", actionLabel: "안전 운행 준비" },
+  "signal-failure": { tone: "change", title: "신호 설비 장애", summary: "복구 작업 동안 열차가 느려져 이용객이 줄고 운영비가 늘어납니다.", demandMultiplier: 0.94, operatingCostMultiplier: 1.06, duration: [1, 3], action: "review-area", actionLabel: "노선 상태 확인" },
 };
 
 type CityConfig = {
@@ -11571,6 +11585,13 @@ const eventSiteGroups: Array<{ id: string; statements: (points: string) => strin
   { id: "shops", statements: (points) => [`nwr(around:600,${points})["name"]["shop"~"^(mall|department_store)$"];`] },
   { id: "roads", statements: (points) => [`way(around:250,${points})["name"]["highway"~"^(trunk|primary)$"];`] },
   { id: "places", statements: (points) => [`node(around:1200,${points})["name"]["place"~"^(suburb|quarter|neighbourhood)$"];`] },
+  { id: "hubs", statements: (points) => [
+    `nwr(around:1500,${points})["name"]["aeroway"="aerodrome"];`,
+    `nwr(around:600,${points})["name"]["railway"="station"]["station"!="subway"];`,
+    `nwr(around:600,${points})["name"]["amenity"="bus_station"];`,
+    `nwr(around:800,${points})["name"]["amenity"~"^(conference_centre|exhibition_centre)$"];`,
+    `way(around:1500,${points})["name"]["landuse"="industrial"];`,
+  ] },
 ];
 let eventSiteFeatures: SiteFeature[] = [];
 let eventSiteKey = "";
@@ -11666,28 +11687,48 @@ function createNewsEvent(day: number): NewsEvent {
   // City development is not generated from railway performance. Legacy
   // new-town/commercial events still load safely, but new automatic events are
   // limited to temporary trip-generating occasions.
+  // 장소 데이터가 없을 때(오프라인 등) 예전 방식으로 임의의 역에 거는 종류
   const opportunityKinds: NewsEventKind[] = ["festival", "concert", "sports", "tourism", "university"];
-  const changeKinds: NewsEventKind[] = ["heavy-rain", "heavy-snow", "roadworks", "demand-decline", "operating-cost", "construction-delay", "recession"];
+  const changeKinds: NewsEventKind[] = ["heavy-rain", "heavy-snow", "roadworks"];
+  // 도시 전역에 거는 종류
+  const allCityWideOpportunityKinds: NewsEventKind[] = ["fuel-price", "transit-campaign"];
+  const allCityWideChangeKinds: NewsEventKind[] = ["demand-decline", "operating-cost", "construction-delay", "recession", "heatwave", "cold-wave", "fine-dust", "holiday", "bus-strike"];
+  // 도시 전역 이벤트도 진행 중이거나 최근 6개에 나온 종류는 잠시 뺀다(전부 빠지면 그대로 쓴다).
+  const recentKinds = new Set([...getActiveNewsEvents(), ...newsEventState.current.slice(-6)].map((event) => event.kind));
+  const freshKinds = (kinds: NewsEventKind[]) => {
+    const fresh = kinds.filter((kind) => !recentKinds.has(kind));
+    return fresh.length > 0 ? fresh : kinds;
+  };
+  const cityWideOpportunityKinds = freshKinds(allCityWideOpportunityKinds);
+  const cityWideChangeKinds = freshKinds(allCityWideChangeKinds);
   const seed = hashNewsSeed(day, `${metaState.current.slotId}:${metaState.current.cityId}:${newsEventState.length}`);
   const opportunity = seed % 100 < 62;
-  // 실제 장소·지형 후보가 있으면 그중에서 고른다. 변화 이벤트는 도시 전체 이벤트(물가·경기·공사 지연 등)와 섞는다.
-  const siteCandidates = currentSiteEventCandidates().filter((candidate) => opportunityKinds.includes(candidate.kind) === opportunity);
-  const cityWideKinds: NewsEventKind[] = ["demand-decline", "operating-cost", "construction-delay", "recession"];
-  // 변화 이벤트는 장소·지형(도로 공사·호우·대설)과 도시 전체 이벤트를 반반으로 고른다(장소가 많아도 한쪽으로 쏠리지 않게).
-  const siteChoices: Array<SiteEventCandidate | NewsEventKind> = opportunity || (seed >>> 3) % 2 === 0 ? siteCandidates : cityWideKinds;
-  // 장소 데이터를 받아 둔 상태에서 쓸 후보가 없으면(모두 쉬는 중 등), 없는 장소를 지어내지 않고 도시 전역 이벤트로 대신한다.
+  // 세이브를 막 불러온 직후에도 받아 둔 장소 데이터를 쓰도록 먼저 꺼내 둔다(받기는 비동기라 이번에는 기다리지 않는다).
+  ensureEventSiteFeatures();
+  // 실제 장소·노선 후보 중 이번 성격(기회/도시 변화)에 맞는 것. 최근에 나온 종류는 다른 종류가 있으면 뺀다.
+  // 신호 장애는 모든 노선에 생길 수 있어 후보가 많으므로 세 번에 한 번만 후보로 둔다.
+  const toneCandidates = currentSiteEventCandidates()
+    .filter((candidate) => (newsEventCatalog[candidate.kind].tone === "opportunity") === opportunity)
+    .filter((candidate) => candidate.kind !== "signal-failure" || (seed >>> 13) % 3 === 0);
+  const freshCandidates = toneCandidates.filter((candidate) => !recentKinds.has(candidate.kind));
+  const siteCandidates = freshCandidates.length > 0 ? freshCandidates : toneCandidates;
+  const hasSiteData = eventSiteFeatures.length > 0;
+  // 기회: 장소 후보 + 도시 전역 기회. 도시 변화: 장소·노선 후보와 도시 전역 변화를 반반(한쪽으로 쏠리지 않게).
+  const choices: Array<SiteEventCandidate | NewsEventKind> = !hasSiteData
+    ? freshKinds(opportunity ? [...opportunityKinds, ...allCityWideOpportunityKinds] : [...changeKinds, ...allCityWideChangeKinds])
+    : opportunity
+      ? [...siteCandidates, ...cityWideOpportunityKinds]
+      : siteCandidates.length > 0 && (seed >>> 3) % 2 === 0 ? siteCandidates : cityWideChangeKinds;
   // 장소가 많은 종류(관광지 등)로 쏠리지 않게, 종류를 먼저 고르게 고른 뒤 그 종류 안에서 장소를 고른다.
-  const pickByKind = (choices: Array<SiteEventCandidate | NewsEventKind>) => {
-    const kinds = [...new Set(choices.map((choice) => (typeof choice === "string" ? `city:${choice}` : choice.kind)))];
+  const pickByKind = (items: Array<SiteEventCandidate | NewsEventKind>) => {
+    const kinds = [...new Set(items.map((item) => (typeof item === "string" ? `city:${item}` : item.kind)))];
     const kind = kinds[(seed >>> 5) % kinds.length];
-    const sameKind = choices.filter((choice) => (typeof choice === "string" ? `city:${choice}` : choice.kind) === kind);
+    const sameKind = items.filter((item) => (typeof item === "string" ? `city:${item}` : item.kind) === kind);
     return sameKind[(seed >>> 11) % sameKind.length];
   };
-  const siteChoice = siteCandidates.length > 0
-    ? pickByKind(siteChoices)
-    : eventSiteFeatures.length > 0
-      ? (opportunity ? "tourism" : cityWideKinds[(seed >>> 5) % cityWideKinds.length])
-      : undefined;
+  const picked = pickByKind(choices);
+  // 장소 데이터가 없을 때 고른 장소형 종류는 예전 방식(임의의 역)으로 아래에서 만든다.
+  const siteChoice = typeof picked === "string" && !allCityWideOpportunityKinds.includes(picked) && !allCityWideChangeKinds.includes(picked) ? undefined : picked;
   if (siteChoice && typeof siteChoice !== "string") {
     const template = newsEventCatalog[siteChoice.kind];
     const durationRange = template.duration[1] - template.duration[0] + 1;
@@ -11736,8 +11777,7 @@ function createNewsEvent(day: number): NewsEvent {
       responsePrepared: false,
     };
   }
-  const pool = opportunity ? opportunityKinds : changeKinds;
-  const kind = pool[seed % pool.length];
+  const kind = picked as NewsEventKind;
   const template = newsEventCatalog[kind];
   const stationPool = networkState.stations.filter((station) => isStationOperational(station.id));
   const station = stationPool.length > 0 ? stationPool[(seed >>> 5) % stationPool.length] : undefined;
@@ -13031,9 +13071,13 @@ function getDemandEvents(): DemandEvent[] {
           ? ["evening-peak" as const]
           : event.kind === "university"
             ? ["morning-peak" as const, "daytime" as const]
-            : event.kind === "tourism" || event.kind === "commercial-growth" || event.kind === "new-town"
+            : event.kind === "tourism" || event.kind === "commercial-growth" || event.kind === "new-town" || event.kind === "airport"
               ? ["daytime" as const, "evening-peak" as const]
-              : undefined;
+              : event.kind === "exhibition"
+                ? ["daytime" as const]
+                : event.kind === "industrial" || event.kind === "bus-strike"
+                  ? ["morning-peak" as const, "evening-peak" as const]
+                  : undefined;
       return {
         id: event.id,
         kind: "temporary" as const,
