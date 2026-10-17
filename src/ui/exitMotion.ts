@@ -16,6 +16,7 @@ const EXIT_SELECTOR = [
   ".dg-workspace",
   ".game-title__sheet",
   ".game-bottom-bar",
+  ".game-event-notice",
 ].join(", ");
 
 /** hud.css의 이탈 애니메이션 길이(--dur-exit)와 맞춘다. */

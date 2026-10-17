@@ -1216,6 +1216,12 @@ app.innerHTML = `
         </div>
         <div class="dg-panel__actions"><button id="tutorialSkipButton" class="dg-btn dg-btn--quiet dg-btn--compact" type="button" aria-label="튜토리얼 건너뛰기">건너뛰기</button><button id="tutorialNextButton" class="dg-btn dg-btn--primary dg-btn--compact dg-panel__actions-push" type="button">확인</button></div>
       </section>
+      <aside id="eventNotice" class="dg-hud dg-banner game-event-notice" hidden role="status" aria-live="polite">
+        <span id="eventNoticeMark" class="dg-banner__icon" aria-hidden="true">▲</span>
+        <span class="game-event-notice__text"><strong id="eventNoticeTitle"></strong><small id="eventNoticeMeta"></small></span>
+        <span class="dg-banner__actions"><button id="eventNoticeFocusButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">지도에서</button><button id="eventNoticeCloseButton" class="dg-icon-btn" type="button" aria-label="이벤트 안내 닫기"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5 L15 15 M15 5 L5 15"/></svg></button></span>
+        <span id="eventNoticeTimer" class="game-event-notice__timer" aria-hidden="true"></span>
+      </aside>
       <div id="toast" class="dg-hud dg-toast game-toast" hidden role="status"></div>
     </div>
 
@@ -11537,7 +11543,8 @@ function updateNewsEventsForDay(dispatch = true) {
     restore: (snapshot) => { newsEventState.restore(snapshot); },
     applyStarted: (event) => {
       if (event.kind === "construction-delay") attachConstructionDelayFromNews(event);
-      showToast(`새 뉴스: ${event.title}`);
+      // 새 이벤트는 토스트 대신 이벤트 안내판으로 알린다.
+      queueEventNotices([event]);
     },
     removeExpired: () => undefined,
     toNews: (event) => event,
@@ -11864,6 +11871,96 @@ function handleNewsFeedClick(event: Event) {
   }
   prepareNewsResponse(newsEvent);
 }
+
+// ===== 이벤트 안내판 =====
+// 새 랜덤 이벤트를 위쪽 가운데 알림 묶음에 짧게 알린다(DESIGN_SYSTEM §12 Notifications의 alert queue).
+// 위에서 미끄러져 내려오고 6초 뒤(마우스를 올리거나 버튼에 초점이 있으면 멈춤) 위로 빠지며 닫힌다. 여러 개면 차례로, 한꺼번에 많으면 최신 2개만.
+const eventNotice = byId("eventNotice");
+const eventNoticeMark = byId("eventNoticeMark");
+const eventNoticeTitle = byId("eventNoticeTitle");
+const eventNoticeMeta = byId("eventNoticeMeta");
+const eventNoticeTimer = byId("eventNoticeTimer");
+const eventNoticeDurationMs = 6000;
+let eventNoticeQueue: NewsEvent[] = [];
+let eventNoticeCurrent: NewsEvent | null = null;
+let eventNoticeRemainingMs = 0;
+let eventNoticeStartedAt = 0;
+let eventNoticeTimeout = 0;
+
+function eventNoticeImpact(event: NewsEvent) {
+  const demandPercent = Math.round((event.demandMultiplier - 1) * 100);
+  const costPercent = Math.round((event.operatingCostMultiplier - 1) * 100);
+  return [
+    event.regionName,
+    demandPercent === 0 ? "" : `수요 ${demandPercent > 0 ? "+" : ""}${demandPercent}%`,
+    costPercent === 0 ? "" : `운영비 +${costPercent}%`,
+    `${event.durationDays}일`,
+  ].filter(Boolean).join(" · ");
+}
+
+function queueEventNotices(events: readonly NewsEvent[]) {
+  if (!hasActiveGameSession || document.hidden) return;
+  eventNoticeQueue = [...eventNoticeQueue, ...events].slice(-2);
+  if (!eventNoticeCurrent) showNextEventNotice();
+}
+
+function showNextEventNotice() {
+  const next = eventNoticeQueue.shift();
+  eventNoticeCurrent = next ?? null;
+  if (!next || !eventNotice) return;
+  const opportunity = next.tone === "opportunity";
+  eventNotice.dataset.tone = opportunity ? "opportunity" : "change";
+  setText(eventNoticeMark, opportunity ? "▲" : "△");
+  setText(eventNoticeTitle, next.title);
+  setText(eventNoticeMeta, eventNoticeImpact(next));
+  eventNotice.setAttribute("aria-label", `${opportunity ? "기회" : "도시 변화"} 이벤트: ${next.title}`);
+  // 진입 애니메이션과 남은 시간 막대를 처음부터 다시 돌린다.
+  eventNotice.hidden = true;
+  eventNotice.hidden = false;
+  eventNoticeTimer?.style.setProperty("--notice-duration", `${eventNoticeDurationMs}ms`);
+  eventNoticeTimer?.classList.remove("is-running");
+  void eventNoticeTimer?.offsetWidth;
+  eventNoticeTimer?.classList.add("is-running");
+  eventNoticeRemainingMs = eventNoticeDurationMs;
+  startEventNoticeTimer();
+  playFeedback("select");
+}
+
+function startEventNoticeTimer() {
+  window.clearTimeout(eventNoticeTimeout);
+  eventNoticeStartedAt = performance.now();
+  eventNoticeTimer?.classList.remove("is-paused");
+  eventNoticeTimeout = window.setTimeout(closeEventNotice, eventNoticeRemainingMs);
+}
+
+function pauseEventNoticeTimer() {
+  if (!eventNoticeCurrent) return;
+  window.clearTimeout(eventNoticeTimeout);
+  eventNoticeRemainingMs = Math.max(800, eventNoticeRemainingMs - (performance.now() - eventNoticeStartedAt));
+  eventNoticeTimer?.classList.add("is-paused");
+}
+
+function closeEventNotice() {
+  window.clearTimeout(eventNoticeTimeout);
+  if (eventNotice) eventNotice.hidden = true;
+  eventNoticeCurrent = null;
+  // 다음 안내는 이탈 모션이 끝난 뒤 보인다.
+  if (eventNoticeQueue.length > 0) window.setTimeout(showNextEventNotice, 220);
+}
+
+eventNotice?.addEventListener("pointerenter", pauseEventNoticeTimer);
+eventNotice?.addEventListener("pointerleave", () => { if (eventNoticeCurrent && !eventNotice.contains(document.activeElement)) startEventNoticeTimer(); });
+eventNotice?.addEventListener("focusin", pauseEventNoticeTimer);
+eventNotice?.addEventListener("focusout", (event) => { if (eventNoticeCurrent && !eventNotice.contains(event.relatedTarget as Node | null)) startEventNoticeTimer(); });
+byId("eventNoticeCloseButton")?.addEventListener("click", closeEventNotice);
+byId("eventNoticeFocusButton")?.addEventListener("click", () => {
+  const current = eventNoticeCurrent;
+  closeEventNotice();
+  if (!current) return;
+  newsEventState.markReadWhere((item) => item.id === current.id);
+  updateNewsBadge();
+  focusNewsEvent(current);
+});
 
 function focusNewsEvent(event: NewsEvent) {
   closeNewsScreen();

@@ -340,6 +340,20 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-toast { opacity: 0; translate: 0 -6px; transition: opacity var(--dur-fast) linear, translate var(--dur-panel) var(--ease-out); pointer-events: none !important; text-align: center; }
 .game-toast.is-visible { opacity: 1; translate: 0 0; }
 .game-error-banner { width: 100%; }
+/* 이벤트 안내판: 기회는 ▲ + ok 띠, 도시 변화는 △ + 주의 띠. 아래 가는 막대가 자동으로 닫히기까지 남은 시간 */
+.game-event-notice { position: relative; width: 100%; overflow: hidden; box-shadow: var(--overlay-shadow); }
+.game-event-notice[data-tone="opportunity"] { --banner-signal: var(--signal-ok); }
+.game-event-notice[data-tone="change"] { --banner-signal: var(--signal-caution); }
+.game-event-notice .dg-banner__icon { color: var(--banner-signal); font-weight: 800; }
+.game-event-notice[data-tone="change"] .dg-banner__icon { color: var(--signal-caution-text); }
+.game-event-notice__text { display: grid; flex: 1; min-width: 0; }
+.game-event-notice__text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-event-notice__text small { color: var(--text-2); font: var(--type-micro); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-event-notice .dg-banner__actions { display: flex; align-items: center; gap: var(--space-1); }
+.game-event-notice__timer { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--banner-signal); transform-origin: left center; transform: scaleX(0); }
+.game-event-notice__timer.is-running { animation: game-notice-timer var(--notice-duration, 6000ms) linear forwards; }
+.game-event-notice__timer.is-paused { animation-play-state: paused; }
+@keyframes game-notice-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ===== 튜토리얼 ===== */
 .game-tutorial { width: 100%; }

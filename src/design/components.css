@@ -653,6 +653,7 @@ body.reduced-motion { --dur-exit: 0ms; }
 @keyframes dg-out-right { to { translate: 24px 0; opacity: 0; } }
 @keyframes dg-out-left { to { translate: -24px 0; opacity: 0; } }
 @keyframes dg-out-down { to { translate: 0 16px; opacity: 0; } }
+@keyframes dg-out-up { to { translate: 0 -12px; opacity: 0; } }
 @keyframes dg-scrim-out { to { background-color: transparent; } }
 
 .dg-enter-edge { animation: dg-in-right var(--dur-panel) var(--ease-out); }
@@ -678,6 +679,7 @@ body.reduced-motion { --dur-exit: 0ms; }
 .dg-workspace.is-leaving,
 .game-bottom-bar.is-leaving { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
 .dg-scrim.is-leaving { animation: dg-scrim-out var(--dur-exit) linear forwards; }
+.game-event-notice.is-leaving { animation: dg-out-up var(--dur-exit) var(--ease-out) forwards; }
 .dg-scrim.is-leaving > .dg-panel { animation: dg-out-down var(--dur-exit) var(--ease-out) forwards; }
 
 /* 마우스 호버 (§13): 마우스처럼 정확히 가리키는 장치에서만. 터치에서는 누른 뒤 호버가 남는 문제가 있어 켜지 않는다.
