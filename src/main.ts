@@ -11,6 +11,7 @@ import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
 import { selectPassengerDestinations } from "./destinationSelection.ts";
 import { constructionSubsidy, constructionSubsidyRates, payableConstructionCost } from "./domain/constructionSubsidy.ts";
+import { buildSiteEventCandidates, readSiteFeatures, type SiteEventCandidate, type SiteFeature } from "./events/siteEvents.ts";
 import { extensionRootId, freeExtensionEndpoints, labelExtensionPieces, normalizeExtensionChains, type ExtensionChainMember, type ExtensionPieceLabel } from "./domain/extensionChain.ts";
 import { listAutomaticStationNames, normalizeAutomaticStationName, selectAutomaticStationName, stationNameSourceLabels, type StationNameMatch } from "./stationNaming.ts";
 import {
@@ -11546,6 +11547,114 @@ function updateNewsEventsForDay(dispatch = true) {
   return runtimeResult;
 }
 
+// ===== 실제 장소·지형 기반 이벤트 =====
+// 운영 중인 노선을 따라가는 띠 안의 OpenStreetMap 장소를 받아 두고(브라우저 저장소에 보관),
+// 이벤트를 실제 장소 이름·위치로 만든다(src/events/siteEvents.ts). 공개 서버가 붐벼도 받을 수 있게 다섯 묶음으로
+// 나눠 작은 질의로 차례로 받고, 받은 묶음부터 쓴다. 실패한 묶음은 2분 뒤 다시 시도. 아무것도 없으면 예전 방식으로 대신한다.
+const eventSiteStorageKey = "draw-gyotong-event-sites-v2";
+const eventSiteGroups: Array<{ id: string; statements: (points: string) => string[] }> = [
+  { id: "venues", statements: (points) => [
+    `nwr(around:900,${points})["name"]["leisure"~"^(stadium|park)$"];`,
+    `nwr(around:900,${points})["name"]["amenity"~"^(theatre|concert_hall|university|college|marketplace)$"];`,
+  ] },
+  { id: "sights", statements: (points) => [
+    `nwr(around:800,${points})["name"]["tourism"~"^(attraction|museum|theme_park|zoo|aquarium)$"];`,
+    `nwr(around:800,${points})["name"]["historic"~"^(palace|castle)$"];`,
+  ] },
+  { id: "shops", statements: (points) => [`nwr(around:600,${points})["name"]["shop"~"^(mall|department_store)$"];`] },
+  { id: "roads", statements: (points) => [`way(around:250,${points})["name"]["highway"~"^(trunk|primary)$"];`] },
+  { id: "places", statements: (points) => [`node(around:1200,${points})["name"]["place"~"^(suburb|quarter|neighbourhood)$"];`] },
+];
+let eventSiteFeatures: SiteFeature[] = [];
+let eventSiteKey = "";
+let eventSiteDone: string[] = [];
+let eventSiteFetching = false;
+let eventSiteRetryAt = 0;
+
+/** 운영 중인 노선마다 최대 30점으로 줄인 경로(질의용)와, 노선망이 바뀌었는지 가리는 열쇠 */
+function eventSiteArea() {
+  const routes = networkState.routes.filter((route) => isRouteOperational(route.id) && route.coordinates.length >= 2);
+  if (routes.length === 0) return null;
+  const polylines = routes.map((route) => {
+    const coordinates = route.coordinates;
+    const count = Math.min(30, coordinates.length);
+    const step = (coordinates.length - 1) / Math.max(1, count - 1);
+    return Array.from({ length: count }, (_, index) => coordinates[Math.round(index * step)])
+      .map(([lat, lng]) => `${lat.toFixed(4)},${lng.toFixed(4)}`).join(",");
+  });
+  // 노선 경로를 약 1km 격자로 뭉뚱그린 값을 열쇠로 써서, 작은 수정에는 다시 받지 않는다.
+  const cells = new Set(routes.flatMap((route) => route.coordinates.map(([lat, lng]) => `${Math.round(lat * 100)}:${Math.round(lng * 100)}`)));
+  return { key: `${metaState.current.cityId}:${[...cells].sort().join("|")}`, polylines };
+}
+
+/** 장소 데이터가 지금 노선망과 맞는지 확인하고, 아니면 저장소에서 꺼내거나 빠진 묶음을 하나씩 받는다(비동기, 한 번에 하나). */
+function ensureEventSiteFeatures() {
+  const area = eventSiteArea();
+  if (!area) return;
+  if (area.key !== eventSiteKey) {
+    eventSiteKey = area.key;
+    eventSiteFeatures = [];
+    eventSiteDone = [];
+    eventSiteRetryAt = 0;
+    try {
+      const cached = JSON.parse(localStorage.getItem(eventSiteStorageKey) ?? "null") as { key: string; features: SiteFeature[]; done: string[] } | null;
+      if (cached?.key === area.key && Array.isArray(cached.features)) {
+        eventSiteFeatures = cached.features;
+        eventSiteDone = Array.isArray(cached.done) ? cached.done : [];
+      }
+    } catch {
+      // 저장소를 읽지 못하면 새로 받는다.
+    }
+  }
+  const group = eventSiteGroups.find((item) => !eventSiteDone.includes(item.id));
+  if (!group || eventSiteFetching || Date.now() < eventSiteRetryAt) return;
+  eventSiteFetching = true;
+  const key = area.key;
+  const query = `[out:json][timeout:30];(${area.polylines.flatMap((points) => group.statements(points)).join("")});out center tags;`;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 120000);
+  void fetchOverpass(query, controller.signal, 40000)
+    .then((data) => {
+      if (key !== eventSiteKey) return;
+      const known = new Set(eventSiteFeatures.map((feature) => `${feature.kind}:${feature.name}`));
+      eventSiteFeatures = [...eventSiteFeatures, ...readSiteFeatures(data?.elements ?? []).filter((feature) => !known.has(`${feature.kind}:${feature.name}`))];
+      eventSiteDone = [...eventSiteDone, group.id];
+      try {
+        localStorage.setItem(eventSiteStorageKey, JSON.stringify({ key, features: eventSiteFeatures, done: eventSiteDone }));
+      } catch {
+        // 저장소가 가득 차면 이번 세션 동안만 쓴다.
+      }
+      // 다음 묶음은 서버에 무리가 가지 않게 잠깐 쉬었다가 받는다.
+      window.setTimeout(ensureEventSiteFeatures, 3000);
+    })
+    .catch(() => {
+      eventSiteRetryAt = Date.now() + 2 * 60 * 1000;
+    })
+    .finally(() => {
+      eventSiteFetching = false;
+      window.clearTimeout(timeout);
+    });
+}
+
+function currentSiteEventCandidates(): SiteEventCandidate[] {
+  if (eventSiteFeatures.length === 0) return [];
+  const stations = networkState.stations
+    .filter((station) => isStationOperational(station.id))
+    .map((station) => ({ id: station.id, name: station.name, position: station.position, routeIds: station.connectedRouteIds.filter(isRouteOperational) }));
+  const routes = networkState.routes
+    .filter((route) => isRouteOperational(route.id))
+    .map((route) => ({
+      id: route.id,
+      name: route.name,
+      coordinates: route.coordinates,
+      riverCrossingPositions: (route.segments ?? []).flatMap((segment) => (segment.riverCrossings ?? []).map((crossing) => crossing.position)),
+      mountainSegments: route.mountainSegments ?? 0,
+    }));
+  // 진행 중이거나 최근 6개 이벤트에 나온 장소는 잠시 빼서 같은 장소가 연달아 나오지 않게 한다.
+  const recentTitles = new Set([...getActiveNewsEvents(), ...newsEventState.current.slice(-6)].map((event) => event.title));
+  return buildSiteEventCandidates(eventSiteFeatures, stations, routes).filter((candidate) => !recentTitles.has(candidate.title));
+}
+
 function createNewsEvent(day: number): NewsEvent {
   // City development is not generated from railway performance. Legacy
   // new-town/commercial events still load safely, but new automatic events are
@@ -11553,7 +11662,74 @@ function createNewsEvent(day: number): NewsEvent {
   const opportunityKinds: NewsEventKind[] = ["festival", "concert", "sports", "tourism", "university"];
   const changeKinds: NewsEventKind[] = ["heavy-rain", "heavy-snow", "roadworks", "demand-decline", "operating-cost", "construction-delay", "recession"];
   const seed = hashNewsSeed(day, `${metaState.current.slotId}:${metaState.current.cityId}:${newsEventState.length}`);
-  const pool = seed % 100 < 62 ? opportunityKinds : changeKinds;
+  const opportunity = seed % 100 < 62;
+  // 실제 장소·지형 후보가 있으면 그중에서 고른다. 변화 이벤트는 도시 전체 이벤트(물가·경기·공사 지연 등)와 섞는다.
+  const siteCandidates = currentSiteEventCandidates().filter((candidate) => opportunityKinds.includes(candidate.kind) === opportunity);
+  const cityWideKinds: NewsEventKind[] = ["demand-decline", "operating-cost", "construction-delay", "recession"];
+  // 변화 이벤트는 장소·지형(도로 공사·호우·대설)과 도시 전체 이벤트를 반반으로 고른다(장소가 많아도 한쪽으로 쏠리지 않게).
+  const siteChoices: Array<SiteEventCandidate | NewsEventKind> = opportunity || (seed >>> 3) % 2 === 0 ? siteCandidates : cityWideKinds;
+  // 장소 데이터를 받아 둔 상태에서 쓸 후보가 없으면(모두 쉬는 중 등), 없는 장소를 지어내지 않고 도시 전역 이벤트로 대신한다.
+  // 장소가 많은 종류(관광지 등)로 쏠리지 않게, 종류를 먼저 고르게 고른 뒤 그 종류 안에서 장소를 고른다.
+  const pickByKind = (choices: Array<SiteEventCandidate | NewsEventKind>) => {
+    const kinds = [...new Set(choices.map((choice) => (typeof choice === "string" ? `city:${choice}` : choice.kind)))];
+    const kind = kinds[(seed >>> 5) % kinds.length];
+    const sameKind = choices.filter((choice) => (typeof choice === "string" ? `city:${choice}` : choice.kind) === kind);
+    return sameKind[(seed >>> 11) % sameKind.length];
+  };
+  const siteChoice = siteCandidates.length > 0
+    ? pickByKind(siteChoices)
+    : eventSiteFeatures.length > 0
+      ? (opportunity ? "tourism" : cityWideKinds[(seed >>> 5) % cityWideKinds.length])
+      : undefined;
+  if (siteChoice && typeof siteChoice !== "string") {
+    const template = newsEventCatalog[siteChoice.kind];
+    const durationRange = template.duration[1] - template.duration[0] + 1;
+    return {
+      id: createId("news"),
+      kind: siteChoice.kind,
+      tone: template.tone,
+      title: siteChoice.title,
+      summary: siteChoice.summary,
+      regionName: siteChoice.regionName,
+      position: [siteChoice.position[0], siteChoice.position[1]],
+      startedDay: day,
+      durationDays: template.duration[0] + ((seed >>> 9) % durationRange),
+      demandMultiplier: template.demandMultiplier,
+      operatingCostMultiplier: template.operatingCostMultiplier,
+      relatedStationIds: siteChoice.stationIds,
+      relatedRouteIds: siteChoice.routeIds,
+      action: template.action,
+      actionLabel: template.actionLabel,
+      read: false,
+      responsePrepared: false,
+    };
+  }
+  // 장소 후보와 함께 뽑힌 도시 전체 이벤트(물가·경기·수요 감소·공사 지연)는 특정 역이 아니라 도시 전역에 건다.
+  if (siteChoice) {
+    const template = newsEventCatalog[siteChoice];
+    const durationRange = template.duration[1] - template.duration[0] + 1;
+    const city = cityConfigs[metaState.current.cityId];
+    return {
+      id: createId("news"),
+      kind: siteChoice,
+      tone: template.tone,
+      title: template.title,
+      summary: template.summary,
+      regionName: `${city.name} 전역`,
+      position: [(city.center as [number, number])[0], (city.center as [number, number])[1]],
+      startedDay: day,
+      durationDays: template.duration[0] + ((seed >>> 9) % durationRange),
+      demandMultiplier: template.demandMultiplier,
+      operatingCostMultiplier: template.operatingCostMultiplier,
+      relatedStationIds: [],
+      relatedRouteIds: [],
+      action: template.action,
+      actionLabel: template.actionLabel,
+      read: false,
+      responsePrepared: false,
+    };
+  }
+  const pool = opportunity ? opportunityKinds : changeKinds;
   const kind = pool[seed % pool.length];
   const template = newsEventCatalog[kind];
   const stationPool = networkState.stations.filter((station) => isStationOperational(station.id));
@@ -13204,6 +13380,7 @@ const dailySettlementContext: DailySettlementRuntimeContext<OperationAnalysisSta
     recordDemandSnapshot();
     // 운영 분석 제안은 조언이라 바로 필요하지 않다. 하루가 넘어가는 프레임을 가볍게 하려고 한가할 때 갱신한다.
     scheduleIdle(() => {
+      ensureEventSiteFeatures();
       refreshOperationSuggestions(true);
       const criticalCount = analysisStateOwner.current.suggestions.filter((suggestion) => suggestion.status === "active" && suggestion.severity === "critical").length;
       if (criticalCount > 0 && analysisStateOwner.current.lastNotifiedDay !== gameDay) {
