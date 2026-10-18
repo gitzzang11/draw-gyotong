@@ -59,6 +59,28 @@ describe("schematic layout", () => {
     expect(shared.lineIds).toEqual(["1", "2"]);
   });
 
+  it("follows the real track shape where it turns between two stations", () => {
+    // a에서 동쪽으로 가다 남쪽으로 꺾여 b에 닿는 선로(ㄱ자). 역끼리 이으면 대각선이 되지만 실제 선형대로 꺾여야 한다.
+    const stations = [station("a", 37.5, 127), station("b", 37.48, 127.025), station("c", 37.46, 127.025)];
+    const track: Array<[number, number]> = [[37.5, 127], [37.5, 127.01], [37.5, 127.025], [37.49, 127.025], [37.48, 127.025]];
+    const lines: SchematicLine[] = [{ ...line("1", [["a", "b", "c"]]), tracks: { "a>b": track } }];
+    const layout = buildSchematicLayout(stations, lines);
+    expect(layout.bendIds.size).toBe(1);
+    const [bend] = [...layout.bendIds];
+    expect(layout.linePaths.get("1")).toEqual([["a", bend, "b", "c"]]);
+    const a = layout.positions.get("a")!;
+    const corner = layout.positions.get(bend)!;
+    const b = layout.positions.get("b")!;
+    expect(corner.y).toBe(a.y); // 동쪽으로 곧게
+    expect(corner.x).toBeGreaterThan(a.x);
+    expect(b.x).toBe(corner.x); // 그다음 남쪽으로
+    expect(b.y).toBeGreaterThan(corner.y);
+    // 꺾임점에는 역 기호·역명을 그리지 않는다.
+    const result = renderSchematic(layout, stations, lines, theme, { unit: 64, showNames: true });
+    expect(result.stations.match(/class="diagram-station"/g)).toHaveLength(3);
+    expect(result.stationPoints.has(bend)).toBe(false);
+  });
+
   it("bends a non-octilinear edge once, preferring the edge's own direction first", () => {
     expect(octilinearBends({ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 1, y: 0 })).toEqual([]);
     expect(octilinearBends({ x: 0, y: 0 }, { x: 2, y: 2 }, { x: 1, y: 1 })).toEqual([]);

@@ -8,7 +8,7 @@
  * - 종착역: 역명 굵게 + 노선 끝 바깥쪽에 노선 기호(정사각형, 번호).
  * - 역명: 바탕색 테두리 글자. 선·역·다른 역명과 겹치지 않는 자리를 고른다.
  */
-import { octilinearBends, type SchematicEdge, type SchematicLayout, type SchematicLine, type SchematicPoint, type SchematicStation } from "./schematicLayout.ts";
+import { octilinearBendOptions, octilinearBends, type SchematicEdge, type SchematicLayout, type SchematicLine, type SchematicPoint, type SchematicStation } from "./schematicLayout.ts";
 
 export type SchematicTheme = {
   background: string;
@@ -69,6 +69,18 @@ function normalOf(direction: SchematicPoint) {
   return { x: -direction.y / length, y: direction.x / length };
 }
 
+/** 직선 p1p2와 q1q2의 교점(평행하면 null) */
+function intersectLines(p1: SchematicPoint, p2: SchematicPoint, q1: SchematicPoint, q2: SchematicPoint): SchematicPoint | null {
+  const rx = p2.x - p1.x;
+  const ry = p2.y - p1.y;
+  const sx = q2.x - q1.x;
+  const sy = q2.y - q1.y;
+  const denominator = rx * sy - ry * sx;
+  if (Math.abs(denominator) < 1e-6) return null;
+  const t = ((q1.x - p1.x) * sy - (q1.y - p1.y) * sx) / denominator;
+  return { x: p1.x + rx * t, y: p1.y + ry * t };
+}
+
 function boxesOverlap(a: Box, b: Box) {
   return Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
 }
@@ -127,12 +139,49 @@ export function renderSchematic(
     return (index - (edge.lineIds.length - 1) / 2) * LINE_GAP;
   };
 
+  // 8방향이 아닌 구간은 한 번 꺾어 그린다. 꺾는 방법 두 가지 중, 양끝 역에서 다른 구간이 이미 쓰는
+  // 방향으로 나가지 않는 쪽을 고른다(같은 방향으로 나가면 다른 노선과 겹쳐 하나처럼 보인다).
+  const directionKey = (from: SchematicPoint, to: SchematicPoint) => `${Math.sign(Math.round(to.x - from.x))},${Math.sign(Math.round(to.y - from.y))}`;
+  const usedDirections = new Map<string, Set<string>>();
+  const useDirection = (node: string, key: string) => {
+    const set = usedDirections.get(node) ?? new Set<string>();
+    set.add(key);
+    usedDirections.set(node, set);
+  };
+  const edgeBends = new Map<string, SchematicPoint[]>();
+  const kinked: SchematicEdge[] = [];
+  for (const edge of layout.edges) {
+    const pa = center.get(edge.a)!;
+    const pb = center.get(edge.b)!;
+    const options = octilinearBendOptions(pa, pb);
+    if (options.length === 1) {
+      edgeBends.set(edge.id, []);
+      useDirection(edge.a, directionKey(pa, pb));
+      useDirection(edge.b, directionKey(pb, pa));
+    } else kinked.push(edge);
+  }
+  for (const edge of kinked) {
+    const pa = center.get(edge.a)!;
+    const pb = center.get(edge.b)!;
+    const preferred = octilinearBends(pa, pb, edge.direction);
+    const options = octilinearBendOptions(pa, pb).sort((left, right) => {
+      const conflicts = (bends: SchematicPoint[]) =>
+        Number(usedDirections.get(edge.a)?.has(directionKey(pa, bends[0])) ?? false)
+        + Number(usedDirections.get(edge.b)?.has(directionKey(pb, bends[bends.length - 1])) ?? false);
+      const same = (bends: SchematicPoint[]) => (bends[0].x === preferred[0].x && bends[0].y === preferred[0].y ? 0 : 1);
+      return conflicts(left) - conflicts(right) || same(left) - same(right);
+    });
+    const bends = options[0];
+    edgeBends.set(edge.id, bends);
+    useDirection(edge.a, directionKey(pa, bends[0]));
+    useDirection(edge.b, directionKey(pb, bends[bends.length - 1]));
+  }
+
   /** 구간을 그리는 중심선 점들(꺾임 포함, 순서 from→to) */
   const centerPolyline = (from: string, edge: SchematicEdge) => {
     const pa = center.get(edge.a)!;
     const pb = center.get(edge.b)!;
-    const bends = octilinearBends(pa, pb, edge.direction);
-    const points = [pa, ...bends, pb];
+    const points = [pa, ...(edgeBends.get(edge.id) ?? octilinearBends(pa, pb, edge.direction)), pb];
     return from === edge.a ? points : [...points].reverse();
   };
 
@@ -180,8 +229,19 @@ export function renderSchematic(
         rememberStationPoint(from, line.id, shifted[0]);
         rememberStationPoint(to, line.id, shifted[shifted.length - 1]);
         for (let k = 1; k < shifted.length; k += 1) segmentsForLabels.push({ a: shifted[k - 1], b: shifted[k] });
+        const last = points[points.length - 1];
         if (points.length === 0) points.push(...shifted);
-        else points.push(...shifted.slice(points[points.length - 1].x === shifted[0].x && points[points.length - 1].y === shifted[0].y ? 1 : 0));
+        else if (last.x === shifted[0].x && last.y === shifted[0].y) points.push(...shifted.slice(1));
+        else {
+          // 실제 선형의 꺾임점에서는 나란히 민 두 조각을 모서리에서 이어 붙인다(역 기호가 없어 끊김이 보인다).
+          const corner = layout.bendIds.has(from) && points.length >= 2 && shifted.length >= 2
+            ? intersectLines(points[points.length - 2], last, shifted[0], shifted[1])
+            : null;
+          if (corner) {
+            points[points.length - 1] = corner;
+            points.push(...shifted.slice(1));
+          } else points.push(...shifted);
+        }
       }
       if (points.length < 2) continue;
       const d = `M ${points.map((point) => `${round(point.x)} ${round(point.y)}`).join(" L ")}`;
@@ -310,7 +370,9 @@ export function renderSchematic(
       let bestScore = Number.POSITIVE_INFINITY;
       for (const candidate of candidates) {
         let score = candidate.index * 2;
-        for (const other of placed) score += boxesOverlap(candidate.box, other) * 8;
+        // 다른 역명과 바짝 붙으면 한 이름처럼 읽히므로 여백을 두고 잰다.
+        const padded = { x: candidate.box.x - 6, y: candidate.box.y - 4, width: candidate.box.width + 12, height: candidate.box.height + 8 };
+        for (const other of placed) score += boxesOverlap(padded, other) * 8;
         for (const other of obstacles) score += boxesOverlap(candidate.box, other) * 4;
         for (const segment of segmentsForLabels) if (segmentHitsBox(segment, candidate.box)) score += 900;
         // 종착 노선 기호 쪽은 피한다.

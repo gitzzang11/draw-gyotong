@@ -7299,6 +7299,9 @@ type DiagramPathInternal = {
   pathIndex: number;
   nodeIds: string[];
   stationIds: string[];
+  /** 실제 선로 좌표와 각 역의 선로 위 위치(0~1, stationIds와 같은 순서) */
+  track: LatLng[];
+  stationProgress: number[];
   branch: boolean;
 };
 
@@ -7438,14 +7441,15 @@ function buildDiagramGraph(): DiagramGraphInternal {
 
     routePaths.forEach((path, pathIndex) => {
       const seenStationIds = new Set<string>();
-      const stationIds = (assignments.get(pathIndex) ?? [])
+      const ordered = (assignments.get(pathIndex) ?? [])
         .sort((a, b) => a.progress - b.progress || a.stationId.localeCompare(b.stationId))
         .filter((item) => {
           if (seenStationIds.has(item.stationId)) return false;
           seenStationIds.add(item.stationId);
           return true;
-        })
-        .map((item) => item.stationId);
+        });
+      const stationIds = ordered.map((item) => item.stationId);
+      const stationProgress = ordered.map((item) => item.progress);
       const startId = `terminal:${route.id}:${pathIndex}:start`;
       const endId = `terminal:${route.id}:${pathIndex}:end`;
       nodes.set(startId, { id: startId, sourceStationIds: [], geo: path[0], routeIds: [route.id], terminal: true, branch: pathIndex > 0, express: false });
@@ -7457,7 +7461,7 @@ function buildDiagramGraph(): DiagramGraphInternal {
         adjacency.get(nodeIds[index - 1])?.add(nodeIds[index]);
         adjacency.get(nodeIds[index])?.add(nodeIds[index - 1]);
       }
-      paths.push({ id: `${route.id}:${pathIndex}`, route, pathIndex, nodeIds, stationIds, branch: pathIndex > 0 });
+      paths.push({ id: `${route.id}:${pathIndex}`, route, pathIndex, nodeIds, stationIds, track: path, stationProgress, branch: pathIndex > 0 });
     });
   }
   return { nodes, paths, adjacency };
@@ -7487,6 +7491,32 @@ function projectLatLngToDiagramPath(point: LatLng, path: LatLng[]) {
     traversed += lengths[index - 1];
   }
   return { distance: bestDistance * 30, progress: bestProgress };
+}
+
+/** 선로 좌표에서 위치 from~to(0~1) 사이의 조각을 [위도, 경도]로 잘라 낸다. */
+function sliceDiagramTrack(track: LatLng[], from: number, to: number): Array<[number, number]> {
+  const lengths: number[] = [0];
+  for (let index = 1; index < track.length; index += 1) lengths.push(lengths[index - 1] + track[index - 1].distanceTo(track[index]));
+  const total = lengths[lengths.length - 1];
+  if (total <= 0) return [];
+  const pointAt = (distance: number): [number, number] => {
+    for (let index = 1; index < track.length; index += 1) {
+      if (lengths[index] >= distance || index === track.length - 1) {
+        const span = lengths[index] - lengths[index - 1];
+        const t = span > 0 ? Math.min(1, Math.max(0, (distance - lengths[index - 1]) / span)) : 0;
+        return [track[index - 1].lat + (track[index].lat - track[index - 1].lat) * t, track[index - 1].lng + (track[index].lng - track[index - 1].lng) * t];
+      }
+    }
+    return [track[0].lat, track[0].lng];
+  };
+  const start = from * total;
+  const end = to * total;
+  const points: Array<[number, number]> = [pointAt(start)];
+  for (let index = 1; index < track.length - 1; index += 1) {
+    if (lengths[index] > start && lengths[index] < end) points.push([track[index].lat, track[index].lng]);
+  }
+  points.push(pointAt(end));
+  return points.map(([lat, lng]) => [Math.round(lat * 1e5) / 1e5, Math.round(lng * 1e5) / 1e5]);
 }
 
 /**
@@ -7520,6 +7550,14 @@ function buildSchematicInput(graph: DiagramGraphInternal) {
   const lines: SchematicLine[] = [];
   for (const [routeId, paths] of byRoute) {
     const route = paths[0].route;
+    // 역과 역 사이 실제 선로 모양(노선도가 실제 선형을 따라 꺾이게 한다)
+    const tracks: Record<string, Array<[number, number]>> = {};
+    for (const path of paths) {
+      for (let index = 1; index < path.stationIds.length; index += 1) {
+        const piece = sliceDiagramTrack(path.track, path.stationProgress[index - 1], path.stationProgress[index]);
+        if (piece.length >= 3) tracks[`${path.stationIds[index - 1]}>${path.stationIds[index]}`] = piece;
+      }
+    }
     const mainStationIds = paths.filter((path) => path.pathIndex === 0).flatMap((path) => path.stationIds);
     const sequences = paths.map((path) => {
       const ids = [...path.stationIds];
@@ -7542,6 +7580,7 @@ function buildSchematicInput(graph: DiagramGraphInternal) {
       label: lineMarkLabel(route.name),
       status: isRouteOperational(routeId) ? "operational" : "building",
       paths: sequences,
+      tracks,
     });
   }
   return { stations, lines };
