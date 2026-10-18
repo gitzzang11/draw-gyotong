@@ -120,3 +120,31 @@ export function listAutomaticStationNames(
     .slice(0, limit)
     .map(({ name, source, distanceMeters: distance }) => ({ name, source, distanceMeters: distance }));
 }
+
+/**
+ * Photon(komoot) 역지오코딩 응답을 이름 고르기에 쓰는 지형지물 목록으로 바꾼다.
+ * Overpass 공개 서버가 느리거나 멈췄을 때 쓰는 예비 출처다. Photon은 OSM 태그 하나(osm_key=osm_value)와
+ * 이름만 주므로 그 태그로 분류를 정한다(분류 기준·반경은 Overpass와 같게 위 함수가 다시 거른다).
+ */
+export function photonToStationNameFeatures(response: unknown): StationNameFeature[] {
+  const features = (response as { features?: unknown } | null)?.features;
+  if (!Array.isArray(features)) return [];
+  const result: StationNameFeature[] = [];
+  for (const feature of features) {
+    const properties = (feature as { properties?: Record<string, unknown> } | null)?.properties;
+    const coordinates = (feature as { geometry?: { coordinates?: unknown } } | null)?.geometry?.coordinates;
+    if (!properties || !Array.isArray(coordinates)) continue;
+    const [lon, lat] = coordinates;
+    const name = typeof properties.name === "string" ? properties.name : "";
+    const key = typeof properties.osm_key === "string" ? properties.osm_key : "";
+    const value = typeof properties.osm_value === "string" ? properties.osm_value : "";
+    if (!name || !key || typeof lat !== "number" || typeof lon !== "number") continue;
+    result.push({
+      id: typeof properties.osm_id === "number" ? properties.osm_id : undefined,
+      lat,
+      lon,
+      tags: { name, [key]: value },
+    });
+  }
+  return result;
+}

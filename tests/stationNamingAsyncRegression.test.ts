@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createContext, runInContext } from "node:vm";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { selectAutomaticStationName, type StationNameMatch } from "../src/stationNaming";
+import { photonToStationNameFeatures, selectAutomaticStationName, type StationNameMatch } from "../src/stationNaming";
 import type { ConstructionPlan, PlannedStation } from "../src/domain/constructionTypes";
 import type { Station } from "../src/domain/networkTypes";
 
@@ -24,6 +24,7 @@ function applicationContext(names: string[], globals: Record<string, unknown> = 
     metaState: { current: { cityId: "seoul", slotId: "slot-a", mode: "sandbox" }, patch: noop },
     settings: { autoStationNaming: true },
     stationNameLookupCache: new Map(), pendingStationNameTargets: new Map(), planConversionsInFlight: new Set(), selectAutomaticStationName,
+    photonNameTags: ["railway:station", "place:quarter"], photonToStationNameFeatures,
     overpassEndpoints: ["https://primary.test/api/interpreter", "https://secondary.test/api/interpreter"],
     requestStateSave: noop, reconcileMapStations: noop, updateHud: noop,
     reconcileBlueprints: noop, renderPlanningDialog: noop,
@@ -45,11 +46,31 @@ function response(value: unknown) {
   return { ok: true, status: 200, json: async () => value };
 }
 
+const naming = ["fetchOverpass", "fetchPhotonNameFeatures", "fetchStationNameFeatures", "findNearbyOsmStationName"];
+/** Photon(예비 출처)이 꺼져 있을 때 */
+const photonOffline = (endpoint: string) => {
+  if (endpoint.includes("photon")) throw new Error("photon offline");
+};
+
 describe("automatic station naming handles Overpass errors", () => {
+  it("uses the Photon fallback when every Overpass server fails", async () => {
+    const context = applicationContext(naming, {
+      fetch: async (endpoint: string) => {
+        if (!endpoint.includes("photon")) return { ok: false, status: 504, json: async () => ({}) };
+        const railway = endpoint.includes("osm_tag=railway");
+        return response({ features: railway ? [{ geometry: { coordinates: [127, 35] }, properties: { name: "가까운역", osm_key: "railway", osm_value: "station" } }] : [] });
+      },
+    });
+    const match = await context.findNearbyOsmStationName(position);
+    expect(match?.name).toBe("가까운");
+    expect(match?.source).toBe("railway");
+  });
+
   it("tries the next server when HTTP 200 contains a runtime timeout instead of accepting fallback names", async () => {
     const requests: Array<{ endpoint: string; query: string }> = [];
-    const context = applicationContext(["fetchOverpass", "findNearbyOsmStationName"], {
+    const context = applicationContext(naming, {
       fetch: async (endpoint: string, options: { body: URLSearchParams }) => {
+        photonOffline(endpoint);
         const query = options.body.get("data")!;
         requests.push({ endpoint, query });
         if (endpoint.includes("primary") && query.includes('["railway"')) return response({ remark: "runtime error: Query timed out", elements: [] });
@@ -69,8 +90,9 @@ describe("automatic station naming handles Overpass errors", () => {
   it("does not retain failed lookups in the name cache and retries the same location", async () => {
     let fail = true;
     let requests = 0;
-    const context = applicationContext(["fetchOverpass", "findNearbyOsmStationName"], {
-      fetch: async () => {
+    const context = applicationContext(naming, {
+      fetch: async (endpoint: string) => {
+        photonOffline(endpoint);
         requests += 1;
         return response(fail ? { remark: "runtime error: Query ran out of memory", elements: [] } : { elements: [nearestStation] });
       },
@@ -86,8 +108,9 @@ describe("automatic station naming handles Overpass errors", () => {
 
   it("caches a legitimate empty railway lookup followed by a successful lower priority place", async () => {
     const requests: string[] = [];
-    const context = applicationContext(["fetchOverpass", "findNearbyOsmStationName"], {
-      fetch: async (_endpoint: string, options: { body: URLSearchParams }) => {
+    const context = applicationContext(naming, {
+      fetch: async (endpoint: string, options: { body: URLSearchParams }) => {
+        photonOffline(endpoint);
         const query = options.body.get("data")!;
         requests.push(query);
         return response({ elements: query.includes('["railway"') ? [] : [fallbackPark] });

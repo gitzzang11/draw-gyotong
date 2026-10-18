@@ -15,7 +15,7 @@ import { selectPassengerDestinations } from "./destinationSelection.ts";
 import { constructionSubsidy, constructionSubsidyRates, payableConstructionCost } from "./domain/constructionSubsidy.ts";
 import { buildSiteEventCandidates, readSiteFeatures, type SiteEventCandidate, type SiteFeature } from "./events/siteEvents.ts";
 import { extensionRootId, freeExtensionEndpoints, labelExtensionPieces, normalizeExtensionChains, type ExtensionChainMember, type ExtensionPieceLabel } from "./domain/extensionChain.ts";
-import { listAutomaticStationNames, normalizeAutomaticStationName, selectAutomaticStationName, stationNameSourceLabels, type StationNameMatch } from "./stationNaming.ts";
+import { listAutomaticStationNames, normalizeAutomaticStationName, photonToStationNameFeatures, selectAutomaticStationName, stationNameSourceLabels, type StationNameFeature, type StationNameMatch } from "./stationNaming.ts";
 import {
   buildNetworkSignature,
   TransitRouter,
@@ -6815,6 +6815,46 @@ function stationNameCandidatesFor(entityId: string) {
   return { state: stationNameCandidates.state, items: stationNameCandidates.items, collapsed: stationNameCandidatesCollapsed };
 }
 
+/**
+ * 역 이름 찾기용 예비 출처: Photon(komoot) 역지오코딩. Overpass 공개 서버는 자주 느리거나 멈춰서(2026-10 기준
+ * 짧은 요청에도 30초 가까이 걸림) 이름 후보·자동 이름이 실패했다. 같은 OSM 자료를 분류별 태그로 걸러 받는다.
+ * 반경은 넉넉히 받고, 분류별 반경은 이름 고르기 함수가 다시 거른다.
+ */
+const photonNameTags = [
+  "railway:station", "railway:halt", "railway:tram_stop",
+  "place:suburb", "place:quarter", "place:neighbourhood", "place:village",
+  "amenity:university", "amenity:hospital", "amenity:townhall", "amenity:marketplace", "amenity:library", "amenity:school",
+  "leisure:park", "tourism", "historic",
+];
+async function fetchPhotonNameFeatures(position: [number, number], signal: AbortSignal) {
+  const [lat, lng] = position;
+  // lang=default: 기기 언어(영어 등)로 바꾼 이름이 아니라 지도에 적힌 원래 이름(한글)을 받는다.
+  const request = async (radiusKm: number, tags: string[]) => {
+    const query = tags.map((tag) => `osm_tag=${encodeURIComponent(tag)}`).join("&");
+    const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=50&radius=${radiusKm}&lang=default&${query}`, { signal });
+    if (!response.ok) throw new Error(`Photon failed: ${response.status}`);
+    return photonToStationNameFeatures(await response.json());
+  };
+  const [named, roads] = await Promise.all([request(0.85, photonNameTags), request(0.3, ["highway"])]);
+  return [...named, ...roads];
+}
+
+/** 이름 찾기: Overpass와 Photon에 함께 물어 먼저 답한 쪽을 쓰고, 나머지 요청은 멈춘다. */
+async function fetchStationNameFeatures(position: [number, number], overpassQuery: string, signal: AbortSignal) {
+  const race = new AbortController();
+  const stop = () => race.abort();
+  signal.addEventListener("abort", stop, { once: true });
+  try {
+    return await Promise.any([
+      fetchOverpass(overpassQuery, race.signal, 25000).then((data) => (data?.elements ?? []) as StationNameFeature[]),
+      fetchPhotonNameFeatures(position, race.signal),
+    ]);
+  } finally {
+    race.abort();
+    signal.removeEventListener("abort", stop);
+  }
+}
+
 async function loadStationNameCandidates(entityId: string, position: [number, number]) {
   stationNameCandidates = { entityId, state: "loading", items: [] };
   renderStationManagerIfOpen();
@@ -6834,8 +6874,8 @@ async function loadStationNameCandidates(entityId: string, position: [number, nu
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 30000);
   try {
-    const data = await fetchOverpass(query, controller.signal, 12000);
-    const items = listAutomaticStationNames(position, data?.elements ?? []).map((match) => ({
+    const elements = await fetchStationNameFeatures(position, query, controller.signal);
+    const items = listAutomaticStationNames(position, elements).map((match) => ({
       name: match.name,
       detail: `${stationNameSourceLabels[match.source]} · ${Math.round(match.distanceMeters)}m`,
     }));
@@ -6869,11 +6909,12 @@ async function findNearbyOsmStationName(position: [number, number]) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 60000);
     try {
-      const railwayData = await fetchOverpass(railwayQuery, controller.signal, 10000);
-      const railwayName = selectAutomaticStationName(position, railwayData?.elements ?? []);
+      // 철도역 이름이 있으면 그것을 쓰고, 없으면 동네·시설 등. Photon은 두 갈래를 한 번에 돌려준다.
+      const railwayElements = await fetchStationNameFeatures(position, railwayQuery, controller.signal);
+      const railwayName = selectAutomaticStationName(position, railwayElements);
       if (railwayName?.source === "railway") return railwayName;
-      const fallbackData = await fetchOverpass(fallbackQuery, controller.signal, 10000);
-      return selectAutomaticStationName(position, fallbackData?.elements ?? []);
+      const fallbackElements = await fetchStationNameFeatures(position, fallbackQuery, controller.signal);
+      return selectAutomaticStationName(position, [...railwayElements, ...fallbackElements]);
     } catch {
       stationNameLookupCache.delete(cacheKey);
       return null;

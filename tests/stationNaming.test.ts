@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listAutomaticStationNames, selectAutomaticStationName, type StationNameFeature } from "../src/stationNaming";
+import { listAutomaticStationNames, photonToStationNameFeatures, selectAutomaticStationName, type StationNameFeature } from "../src/stationNaming";
 
 const origin: [number, number] = [0, 0];
 
@@ -232,5 +232,25 @@ describe("station name candidates language", () => {
       feature("성수동", { place: "quarter" }, 100),
     ]);
     expect(result.map((item) => item.name)).toEqual(["성수동"]);
+  });
+});
+
+describe("photon fallback", () => {
+  it("turns Photon reverse results into name features the usual rules can pick from", () => {
+    const point = (lng: number, lat: number) => ({ type: "Point", coordinates: [lng, lat] });
+    const features = photonToStationNameFeatures({
+      features: [
+        { geometry: point(126.8889, 35.1531), properties: { osm_id: 1, name: "농성", osm_key: "railway", osm_value: "station" } },
+        { geometry: point(126.889, 35.1535), properties: { osm_id: 2, name: "농성동", osm_key: "place", osm_value: "quarter" } },
+        { geometry: point(126.889, 35.1532), properties: { osm_id: 3, name: "알프스모텔", osm_key: "tourism", osm_value: "motel" } },
+        { geometry: point(126.889, 35.1532), properties: { osm_key: "tourism", osm_value: "hotel" } },
+        { properties: { name: "좌표 없음", osm_key: "place", osm_value: "quarter" } },
+      ],
+    });
+    expect(features).toHaveLength(3);
+    expect(features[0]).toEqual({ id: 1, lat: 35.1531, lon: 126.8889, tags: { name: "농성", railway: "station" } });
+    const names = listAutomaticStationNames([35.1531, 126.8889], features).map((item) => item.name);
+    expect(names).toEqual(["농성", "농성동"]);
+    expect(photonToStationNameFeatures(null)).toEqual([]);
   });
 });
