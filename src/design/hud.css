@@ -336,6 +336,8 @@ body[data-mode-banner="low"] .game-side-panel { top: calc(var(--hud-top) + var(-
   pointer-events: none;
 }
 .game-notice-stack > * { pointer-events: auto; max-width: 100%; }
+/* 메인 화면(층 1500)이 떠 있을 때도 뒤로가기 종료 안내 같은 토스트가 보이게 그 위로 올린다. */
+body:has(#startScreen:not([hidden])) .game-notice-stack { z-index: 1600; }
 body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var(--hud-gap) * 2 + 32px); }
 .game-toast { opacity: 0; translate: 0 -6px; transition: opacity var(--dur-fast) linear, translate var(--dur-panel) var(--ease-out); pointer-events: none !important; text-align: center; }
 .game-toast.is-visible { opacity: 1; translate: 0 0; }

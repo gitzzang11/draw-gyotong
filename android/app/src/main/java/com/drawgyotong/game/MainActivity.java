@@ -73,7 +73,7 @@ public class MainActivity extends BridgeActivity {
                     return;
                 }
                 webView.evaluateJavascript(
-                    "(function(){try{return typeof window.__drawGyotongBack===function?(window.__drawGyotongBack()?handled:exit):none;}catch(e){return none;}})()",
+                    "(function(){try{return typeof window.__drawGyotongBack==='function'?(window.__drawGyotongBack()?'handled':'exit'):'none';}catch(e){return 'none';}})()",
                     (result) -> {
                         if (result != null && result.contains("handled")) return;
                         if (result != null && result.contains("none") && webView.canGoBack()) {
