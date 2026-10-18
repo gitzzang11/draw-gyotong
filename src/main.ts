@@ -18248,6 +18248,91 @@ function installSheetGrips() {
 }
 installSheetGrips();
 
+// ===== 시스템 뒤로가기 (MOBILE_UX §9) =====
+// 안드로이드 앱의 뒤로가기는 MainActivity가 window.__drawGyotongBack()을 먼저 부른다. 한 번에 한 단계만 닫고,
+// 닫은 것이 있으면 true. 닫을 것이 없으면 "한 번 더 누르면 종료" 안내를 띄우고, 2초 안에 다시 누르면 저장 후 false(앱 종료).
+let lastBackExitPromptAt = 0;
+
+function confirmExitByBack() {
+  const now = performance.now();
+  if (now - lastBackExitPromptAt < 2000) {
+    if (hasActiveGameSession) void saveCurrentSlot("종료 전 저장");
+    return false;
+  }
+  lastBackExitPromptAt = now;
+  showToast("뒤로 버튼을 한 번 더 누르면 게임을 종료합니다.");
+  return true;
+}
+
+function handleSystemBack(): boolean {
+  const visible = (element: Element | null | undefined): element is HTMLElement =>
+    element instanceof HTMLElement && !element.hidden && !element.classList.contains("is-leaving");
+  // 표면의 닫기 버튼을 누른다(닫기·취소와 같은 경로라 저장·정리도 같다). 없으면 Escape로 닫는다.
+  const close = (surface: HTMLElement) => {
+    const button = surface.querySelector<HTMLButtonElement>(
+      '.dg-panel__header-end button[aria-label*="닫"], .dg-workspace__bar button[aria-label*="닫"], [data-title-close]',
+    ) ?? surface.querySelector<HTMLButtonElement>(".dg-workspace__bar button:last-of-type");
+    if (button) button.click();
+    else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    return true;
+  };
+  // 시작 화면: 새 게임·불러오기 안내판부터 닫는다.
+  if (visible(startScreen)) {
+    if (startScreen.querySelector("[data-title-panel]:not([hidden])")) {
+      openTitleSheet(null);
+      return true;
+    }
+    return confirmExitByBack();
+  }
+  // 1. 펼친 목록·메뉴
+  if (railModeNowButton?.getAttribute("aria-expanded") === "true") {
+    setRailModesOpen(false);
+    return true;
+  }
+  if (visible(modifyToolsCard)) {
+    modifyToolsCard.hidden = true;
+    modifyToolsButton?.setAttribute("aria-expanded", "false");
+    return true;
+  }
+  const layerMenu = document.querySelector<HTMLDetailsElement>(".game-layer-menu");
+  if (layerMenu?.open) {
+    layerMenu.open = false;
+    return true;
+  }
+  // 2. 대화상자(맨 위 것부터), 그다음 전체 화면
+  const dialog = [...document.querySelectorAll<HTMLElement>(".dg-scrim")].filter(visible)
+    .sort((left, right) => (Number(getComputedStyle(right).zIndex) || 0) - (Number(getComputedStyle(left).zIndex) || 0))[0];
+  if (dialog) return close(dialog);
+  const workspace = [...document.querySelectorAll<HTMLElement>(".dg-workspace")].find(visible);
+  if (workspace) return close(workspace);
+  // 3. 정차역 지도 편집, 작도 중인 검토(초안)
+  if (operatingServiceMapEditActive) {
+    cancelOperatingServiceMapEdit();
+    return true;
+  }
+  if (visible(constructionPreviewPanel)) {
+    cancelActiveReview();
+    return true;
+  }
+  // 4. 켜진 도구 → 탐색
+  if (activeTool !== "pan") {
+    setTool("pan");
+    return true;
+  }
+  // 5·6. 펼친 정보창은 접고, 아니면 닫는다(노선 목록·노선 설정 상자 포함).
+  const panel = [...document.querySelectorAll<HTMLElement>(".game-inspector, .game-side-panel")].find(visible);
+  if (panel) {
+    if (panel.classList.contains("is-sheet-expanded")) {
+      panel.querySelector<HTMLButtonElement>(".game-sheet-grip")?.click();
+      return true;
+    }
+    return close(panel);
+  }
+  // 8. 종료 의도 확인
+  return confirmExitByBack();
+}
+(window as Window & { __drawGyotongBack?: () => boolean }).__drawGyotongBack = handleSystemBack;
+
 /** 일시정지 칸과 배속 칸의 표시를 현재 simSpeed에 맞춘다. */
 function syncSpeedControls() {
   syncWorkspaceClocks();

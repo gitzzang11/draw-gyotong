@@ -59,23 +59,38 @@ public class MainActivity extends BridgeActivity {
     }
 
     /**
-     * 시스템 뒤로가기: 웹 기록이 있으면(시작 화면 안내판 등) 웹에서 한 단계 뒤로 가고, 없을 때만 앱을 닫는다.
-     * Capacitor App 플러그인이 없으면 기본 동작이 곧바로 앱 종료라 안내판을 닫을 수 없었다.
+     * 시스템 뒤로가기: 게임 화면에 먼저 묻는다(window.__drawGyotongBack, MOBILE_UX §9 순서로 한 단계만 닫음).
+     * 게임이 처리하면 끝, 처리할 것이 없다고 하면(두 번 눌러 종료 확인) 앱을 닫는다.
+     * 게임 쪽 함수가 아직 없으면(로딩 중) 예전처럼 웹 기록 뒤로가기 → 없으면 종료.
      */
     private void bridgeBackButton() {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 WebView webView = getBridge() != null ? getBridge().getWebView() : null;
-                if (webView != null && webView.canGoBack()) {
-                    webView.goBack();
+                if (webView == null) {
+                    exitByBack(this);
                     return;
                 }
-                setEnabled(false);
-                getOnBackPressedDispatcher().onBackPressed();
-                setEnabled(true);
+                webView.evaluateJavascript(
+                    "(function(){try{return typeof window.__drawGyotongBack===function?(window.__drawGyotongBack()?handled:exit):none;}catch(e){return none;}})()",
+                    (result) -> {
+                        if (result != null && result.contains("handled")) return;
+                        if (result != null && result.contains("none") && webView.canGoBack()) {
+                            webView.goBack();
+                            return;
+                        }
+                        exitByBack(this);
+                    }
+                );
             }
         });
+    }
+
+    private void exitByBack(OnBackPressedCallback callback) {
+        callback.setEnabled(false);
+        getOnBackPressedDispatcher().onBackPressed();
+        callback.setEnabled(true);
     }
 
     /**
