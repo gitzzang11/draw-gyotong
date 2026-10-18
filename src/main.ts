@@ -1313,7 +1313,7 @@ app.innerHTML = `
           </select></label>
           <label class="game-check"><input id="diagramLabelsToggle" type="checkbox" checked /><span>역 이름</span></label>
           <label class="game-check"><input id="diagramCompanyToggle" type="checkbox" checked /><span>철도망 정보</span></label>
-          <p class="game-inspector__note">역을 끌어 옮기면 그 자리에 고정되고 나머지 역이 다시 맞춰집니다(세이브에 저장). 빈 곳을 끌면 이동, 휠·두 손가락으로 확대합니다.</p>
+          <p class="game-inspector__note">역을 끌어 옮기면 그 자리에 고정되고 다른 역은 그대로 있습니다(세이브에 저장, 「자동 재배치」로 되돌림). 빈 곳을 끌면 이동, 휠·두 손가락으로 확대합니다.</p>
           <div class="game-diagram__actions">
             <button id="fitDiagramButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">전체 보기</button>
             <button id="resetDiagramLayoutButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">자동 재배치</button>
@@ -7527,7 +7527,7 @@ const diagramUnit = 64;
 /** 지금 보이는 범위(확대·이동). null이면 전체 맞춤 */
 let diagramView: { x: number; y: number; width: number; height: number } | null = null;
 let diagramContentBox = { x: 0, y: 0, width: 900, height: 506 };
-let diagramLayoutCache: { key: string; stations: SchematicStation[]; lines: SchematicLine[]; layout: SchematicLayout } | null = null;
+let diagramLayoutCache: { key: string; signature: string; stations: SchematicStation[]; lines: SchematicLine[]; layout: SchematicLayout } | null = null;
 /** 손으로 옮기는 중인 역의 임시 위치(칸 단위) */
 let diagramDragOverride: { id: string; point: SchematicPoint } | null = null;
 const diagramPointers = new Map<number, { x: number; y: number }>();
@@ -7587,12 +7587,35 @@ function buildSchematicInput(graph: DiagramGraphInternal) {
 }
 
 /** 지금 노선망의 배치(같은 입력·같은 수동 위치면 다시 계산하지 않는다) */
+/** 노선망(배치 입력)이 같은지 알아보는 짧은 서명 */
+function diagramNetworkSignature(stations: SchematicStation[], lines: SchematicLine[]) {
+  const text = JSON.stringify([stations, lines]);
+  let first = 0x811c9dc5;
+  let second = 0x9e3779b9;
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    first = Math.imul(first ^ code, 0x01000193);
+    second = Math.imul(second ^ code, 0x85ebca6b);
+  }
+  return `${text.length}:${(first >>> 0).toString(36)}:${(second >>> 0).toString(36)}`;
+}
+
+/**
+ * 지금 노선망의 배치(같은 입력·같은 고정 위치면 다시 계산하지 않는다).
+ * 역을 손으로 옮기면 그때 보이던 배치 전체를 autoPositions에 남겨 두고(노선망 서명과 함께), 노선망이 그대로인
+ * 동안은 그 배치에 옮긴 역만 바꿔 그린다. 역 하나만 고정하고 처음부터 다시 배치하면 이웃 역이 따라와 노선
+ * 전체가 밀려서, 옮긴 역이 제자리로 돌아간 것처럼 보이기 때문이다. 노선망이 바뀌면 남겨 둔 배치는 쓰지 않고
+ * 손으로 옮긴 역만 고정해 새로 배치한다.
+ */
 function ensureDiagramLayout(graph: DiagramGraphInternal) {
   const { stations, lines } = buildSchematicInput(graph);
-  const manual = diagramStateOwner.current.manualPositions;
-  const key = JSON.stringify([stations, lines, manual]);
+  const signature = diagramNetworkSignature(stations, lines);
+  const state = diagramStateOwner.current;
+  const base = state.networkSignature === signature ? state.autoPositions : {};
+  const pinned = { ...base, ...state.manualPositions };
+  const key = JSON.stringify([signature, pinned]);
   if (diagramLayoutCache?.key !== key) {
-    diagramLayoutCache = { key, stations, lines, layout: buildSchematicLayout(stations, lines, manual) };
+    diagramLayoutCache = { key, signature, stations, lines, layout: buildSchematicLayout(stations, lines, pinned) };
   }
   return diagramLayoutCache;
 }
@@ -7799,8 +7822,12 @@ function finishDiagramPointer(event: PointerEvent) {
   diagramDragOverride = null;
   document.body.classList.remove("diagram-dragging");
   if (!moved) return;
-  // 놓은 자리에 고정하고 나머지 역을 다시 맞춘다.
-  diagramStateOwner.setManualPosition(moved.id, moved.point);
+  // 지금 보이는 배치를 그대로 두고 옮긴 역만 놓은 자리로 바꾼다(이어진 구간은 8방향으로 꺾어 그린다).
+  const cache = diagramLayoutCache;
+  if (cache) {
+    const snapshot = Object.fromEntries(Array.from(cache.layout.positions, ([id, point]) => [id, { x: point.x, y: point.y }]));
+    diagramStateOwner.updateLayout(snapshot, { ...diagramStateOwner.current.manualPositions, [moved.id]: moved.point }, cache.signature);
+  } else diagramStateOwner.setManualPosition(moved.id, moved.point);
   renderMetroDiagram();
   requestStateSave();
   void saveCurrentSlot("노선도 배치 저장");
