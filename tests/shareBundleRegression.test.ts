@@ -29,7 +29,7 @@ function applicationContext(names: string[], globals: Record<string, unknown> = 
     baseConstructionDaysPerKm: 95, filterValidPlanConnections,
     copyConstructionPlan, validateSharedGameBundle, maxShareFileBytes, shareImportInProgress: false,
     createId: (prefix: string) => `${prefix}-new-${++sequence}`,
-    renderMetroDiagram: noop, renderPlanningDialog: noop, requestUpdate: noop,
+    renderMetroDiagram: noop, renderPlanningDialog: noop, requestUpdate: noop, diagramUnit: 64,
     requestStateSave: noop, pushHistory: noop, showToast: noop,
     ...globals,
   });
@@ -471,7 +471,8 @@ describe("shared bundle import limits and transactions", () => {
     const after = capture();
     expect(after.plans).toHaveLength(2);
     expect(after.activePlanId).toBe(after.plans[1].id);
-    expect(after.diagram.manualPositions.known).toEqual({ x: 900, y: 800 });
+    // 공유 위치(화면 좌표 900, 800)는 칸 단위(64px, 0.5칸 맞춤)로 저장된다.
+    expect(after.diagram.manualPositions.known).toEqual({ x: 14, y: 12.5 });
     expect(after.undoStack).toHaveLength(before.undoStack.length + 1);
     expect(after.undoStack.at(-1)).toEqual({ plans: before.plans, diagramState: before.diagram });
     expect(after.redoStack).toEqual([]);

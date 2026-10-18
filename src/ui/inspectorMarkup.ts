@@ -30,6 +30,9 @@ export function lineMarkLabel(name: string) {
   const trimmed = name.trim();
   const digits = trimmed.match(/^\d{1,3}/);
   if (digits) return digits[0];
+  // "광주 1호선"처럼 도시 이름이 앞에 붙어도 노선 번호를 쓴다.
+  const numbered = trimmed.match(/(\d{1,3})\s*호선/);
+  if (numbered) return numbered[1];
   return Array.from(trimmed.replace(/\s+/g, "")).slice(0, 2).join("") || "?";
 }
 

@@ -19,6 +19,8 @@ describe("inspector markup", () => {
     expect(lineMarkLabel("1호선")).toBe("1");
     expect(lineMarkLabel("12호선 급행")).toBe("12");
     expect(lineMarkLabel("공항철도")).toBe("공항");
+    expect(lineMarkLabel("광주 1호선")).toBe("1");
+    expect(lineMarkLabel("광주2호선")).toBe("2");
     expect(lineMarkLabel(" 신 분당선")).toBe("신분");
     expect(lineMarkLabel("")).toBe("?");
   });

@@ -39,9 +39,23 @@ describe("MetroDiagramStateOwner", () => {
       showStationNames: false,
       showCompanyInfo: false,
       selectedRouteId: "route-2",
-      layoutVersion: 3,
+      layoutVersion: 4,
       networkSignature: "old-network",
     });
+  });
+
+  it("drops version-3 diagram positions but keeps the chosen background", () => {
+    const owner = new MetroDiagramStateOwner({
+      autoPositions: { a: { x: 720, y: 360 } },
+      manualPositions: { a: { x: 800, y: 400 } },
+      background: "blueprint",
+      showStationNames: true,
+      showCompanyInfo: true,
+      selectedRouteId: "all",
+      layoutVersion: 3,
+      networkSignature: "n",
+    });
+    expect(owner.current).toMatchObject({ autoPositions: {}, manualPositions: {}, background: "blueprint", layoutVersion: 4 });
   });
 
   it("removes invalid diagram nodes without changing other saved settings", () => {

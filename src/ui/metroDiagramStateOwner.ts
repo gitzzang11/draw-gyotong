@@ -22,12 +22,16 @@ const defaultDiagramState: MetroDiagramState = {
   showStationNames: true,
   showCompanyInfo: true,
   selectedRouteId: "all",
-  layoutVersion: 3,
+  // 4: 새 노선도 배치(src/diagram). 손으로 옮긴 위치를 화면 좌표가 아니라 칸 단위로 저장한다.
+  layoutVersion: 4,
   networkSignature: "",
 };
 
 export function normalizeMetroDiagramState(state?: MetroDiagramState): MetroDiagramState {
-  const usingPublicMapLayout = (state?.layoutVersion ?? 0) < defaultDiagramState.layoutVersion;
+  const version = state?.layoutVersion ?? 0;
+  // 3 미만: 공개 지도 배치 시절이라 배경도 기본값으로. 4 미만: 위치 좌표계가 달라 손으로 옮긴 위치·자동 위치를 버린다.
+  const usingPublicMapLayout = version < 3;
+  const usingOldPositions = version < defaultDiagramState.layoutVersion;
   const background: MetroDiagramState["background"] = usingPublicMapLayout
     ? defaultDiagramState.background
     : state?.background === "dark" || state?.background === "blueprint" || state?.background === "light"
@@ -38,8 +42,8 @@ export function normalizeMetroDiagramState(state?: MetroDiagramState): MetroDiag
     ...(state ?? {}),
     background,
     layoutVersion: defaultDiagramState.layoutVersion,
-    autoPositions: usingPublicMapLayout ? {} : state?.autoPositions ?? {},
-    manualPositions: usingPublicMapLayout ? {} : state?.manualPositions ?? {},
+    autoPositions: usingOldPositions ? {} : state?.autoPositions ?? {},
+    manualPositions: usingOldPositions ? {} : state?.manualPositions ?? {},
   };
 }
 

@@ -5,7 +5,9 @@ import "./legacy.css";
 import "./design/tokens.css";
 import "./design/components.css";
 import "./design/hud.css";
-import { lineMarkHtml, lineMarkLabel, metricRowsHtml } from "./ui/inspectorMarkup.ts";
+import { lineMarkHtml, lineMarkLabel, metricRowsHtml, prefersDarkText } from "./ui/inspectorMarkup.ts";
+import { buildSchematicLayout, type SchematicLayout, type SchematicLine, type SchematicPoint, type SchematicStation } from "./diagram/schematicLayout.ts";
+import { renderSchematic } from "./diagram/schematicRender.ts";
 import { applyMapTheme, MAP_THEME_LABELS, MAP_THEMES, normalizeMapTheme, syncThemeColorMeta, type MapTheme } from "./design/theme.ts";
 import { copyConstructionPlan } from "./domain/planCopy.ts";
 import { maxShareFileBytes, validateSharedGameBundle, type DiagramShareRoute, type MetroDiagramShareData, type RouteDesignShareData, type GameShareBundle } from "./shareBundle.ts";
@@ -126,7 +128,6 @@ import { formatCost, formatDate, formatPlayTime, formatSignedCost } from "./ui/d
 import { saveEditedSlot as persistEditedSlot } from "./ui/saveSlotEditorController.ts";
 import {
   MetroDiagramStateOwner,
-  type DiagramPoint,
   type MetroDiagramState,
 } from "./ui/metroDiagramStateOwner.ts";
 import {
@@ -637,9 +638,6 @@ const localRecoveryStore = new LocalRecoveryStore<SaveState>(
 );
 const gameVersion = "0.4.0";
 const cityDataVersion = "korea-cities-1";
-const diagramWidth = 1800;
-const diagramHeight = 1000;
-const diagramGrid = 72;
 const defaultAnalysisState: OperationAnalysisState = {
   dayIndex: 0,
   demandHistory: [],
@@ -1315,8 +1313,11 @@ app.innerHTML = `
           </select></label>
           <label class="game-check"><input id="diagramLabelsToggle" type="checkbox" checked /><span>역 이름</span></label>
           <label class="game-check"><input id="diagramCompanyToggle" type="checkbox" checked /><span>철도망 정보</span></label>
-          <p class="game-inspector__note">역을 끌어 위치를 조정합니다. 조정값은 세이브에 저장됩니다.</p>
-          <button id="resetDiagramLayoutButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">자동 재배치</button>
+          <p class="game-inspector__note">역을 끌어 옮기면 그 자리에 고정되고 나머지 역이 다시 맞춰집니다(세이브에 저장). 빈 곳을 끌면 이동, 휠·두 손가락으로 확대합니다.</p>
+          <div class="game-diagram__actions">
+            <button id="fitDiagramButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">전체 보기</button>
+            <button id="resetDiagramLayoutButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">자동 재배치</button>
+          </div>
           <h3 class="dg-panel__section-label">내보내기</h3>
           <div class="game-diagram__actions">
             <button id="saveDiagramSvgButton" class="dg-btn dg-btn--secondary dg-btn--compact" type="button">SVG 저장</button>
@@ -1326,10 +1327,12 @@ app.innerHTML = `
           <input id="importShareJsonInput" type="file" accept="application/json,.json" hidden />
           <h3 class="dg-panel__section-label">범례</h3>
           <ul class="game-diagram__legend">
-            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="8" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/></svg>일반역</li>
-            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="8" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/><path d="M14 9 L19 14 L14 19 L9 14 Z" fill="#1b252b"/></svg>급행 정차역</li>
-            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="8" y="3" width="12" height="22" rx="6" fill="#ffffff" stroke="#1b252b" stroke-width="2.5"/></svg>환승역</li>
-            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="7" y="7" width="14" height="14" rx="2" fill="#ffffff" stroke="currentColor" stroke-width="4"/></svg>노선 끝점</li>
+            <!-- 노선도와 같은 기호(src/diagram/schematicRender.ts). 노선 색 자리는 보조 글자색으로 보인다. -->
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><path d="M2 14 H26" stroke="currentColor" stroke-width="5"/><circle cx="14" cy="14" r="6" fill="var(--surface-0)" stroke="currentColor" stroke-width="3"/></svg>일반역</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><path d="M2 14 H26" stroke="currentColor" stroke-width="5"/><circle cx="14" cy="14" r="6" fill="var(--surface-0)" stroke="currentColor" stroke-width="3"/><circle cx="14" cy="14" r="2.5" fill="var(--text-1)"/></svg>급행 정차역</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="9" fill="var(--surface-0)" stroke="var(--text-1)" stroke-width="3"/></svg>환승역</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="5" y="5" width="18" height="18" rx="2" fill="currentColor"/><text x="14" y="19" text-anchor="middle" font-size="12" font-weight="800" fill="var(--surface-0)">1</text></svg>종착역 노선 표지</li>
+            <li><svg class="game-diagram__symbol" viewBox="0 0 28 28" aria-hidden="true"><path d="M1 14 H27" stroke="currentColor" stroke-width="5" stroke-dasharray="7 4"/></svg>공사 중 노선</li>
           </ul>
           <div id="diagramRouteLegend" class="game-diagram__routes" aria-label="노선 색상 범례"></div>
           <p id="diagramStatus" class="game-inspector__note">자동 배치</p>
@@ -2169,6 +2172,7 @@ const diagramLabelsToggle = document.querySelector<HTMLInputElement>("#diagramLa
 const diagramCompanyToggle = document.querySelector<HTMLInputElement>("#diagramCompanyToggle");
 const resetDiagramLayoutButton = document.querySelector<HTMLButtonElement>("#resetDiagramLayoutButton");
 const saveDiagramSvgButton = document.querySelector<HTMLButtonElement>("#saveDiagramSvgButton");
+const fitDiagramButton = document.querySelector<HTMLButtonElement>("#fitDiagramButton");
 const exportShareJsonButton = document.querySelector<HTMLButtonElement>("#exportShareJsonButton");
 const importShareJsonButton = document.querySelector<HTMLButtonElement>("#importShareJsonButton");
 const importShareJsonInput = document.querySelector<HTMLInputElement>("#importShareJsonInput");
@@ -3286,10 +3290,20 @@ saveDiagramSvgButton?.addEventListener("click", saveDiagramSvg);
 exportShareJsonButton?.addEventListener("click", exportShareBundle);
 importShareJsonButton?.addEventListener("click", () => importShareJsonInput?.click());
 importShareJsonInput?.addEventListener("change", importShareBundle);
-metroDiagramSvg?.addEventListener("pointerdown", startDiagramStationDrag);
-metroDiagramSvg?.addEventListener("pointermove", moveDiagramStationDrag);
-metroDiagramSvg?.addEventListener("pointerup", finishDiagramStationDrag);
-metroDiagramSvg?.addEventListener("pointercancel", finishDiagramStationDrag);
+metroDiagramSvg?.addEventListener("pointerdown", startDiagramPointer);
+metroDiagramSvg?.addEventListener("pointermove", moveDiagramPointer);
+metroDiagramSvg?.addEventListener("pointerup", finishDiagramPointer);
+metroDiagramSvg?.addEventListener("pointercancel", finishDiagramPointer);
+// 마우스 휠: 가리킨 곳을 중심으로 확대·축소. 빈 곳 두 번 누르기: 전체 보기
+metroDiagramSvg?.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  zoomDiagramAt(diagramClientPoint(event.clientX, event.clientY), Math.exp(event.deltaY * 0.0015));
+}, { passive: false });
+metroDiagramSvg?.addEventListener("dblclick", (event) => {
+  if ((event.target as Element).closest(".diagram-station")) return;
+  fitDiagramView();
+});
+fitDiagramButton?.addEventListener("click", fitDiagramView);
 helpButton?.addEventListener("click", () => {
   closeInGameMenu();
   openTutorial(true);
@@ -7341,7 +7355,7 @@ function renderDiagramRouteLegend() {
 
 function buildDiagramGraph(): DiagramGraphInternal {
   const visibleRoutes = networkState.routes
-    .filter((route) => route.coordinates.length >= 2)
+    .filter((route) => route.coordinates.length >= 2 && route.visibility !== "planning")
     .filter((route) => diagramStateOwner.current.selectedRouteId === "all" || route.id === diagramStateOwner.current.selectedRouteId)
     .sort((a, b) => a.id.localeCompare(b.id));
   const visibleRouteIds = new Set(visibleRoutes.map((route) => route.id));
@@ -7475,404 +7489,311 @@ function projectLatLngToDiagramPath(point: LatLng, path: LatLng[]) {
   return { distance: bestDistance * 30, progress: bestProgress };
 }
 
-function buildDiagramPositions(graph: DiagramGraphInternal) {
-  const stationNodes = Array.from(graph.nodes.values()).filter((node) => !node.terminal);
-  const validStationIds = new Set(stationNodes.map((node) => node.id));
-  const positions = new Map<string, DiagramPoint>();
-  const occupied: DiagramPoint[] = [];
-  for (const node of stationNodes) {
-    const saved = diagramStateOwner.current.manualPositions[node.id] ?? diagramStateOwner.current.autoPositions[node.id];
-    if (!saved) continue;
-    const point = { x: clampNumber(saved.x, 120, diagramWidth - 120), y: clampNumber(saved.y, 100, diagramHeight - 100) };
-    positions.set(node.id, point);
-    occupied.push(point);
-  }
+/**
+ * 노선도 1칸(역 간격)의 화면 크기. 손으로 옮긴 역 위치는 칸 단위로 저장한다(layoutVersion 4).
+ * 배치는 src/diagram/schematicLayout.ts가 매번 새로 계산한다(저장해 둔 자동 배치를 쓰지 않음, 같은 노선망이면 같은 결과).
+ */
+const diagramUnit = 64;
+/** 지금 보이는 범위(확대·이동). null이면 전체 맞춤 */
+let diagramView: { x: number; y: number; width: number; height: number } | null = null;
+let diagramContentBox = { x: 0, y: 0, width: 900, height: 506 };
+let diagramLayoutCache: { key: string; stations: SchematicStation[]; lines: SchematicLine[]; layout: SchematicLayout } | null = null;
+/** 손으로 옮기는 중인 역의 임시 위치(칸 단위) */
+let diagramDragOverride: { id: string; point: SchematicPoint } | null = null;
+const diagramPointers = new Map<number, { x: number; y: number }>();
+let diagramPan: { pointerId: number; startX: number; startY: number; view: { x: number; y: number; width: number; height: number } } | null = null;
+let diagramPinch: { distance: number; view: { x: number; y: number; width: number; height: number }; center: SchematicPoint } | null = null;
 
-  const sorted = [...stationNodes].sort(
-    (a, b) => (graph.adjacency.get(b.id)?.size ?? 0) - (graph.adjacency.get(a.id)?.size ?? 0) || a.id.localeCompare(b.id),
-  );
-  let componentIndex = 0;
-  while (positions.size < stationNodes.length) {
-    let placedAny = false;
-    for (const node of sorted) {
-      if (positions.has(node.id)) continue;
-      const placedNeighbor = Array.from(graph.adjacency.get(node.id) ?? [])
-        .map((id) => graph.nodes.get(id))
-        .find((neighbor) => neighbor && !neighbor.terminal && positions.has(neighbor.id));
-      if (!placedNeighbor) continue;
-      const origin = positions.get(placedNeighbor.id)!;
-      const direction = quantizeDiagramDirection(placedNeighbor.geo, node.geo);
-      const proposed = { x: origin.x + direction.x * diagramGrid, y: origin.y + direction.y * diagramGrid };
-      const point = resolveDiagramCollision(proposed, occupied, node.id);
-      positions.set(node.id, point);
-      occupied.push(point);
-      placedAny = true;
-    }
-    if (placedAny) continue;
-    const next = sorted.find((node) => !positions.has(node.id));
-    if (!next) break;
-    const col = componentIndex % 4;
-    const row = Math.floor(componentIndex / 4);
-    const seed = resolveDiagramCollision({ x: 620 + col * 310, y: 340 + row * 250 }, occupied, next.id);
-    positions.set(next.id, seed);
-    occupied.push(seed);
-    componentIndex += 1;
+/** 노선도 그래프를 배치 입력(역·노선 경로)으로 바꾼다. 분기는 갈라지는 곳에서 가장 가까운 같은 노선 역에 잇는다. */
+function buildSchematicInput(graph: DiagramGraphInternal) {
+  const stations: SchematicStation[] = Array.from(graph.nodes.values())
+    .filter((node) => !node.terminal && node.station)
+    .map((node) => ({
+      id: node.id,
+      name: node.station!.name,
+      geo: [node.geo.lat, node.geo.lng] as [number, number],
+      transfer: node.sourceStationIds.length > 1 || node.routeIds.length > 1,
+      express: node.express,
+    }));
+  const byRoute = new Map<string, DiagramPathInternal[]>();
+  for (const path of graph.paths) byRoute.set(path.route.id, [...(byRoute.get(path.route.id) ?? []), path]);
+  const lines: SchematicLine[] = [];
+  for (const [routeId, paths] of byRoute) {
+    const route = paths[0].route;
+    const mainStationIds = paths.filter((path) => path.pathIndex === 0).flatMap((path) => path.stationIds);
+    const sequences = paths.map((path) => {
+      const ids = [...path.stationIds];
+      if (path.pathIndex > 0 && mainStationIds.length > 0) {
+        const junction = graph.nodes.get(path.nodeIds[0])?.geo;
+        if (junction) {
+          const nearest = mainStationIds
+            .map((id) => ({ id, distance: graph.nodes.get(id)!.geo.distanceTo(junction) }))
+            .sort((left, right) => left.distance - right.distance)[0];
+          if (nearest && ids[0] !== nearest.id && !ids.includes(nearest.id)) ids.unshift(nearest.id);
+        }
+      }
+      return ids;
+    }).filter((ids) => ids.length >= 2);
+    if (sequences.length === 0) continue;
+    lines.push({
+      id: routeId,
+      name: route.name,
+      color: route.color,
+      label: lineMarkLabel(route.name),
+      status: isRouteOperational(routeId) ? "operational" : "building",
+      paths: sequences,
+    });
   }
-
-  const nextAuto: Record<string, DiagramPoint> = {};
-  for (const [stationId, point] of positions) if (validStationIds.has(stationId)) nextAuto[stationId] = point;
-  diagramStateOwner.updateLayout(
-    nextAuto,
-    Object.fromEntries(Object.entries(diagramStateOwner.current.manualPositions).filter(([stationId]) => validStationIds.has(stationId))),
-    buildDiagramNetworkSignature(graph),
-  );
-
-  const allPositions = new Map(positions);
-  for (const path of graph.paths) {
-    const stationPoints = path.stationIds.map((id) => positions.get(id)).filter(Boolean) as DiagramPoint[];
-    if (stationPoints.length > 0) {
-      const firstStation = graph.nodes.get(path.stationIds[0])!;
-      const lastStation = graph.nodes.get(path.stationIds[path.stationIds.length - 1])!;
-      const firstDirection = quantizeDiagramDirection(firstStation.geo, graph.nodes.get(path.nodeIds[0])!.geo);
-      const lastDirection = quantizeDiagramDirection(lastStation.geo, graph.nodes.get(path.nodeIds[path.nodeIds.length - 1])!.geo);
-      allPositions.set(path.nodeIds[0], resolveDiagramCollision({ x: stationPoints[0].x + firstDirection.x * diagramGrid * 0.82, y: stationPoints[0].y + firstDirection.y * diagramGrid * 0.82 }, Array.from(allPositions.values()), path.nodeIds[0], 36));
-      allPositions.set(
-        path.nodeIds[path.nodeIds.length - 1],
-        resolveDiagramCollision(
-          { x: stationPoints[stationPoints.length - 1].x + lastDirection.x * diagramGrid * 0.82, y: stationPoints[stationPoints.length - 1].y + lastDirection.y * diagramGrid * 0.82 },
-          Array.from(allPositions.values()),
-          path.nodeIds[path.nodeIds.length - 1],
-          36,
-        ),
-      );
-    } else {
-      const hash = stableHash(path.id);
-      const y = 170 + (hash % 7) * 92;
-      const x = 240 + ((hash >> 3) % 4) * 120;
-      allPositions.set(path.nodeIds[0], { x, y });
-      allPositions.set(path.nodeIds[path.nodeIds.length - 1], { x: x + 540, y });
-    }
-  }
-  return allPositions;
+  return { stations, lines };
 }
 
-function quantizeDiagramDirection(from: LatLng, to: LatLng) {
-  const dx = (to.lng - from.lng) * Math.cos(((to.lat + from.lat) / 2) * (Math.PI / 180));
-  const dy = from.lat - to.lat;
-  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return { x: 1, y: 0 };
-  const sector = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
-  const directions = [
-    { x: 1, y: 0 },
-    { x: 1, y: 1 },
-    { x: 0, y: 1 },
-    { x: -1, y: 1 },
-    { x: -1, y: 0 },
-    { x: -1, y: -1 },
-    { x: 0, y: -1 },
-    { x: 1, y: -1 },
-  ];
-  return directions[(sector + 8) % 8];
-}
-
-function resolveDiagramCollision(proposed: DiagramPoint, occupied: DiagramPoint[], seed: string, minimum = 58) {
-  const directions = [
-    { x: 0, y: 0 },
-    { x: 1, y: 0 },
-    { x: 0, y: 1 },
-    { x: -1, y: 0 },
-    { x: 0, y: -1 },
-    { x: 1, y: 1 },
-    { x: -1, y: 1 },
-    { x: -1, y: -1 },
-    { x: 1, y: -1 },
-  ];
-  const offset = stableHash(seed) % directions.length;
-  for (let ring = 0; ring < 8; ring += 1) {
-    for (let index = 0; index < directions.length; index += 1) {
-      const direction = directions[(index + offset) % directions.length];
-      const point = {
-        x: clampNumber(proposed.x + direction.x * ring * diagramGrid, 100, diagramWidth - 100),
-        y: clampNumber(proposed.y + direction.y * ring * diagramGrid, 90, diagramHeight - 90),
-      };
-      if (occupied.every((item) => Math.hypot(item.x - point.x, item.y - point.y) >= minimum)) return point;
-    }
+/** 지금 노선망의 배치(같은 입력·같은 수동 위치면 다시 계산하지 않는다) */
+function ensureDiagramLayout(graph: DiagramGraphInternal) {
+  const { stations, lines } = buildSchematicInput(graph);
+  const manual = diagramStateOwner.current.manualPositions;
+  const key = JSON.stringify([stations, lines, manual]);
+  if (diagramLayoutCache?.key !== key) {
+    diagramLayoutCache = { key, stations, lines, layout: buildSchematicLayout(stations, lines, manual) };
   }
-  return { x: clampNumber(proposed.x, 100, diagramWidth - 100), y: clampNumber(proposed.y, 90, diagramHeight - 90) };
-}
-
-function buildDiagramNetworkSignature(graph: DiagramGraphInternal) {
-  return graph.paths
-    .map((path) => `${path.id}:${path.nodeIds.join(",")}`)
-    .sort()
-    .join("|");
+  return diagramLayoutCache;
 }
 
 function renderMetroDiagram() {
   if (!metroDiagramSvg || !diagramBackgroundLayer || !diagramRouteLayer || !diagramStationLayer || !diagramLabelLayer || !diagramCompanyLayer) return;
   const graph = buildDiagramGraph();
-  const positions = buildDiagramPositions(graph);
-  const hasRoutes = graph.paths.length > 0;
+  const { stations, lines, layout } = ensureDiagramLayout(graph);
+  const hasRoutes = lines.length > 0;
   if (diagramEmptyState) diagramEmptyState.hidden = hasRoutes;
   metroDiagramSvg.toggleAttribute("hidden", !hasRoutes);
   if (diagramScreen) diagramScreen.dataset.background = diagramStateOwner.current.background;
   renderDiagramRouteLegend();
-  renderDiagramBackground();
   if (!hasRoutes) {
-    metroDiagramSvg.setAttribute("viewBox", `0 0 ${diagramWidth} ${diagramHeight}`);
     diagramRouteLayer.innerHTML = "";
     diagramStationLayer.innerHTML = "";
     diagramLabelLayer.innerHTML = "";
     diagramCompanyLayer.innerHTML = "";
+    diagramBackgroundLayer.innerHTML = "";
     setText(diagramStatus, "실제 노선 대기");
     return;
   }
-  const viewBox = calculateDiagramViewBox(positions);
-  metroDiagramSvg.setAttribute("viewBox", `${roundSvg(viewBox.x)} ${roundSvg(viewBox.y)} ${roundSvg(viewBox.width)} ${roundSvg(viewBox.height)}`);
+  const theme = diagramTheme();
+  const result = renderSchematic(layout, stations, lines, { background: theme.background, surface: theme.surface, ink: theme.text, muted: theme.muted, halo: theme.background }, {
+    unit: diagramUnit,
+    showNames: diagramStateOwner.current.showStationNames,
+    override: diagramDragOverride,
+  });
+  diagramRouteLayer.innerHTML = result.routes;
+  diagramStationLayer.innerHTML = result.stations;
+  diagramLabelLayer.innerHTML = result.labels;
+  // 제목(위)과 노선 범례(아래)는 철도망 정보를 켰을 때만
+  const pad = 56;
+  let { minX, minY, maxX, maxY } = result.bounds;
+  diagramCompanyLayer.innerHTML = "";
+  if (diagramStateOwner.current.showCompanyInfo) {
+    const titleY = minY - 96;
+    const cityName = cityConfigs[metaState.current.cityId].name;
+    const legendY = maxY + 48;
+    const legendItems: string[] = [];
+    let cursorX = minX;
+    let cursorY = legendY;
+    const legendWidth = Math.max(560, maxX - minX);
+    for (const line of lines) {
+      const itemWidth = 34 + Array.from(line.name).length * 15 + 28;
+      if (cursorX > minX && cursorX + itemWidth > minX + legendWidth) {
+        cursorX = minX;
+        cursorY += 36;
+      }
+      const textColor = prefersDarkText(line.color) ? "#15171A" : "#FFFFFF";
+      legendItems.push(`<rect x="${roundSvg(cursorX)}" y="${roundSvg(cursorY)}" width="24" height="24" rx="2" fill="${escapeHtml(line.color)}"/><text x="${roundSvg(cursorX + 12)}" y="${roundSvg(cursorY + 17)}" text-anchor="middle" font-size="${line.label.length > 1 ? 12 : 14}" font-weight="800" fill="${textColor}">${escapeHtml(line.label)}</text><text x="${roundSvg(cursorX + 34)}" y="${roundSvg(cursorY + 18)}" font-size="15" font-weight="700" fill="${theme.text}">${escapeHtml(line.name)}${line.status === "building" ? " (공사 중)" : ""}</text>`);
+      cursorX += itemWidth;
+    }
+    diagramCompanyLayer.innerHTML = `<g pointer-events="none">
+      <rect x="${roundSvg(minX)}" y="${roundSvg(titleY)}" width="56" height="4" fill="${theme.text}"/>
+      <text x="${roundSvg(minX)}" y="${roundSvg(titleY + 36)}" font-size="28" font-weight="800" fill="${theme.text}">${escapeHtml(getNetworkTitle())}</text>
+      <text x="${roundSvg(minX)}" y="${roundSvg(titleY + 60)}" font-size="14" font-weight="700" fill="${theme.muted}">${escapeHtml(cityName)} 노선도 · ${escapeHtml(formatDate(Date.now()))} · ${lines.length}개 노선 · ${stations.length}개 역</text>
+      ${legendItems.join("")}
+    </g>`;
+    minY = titleY;
+    maxY = cursorY + 24;
+    maxX = Math.max(maxX, minX + 560);
+  }
+  diagramContentBox = { x: minX - pad, y: minY - pad, width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 };
+  renderDiagramBackground();
+  applyDiagramViewBox();
+  const transferCount = stations.filter((station) => station.transfer).length;
+  setText(diagramStatus, `${lines.length}개 노선 · ${stations.length}개 역 · 환승 ${transferCount}개 · 손으로 옮긴 역 ${Object.keys(diagramStateOwner.current.manualPositions).length}개`);
+}
 
-  diagramRouteLayer.innerHTML = graph.paths
-    .map((path) => {
-      const points = path.nodeIds.map((id) => positions.get(id)).filter(Boolean) as DiagramPoint[];
-      const pathData = points.slice(1).map((point, index) => octilinearDiagramPath(points[index], point, `${path.id}:${index}`)).join(" ");
-      const start = points[0];
-      return `<g class="diagram-route" data-route-id="${path.route.id}">
-        <path d="M ${roundSvg(start.x)} ${roundSvg(start.y)} ${pathData}" fill="none" stroke="${diagramTheme().casing}" stroke-width="${path.branch ? 18 : 21}" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M ${roundSvg(start.x)} ${roundSvg(start.y)} ${pathData}" fill="none" stroke="${escapeHtml(path.route.color)}" stroke-width="${path.branch ? 10 : 12}" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>`;
-    })
-    .join("");
-
-  const visibleStationNodes = Array.from(graph.nodes.values()).filter((node) => !node.terminal);
-  const terminals = Array.from(graph.nodes.values()).filter((node) => node.terminal);
-  diagramStationLayer.innerHTML =
-    terminals
-      .map((node) => {
-        const point = positions.get(node.id)!;
-        const color = getRouteColor(node.routeIds[0]);
-        return `<rect class="diagram-terminal" x="${roundSvg(point.x - 8)}" y="${roundSvg(point.y - 8)}" width="16" height="16" rx="2" fill="${diagramTheme().surface}" stroke="${color}" stroke-width="5"/>`;
-      })
-      .join("") +
-    visibleStationNodes.map((node) => renderDiagramStation(node, positions.get(node.id)!)).join("");
-
-  diagramLabelLayer.innerHTML = diagramStateOwner.current.showStationNames ? renderDiagramLabels(visibleStationNodes, positions) : "";
-  renderDiagramCompany();
-  const transferCount = visibleStationNodes.filter(
-    (node) => node.sourceStationIds.length > 1 || node.routeIds.length > 1,
-  ).length;
-  setText(
-    diagramStatus,
-    `${graph.paths.length}개 경로 · ${visibleStationNodes.length}개 논리역 · 환승 ${transferCount}개 · 수동 조정 ${Object.keys(diagramStateOwner.current.manualPositions).length}개`,
-  );
+function applyDiagramViewBox() {
+  if (!metroDiagramSvg) return;
+  const view = diagramView ?? diagramContentBox;
+  metroDiagramSvg.setAttribute("viewBox", `${roundSvg(view.x)} ${roundSvg(view.y)} ${roundSvg(view.width)} ${roundSvg(view.height)}`);
 }
 
 function renderDiagramBackground() {
   if (!diagramBackgroundLayer) return;
   const theme = diagramTheme();
+  // 확대·이동해도 바탕이 끊기지 않게 내용 범위보다 넉넉하게 칠한다.
+  const box = diagramContentBox;
+  const margin = Math.max(box.width, box.height) * 3;
+  const x = box.x - margin;
+  const y = box.y - margin;
+  const width = box.width + margin * 2;
+  const height = box.height + margin * 2;
   const gridLines: string[] = [];
   if (diagramStateOwner.current.background === "blueprint") {
-    for (let x = 0; x <= diagramWidth; x += 40) gridLines.push(`<path d="M ${x} 0 V ${diagramHeight}" stroke="${theme.grid}" stroke-width="1"/>`);
-    for (let y = 0; y <= diagramHeight; y += 40) gridLines.push(`<path d="M 0 ${y} H ${diagramWidth}" stroke="${theme.grid}" stroke-width="1"/>`);
+    const step = diagramUnit / 2;
+    for (let gx = Math.floor(box.x / step) * step; gx <= box.x + box.width; gx += step) gridLines.push(`<path d="M ${gx} ${box.y} V ${box.y + box.height}" stroke="${theme.grid}" stroke-width="1"/>`);
+    for (let gy = Math.floor(box.y / step) * step; gy <= box.y + box.height; gy += step) gridLines.push(`<path d="M ${box.x} ${gy} H ${box.x + box.width}" stroke="${theme.grid}" stroke-width="1"/>`);
   }
-  const river = diagramStateOwner.current.background === "light"
-    ? `<path d="M -60 690 C 230 590 405 755 690 677 S 1160 580 1425 655 S 1660 770 1870 650" fill="none" stroke="#d6edf8" stroke-width="34" stroke-linecap="round" opacity=".78"/>`
-    : "";
-  diagramBackgroundLayer.innerHTML = `<rect width="${diagramWidth}" height="${diagramHeight}" fill="${theme.background}"/>${river}${gridLines.join("")}`;
+  diagramBackgroundLayer.innerHTML = `<rect x="${roundSvg(x)}" y="${roundSvg(y)}" width="${roundSvg(width)}" height="${roundSvg(height)}" fill="${theme.background}"/>${gridLines.join("")}`;
 }
 
 function diagramTheme() {
   if (diagramStateOwner.current.background === "theme") {
     // 앱 테마를 따르는 인쇄 노선도: 바탕·글자·역 기호를 지도 팔레트에서 가져온다 (DESIGN_SYSTEM §3).
     const palette = mapPalette();
-    return { background: palette.surface, surface: palette.surface, text: palette.ink, muted: palette.inkFaint, label: palette.surface, grid: palette.inkFaint, casing: palette.surface, symbolStroke: palette.ink };
+    return { background: palette.surface, surface: palette.surface, text: palette.ink, muted: palette.inkFaint, grid: palette.inkFaint };
   }
-  if (diagramStateOwner.current.background === "light")
-    return { background: "#ffffff", surface: "#ffffff", text: "#161616", muted: "#67727a", label: "rgba(255,255,255,.92)", grid: "rgba(28,51,65,.08)", casing: "#ffffff", symbolStroke: "#1b252b" };
-  if (diagramStateOwner.current.background === "blueprint")
-    return { background: "#092d48", surface: "#e6f4ff", text: "#eef8ff", muted: "#9fc6dd", label: "rgba(9,45,72,.9)", grid: "rgba(158,208,235,.09)", casing: "#ffffff", symbolStroke: "#1b252b" };
-  return { background: "#071116", surface: "#f7fbfc", text: "#edf5f7", muted: "#8fa4ad", label: "rgba(7,17,22,.9)", grid: "rgba(255,255,255,.05)", casing: "#ffffff", symbolStroke: "#1b252b" };
+  if (diagramStateOwner.current.background === "light") return { background: "#FFFFFF", surface: "#FFFFFF", text: "#15171A", muted: "#6B7076", grid: "rgba(21,23,26,.08)" };
+  if (diagramStateOwner.current.background === "blueprint") return { background: "#0B2D48", surface: "#E6F4FF", text: "#EEF8FF", muted: "#9FC6DD", grid: "rgba(158,208,235,.12)" };
+  return { background: "#121416", surface: "#121416", text: "#ECEAE3", muted: "#8C8981", grid: "rgba(255,255,255,.06)" };
 }
 
-function renderDiagramStation(node: DiagramNodeInternal, point: DiagramPoint) {
-  const theme = diagramTheme();
-  const colors = node.routeIds.map((routeId) => getRouteColor(routeId));
-  const transfer = colors.length > 1 || Boolean(node.station?.transferGroupId);
-  const signalColors = Array.from(new Set(colors)).slice(0, 4);
-  const signalHeight = Math.max(30, 10 + signalColors.length * 11);
-  const signalTop = point.y - signalHeight / 2;
-  const ringMarkup = transfer
-    ? `<rect class="diagram-transfer-signal" x="${roundSvg(point.x - 11)}" y="${roundSvg(signalTop)}" width="22" height="${roundSvg(signalHeight)}" rx="11" fill="${theme.surface}" stroke="${theme.symbolStroke}" stroke-width="2.5"/>${signalColors.map((color, index) => `<circle cx="${roundSvg(point.x)}" cy="${roundSvg(signalTop + 10 + index * 11)}" r="4.2" fill="${color}" stroke="${theme.surface}" stroke-width="1.2"/>`).join("")}`
-    : `<circle cx="${roundSvg(point.x)}" cy="${roundSvg(point.y)}" r="9" fill="${theme.surface}" stroke="${theme.symbolStroke}" stroke-width="2.5"/>`;
-  const expressMarkup = node.express
-    ? `<path d="M ${roundSvg(point.x)} ${roundSvg(point.y - 6)} L ${roundSvg(point.x + 6)} ${roundSvg(point.y)} L ${roundSvg(point.x)} ${roundSvg(point.y + 6)} L ${roundSvg(point.x - 6)} ${roundSvg(point.y)} Z" fill="${theme.symbolStroke}"/>`
-    : "";
-  const branchMarkup = node.branch
-    ? `<rect x="${roundSvg(point.x - 25)}" y="${roundSvg(point.y - 25)}" width="50" height="50" rx="10" fill="none" stroke="${theme.muted}" stroke-width="2" stroke-dasharray="5 5"/>`
-    : "";
-  return `<g class="diagram-station" data-station-id="${node.id}" role="button" tabindex="0" aria-label="${escapeHtml(node.station?.name ?? "역")} 위치 조정">
-    ${branchMarkup}${ringMarkup}${expressMarkup}
-  </g>`;
+/** 화면 좌표 → 노선도 좌표(확대·이동·화면 비율 맞춤을 모두 반영) */
+function diagramClientPoint(clientX: number, clientY: number) {
+  if (!metroDiagramSvg) return { x: 0, y: 0 };
+  const matrix = metroDiagramSvg.getScreenCTM();
+  if (!matrix) return { x: 0, y: 0 };
+  const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+  return { x: point.x, y: point.y };
 }
 
-function renderDiagramLabels(nodes: DiagramNodeInternal[], positions: Map<string, DiagramPoint>) {
-  const theme = diagramTheme();
-  const placed: Array<{ x: number; y: number; width: number; height: number }> = [];
-  const sorted = [...nodes].sort((a, b) => b.routeIds.length - a.routeIds.length || (a.station?.name ?? "").localeCompare(b.station?.name ?? "") || a.id.localeCompare(b.id));
-  return sorted
-    .map((node) => {
-      const point = positions.get(node.id)!;
-      const name = node.station?.name ?? "";
-      const width = Math.max(42, Array.from(name).length * 15 + 8);
-      const height = 22;
-      const candidates = [
-        { x: point.x + 24, y: point.y - 15 },
-        { x: point.x - width - 24, y: point.y - 15 },
-        { x: point.x - width / 2, y: point.y - 48 },
-        { x: point.x - width / 2, y: point.y + 22 },
-        { x: point.x + 22, y: point.y + 19 },
-        { x: point.x - width - 22, y: point.y + 19 },
-      ];
-      const ranked = candidates
-        .map((candidate, index) => ({
-          ...candidate,
-          index,
-          score: placed.reduce((sum, box) => sum + diagramOverlapArea({ ...candidate, width, height }, box), 0),
-        }))
-        .sort((a, b) => a.score - b.score || a.index - b.index);
-      const selected = ranked[0];
-      placed.push({ x: selected.x, y: selected.y, width, height });
-      return `<g class="diagram-label" pointer-events="none">
-        <text x="${roundSvg(selected.x + 4)}" y="${roundSvg(selected.y + 16)}" fill="${theme.text}" font-size="15" font-weight="800" paint-order="stroke" stroke="${theme.label}" stroke-width="5" stroke-linejoin="round">${escapeHtml(name)}</text>
-      </g>`;
-    })
-    .join("");
+/** 화면 1px이 노선도 좌표로 몇인지 */
+function diagramPixelScale() {
+  if (!metroDiagramSvg) return 1;
+  const rect = metroDiagramSvg.getBoundingClientRect();
+  const view = diagramView ?? diagramContentBox;
+  return Math.max(view.width / Math.max(1, rect.width), view.height / Math.max(1, rect.height));
 }
 
-function diagramOverlapArea(a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) {
-  const width = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
-  const height = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
-  return width * height;
+function zoomDiagramAt(center: SchematicPoint, factor: number, from = diagramView ?? diagramContentBox) {
+  const minWidth = Math.min(diagramContentBox.width, diagramUnit * 6);
+  const maxWidth = diagramContentBox.width * 2.5;
+  const width = clampNumber(from.width * factor, minWidth, maxWidth);
+  const ratio = width / from.width;
+  diagramView = {
+    x: center.x - (center.x - from.x) * ratio,
+    y: center.y - (center.y - from.y) * ratio,
+    width,
+    height: from.height * ratio,
+  };
+  applyDiagramViewBox();
 }
 
-function renderDiagramCompany() {
-  if (!diagramCompanyLayer) return;
-  if (!diagramStateOwner.current.showCompanyInfo) {
-    diagramCompanyLayer.innerHTML = "";
+function fitDiagramView() {
+  diagramView = null;
+  applyDiagramViewBox();
+}
+
+function startDiagramPointer(event: PointerEvent) {
+  if (!metroDiagramSvg) return;
+  diagramPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  metroDiagramSvg.setPointerCapture(event.pointerId);
+  if (diagramPointers.size === 2) {
+    // 두 손가락: 확대·축소(역 옮기기·이동은 멈춘다)
+    diagramDrag = null;
+    diagramDragOverride = null;
+    diagramPan = null;
+    const [a, b] = [...diagramPointers.values()];
+    diagramPinch = { distance: Math.hypot(a.x - b.x, a.y - b.y), view: { ...(diagramView ?? diagramContentBox) }, center: diagramClientPoint((a.x + b.x) / 2, (a.y + b.y) / 2) };
     return;
   }
-  const theme = diagramTheme();
-  const title = getNetworkTitle();
-  const cityName = cityConfigs[metaState.current.cityId].name;
-  const generatedDate = formatDate(Date.now());
-  diagramCompanyLayer.innerHTML = `<g transform="translate(80 70)" pointer-events="none">
-    <rect width="470" height="104" rx="18" fill="${theme.label}" stroke="${theme.muted}" stroke-width="1"/>
-    <text x="24" y="29" fill="${theme.muted}" font-size="12" font-weight="900" letter-spacing="2">NETWORK MAP · ${escapeHtml(cityName)}</text>
-    <text x="24" y="59" fill="${theme.text}" font-size="22" font-weight="900">${escapeHtml(title)}</text>
-    <text x="24" y="84" fill="${theme.muted}" font-size="13" font-weight="700">${escapeHtml(generatedDate)} · ${networkState.routes.length}개 노선 · ${networkState.stations.length}개 역</text>
-  </g>`;
-}
-
-function octilinearDiagramPath(from: DiagramPoint, to: DiagramPoint, seed: string) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const absX = Math.abs(dx);
-  const absY = Math.abs(dy);
-  if (absX < 1 || absY < 1 || Math.abs(absX - absY) < 1) return `L ${roundSvg(to.x)} ${roundSvg(to.y)}`;
-  const diagonal = Math.min(absX, absY);
-  const signX = Math.sign(dx);
-  const signY = Math.sign(dy);
-  if (stableHash(seed) % 2 === 0) {
-    const bend = { x: from.x + signX * (absX - diagonal), y: from.y };
-    const diagonalEnd = { x: bend.x + signX * diagonal, y: bend.y + signY * diagonal };
-    return `L ${roundSvg(bend.x)} ${roundSvg(bend.y)} L ${roundSvg(diagonalEnd.x)} ${roundSvg(diagonalEnd.y)}`;
-  }
-  const bend = { x: from.x, y: from.y + signY * (absY - diagonal) };
-  const diagonalEnd = { x: bend.x + signX * diagonal, y: bend.y + signY * diagonal };
-  return `L ${roundSvg(bend.x)} ${roundSvg(bend.y)} L ${roundSvg(diagonalEnd.x)} ${roundSvg(diagonalEnd.y)}`;
-}
-
-function startDiagramStationDrag(event: PointerEvent) {
   const target = (event.target as Element).closest<SVGGElement>(".diagram-station[data-station-id]");
   const stationId = target?.dataset.stationId;
-  if (!stationId || !metroDiagramSvg) return;
   event.preventDefault();
-  diagramDrag = { stationId, pointerId: event.pointerId };
-  metroDiagramSvg.setPointerCapture(event.pointerId);
-  document.body.classList.add("diagram-dragging");
+  if (stationId) {
+    diagramDrag = { stationId, pointerId: event.pointerId };
+    document.body.classList.add("diagram-dragging");
+    return;
+  }
+  diagramPan = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, view: { ...(diagramView ?? diagramContentBox) } };
 }
 
-function moveDiagramStationDrag(event: PointerEvent) {
-  if (!diagramDrag || diagramDrag.pointerId !== event.pointerId) return;
-  event.preventDefault();
-  const point = diagramClientPoint(event.clientX, event.clientY);
-  diagramStateOwner.setManualPosition(diagramDrag.stationId, {
-    x: Math.round(clampNumber(point.x, 80, diagramWidth - 80) / 8) * 8,
-    y: Math.round(clampNumber(point.y, 70, diagramHeight - 70) / 8) * 8,
-  });
-  renderMetroDiagram();
+function moveDiagramPointer(event: PointerEvent) {
+  if (!diagramPointers.has(event.pointerId)) return;
+  diagramPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (diagramPinch && diagramPointers.size >= 2) {
+    event.preventDefault();
+    const [a, b] = [...diagramPointers.values()];
+    const distance = Math.hypot(a.x - b.x, a.y - b.y);
+    zoomDiagramAt(diagramPinch.center, diagramPinch.distance / Math.max(1, distance), diagramPinch.view);
+    return;
+  }
+  if (diagramDrag && diagramDrag.pointerId === event.pointerId) {
+    event.preventDefault();
+    const point = diagramClientPoint(event.clientX, event.clientY);
+    // 칸 단위, 0.5칸에 맞춤
+    diagramDragOverride = { id: diagramDrag.stationId, point: { x: Math.round((point.x / diagramUnit) * 2) / 2, y: Math.round((point.y / diagramUnit) * 2) / 2 } };
+    renderMetroDiagram();
+    return;
+  }
+  if (diagramPan && diagramPan.pointerId === event.pointerId) {
+    event.preventDefault();
+    const scale = diagramPixelScale();
+    diagramView = {
+      ...diagramPan.view,
+      x: diagramPan.view.x - (event.clientX - diagramPan.startX) * scale,
+      y: diagramPan.view.y - (event.clientY - diagramPan.startY) * scale,
+    };
+    applyDiagramViewBox();
+  }
 }
 
-function finishDiagramStationDrag(event: PointerEvent) {
+function finishDiagramPointer(event: PointerEvent) {
+  diagramPointers.delete(event.pointerId);
+  if (diagramPinch && diagramPointers.size < 2) diagramPinch = null;
+  if (diagramPan?.pointerId === event.pointerId) diagramPan = null;
   if (!diagramDrag || diagramDrag.pointerId !== event.pointerId) return;
+  const moved = diagramDragOverride;
   diagramDrag = null;
+  diagramDragOverride = null;
   document.body.classList.remove("diagram-dragging");
+  if (!moved) return;
+  // 놓은 자리에 고정하고 나머지 역을 다시 맞춘다.
+  diagramStateOwner.setManualPosition(moved.id, moved.point);
+  renderMetroDiagram();
   requestStateSave();
   void saveCurrentSlot("노선도 배치 저장");
 }
 
-function diagramClientPoint(clientX: number, clientY: number) {
-  if (!metroDiagramSvg) return { x: 0, y: 0 };
-  const rect = metroDiagramSvg.getBoundingClientRect();
-  const viewBox = metroDiagramSvg.viewBox.baseVal;
-  return {
-    x: viewBox.x + ((clientX - rect.left) / Math.max(1, rect.width)) * viewBox.width,
-    y: viewBox.y + ((clientY - rect.top) / Math.max(1, rect.height)) * viewBox.height,
-  };
-}
-
-function calculateDiagramViewBox(positions: Map<string, DiagramPoint>) {
-  const points = Array.from(positions.values());
-  if (diagramStateOwner.current.showCompanyInfo) points.push({ x: 80, y: 70 }, { x: 550, y: 174 });
-  const minX = Math.min(...points.map((point) => point.x)) - 110;
-  const maxX = Math.max(...points.map((point) => point.x)) + 110;
-  const minY = Math.min(...points.map((point) => point.y)) - 90;
-  const maxY = Math.max(...points.map((point) => point.y)) + 90;
-  let width = Math.max(900, maxX - minX);
-  let height = Math.max(506, maxY - minY);
-  const aspect = 16 / 9;
-  if (width / height < aspect) width = height * aspect;
-  else height = width / aspect;
-  width = Math.min(diagramWidth, width);
-  height = Math.min(diagramHeight, height);
-  const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
-  return {
-    x: clampNumber(centerX - width / 2, 0, diagramWidth - width),
-    y: clampNumber(centerY - height / 2, 0, diagramHeight - height),
-    width,
-    height,
-  };
-}
-
 function resetDiagramLayout() {
   diagramStateOwner.resetLayout();
+  diagramView = null;
   requestStateSave();
   renderMetroDiagram();
   void saveCurrentSlot("노선도 자동 배치");
-  showToast("수동 조정을 지우고 노선도를 다시 배치했습니다.");
+  showToast("손으로 옮긴 역을 지우고 노선도를 다시 배치했습니다.");
 }
 
 function saveDiagramSvg() {
   if (!metroDiagramSvg || metroDiagramSvg.hasAttribute("hidden")) return;
   const clone = metroDiagramSvg.cloneNode(true) as SVGSVGElement;
+  // 확대·이동과 상관없이 노선도 전체를 내보낸다.
+  const box = diagramContentBox;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(diagramWidth));
-  clone.setAttribute("height", String(diagramHeight));
+  clone.setAttribute("viewBox", `${roundSvg(box.x)} ${roundSvg(box.y)} ${roundSvg(box.width)} ${roundSvg(box.height)}`);
+  clone.setAttribute("width", String(Math.round(box.width)));
+  clone.setAttribute("height", String(Math.round(box.height)));
+  clone.setAttribute("font-family", "Pretendard, 'Noto Sans KR', sans-serif");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
   downloadTextFile(`${safeFilename(getNetworkTitle())}-노선도.svg`, xml, "image/svg+xml");
 }
 
 function buildMetroDiagramShareData(): MetroDiagramShareData {
   const graph = buildDiagramGraph();
-  const positions = buildDiagramPositions(graph);
+  const { layout } = ensureDiagramLayout(graph);
+  const positions = new Map(Array.from(layout.positions, ([id, point]) => [id, { x: point.x * diagramUnit, y: point.y * diagramUnit }]));
   const logicalStationCount = Array.from(graph.nodes.values()).filter((node) => node.station).length;
   const routeMap = new Map<string, DiagramShareRoute>();
   for (const path of graph.paths) {
@@ -7902,7 +7823,7 @@ function buildMetroDiagramShareData(): MetroDiagramShareData {
         id: node.id,
         name: node.station!.name,
         routeIds: node.routeIds,
-        position: positions.get(node.id)!,
+        position: positions.get(node.id) ?? { x: 0, y: 0 },
         transfer: node.routeIds.length > 1 || Boolean(node.station!.transferGroupId),
         express: node.express,
       })),
@@ -7962,7 +7883,11 @@ async function importShareBundle() {
     const bundle = validation.bundle;
     const importedPlans = bundle.routeDesign.plans.map((plan) => cloneImportedPlan(plan));
     const knownStationIds = new Set([...networkState.stations.map((station) => station.id), ...(networkState.transfers ?? []).map((transfer) => `transfer:${transfer.id}`)]);
-    const importedPositions = Object.fromEntries(bundle.diagram.stations.filter((station) => knownStationIds.has(station.id)).map((station) => [station.id, station.position]));
+    // 공유 파일의 위치는 화면 좌표라 칸 단위(0.5칸 맞춤)로 바꿔 고정 위치로 넣는다.
+    const importedPositions = Object.fromEntries(bundle.diagram.stations.filter((station) => knownStationIds.has(station.id)).map((station) => [
+      station.id,
+      { x: Math.round((station.position.x / diagramUnit) * 2) / 2, y: Math.round((station.position.y / diagramUnit) * 2) / 2 },
+    ]));
     before = cloneState();
     previousActivePlanId = activePlanId;
     previousUndoStack = undoStack;
@@ -8030,15 +7955,6 @@ function downloadTextFile(filename: string, contents: string, mimeType: string) 
 
 function safeFilename(value: string) {
   return (value || "draw-gyotong").replace(/[\\/:*?"<>|]+/g, "-").trim();
-}
-
-function stableHash(value: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
 }
 
 function clampNumber(value: number, min: number, max: number) {
