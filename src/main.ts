@@ -18165,7 +18165,11 @@ function keepTappedObjectVisible(panel: HTMLElement) {
     // 들어오는 모션(translate)과 상관없는 최종 위치: 화면 아래에서 bottom·높이만큼 올라온 곳
     const panelTop = window.innerHeight - parseFloat(getComputedStyle(panel).bottom) - panel.offsetHeight;
     if (pointer.bottom < panelTop - 48) return;
-    const hudTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hud-top")) || 64;
+    // 남은 지도의 위쪽 끝: 정보판, 모드 배너, 열린 노선 설정 상자 중 가장 아래
+    const hudTop = Math.max(
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hud-top")) || 64,
+      ...[modeBanner, routeSettingsCard].filter((item): item is HTMLElement => Boolean(item) && !item!.hidden).map((item) => item.getBoundingClientRect().bottom),
+    );
     // 범위가 남은 지도보다 길면 위쪽 끝을 맞추고, 아니면 가운데를 맞춘다.
     const visibleCenter = hudTop + (panelTop - hudTop) / 2;
     const span = pointer.bottom - pointer.top;

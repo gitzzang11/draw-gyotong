@@ -857,7 +857,7 @@ body[data-mode-banner="low"] .game-notice-stack { top: calc(var(--hud-top) + var
 .game-suggestion__facts dd { margin: 0; }
 
 /* ===== 도시 뉴스 ===== */
-.game-news__body { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; gap: var(--space-5); }
+.game-news__body { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: start; align-content: start; gap: var(--space-5); }
 .game-news__aside { position: sticky; top: 0; display: grid; gap: var(--space-2); }
 .game-news__feed { display: grid; max-width: 760px; }
 .game-news__empty { display: grid; gap: var(--space-1); margin: 0; }
@@ -958,6 +958,9 @@ body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden;
   #satisfactionPill { align-items: center; }
   #financeStatusButton .game-status-net { font-size: 12px; line-height: 14px; }
   body[data-plates="stacked"] .game-plate--time { top: calc(var(--hud-inset-top) + var(--plate-height) + 2px + 6px); }
+  /* 두 줄일 때 첫 줄 오른쪽 빈자리에 레이어 버튼을 올리고, 노선 설정 상자는 전체 폭을 쓴다. */
+  body[data-plates="stacked"] .game-map-controls { top: var(--hud-inset-top); }
+  body[data-plates="stacked"] .game-side-panel { right: var(--edge-inset-right); }
 
   /* 도구 레일: 화면 아래 가로. 왼쪽 반전 칸이 현재 모드, 오른쪽 상자가 도구(들어가는 만큼, 나머지는 더보기). */
   .game-mode-rail,
@@ -1028,9 +1031,16 @@ body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden;
   }
   .game-inspector { transition: max-height var(--dur-panel) var(--ease-out); }
   .game-inspector.is-sheet-expanded { max-height: calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--portrait-rail-clear)); }
+  /* 검토 중에는 위쪽에 노선 설정 상자도 있어 지도가 좁아지므로 검토 창은 36%까지(본문만 스크롤, 확정 줄 고정). */
   body.construction-reviewing .game-review {
     bottom: var(--hud-bottom-clear);
-    max-height: min(46dvh, calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--hud-bottom-clear)));
+    max-height: min(36dvh, calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--hud-bottom-clear)));
+  }
+  /* 검토 창이 낮아 경고가 본문 아래로 밀리므로, 펼친 상태에서도 머리글에 경고 개수를 보인다. */
+  .game-review:not(.game-review--minimized) .game-review__alert:not([hidden]) { display: inline-flex; }
+  /* 짧은 세로 화면(높이 800 미만)에서는 검토 창을 30%까지로 줄여 그린 노선이 보이는 지도를 남긴다. */
+  @media (max-height: 799px) {
+    body.construction-reviewing .game-review { max-height: min(30dvh, calc(100dvh - var(--hud-top) - var(--hud-gap) - var(--hud-bottom-clear))); }
   }
   .game-sheet-grip {
     display: grid;
@@ -1062,11 +1072,12 @@ body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden;
 
   /* 세로 화면에서는 지도 위쪽을 덜 가리게 머리글만 두고, 펼치기 버튼으로 연다. 안내는 그 아래. */
   .game-side-panel:not(.is-expanded) .dg-panel__body { display: none; }
+  .game-side-panel .dg-panel__header { min-height: 44px; padding-block: 0; }
   .game-side-panel .game-side-panel__expand { display: inline-grid; }
   .game-side-panel.is-expanded .game-side-panel__expand svg { transform: rotate(180deg); }
 
   .game-notice-stack { width: calc(100vw - var(--edge-inset-left) - var(--edge-inset-right)); }
-  body:has(.game-side-panel:not([hidden])) .game-notice-stack { top: calc(var(--hud-top) + var(--hud-gap) * 3 + 32px + 52px); }
+  body:has(.game-side-panel:not([hidden])) .game-notice-stack { top: calc(var(--hud-top) + var(--hud-gap) * 3 + 32px + 48px); }
 
   /* 붙은 가장자리에서 들어오고 나간다: 정보창·검토·더보기는 아래에서, 노선 설정 상자는 위에서. */
   .game-inspector:not([hidden]),
@@ -1082,6 +1093,11 @@ body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden;
     transform: translateY(var(--route-drawing-bottom-shift, 0px));
   }
 
+  /* 대화상자: 아래쪽에 붙여 확정·취소 버튼이 엄지에 닿게 한다(들어오는 방향도 아래에서). */
+  .dg-scrim { place-items: end center; }
+  /* 전체 화면 제목 띠: 폭이 좁으니 보조 문구(분석 기준 등)는 제목 아래 둘째 줄로 */
+  .dg-workspace__bar:has(.game-workspace__sub) { flex-wrap: wrap; row-gap: 0; }
+  .dg-workspace__bar .game-workspace__sub { order: 10; flex-basis: 100%; padding-bottom: var(--space-1); }
   /* 전체 화면: 두 열을 한 열로 쌓는다. */
   .game-stats__split { grid-template-columns: 1fr; }
   .game-stats__list { position: static; max-height: none; padding-right: 0; border-right: 0; border-bottom: var(--line-strong) solid var(--text-1); }
