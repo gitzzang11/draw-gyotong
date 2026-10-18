@@ -957,8 +957,20 @@ body.route-drawing-hud-proximity #constructionPreviewPanel { visibility: hidden;
   #satisfactionPill { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
   #satisfactionPill { align-items: center; }
   #financeStatusButton .game-status-net { font-size: 12px; line-height: 14px; }
-  body[data-plates="stacked"] .game-plate--time { top: calc(var(--hud-inset-top) + var(--plate-height) + 2px + 6px); }
-  /* 두 줄일 때 첫 줄 오른쪽 빈자리에 레이어 버튼을 올리고, 노선 설정 상자는 전체 폭을 쓴다. */
+  /* 한 줄일 때: 재정 정보판이 시간 정보판 바로 옆까지 늘어나 첫 줄을 채운다(자금 칸이 늘어남). */
+  body[data-plates="row"] .game-plate--finance { right: calc(var(--edge-inset-right) + var(--time-plate-width, 240px) + 6px); }
+  body[data-plates="row"] #financeStatusButton { flex: 1; }
+  /* 두 줄일 때는 엇갈리지 않게 두 줄 모두 화면 폭을 채운다.
+     첫 줄: 재정 정보판(자금 칸이 늘어남) + 레이어 버튼, 둘째 줄: 시간 정보판(칸을 고르게 나눔). */
+  body[data-plates="stacked"] .game-plate--finance { right: calc(var(--edge-inset-right) + var(--plate-height) + 6px); }
+  body[data-plates="stacked"] #financeStatusButton { flex: 1; }
+  body[data-plates="stacked"] .game-plate--time {
+    top: calc(var(--hud-inset-top) + var(--plate-height) + 2px + 6px);
+    left: var(--edge-inset-left);
+    justify-content: stretch;
+  }
+  body[data-plates="stacked"] .game-plate--time > .dg-plate__cell { flex: 1 1 auto; justify-content: center; }
+  body[data-plates="stacked"] .game-plate--time > .dg-plate__cell--stack { flex: 0 0 auto; align-items: flex-start; }
   body[data-plates="stacked"] .game-map-controls { top: var(--hud-inset-top); }
   body[data-plates="stacked"] .game-side-panel { right: var(--edge-inset-right); }
 

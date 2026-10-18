@@ -3384,8 +3384,25 @@ syncSpeedControls();
 // 정보판이 큰 글자로 줄바꿈되어도 레일·지도 컨트롤이 그 아래에 오도록 실제 아래쪽 위치를 반영한다.
 const topPlates = [byId("financePlate"), byId("timePlate")].filter((plate): plate is HTMLElement => Boolean(plate));
 if (topPlates.length && "ResizeObserver" in window) {
-  const observer = new ResizeObserver(() => syncTopHud());
+  // 배치를 바꾸면 정보판 크기도 바뀌므로 관찰 콜백 안에서 바로 바꾸지 않고 다음 프레임에 한 번 맞춘다(ResizeObserver 반복 방지).
+  let topHudFrame = 0;
+  const observer = new ResizeObserver(() => {
+    if (topHudFrame) return;
+    topHudFrame = window.requestAnimationFrame(() => {
+      topHudFrame = 0;
+      syncTopHud();
+    });
+  });
   topPlates.forEach((plate) => observer.observe(plate));
+  // 두 줄일 때는 정보판이 폭을 채워 크기가 그대로이므로, 글자(자금·시각)가 바뀔 때도 다시 잰다.
+  const plateTextObserver = new MutationObserver(() => {
+    if (topHudFrame || !isPortraitLayout()) return;
+    topHudFrame = window.requestAnimationFrame(() => {
+      topHudFrame = 0;
+      syncTopHud();
+    });
+  });
+  topPlates.forEach((plate) => plateTextObserver.observe(plate, { childList: true, characterData: true, subtree: true }));
 }
 document.addEventListener("pointerdown", (event) => {
   const layerMenu = document.querySelector<HTMLDetailsElement>(".game-layer-menu");
@@ -18115,9 +18132,12 @@ function syncTopHud() {
   const financePlate = byId("financePlate");
   const timePlate = byId("timePlate");
   if (financePlate && timePlate) {
+    // 한 줄·두 줄 배치에서는 정보판이 폭을 채우므로, 늘리지 않은 상태(measure)에서 원래 폭을 잰다(같은 프레임이라 깜빡이지 않음).
+    document.body.dataset.plates = "measure";
     const left = financePlate.getBoundingClientRect().left;
     const right = window.innerWidth - timePlate.getBoundingClientRect().right;
     const stacked = isPortraitLayout() && financePlate.offsetWidth + timePlate.offsetWidth + 6 > window.innerWidth - left - right;
+    document.documentElement.style.setProperty("--time-plate-width", `${timePlate.offsetWidth}px`);
     document.body.dataset.plates = stacked ? "stacked" : "row";
     const bottom = Math.max(financePlate.getBoundingClientRect().bottom, timePlate.getBoundingClientRect().bottom);
     document.documentElement.style.setProperty("--hud-top", `${Math.ceil(bottom)}px`);
