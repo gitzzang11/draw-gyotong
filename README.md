@@ -1,9 +1,9 @@
-# 🚆 Draw Gyotong (드로우 교통)
+# 🚆 메트로 메이커 (Draw Gyotong)
 
 <div align="center">
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-emerald.svg)
+![Version](https://img.shields.io/badge/version-1.1.0--beta.1-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android-lightgrey.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6.svg)
 ![Vite](https://img.shields.io/badge/Vite-8.1-646CFF.svg)
@@ -14,7 +14,7 @@
   지도 위에 직접 철도 노선을 설계하고 건설하여 교통망을 확장하고 승객 만족도를 높여보세요!
 </p>
 
-[📥 최신 APK 다운로드](https://github.com/gitzzang11/draw-gyotong/releases/latest) • [🎮 게임 시작하기](#-빠른-시작) • [✨ 주요 기능](#-주요-기능) • [🛠️ 빌드 및 개발](#️-빌드-및-개발)
+[📥 베타 릴리스 및 APK](https://github.com/gitzzang11/draw-gyotong/releases/tag/v1.1.0-beta.1) • [🎮 게임 시작하기](#-빠른-시작-getting-started) • [✨ 주요 기능](#-주요-기능-key-features) • [🛠️ 빌드 및 개발](#️-빌드-및-개발-build--android)
 
 </div>
 
@@ -22,7 +22,7 @@
 
 ## 📖 소개 (Overview)
 
-**Draw Gyotong**은 실제 지리 데이터(OpenStreetMap/Leaflet)와 실제 인구 밀도 데이터를 바탕으로 철도망을 계획하고 운영하는 도시 철도 경영 시뮬레이션 게임입니다.
+**메트로 메이커 (Draw Gyotong)**는 실제 지리 데이터(OpenStreetMap/Leaflet)와 인구 밀도 데이터를 바탕으로 철도망을 계획하고 운영하는 도시 철도 경영 시뮬레이션 게임입니다. 현재 버전은 **베타 v1 (`1.1.0-beta.1`)**입니다.
 
 복잡하고 사실적인 승객 수요 흐름, 환승 시스템, 노선별 배차 및 차량 기지 연결, 재정 및 대출 관리까지 대중교통 네트워크 운영의 모든 요소를 경험할 수 있습니다.
 
@@ -32,7 +32,9 @@
 
 - 🗺️ **실제 지도 기반 노선 건설 (Real Geographic Map)**
   - 실제 지도 위에서 역을 세우고 선로를 연결하며 나만의 철도망을 구축
-  - 도시철도·광역전철·급행형 차량과 일반·급행 운행 지원
+  - 트램·경전철·중전철·GTX 차종과 운행 계통 지원
+  - 기획 모드의 연결 도구로 같은 노선의 양 끝을 이으면 순환선 설계 가능
+  - 실제 노선 선형을 반영하는 자동 노선도와 역 위치 편집
   - 버스 노선·정류장·버스 차량 기능은 현재 제공하지 않음
 - 👥 **현실적인 수요 및 환승 시뮬레이션 (Realistic Demand & Transfer)**
   - WorldPop 기반 실제 인구 밀도에 따른 구역별 출퇴근/일상 통행 수요 반영
@@ -42,7 +44,7 @@
   - 운영 예측(Operating Forecast) 및 혼잡도 기반 승객 만족도 지표 제공
   - 차량기지는 비용과 결과를 검토한 뒤 최대 레벨 5까지 확장 ([확장 규칙](docs/depot-expansion.md))
 - 📱 **모바일 최적화 및 크로스 플랫폼 (Mobile Landscape UX)**
-  - 모바일 가로 화면에 최적화된 직관적인 HUD 및 컨텍스트 서피스 디자인
+  - 가로·세로 화면과 화면 방향 설정, 종이·먹 지도 테마 지원
   - Capacitor 기반 Android APK 지원
 
 ---
@@ -92,7 +94,7 @@ npm run apk:patch
 npm run apk:minor
 ```
 
-빌드된 APK 파일은 루트의 `release_apk/` 디렉토리에 버전명으로 자동 저장됩니다.
+빌드된 APK 파일은 루트의 `release_apk/` 디렉토리에 버전명으로 자동 저장됩니다. `apk:debug`는 디버그 키로 서명된 테스트용 APK를 생성합니다.
 
 ### 개발 도구 보안 기록
 

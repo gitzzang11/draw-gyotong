@@ -32,6 +32,13 @@ export interface OperatingServiceOperation {
   hourlyCapacity: number;
 }
 
+export function circularTrainProgress(progressBase: number, index: number, count: number) {
+  const forward = index % 2 === 0;
+  const directionCount = Math.ceil((count - (index % 2)) / 2);
+  const lap = (progressBase * 2 + Math.floor(index / 2) / directionCount) % 1;
+  return { forward, progress: forward ? lap : 1 - lap };
+}
+
 export function applyStopPreset(
   preset: StopPreset,
   stationIds: readonly string[],

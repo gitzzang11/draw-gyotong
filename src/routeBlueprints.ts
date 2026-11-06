@@ -117,7 +117,9 @@ export function getAvailableConnectionTypes(
   target: ConnectionTarget,
   existing: ExistingConnection[] = [],
 ): ConnectionType[] {
-  if (source.id === target.id || source.deleted || target.deleted || source.closed || target.closed) return [];
+  const oppositeEnds = source.id === target.id && source.type === target.type && isEndpoint(source.type) &&
+    Boolean(source.endpoint && target.endpoint && source.endpoint !== target.endpoint);
+  if ((source.id === target.id && !oppositeEnds) || source.deleted || target.deleted || source.closed || target.closed) return [];
   const duplicate = (type: ConnectionType) => existing.some((item) =>
     item.connectionType === type &&
     ((item.sourceEntityId === source.id && item.targetEntityId === target.id) ||
@@ -135,7 +137,8 @@ export function getAvailableConnectionTypes(
   } else if (stationPair) {
     candidates = source.lineId !== target.lineId ? ["transfer", "crossing-only"] : ["crossing-only"];
   } else if (endpointPair) {
-    if (source.lineId === target.lineId) candidates = ["physical-track", "crossing-only"];
+    if (oppositeEnds) candidates = ["line-merge"];
+    else if (source.lineId === target.lineId) candidates = ["physical-track", "crossing-only"];
     else candidates = ["physical-track", "line-merge", "crossing-only"];
   } else {
     candidates = ["crossing-only"];
@@ -226,7 +229,7 @@ export function validateRouteBlueprint(input: {
   } else if (input.tool === "connect") {
     const item = input.blueprint as ConnectionBlueprint;
     if (item.operationType !== "connection") errors.push(error("invalid-operation-type", "연결 설계 유형이 올바르지 않습니다."));
-    if (item.sourceEntityId === item.targetEntityId) errors.push(error("self-connection", "같은 대상을 다시 선택할 수 없습니다."));
+    if (item.sourceEntityId === item.targetEntityId && !(item.connectionType === "line-merge" && isEndpoint(item.sourceEntityType) && item.sourceEntityType === item.targetEntityType && item.sourceEndpoint && item.targetEndpoint && item.sourceEndpoint !== item.targetEndpoint)) errors.push(error("self-connection", "같은 대상을 다시 선택할 수 없습니다."));
     if (entities.size && !entities.has(item.sourceEntityId)) errors.push(error("missing-source", "연결 시작 대상이 존재하지 않습니다."));
     if (entities.size && !entities.has(item.targetEntityId)) errors.push(error("missing-target", "연결 대상이 존재하지 않습니다."));
   } else {

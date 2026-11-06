@@ -127,6 +127,18 @@ export function mergeRouteGeometry(input: {
   };
 }
 
+export function closeRouteGeometry(route: readonly GeoCoordinate[], bridge: readonly GeoCoordinate[]): GeoCoordinate[] {
+  if (route.length < 2 || bridge.length < 2 || coordinatesEqual(route[0], route.at(-1)!)) throw new Error("Route cannot be closed.");
+  const forward = distanceMeters(bridge[0], route.at(-1)!) + distanceMeters(bridge.at(-1)!, route[0]);
+  const reverse = distanceMeters(bridge.at(-1)!, route.at(-1)!) + distanceMeters(bridge[0], route[0]);
+  if (Math.min(forward, reverse) > 140 || Math.max(
+    distanceMeters(forward <= reverse ? bridge[0] : bridge.at(-1)!, route.at(-1)!),
+    distanceMeters(forward <= reverse ? bridge.at(-1)! : bridge[0], route[0]),
+  ) > 70) throw new Error("Connection no longer matches route endpoints.");
+  const oriented = forward <= reverse ? bridge : [...bridge].reverse();
+  return dedupeCoordinates([...route, ...oriented.slice(1, -1), route[0]]);
+}
+
 export function splitRouteSegment<T extends Pick<RouteSegment, "id" | "fromNodeId" | "toNodeId" | "coordinates" | "lengthKm">>(input: {
   segment: T;
   junctionPosition: GeoCoordinate;

@@ -101,6 +101,7 @@ import {
 import {
   applyStopPreset,
   calculateOperatingServiceOperation,
+  circularTrainProgress,
   normalizeOperatingService,
   toggleOperatingServiceStop,
   type OperatingService,
@@ -206,6 +207,7 @@ import { DailySettlementRuntime, type DailySettlementRuntimeContext } from "./ru
 import { NetworkInvalidation } from "./routing/networkInvalidation.ts";
 import {
   createConnectionSegment,
+  closeRouteGeometry,
   findNearestConnectionStation,
   findPolylineInsertionIndex,
   mergeRouteGeometry,
@@ -6287,10 +6289,12 @@ function applyCompletedConnectionProject(project: ConstructionProject) {
     completeConnectionBlueprint(runtime, runtimeConnection);
     actualEntityIds = [runtimeConnection.sourceEntityId, runtimeConnection.targetEntityId];
   } else {
-    if (!sourceRoute || !targetRoute || sourceRoute.id === targetRoute.id) throw new Error("Line merge targets are invalid.");
+    if (!sourceRoute || !targetRoute) throw new Error("Line merge targets are invalid.");
+    const isLoop = sourceRoute.id === targetRoute.id;
+    if (isLoop && (connection.sourceEntityId !== connection.targetEntityId || !connection.sourceEndpoint || connection.sourceEndpoint === connection.targetEndpoint)) throw new Error("Loop endpoints are invalid.");
     completeConnectionBlueprint(runtime, runtimeConnection, {
       keepLineId: sourceRoute.id,
-      merge: () => mergeCompletedConnectionRoutes(sourceRoute, targetRoute, connection),
+      merge: () => isLoop ? closeCompletedRoute(sourceRoute, getPhysicalConnectionCoordinates(connection, sourceRoute, targetRoute), connection.estimatedCost) : mergeCompletedConnectionRoutes(sourceRoute, targetRoute, connection),
     });
     actualEntityIds = [sourceRoute.id];
   }
@@ -6304,6 +6308,25 @@ function applyCompletedConnectionProject(project: ConstructionProject) {
     transitRouterCache.invalidate();
   }
   return actualEntityIds;
+}
+
+function closeCompletedRoute(route: RouteLine, bridge: Array<[number, number]>, cost: number) {
+  const coordinates = closeRouteGeometry(route.coordinates, bridge);
+  const closed = rebuildRouteGraph({
+    ...route,
+    coordinates,
+    lengthKm: Math.round(polylineLengthMeters(coordinates)) / 1000,
+    constructionCost: route.constructionCost + cost,
+  });
+  networkState.routes = networkState.routes.map((item) => item.id === route.id ? closed : item);
+  operationsState.services = operationsState.services.map((service) => {
+    if (service.ownerRouteId !== route.id || service.routeIds.length !== 1 || service.branchIds.length !== 0) return service;
+    const path = service.pathCoordinates;
+    const same = path.length === route.coordinates.length && path.every((point, index) => coordinatesEqual(point, route.coordinates[index]));
+    const reversed = path.length === route.coordinates.length && path.every((point, index) => coordinatesEqual(point, route.coordinates[route.coordinates.length - 1 - index]));
+    return same || reversed ? { ...service, pathCoordinates: reversed ? [...coordinates].reverse() : coordinates } : service;
+  });
+  synchronizeGraphReferences();
 }
 
 function mergeCompletedConnectionRoutes(first: RouteLine, second: RouteLine, connection: ConnectionBlueprint) {
@@ -10445,7 +10468,10 @@ function reconcileMapTrains() {
       if (!displayedTrain) continue;
       const progressBase = (simulationRuntimeState.clockMinutes % Math.max(operation.roundTripMin, 12)) / Math.max(operation.roundTripMin, 12);
       const progress = (progressBase + index / displaySets) % 1;
-      const travelProgress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
+      const circular = service.pathCoordinates.length > 2 && coordinatesEqual(service.pathCoordinates[0], service.pathCoordinates.at(-1)!);
+      const loopPosition = circular ? circularTrainProgress(progressBase, index, displaySets) : null;
+      const forward = loopPosition?.forward ?? progress <= 0.5;
+      const travelProgress = loopPosition?.progress ?? (progress <= 0.5 ? progress * 2 : (1 - progress) * 2);
       const position = interpolateAlongRoute(routePoints, travelProgress);
       const nearStation = stopPositions.some((stationPosition) => map.distance(position, stationPosition) <= 35);
       const key = `${service.id}:${displayedTrain.fleet.id}:${displayedTrain.setNumber}`;
@@ -10457,8 +10483,8 @@ function reconcileMapTrains() {
         label: `${service.name} ${displayedTrain.setNumber}편성`,
         position: [position.lat, position.lng],
         serviceId: service.id,
-        state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
-        forward: progress <= 0.5,
+        state: !circular && (progress < 0.02 || Math.abs(progress - 0.5) < 0.02) ? "turning" : nearStation ? "stopped" : "running",
+        forward,
         travelProgress,
         path: service.pathCoordinates,
         stopStationIds: operation.stopStationIds,
@@ -10470,8 +10496,8 @@ function reconcileMapTrains() {
         serviceKind: "local",
         label: `${service.name} ${displayedTrain.setNumber}편성 열차`,
         title: `${service.name} · ${displayedTrain.fleet.cars}량 ${displayedTrain.setNumber}편성`,
-        state: progress < 0.02 || Math.abs(progress - 0.5) < 0.02 ? "turning" : nearStation ? "stopped" : "running",
-        ...trainSymbolFields(ownerRoute, routePoints, position, travelProgress, progress <= 0.5, displayedTrain.fleet.cars),
+        state: !circular && (progress < 0.02 || Math.abs(progress - 0.5) < 0.02) ? "turning" : nearStation ? "stopped" : "running",
+        ...trainSymbolFields(ownerRoute, routePoints, position, travelProgress, forward, displayedTrain.fleet.cars),
       });
     }
   }
@@ -15756,7 +15782,7 @@ function beginConnectionDrawing(event: PointerEvent, point: L.Point) {
     [map.containerPointToLatLng(source.endpoint)],
     { ...routeStyle(route?.color ?? selectedColor, 7, 0.72), dashArray: "8 10", interactive: false },
   ).addTo(previewLayer);
-  setText(facilityReadout, "연결할 다른 노선 끝점까지 드래그하세요");
+  setText(facilityReadout, "연결할 노선 끝점까지 드래그하세요");
 }
 
 /**
@@ -15781,12 +15807,26 @@ function finishConnectionDrawing(
 ) {
   if (!source) return;
   const releasePoint = points.at(-1) ?? source.endpoint;
-  const target = planningMode
+  let target = planningMode
     ? findNearestPlanningConnectEndpoint(releasePoint, 56, source.routeId)
     : findNearestRouteEndpoint(releasePoint, 56, undefined, source.routeId);
-  if (!target || target.routeId === source.routeId) {
+  const sourceKind = "kind" in source ? (source as PlanningConnectEndpoint).kind : "actual";
+  const sourceRoute = sourceKind === "planned"
+    ? getActivePlan(false)?.routes.find((route) => route.id === source.routeId)
+    : networkState.routes.find((route) => route.id === source.routeId);
+  if (sourceRoute && sourceRoute.coordinates.length >= 2 && !coordinatesEqual(sourceRoute.coordinates[0], sourceRoute.coordinates.at(-1)!)) {
+    const opposite = source.atStart ? sourceRoute.coordinates.at(-1)! : sourceRoute.coordinates[0];
+    const endpoint = map.latLngToContainerPoint(L.latLng(...opposite));
+    const distance = releasePoint.distanceTo(endpoint);
+    if (distance <= 56 && (!target || distance < releasePoint.distanceTo(target.endpoint))) {
+      target = sourceKind === "planned"
+        ? { routeId: source.routeId, atStart: !source.atStart, endpoint, kind: "planned" } as PlanningConnectEndpoint
+        : { routeId: source.routeId, atStart: !source.atStart, endpoint, ...(planningMode ? { kind: "actual" as const } : {}) };
+    }
+  }
+  if (!target) {
     endConnectionSession("cancelled");
-    setText(facilityReadout, "다른 노선의 연결 가능한 끝점에 놓으세요");
+    setText(facilityReadout, "연결 가능한 다른 끝점에 놓으세요");
     return;
   }
   const firstPoint = map.containerPointToLatLng(source.endpoint);
@@ -15898,7 +15938,7 @@ function findNearestPlannedRouteEndpoint(point: L.Point, thresholdPx: number, ex
   const plan = getActivePlan(false);
   let best: { endpoint: PlannedRouteMergeEndpoint; distance: number } | null = null;
   for (const route of plan?.routes ?? []) {
-    if (route.id === excludedRouteId || route.coordinates.length < 2) continue;
+    if (route.id === excludedRouteId || route.coordinates.length < 2 || coordinatesEqual(route.coordinates[0], route.coordinates.at(-1)!)) continue;
     for (const [atStart, coordinate] of [
       [true, route.coordinates[0]],
       [false, route.coordinates[route.coordinates.length - 1]],
@@ -15917,17 +15957,18 @@ function openMergeDialog(merge: PendingMerge) {
   if (!first || !second || !mergeDialog) return;
   connectionDialogMode = "merge";
   const planned = Boolean(merge.plan);
+  const loop = merge.first.routeId === merge.second.routeId && (merge.plan?.firstKind ?? "actual") === (merge.plan?.secondKind ?? "actual");
   const transferStationIds = getMergeTransferStationIds(merge);
   // 한 노선에는 한 차종만 다닌다. 차종이 다르면 하나로 잇지 않고 환승 연결만 고를 수 있다.
   const sameTrainType = first.trainType === second.trainType;
   const choiceModel = getConnectionChoices({
     canMerge: sameTrainType,
-    canTransfer: Boolean(transferStationIds),
+    canTransfer: !loop && Boolean(transferStationIds),
   });
   selectedConnectionChoice = choiceModel.defaultChoice;
   setText(
     mergeDescription,
-    sameTrainType
+    loop ? `${first.name}의 양 끝을 연결해 순환선으로 만듭니다.` : sameTrainType
       ? `${first.name}과 ${second.name}의 끝점이 만났습니다. 연결 결과를 선택하세요.`
       : `${first.name}(${trainCatalog[first.trainType].label})과 ${second.name}(${trainCatalog[second.trainType].label})은 차종이 달라 한 노선으로 이을 수 없습니다. 환승 연결만 가능합니다.`,
   );
@@ -15938,18 +15979,18 @@ function openMergeDialog(merge: PendingMerge) {
       <div class="dg-row"><span class="dg-row__label">연결 거리</span><span class="dg-row__value">${merge.bridgeLengthKm.toFixed(2)}km</span></div>
       <div class="dg-row"><span class="dg-row__label">예상 비용</span><span class="dg-row__value dg-row__value--metric">${formatCost(merge.bridgeCost)}</span></div>
       <div class="dg-row"><span class="dg-row__label">완공</span><span class="dg-row__value">${planned ? "기획안에 추가 · 착공 후 공사 기간" : "확정 즉시"}</span></div>
-      ${planned ? `<div class="dg-row"><span class="dg-row__label">병합 후 이름·색</span><span class="dg-row__value">${escapeHtml(first.name)}(A)</span></div>` : ""}
-      <div class="dg-row"><span class="dg-row__label">환승 연결</span><span class="dg-row__value${transferStationIds ? " dg-row__value--ok" : ""}">${transferStationIds ? "● 사용 가능" : "대상 역 없음"}</span></div>`;
+      ${planned && !loop ? `<div class="dg-row"><span class="dg-row__label">병합 후 이름·색</span><span class="dg-row__value">${escapeHtml(first.name)}(A)</span></div>` : ""}
+      ${!loop ? `<div class="dg-row"><span class="dg-row__label">환승 연결</span><span class="dg-row__value${transferStationIds ? " dg-row__value--ok" : ""}">${transferStationIds ? "● 사용 가능" : "대상 역 없음"}</span></div>` : ""}`;
   }
   if (mergeChoiceList) {
     mergeChoiceList.innerHTML = `
       <legend class="dg-sr-only">연결 방식</legend>
       ${choiceModel.choices.map((choice) =>
-        renderConnectionChoice(choice.id, escapeHtml(choice.title), escapeHtml(choice.description), choice.id === choiceModel.defaultChoice)
+        renderConnectionChoice(choice.id, escapeHtml(loop && choice.id === "merge" ? "순환선 연결" : choice.title), escapeHtml(loop && choice.id === "merge" ? "노선의 양 끝을 이어 순환선으로 만듭니다." : choice.description), choice.id === choiceModel.defaultChoice)
       ).join("")}`;
   }
   // 기획 연결의 병합 결과 이름·색은 A 노선을 따른다(병합은 완공 때 적용).
-  if (mergeLegacyFields) mergeLegacyFields.hidden = planned;
+  if (mergeLegacyFields) mergeLegacyFields.hidden = planned || loop;
   if (mergeNameSelect) mergeNameSelect.innerHTML = `<option value="${first.id}">${escapeHtml(first.name)}</option><option value="${second.id}">${escapeHtml(second.name)}</option>`;
   if (mergeColorSelect)
     mergeColorSelect.innerHTML = `<option value="${first.id}" style="color:${first.color}">${escapeHtml(first.name)} 색상</option><option value="${second.id}" style="color:${second.color}">${escapeHtml(second.name)} 색상</option>`;
@@ -16075,6 +16116,8 @@ function savePlannedConnection(merge: PendingMerge) {
   closeMergeDialog();
   showToast(transfer
     ? `${first.name} ↔ ${second.name} 환승 연결 설계를 기획안에 넣었습니다.`
+    : first.id === second.id && planInfo.firstKind === planInfo.secondKind
+    ? `${first.name} 순환선 연결 설계를 기획안에 넣었습니다. 착공해 공사가 끝나면 순환선이 됩니다.`
     : `${first.name} ↔ ${second.name} 노선 병합 설계를 기획안에 넣었습니다. 착공해 공사가 끝나면 하나의 노선이 됩니다.`);
   playFeedback("plan");
 }
@@ -16140,6 +16183,23 @@ async function confirmRouteMerge() {
   const before = cloneState();
   try {
     const bridgeCost = merge.bridgeCost;
+    if (first.id === second.id) {
+      if (merge.first.atStart === merge.second.atStart) throw new Error("Loop endpoints are invalid.");
+      const bridge = smoothCoordinateBridge(first.coordinates.at(-1)!, first.coordinates[0]);
+      closeCompletedRoute(first, bridge, bridgeCost);
+      financeState.economy = { ...financeState.economy, cash: financeState.economy.cash - subsidizedCost(bridgeCost), constructionSpent: financeState.economy.constructionSpent + subsidizedCost(bridgeCost) };
+      metaState.patch({ updatedAt: Date.now() });
+      await flushStateSave();
+      undoStack = [...undoStack, before].slice(-maxHistory);
+      redoStack = [];
+      endConnectionSession("completed");
+      closeMergeDialog();
+      selectRoute(first.id, false);
+      requestUpdate("network-structure", first.id);
+      showToast(`${first.name}을 순환선으로 연결했습니다 · ${formatCost(bridgeCost)} 반영`);
+      playFeedback("confirm");
+      return;
+    }
     const firstCoordinates = merge.first.atStart ? [...first.coordinates].reverse() : first.coordinates;
     const secondCoordinates = merge.second.atStart ? second.coordinates : [...second.coordinates].reverse();
     const bridgeCoordinates = smoothCoordinateBridge(firstCoordinates.at(-1)!, secondCoordinates[0]);
@@ -16626,7 +16686,7 @@ function findNearestRouteEndpoint(point: L.Point, thresholdPx: number, preferred
   const orderedRoutes = preferredRouteId ? [...networkState.routes].sort((a, b) => Number(b.id === preferredRouteId) - Number(a.id === preferredRouteId)) : networkState.routes;
   for (const route of orderedRoutes) {
     if (route.id === excludedRouteId) continue;
-    if (route.coordinates.length < 2) continue;
+    if (route.coordinates.length < 2 || coordinatesEqual(route.coordinates[0], route.coordinates.at(-1)!)) continue;
     const endpointCandidates = [
       { atStart: true, coordinate: route.coordinates[0] },
       { atStart: false, coordinate: route.coordinates[route.coordinates.length - 1] },

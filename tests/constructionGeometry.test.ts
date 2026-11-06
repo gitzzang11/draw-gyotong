@@ -116,3 +116,12 @@ describe("construction geometry", () => {
     expect(performance.now() - started).toBeLessThan(1_000);
   });
 });
+
+it("closes a route using the bridge in either drawing direction", async () => {
+  const { closeRouteGeometry } = await import("../src/geometry/constructionGeometry");
+  const route: [number, number][] = [[0, 0], [0, 1], [1, 1]];
+  const bridge: [number, number][] = [[1, 1], [1, 0], [0, 0]];
+  expect(closeRouteGeometry(route, bridge)).toEqual([[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]);
+  expect(closeRouteGeometry(route, [...bridge].reverse())).toEqual(closeRouteGeometry(route, bridge));
+  expect(() => closeRouteGeometry(closeRouteGeometry(route, bridge), bridge)).toThrow();
+});

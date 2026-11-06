@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { applyStopPreset, calculateOperatingServiceOperation, toggleOperatingServiceStop } from "../src/operatingService";
+import { applyStopPreset, calculateOperatingServiceOperation, circularTrainProgress, toggleOperatingServiceStop } from "../src/operatingService";
 
 describe("custom operating services", () => {
+  it("keeps circular trains moving in their direction and spaces trains on each side", () => {
+    expect(circularTrainProgress(0, 0, 4)).toEqual({ forward: true, progress: 0 });
+    expect(circularTrainProgress(0, 2, 4)).toEqual({ forward: true, progress: 0.5 });
+    expect(circularTrainProgress(0.3, 1, 4)).toEqual({ forward: false, progress: 0.4 });
+    expect(circularTrainProgress(0.3, 0, 4)).toEqual({ forward: true, progress: 0.6 });
+  });
   const stations = ["a", "b", "c", "d"];
 
   it("applies convenience presets without storing a service grade", () => {

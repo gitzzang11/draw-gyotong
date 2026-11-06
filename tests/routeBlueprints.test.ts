@@ -110,3 +110,12 @@ describe("route blueprints", () => {
     expect(left.coordinates.at(-1)).toEqual(right.coordinates[0]);
   });
 });
+
+it("allows a line's opposite endpoints to form a loop, but rejects the same endpoint", () => {
+  const start = { id: "line", type: "line-endpoint" as const, lineId: "line", endpoint: "start" as const };
+  const end = { ...start, endpoint: "end" as const };
+  const blueprint = createConnectionBlueprint({ id: "loop", source: start, target: end, connectionType: "line-merge" });
+  expect(validateRouteBlueprint({ tool: "connect", blueprint, lineIds: ["line"], entityIds: ["line"] })).toEqual([]);
+  expect(getAvailableConnectionTypes(start, start)).toEqual([]);
+  expect(getAvailableConnectionTypes(start, end, [blueprint])).not.toContain("line-merge");
+});
