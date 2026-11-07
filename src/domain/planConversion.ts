@@ -1,6 +1,20 @@
 import type { ConnectionBlueprint } from "../routeBlueprints.ts";
-import type { PlannedRoute } from "./constructionTypes.ts";
+import type { ConstructionPlan, PlannedRoute } from "./constructionTypes.ts";
 import { coordinatesEqual, distanceMeters, type GeoCoordinate } from "../geometry/constructionGeometry.ts";
+
+export function calculatePlanConversionCost(plan: ConstructionPlan, selection: readonly { kind: string; assetId: string; routeId: string }[]) {
+  return selection.reduce((sum, item) => {
+    if (item.kind === "segment") return sum + (plan.routes.find((route) => route.id === item.routeId)?.segments.find((segment) => segment.id === item.assetId)?.constructionCost ?? 0);
+    if (item.kind === "station") return sum + 180;
+    if (item.kind === "depot") return sum + (plan.depots.find((depot) => depot.id === item.assetId)?.expectedCost ?? 0);
+    if (item.kind === "transfer") return sum + 40;
+    if (item.kind === "connection") {
+      const connection = (plan.connections ?? []).find((candidate) => candidate.id === item.assetId);
+      return sum + (connection?.status === "draft" || connection?.status === "approved" ? connection.estimatedCost : 0);
+    }
+    return sum;
+  }, 0);
+}
 
 export function filterValidPlanConnections(
   routes: readonly PlannedRoute[],

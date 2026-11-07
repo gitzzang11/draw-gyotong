@@ -125,3 +125,11 @@ it("closes a route using the bridge in either drawing direction", async () => {
   expect(closeRouteGeometry(route, [...bridge].reverse())).toEqual(closeRouteGeometry(route, bridge));
   expect(() => closeRouteGeometry(closeRouteGeometry(route, bridge), bridge)).toThrow();
 });
+
+it("recognizes an operating trunk path retained after its route was extended", async () => {
+  const { routePathDirection } = await import("../src/geometry/constructionGeometry");
+  const extended: [number, number][] = [[0,0],[0,1],[1,1],[2,1]];
+  expect(routePathDirection(extended, [[0,1],[1,1]])).toBe("forward");
+  expect(routePathDirection(extended, [[1,1],[0,1]])).toBe("reverse");
+  expect(routePathDirection(extended, [[0,0],[1,1]])).toBeNull();
+});

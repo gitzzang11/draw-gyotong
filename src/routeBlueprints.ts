@@ -138,7 +138,7 @@ export function getAvailableConnectionTypes(
     candidates = source.lineId !== target.lineId ? ["transfer", "crossing-only"] : ["crossing-only"];
   } else if (endpointPair) {
     if (oppositeEnds) candidates = ["line-merge"];
-    else if (source.lineId === target.lineId) candidates = ["physical-track", "crossing-only"];
+    else if (source.lineId === target.lineId) candidates = source.lineId ? ["physical-track", "line-merge", "crossing-only"] : ["physical-track", "crossing-only"];
     else candidates = ["physical-track", "line-merge", "crossing-only"];
   } else {
     candidates = ["crossing-only"];

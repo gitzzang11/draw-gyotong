@@ -3,7 +3,7 @@
 <div align="center">
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-1.1.0--beta.1-orange.svg)
+![Version](https://img.shields.io/badge/version-1.1.0--beta.2-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android-lightgrey.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6.svg)
 ![Vite](https://img.shields.io/badge/Vite-8.1-646CFF.svg)
@@ -14,7 +14,7 @@
   지도 위에 직접 철도 노선을 설계하고 건설하여 교통망을 확장하고 승객 만족도를 높여보세요!
 </p>
 
-[📥 베타 릴리스 및 APK](https://github.com/gitzzang11/draw-gyotong/releases/tag/v1.1.0-beta.1) • [🎮 게임 시작하기](#-빠른-시작-getting-started) • [✨ 주요 기능](#-주요-기능-key-features) • [🛠️ 빌드 및 개발](#️-빌드-및-개발-build--android)
+[📥 베타 릴리스 및 APK](https://github.com/gitzzang11/draw-gyotong/releases/tag/v1.1.0-beta.2) • [🎮 게임 시작하기](#-빠른-시작-getting-started) • [✨ 주요 기능](#-주요-기능-key-features) • [🛠️ 빌드 및 개발](#️-빌드-및-개발-build--android)
 
 </div>
 
@@ -22,7 +22,7 @@
 
 ## 📖 소개 (Overview)
 
-**메트로 메이커 (Draw Gyotong)**는 실제 지리 데이터(OpenStreetMap/Leaflet)와 인구 밀도 데이터를 바탕으로 철도망을 계획하고 운영하는 도시 철도 경영 시뮬레이션 게임입니다. 현재 버전은 **베타 v1 (`1.1.0-beta.1`)**입니다.
+**메트로 메이커 (Draw Gyotong)**는 실제 지리 데이터(OpenStreetMap/Leaflet)와 인구 밀도 데이터를 바탕으로 철도망을 계획하고 운영하는 도시 철도 경영 시뮬레이션 게임입니다. 현재 버전은 **베타 v1 수정판 (`1.1.0-beta.2`)**입니다.
 
 복잡하고 사실적인 승객 수요 흐름, 환승 시스템, 노선별 배차 및 차량 기지 연결, 재정 및 대출 관리까지 대중교통 네트워크 운영의 모든 요소를 경험할 수 있습니다.
 

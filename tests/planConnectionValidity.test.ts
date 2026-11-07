@@ -144,3 +144,11 @@ describe("plan connection validity filtering", () => {
       .toEqual([firstValid, lastValid]);
   });
 });
+
+it("adds connection cost to selected route segment costs", async () => {
+  const { calculatePlanConversionCost } = await import("../src/domain/planConversion");
+  const route = plannedRoute("route", [[37.5,127],[37.51,127]]);
+  route.segments = [{ id:"segment", fromNodeId:"a", toNodeId:"b", coordinates:route.coordinates, lengthKm:1, terrainImpact:{riverCrossings:0,mountainSegments:0}, constructionMode:"bridge", constructionCost:987, enabled:true }];
+  const plan = { routes:[route], stations:[], depots:[], transfers:[], connections:[connection({estimatedCost:2561})] } as unknown as import("../src/domain/constructionTypes").ConstructionPlan;
+  expect(calculatePlanConversionCost(plan, [{kind:"segment",routeId:"route",assetId:"segment"},{kind:"connection",routeId:"",assetId:"connection"}])).toBe(3548);
+});

@@ -67,7 +67,7 @@ import { ConstructionState } from "./domain/constructionState.ts";
 import { OperationsState, type ExpressConfig, type TrainFleet } from "./domain/operationsState.ts";
 import { removeOperatingService, replaceExpressConfigForRoute, replaceOperatingService } from "./domain/operationsMutations.ts";
 import { updateConstructionPlan } from "./domain/constructionMutations.ts";
-import { filterValidPlanConnections, resolvePlanConnectionEndpoint, resolvePlanConnectionRouteId } from "./domain/planConversion.ts";
+import { calculatePlanConversionCost, filterValidPlanConnections, resolvePlanConnectionEndpoint, resolvePlanConnectionRouteId } from "./domain/planConversion.ts";
 import { buildTransferGroupMutation } from "./domain/transferMutations.ts";
 import { calculateNetworkFinancials as calculateNetworkFinancialsModel } from "./analysis/networkFinancials.ts";
 import type { ConstructionPlan, ConstructionProject, ConstructionProjectKind, ConstructionProjectStatus, ManualTransferEndpoint, PlanPriority, PlanStatus, PlannedDepot, PlannedRoute, PlannedStation } from "./domain/constructionTypes.ts";
@@ -172,6 +172,7 @@ import {
   type ConstructionDraftRenderEntity,
 } from "./map/constructionRenderer.ts";
 import { getStationTransferInfo } from "./stationTransferInfo.ts";
+import { planConnectionRowsHtml } from "./ui/planConnectionRows.ts";
 import { mergeLineExtension, resolveReferencedLineColor, type LineExtensionPayload } from "./lineExtension.ts";
 import { type RoutePlanningTool } from "./routePlanning.ts";
 import { RoutePlanningController } from "./tools/routePlanningController.ts";
@@ -213,6 +214,7 @@ import {
   mergeRouteGeometry,
   normalizeConnectionPolyline,
   polylineLengthMeters,
+  routePathDirection,
 } from "./geometry/constructionGeometry.ts";
 
 let saveSlotServiceInstance: SaveSlotService<SaveState> | null = null;
@@ -5713,6 +5715,19 @@ function getOpeningRequirements(project: ConstructionProject) {
           action: "route",
         }]
       : [];
+    if (connection.connectionType === "line-merge" && connection.sourceLineId && connection.sourceLineId === connection.targetLineId) {
+      const plan = constructionState.plans.find((item) => item.id === project.sourcePlanId);
+      const routeId = plan ? resolveConnectionRouteId(plan, connection, "source") : undefined;
+      const route = networkState.routes.find((item) => item.id === routeId);
+      let endpointsReady = false;
+      if (route) {
+        try {
+          closeRouteGeometry(route.coordinates, getPhysicalConnectionCoordinates(connection, route, route));
+          endpointsReady = true;
+        } catch { /* 선행 구간이 개통되면 다시 확인한다. */ }
+      }
+      return [...dependency, { code: "loop-endpoints", label: "양 끝 구간 개통", met: endpointsReady, action: "route" }];
+    }
     if (connection.connectionType !== "physical-track") return dependency;
     const [sourceRouteId, targetRouteId] = project.routeIds;
     const sourceStation = sourceRouteId ? findConnectionStation(sourceRouteId, connection.coordinates?.[0]) : undefined;
@@ -6291,7 +6306,8 @@ function applyCompletedConnectionProject(project: ConstructionProject) {
   } else {
     if (!sourceRoute || !targetRoute) throw new Error("Line merge targets are invalid.");
     const isLoop = sourceRoute.id === targetRoute.id;
-    if (isLoop && (connection.sourceEntityId !== connection.targetEntityId || !connection.sourceEndpoint || connection.sourceEndpoint === connection.targetEndpoint)) throw new Error("Loop endpoints are invalid.");
+    if (isLoop && (!connection.sourceEndpoint || !connection.targetEndpoint ||
+      (connection.sourceEntityId === connection.targetEntityId && connection.sourceEndpoint === connection.targetEndpoint))) throw new Error("Loop endpoints are invalid.");
     completeConnectionBlueprint(runtime, runtimeConnection, {
       keepLineId: sourceRoute.id,
       merge: () => isLoop ? closeCompletedRoute(sourceRoute, getPhysicalConnectionCoordinates(connection, sourceRoute, targetRoute), connection.estimatedCost) : mergeCompletedConnectionRoutes(sourceRoute, targetRoute, connection),
@@ -6320,11 +6336,9 @@ function closeCompletedRoute(route: RouteLine, bridge: Array<[number, number]>, 
   });
   networkState.routes = networkState.routes.map((item) => item.id === route.id ? closed : item);
   operationsState.services = operationsState.services.map((service) => {
-    if (service.ownerRouteId !== route.id || service.routeIds.length !== 1 || service.branchIds.length !== 0) return service;
-    const path = service.pathCoordinates;
-    const same = path.length === route.coordinates.length && path.every((point, index) => coordinatesEqual(point, route.coordinates[index]));
-    const reversed = path.length === route.coordinates.length && path.every((point, index) => coordinatesEqual(point, route.coordinates[route.coordinates.length - 1 - index]));
-    return same || reversed ? { ...service, pathCoordinates: reversed ? [...coordinates].reverse() : coordinates } : service;
+    if (service.ownerRouteId !== route.id || service.routeIds.length !== 1 || service.branchIds.length !== 0 || service.pathOptionId !== `${route.id}:trunk`) return service;
+    const direction = routePathDirection(route.coordinates, service.pathCoordinates);
+    return direction ? { ...service, pathCoordinates: direction === "reverse" ? [...coordinates].reverse() : coordinates } : service;
   });
   synchronizeGraphReferences();
 }
@@ -8687,6 +8701,13 @@ function renderPlanAssets(plan: ConstructionPlan) {
     ...plan.stations.map((station) => facilityRow("station", "○", "역", station.name, `예상 수요 ${station.expectedDemand.toLocaleString("ko-KR")}${station.completed ? " · 완공" : ""}`, station.id)),
     ...plan.depots.map((depot) => facilityRow("depot", "▥", "기지", depot.name, `${depot.capacity}편성 · ${formatCost(depot.expectedCost)}${depot.completed ? " · 완공" : ""}`, depot.id)),
     ...plan.transfers.map((transfer) => facilityRow("transfer", "⇄", "환승", "예정 환승 연결", `환승 효과 +${transfer.expectedEffect}${transfer.completed ? " · 완공" : ""}`, transfer.id)),
+    planConnectionRowsHtml((plan.connections ?? []).map((connection) => {
+      const routeName = (id: string, lineId?: string) => plan.routes.find((route) => route.id === id)?.name ?? networkState.routes.find((route) => route.id === lineId)?.name ?? "노선";
+      const source = routeName(connection.sourceEntityId, connection.sourceLineId);
+      const target = routeName(connection.targetEntityId, connection.targetLineId);
+      const loop = connection.connectionType === "line-merge" && connection.sourceLineId && connection.sourceLineId === connection.targetLineId;
+      return { id: connection.id, title: loop ? `${source} 순환선 연결` : `${source} ↔ ${target} 연결`, status: connection.status, cost: formatCost(connection.estimatedCost) };
+    })),
   ].join("");
   planAssetList.innerHTML = routeItems || facilities ? routeItems + facilities : `<p class="game-inspector__note">기획 모드에서 지도에 노선이나 시설을 추가하세요.</p>`;
   planAssetList.querySelectorAll<HTMLButtonElement>("[data-plan-action]").forEach((button) => {
@@ -8748,6 +8769,7 @@ function handlePlanAssetAction(action: string, assetId: string) {
       routes: action === "delete-route" ? item.routes.filter((asset) => !plannedRouteDeletionIds(item, assetId).has(asset.id)) : item.routes,
       depots: action === "delete-depot" ? item.depots.filter((asset) => asset.id !== assetId) : item.depots,
       transfers: action === "delete-transfer" ? item.transfers.filter((asset) => asset.id !== assetId) : item.transfers,
+      connections: action === "delete-connection" ? (item.connections ?? []).filter((asset) => asset.id !== assetId || (asset.status !== "draft" && asset.status !== "approved")) : item.connections,
     }));
   }
   redoStack = [];
@@ -9208,20 +9230,6 @@ function getPlanConversionSelection() {
     assetId: input.dataset.assetId ?? "",
     routeId: input.dataset.routeId ?? "",
   }));
-}
-
-function calculatePlanConversionCost(plan: ConstructionPlan, selection = getPlanConversionSelection()) {
-  return selection.reduce((sum, item) => {
-    if (item.kind === "segment") return sum + (plan.routes.find((route) => route.id === item.routeId)?.segments.find((segment) => segment.id === item.assetId)?.constructionCost ?? 0);
-    if (item.kind === "station") return sum + 180;
-    if (item.kind === "depot") return sum + (plan.depots.find((depot) => depot.id === item.assetId)?.expectedCost ?? 0);
-    if (item.kind === "transfer") return sum + 40;
-    if (item.kind === "connection") {
-      const connection = (plan.connections ?? []).find((candidate) => candidate.id === item.assetId);
-      return connection?.status === "draft" || connection?.status === "approved" ? connection.estimatedCost : 0;
-    }
-    return sum;
-  }, 0);
 }
 
 function renderPlanConversionSummary() {
@@ -15957,7 +15965,7 @@ function openMergeDialog(merge: PendingMerge) {
   if (!first || !second || !mergeDialog) return;
   connectionDialogMode = "merge";
   const planned = Boolean(merge.plan);
-  const loop = merge.first.routeId === merge.second.routeId && (merge.plan?.firstKind ?? "actual") === (merge.plan?.secondKind ?? "actual");
+  const loop = first.lineId === second.lineId;
   const transferStationIds = getMergeTransferStationIds(merge);
   // 한 노선에는 한 차종만 다닌다. 차종이 다르면 하나로 잇지 않고 환승 연결만 고를 수 있다.
   const sameTrainType = first.trainType === second.trainType;
@@ -16116,7 +16124,7 @@ function savePlannedConnection(merge: PendingMerge) {
   closeMergeDialog();
   showToast(transfer
     ? `${first.name} ↔ ${second.name} 환승 연결 설계를 기획안에 넣었습니다.`
-    : first.id === second.id && planInfo.firstKind === planInfo.secondKind
+    : first.lineId === second.lineId
     ? `${first.name} 순환선 연결 설계를 기획안에 넣었습니다. 착공해 공사가 끝나면 순환선이 됩니다.`
     : `${first.name} ↔ ${second.name} 노선 병합 설계를 기획안에 넣었습니다. 착공해 공사가 끝나면 하나의 노선이 됩니다.`);
   playFeedback("plan");

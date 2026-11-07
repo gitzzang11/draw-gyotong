@@ -4,7 +4,7 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import type { ConstructionPlan, ConstructionProject, PlannedRoute } from "../src/domain/constructionTypes";
 import type { Depot, RouteLine, RouteSegment, Station } from "../src/domain/networkTypes";
-import { filterValidPlanConnections } from "../src/domain/planConversion";
+import { calculatePlanConversionCost, filterValidPlanConnections } from "../src/domain/planConversion";
 import { coordinatesEqual } from "../src/geometry/constructionGeometry";
 import { stableEntityId } from "../src/storage/migrations";
 import { addStagedPlanSegments } from "../src/domain/stagedPlanRoute";
@@ -60,7 +60,7 @@ function application(plan = fixture(), timeline = false, flushStateSave = async 
     metaState: { current: { mode: "sandbox", cityId: "seoul", difficulty: "normal" }, patch: noop },
     analysisStateOwner: { current: { dayIndex: 0 } },
     baseConstructionDaysPerKm: 95, bridgeConstructionDays: 60, tunnelConstructionDays: 90,
-    filterValidPlanConnections, coordinatesEqual, stableEntityId, addStagedPlanSegments, isValidConstructionStatusTransition, mergeLineExtension, normalizeTrainType,
+    calculatePlanConversionCost, filterValidPlanConnections, coordinatesEqual, stableEntityId, addStagedPlanSegments, isValidConstructionStatusTransition, mergeLineExtension, normalizeTrainType,
     pendingStationNameTargets: new Map(), planConversionsInFlight: new Set(),
     dedupeById: <T extends { id: string }>(values: T[]) => Array.from(new Map(values.map((value) => [value.id, value])).values()),
     L: { latLng }, map: { distance: (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => Math.hypot(a.lat - b.lat, a.lng - b.lng) * 100_000 },
@@ -83,7 +83,7 @@ function application(plan = fixture(), timeline = false, flushStateSave = async 
     showError: (message: string) => errors.push(message),
     stateRecoveryCoordinator: { recover: noop },
   });
-  const names = ["confirmPlanConversion", "calculatePlanConversionCost", "groupContiguousPlanSegments", "isPlanFullyConverted", "planHasActiveConstruction", "pruneFinishedPlans", "recalculatePlan", "rebuildRouteGraph", "upsertEqualBranchPattern", "calculateLengthKmPrecise", "findNearestGraphNodeId", "createPlanConstructionProjects", "createStagedPlanConstructionProject", "openConstructionProject", "getOpeningRequirements", "hasRouteGaps", "isRouteOperational", "isStationOperational", "isDepotOperational", "getPlannedExtensionSegments", "getPlannedExtensionCoordinates", "createLineExtensionPayload", "applyPendingLineExtension", "createPendingExtensionProject"];
+  const names = ["confirmPlanConversion", "groupContiguousPlanSegments", "isPlanFullyConverted", "planHasActiveConstruction", "pruneFinishedPlans", "recalculatePlan", "rebuildRouteGraph", "upsertEqualBranchPattern", "calculateLengthKmPrecise", "findNearestGraphNodeId", "createPlanConstructionProjects", "createStagedPlanConstructionProject", "openConstructionProject", "getOpeningRequirements", "hasRouteGaps", "isRouteOperational", "isStationOperational", "isDepotOperational", "getPlannedExtensionSegments", "getPlannedExtensionCoordinates", "createLineExtensionPayload", "applyPendingLineExtension", "createPendingExtensionProject"];
   runInContext(ts.transpileModule(names.map((name) => declarations.get(name)).join("\n"), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   return {
     constructionState, networkState, financeState, operationsState, errors,

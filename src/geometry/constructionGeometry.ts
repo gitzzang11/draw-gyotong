@@ -24,6 +24,15 @@ export function coordinatesEqual(a: GeoCoordinate, b: GeoCoordinate, epsilon = 1
   return Math.abs(a[0] - b[0]) <= epsilon && Math.abs(a[1] - b[1]) <= epsilon;
 }
 
+export function routePathDirection(route: readonly GeoCoordinate[], path: readonly GeoCoordinate[]): "forward" | "reverse" | null {
+  if (path.length < 2 || path.length > route.length) return null;
+  for (let start = 0; start <= route.length - path.length; start += 1) {
+    if (path.every((point, index) => coordinatesEqual(point, route[start + index]))) return "forward";
+    if (path.every((point, index) => coordinatesEqual(point, route[start + path.length - 1 - index]))) return "reverse";
+  }
+  return null;
+}
+
 export function dedupeCoordinates(coordinates: readonly GeoCoordinate[]): GeoCoordinate[] {
   return coordinates.reduce<GeoCoordinate[]>((result, point) => {
     if (!result.length || !coordinatesEqual(result.at(-1)!, point)) result.push([point[0], point[1]]);

@@ -119,3 +119,10 @@ it("allows a line's opposite endpoints to form a loop, but rejects the same endp
   expect(getAvailableConnectionTypes(start, start)).toEqual([]);
   expect(getAvailableConnectionTypes(start, end, [blueprint])).not.toContain("line-merge");
 });
+
+it("allows a connection between extension blueprints belonging to the same line", () => {
+  const source = { id: "extension-a", type: "blueprint-endpoint" as const, lineId: "line", endpoint: "end" as const };
+  const target = { id: "extension-b", type: "blueprint-endpoint" as const, lineId: "line", endpoint: "end" as const };
+  expect(getAvailableConnectionTypes(source, target)).toContain("line-merge");
+  expect(createConnectionBlueprint({ id: "loop-extension", source, target, connectionType: "line-merge" })).toMatchObject({ sourceLineId: "line", targetLineId: "line" });
+});
